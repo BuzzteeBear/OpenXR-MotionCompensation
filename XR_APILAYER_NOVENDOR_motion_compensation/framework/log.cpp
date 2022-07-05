@@ -30,10 +30,10 @@ namespace {
 namespace LAYER_NAMESPACE::log {
     extern std::ofstream logStream;
 
-    // {cbf3adcd-42b1-4c38-830c-91980af201f8}
+    // {40633bc2-ca4a-4c13-88b6-7a55ed74e061}
     TRACELOGGING_DEFINE_PROVIDER(g_traceProvider,
                                  "OpenXRTemplate",
-                                 (0xcbf3adcd, 0x42b1, 0x4c38, 0x83, 0x0c, 0x91, 0x98, 0x0a, 0xf2, 0x01, 0xf8));
+                                 (0x40633bc2, 0xca4a, 0x4c13, 0x88, 0xb6, 0x7a, 0x55, 0xed, 0x74, 0xe0, 0x61));
 
     TraceLoggingActivity<g_traceProvider> g_traceActivity;
 

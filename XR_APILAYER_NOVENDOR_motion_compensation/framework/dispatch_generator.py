@@ -292,6 +292,8 @@ namespace LAYER_NAMESPACE
 		OpenXrApi() = default;
 
 		PFN_xrGetInstanceProcAddr m_xrGetInstanceProcAddr{ nullptr };
+        
+        std::set<std::string> m_extensions;
 
 	public:
 		virtual ~OpenXrApi() = default;
@@ -311,6 +313,16 @@ namespace LAYER_NAMESPACE
 			m_xrGetInstanceProcAddr = pfn_xrGetInstanceProcAddr;
 			m_instance = instance;
 		}
+
+        void SetExtensions(const std::vector<std::string>& extensions)
+        {
+            m_extensions = std::set(extensions.begin(), extensions.end());
+        }
+
+        bool IsExtensionActivated(const std::string extensionName)
+        {
+            return (bool)m_extensions.count(extensionName);
+        }
 
 		// Specially-handled by the auto-generated code.
 		virtual XrResult xrGetInstanceProcAddr(XrInstance instance, const char* name, PFN_xrVoidFunction* function);

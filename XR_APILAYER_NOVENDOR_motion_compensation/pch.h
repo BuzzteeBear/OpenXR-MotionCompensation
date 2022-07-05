@@ -22,17 +22,51 @@
 
 #pragma once
 
-#include "framework/dispatch.gen.h"
+// Standard library.
+#include <algorithm>
+#include <cstdarg>
+#include <ctime>
+#include <iomanip>
+#include <iostream>
+#include <filesystem>
+#include <fstream>
+#include <sstream>
+#include <string>
+#include <memory>
+#include <vector>
+#include <set>
+#include <map>
+#define _USE_MATH_DEFINES
+#include <cmath>
 
-namespace layer_template {
+using namespace std::chrono_literals;
 
-    const std::string LayerName = "XR_APILAYER_NOVENDOR_template";
-    const std::string VersionString = "Unreleased (0.0.0)";
+// Windows header files.
+#define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
+#include <windows.h>
+#include <unknwn.h>
+#include <wrl.h>
+#include <wil/resource.h>
+#include <traceloggingactivity.h>
+#include <traceloggingprovider.h>
 
-    // Singleton accessor.
-    OpenXrApi* GetInstance();
+using Microsoft::WRL::ComPtr;
 
-    // A function to reset (delete) the singleton.
-    void ResetInstance();
+// OpenXR + Windows-specific definitions.
+#define XR_NO_PROTOTYPES
+#define XR_USE_PLATFORM_WIN32
+#include <openxr/openxr.h>
+#include <openxr/openxr_platform.h>
 
-} // namespace layer_template
+// OpenXR loader interfaces.
+#include <loader_interfaces.h>
+
+// OpenXR utilities.
+#include <XrError.h>
+#include <XrMath.h>
+#include <XrSide.h>
+#include <XrStereoView.h>
+#include <XrToString.h>
+
+// FMT formatter.
+#include <fmt/format.h>

@@ -11,7 +11,7 @@
       <Buffers Value="40"/>
     </EventCollector>
 
-    <EventProvider Name="CBF3ADCD-42B1-4C38-830C-91980AF201F8" Id="OpenXRTemplate" />
+    <EventProvider Name="{40633BC2-CA4A-4C13-88B6-7A55ED74E061}" Id="OpenXRMotionCompensation" />
 
     <!-- Watson logging -->
     <EventProvider Name="1377561D-9312-452C-AD13-C4A1C9C906E0" Id="Microsoft.Windows.FaultReporting" />

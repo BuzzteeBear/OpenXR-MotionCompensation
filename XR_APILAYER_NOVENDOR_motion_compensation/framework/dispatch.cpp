@@ -65,8 +65,32 @@ namespace LAYER_NAMESPACE {
         }
 
         // The list of extensions to remove or implicitly add.
+        PFN_xrEnumerateInstanceExtensionProperties xrEnumerateInstanceExtensionProperties = nullptr;
+        CHECK_XRCMD(apiLayerInfo->nextInfo->nextGetInstanceProcAddr(
+            XR_NULL_HANDLE,
+            "xrEnumerateInstanceExtensionProperties",
+            reinterpret_cast<PFN_xrVoidFunction*>(&xrEnumerateInstanceExtensionProperties)));
+
+        uint32_t extensionsCount = 0;
+        CHECK_XRCMD(xrEnumerateInstanceExtensionProperties(nullptr, 0, &extensionsCount, nullptr));
+        std::vector<XrExtensionProperties> extensions(extensionsCount, {XR_TYPE_EXTENSION_PROPERTIES});
+        CHECK_XRCMD(
+            xrEnumerateInstanceExtensionProperties(nullptr, extensionsCount, &extensionsCount, extensions.data()));
+
+
         std::vector<std::string> blockedExtensions;
         std::vector<std::string> implicitExtensions;
+
+        for (const auto& extension : extensions)
+        {
+            if (!strcmp(XR_EXT_HP_MIXED_REALITY_CONTROLLER_EXTENSION_NAME, extension.extensionName) 
+                || !strcmp(XR_MSFT_CONTROLLER_MODEL_EXTENSION_NAME, extension.extensionName))
+            {
+                implicitExtensions.push_back(extension.extensionName); 
+            }
+        }
+
+        LAYER_NAMESPACE::GetInstance()->SetExtensions(implicitExtensions);
 
         // Dump the requested extensions.
         XrInstanceCreateInfo chainInstanceCreateInfo = *instanceCreateInfo;
