@@ -14,17 +14,7 @@ OpenXrTracker::OpenXrTracker(OpenXrApi* api)
     m_Api = api;
 }
 
-OpenXrTracker::~OpenXrTracker()
-{
-    for (auto binding : m_createdBindings)
-    {
-        delete binding;
-    }
-    for (auto path : m_createdPaths)
-    {
-        delete path;
-    }
-}
+OpenXrTracker::~OpenXrTracker(){}
 
 void OpenXrTracker::beginSession(XrSession session)
 {
@@ -54,33 +44,6 @@ void OpenXrTracker::beginSession(XrSession session)
         CHECK_XRCMD(m_Api->xrCreateAction(m_ActionSet, &actionCreateInfo, &m_TrackerPoseAction));
     }
     {
-        XrInteractionProfileSuggestedBinding suggestedBinding{XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING, nullptr};
-
-        XrActionSuggestedBinding* binding = new XrActionSuggestedBinding;
-        m_createdBindings.push_back(binding);
-        binding->action = m_TrackerPoseAction;
-
-        // use a Left simple controller to simulate the tracker.
-        XrPath* bindingPath = new XrPath;
-        m_createdPaths.push_back(bindingPath);
-        CHECK_XRCMD(m_Api->xrStringToPath(m_Api->GetXrInstance(), "/user/hand/left/input/grip/pose", bindingPath));
-        binding->binding = *bindingPath;
-
-        const std::string interactionProfilePath = m_Api->IsExtensionActivated(XR_MSFT_CONTROLLER_MODEL_EXTENSION_NAME)
-                                                       ? "/interaction_profiles/microsoft/motion_controller"
-                                                       : "/interaction_profiles/khr/simple_controller";
-
-        CHECK_XRCMD(m_Api->xrStringToPath(m_Api->GetXrInstance(),
-                                          interactionProfilePath.c_str(),
-                                          &suggestedBinding.interactionProfile));
-
-        suggestedBinding.suggestedBindings = binding;
-        suggestedBinding.countSuggestedBindings = 1;
-        CHECK_XRCMD(m_Api->xrSuggestInteractionProfileBindings(m_Api->GetXrInstance(), &suggestedBinding));
-
-        m_Bindings[interactionProfilePath] = {suggestedBinding, false};
-    }
-    {
         XrActionSpaceCreateInfo actionSpaceCreateInfo{XR_TYPE_ACTION_SPACE_CREATE_INFO, nullptr};
         actionSpaceCreateInfo.action = m_TrackerPoseAction;
         actionSpaceCreateInfo.subactionPath = XR_NULL_PATH;
@@ -95,11 +58,6 @@ void OpenXrTracker::endSession()
     {
         m_Api->xrDestroyActionSet(m_ActionSet);
         m_ActionSet = XR_NULL_HANDLE;
-    }
-    if (m_ViewSpace != XR_NULL_HANDLE)
-    {
-        m_Api->xrDestroySpace(m_ViewSpace);
-        m_ViewSpace = XR_NULL_HANDLE;
     }
 
     m_Session = XR_NULL_HANDLE;
@@ -131,12 +89,19 @@ bool OpenXrTracker::setReferencePose(XrTime frameTime)
     }
 }
 
-bool OpenXrTracker::getPoseDelta(XrPosef& trackerPose, XrTime frameTime) const
+bool OpenXrTracker::getPoseDelta(XrPosef& trackerPose, XrTime frameTime)
 {
     XrPosef curPose;
     if (getPose(curPose, frameTime))
     {
-        trackerPose = Pose::Multiply(curPose, m_ReferencePoseInverse);
+        // TODO: move initialization to appropriate location
+        if (!m_Initialized)
+        {
+            m_ReferencePoseInverse = curPose;
+            m_Initialized = true;
+        }
+
+        trackerPose = Pose::Multiply(Pose::Invert(curPose), m_ReferencePoseInverse);
         return true;
     }
     else
@@ -147,23 +112,6 @@ bool OpenXrTracker::getPoseDelta(XrPosef& trackerPose, XrTime frameTime) const
 
 bool OpenXrTracker::getPose(XrPosef& trackerPose, XrTime frameTime) const
 {
-    XrView eyeInViewSpace[2] = {{XR_TYPE_VIEW, nullptr}, {XR_TYPE_VIEW, nullptr}};
-    {
-        XrViewLocateInfo locateInfo{XR_TYPE_VIEW_LOCATE_INFO, nullptr};
-        locateInfo.viewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
-        locateInfo.space = m_ViewSpace;
-        locateInfo.displayTime = frameTime;
-
-        XrViewState state{XR_TYPE_VIEW_STATE, nullptr};
-        uint32_t viewCountOutput;
-        CHECK_HRCMD(
-            m_Api->OpenXrApi::xrLocateViews(m_Session, &locateInfo, &state, 2, &viewCountOutput, eyeInViewSpace));
-
-        if (!Pose::IsPoseValid(state.viewStateFlags))
-        {
-            return false;
-        }
-    }
     // Query the latest tracker pose.
     XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
     {
@@ -182,14 +130,13 @@ bool OpenXrTracker::getPose(XrPosef& trackerPose, XrTime frameTime) const
         getActionStateInfo.action = m_TrackerPoseAction;
         CHECK_XRCMD(m_Api->xrGetActionStatePose(m_Session, &getActionStateInfo, &actionStatePose));
 
-        // TODO: investigate why action state pose is not active
         if (!actionStatePose.isActive)
         {
             return false;
         }
     }
 
-    CHECK_XRCMD(m_Api->xrLocateSpace(m_TrackerSpace, m_ViewSpace, frameTime, &location));
+    CHECK_XRCMD(m_Api->OpenXrApi::xrLocateSpace(m_TrackerSpace, m_ViewSpace, frameTime, &location));
 
     if (!Pose::IsPoseValid(location.locationFlags))
     {

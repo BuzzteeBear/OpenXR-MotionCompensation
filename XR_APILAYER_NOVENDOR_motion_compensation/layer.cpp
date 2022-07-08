@@ -155,42 +155,35 @@ namespace
         XrResult xrSuggestInteractionProfileBindings(XrInstance instance,
             const XrInteractionProfileSuggestedBinding* suggestedBindings)
         {
-            // block controller biindings
-            if (suggestedBindings->countSuggestedBindings > 1 ||
-                getPath(suggestedBindings->interactionProfile) != "/interaction_profiles/microsoft/motion_controller")
+            DebugLog("suggestedBindings: %s\n", getXrPath(suggestedBindings->interactionProfile).c_str());         
+            const XrActionSuggestedBinding* it = suggestedBindings->suggestedBindings;
+            for (size_t i = 0 ; i < suggestedBindings->countSuggestedBindings ; i++)
             {
-                return XR_SUCCESS;
+                DebugLog("\tbinding: %s\n", getXrPath(it->binding).c_str());
+                it++;
             }
 
-            return OpenXrApi::xrSuggestInteractionProfileBindings(instance, suggestedBindings);
-
-            XrInteractionProfileSuggestedBinding profileBindings = *suggestedBindings;
+            XrInteractionProfileSuggestedBinding bindingProfiles = *suggestedBindings;
             std::vector<XrActionSuggestedBinding> bindings{};
-            std::vector<XrActionSuggestedBinding> bindingsToAdd{};
+            
             if (m_Tracker)
             {
-                auto newProfile = m_Tracker->m_Bindings.find(getPath(suggestedBindings->interactionProfile));
-                if (newProfile != m_Tracker->m_Bindings.end())
+                // override left hand pose action
+                // TODO: find a way to persist original pose action?
+                bindings.resize((size_t)bindingProfiles.countSuggestedBindings);
+                memcpy(bindings.data(),
+                       bindingProfiles.suggestedBindings,
+                       bindingProfiles.countSuggestedBindings * sizeof(XrActionSuggestedBinding));
+                for (XrActionSuggestedBinding& curBinding : bindings)
                 {
-                    bindings.resize((size_t)profileBindings.countSuggestedBindings);
-                    memcpy(bindings.data(),
-                           profileBindings.suggestedBindings,
-                           profileBindings.countSuggestedBindings * sizeof(XrActionSuggestedBinding));
-
-                    //  add bindings
-                    bindingsToAdd.resize((size_t)newProfile->second.first.countSuggestedBindings);
-                    memcpy(bindingsToAdd.data(),
-                           newProfile->second.first.suggestedBindings,
-                           newProfile->second.first.countSuggestedBindings * sizeof(XrActionSuggestedBinding));
-                    bindings.insert(bindings.end(), bindingsToAdd.begin(), bindingsToAdd.end());
-
-                    profileBindings.suggestedBindings = bindingsToAdd.data();
-                    profileBindings.countSuggestedBindings = (uint32_t)bindingsToAdd.size();
-                    newProfile->second.second = true;
+                    if (getXrPath(curBinding.binding) == "/user/hand/left/input/grip/pose")
+                    {
+                        curBinding.action = m_Tracker->m_TrackerPoseAction;
+                    }
                 }
+                bindingProfiles.suggestedBindings = bindings.data();
             }
-           
-            
+            return OpenXrApi::xrSuggestInteractionProfileBindings(instance, &bindingProfiles);    
         }
 
         XrResult xrCreateSession(XrInstance instance,
@@ -244,6 +237,7 @@ namespace
                 // memorize
                 if (XR_REFERENCE_SPACE_TYPE_VIEW == createInfo->referenceSpaceType)
                 {
+                    // TODO: update view space member variable? update tracker reference space?
                     DebugLog("xrCreateReferenceSpace::addViewSpace: %d\n", *space);
                     m_ViewSpaces.insert(*space);
                 }
@@ -266,15 +260,31 @@ namespace
                 bool spaceIsViewSpace = isViewSpace(space);
                 bool baseSpaceIsViewSpace = isViewSpace(baseSpace);
 
-                XrPosef trackerDelta;
+                XrPosef trackerDelta = Pose::Identity();
                 bool deltaSuccess = m_Tracker->getPoseDelta(trackerDelta, time);
+                /*
+                if (spaceIsViewSpace && !baseSpaceIsViewSpace)
+                {
+                    location->pose = Pose::Multiply(location->pose, trackerDelta);
+                                    }
+                if (baseSpaceIsViewSpace && !spaceIsViewSpace)
+                {
+                    // TODO: verify calculation
+                    location->pose = Pose::Multiply(trackerDelta, Pose::Invert(location->pose));
+                }
+                */
 
+                // test rotation
                 // save current location
                 XrVector3f pos = location->pose.position;
 
+                /*
                 int64_t milliseconds = (time / 1000000) % 10000;
                 float angle = (float)M_PI * 0.0002f * milliseconds;
+                */
 
+                float angle = (float)M_PI * 0.002f * (m_Counter++ %1000);
+               
                 if (spaceIsViewSpace && !baseSpaceIsViewSpace)
                 {
                     location->pose.position = {0, 0, 0};
@@ -291,6 +301,16 @@ namespace
                                                  DirectX::XMMatrixRotationRollPitchYaw(angle, 0.f, 0.f)));
                     location->pose.position = pos;
                 }
+
+                DebugLog("output pose\nx: %f y: %f z: %f\na: %f b: %f, c: %f d: %f\n",
+                         location->pose.position.x,
+                         location->pose.position.y,
+                         location->pose.position.z,
+                         location->pose.orientation.w,
+                         location->pose.orientation.x,
+                         location->pose.orientation.y,
+                         location->pose.orientation.z);  
+                
             }
             return result;
         }
@@ -309,17 +329,7 @@ namespace
                                                  viewCapacityInput,
                                                  viewCountOutput,
                                                  views));
-            // create reference space if necessary
-            if (!m_Tracker && !m_Tracker->m_Initialized)
-            {
-                // TODO: move tracker pose initializtion to an appropriate location
-                bool success = m_Tracker->setReferencePose(viewLocateInfo->displayTime);
-                if (!success)
-                {
-                    ErrorLog("unable to retrieve reference tracker pose\n");
-                }
-            }
-
+            
             // manipulate reference space location
             XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
             CHECK_XRCMD(xrLocateSpace(m_ViewSpace, viewLocateInfo->space, viewLocateInfo->displayTime, &location));
@@ -356,13 +366,14 @@ namespace
                          offsetPose.orientation.w,
                          offsetPose.orientation.x,
                          offsetPose.orientation.y,
-                         offsetPose.orientation.z);
-                */
+                         offsetPose.orientation.z);  
+                         */
             }
-            
 
             return XR_SUCCESS;
         }
+
+        XrSpace m_ViewSpace{XR_NULL_HANDLE};
 
       private:
         bool isSystemHandled(XrSystemId systemId) const
@@ -379,7 +390,7 @@ namespace
 
         std::set<XrSpace> m_ViewSpaces{};
 
-        const std::string getPath(XrPath path)
+        const std::string getXrPath(XrPath path)
         {
             char buf[XR_MAX_PATH_LENGTH];
             uint32_t count;
@@ -389,9 +400,9 @@ namespace
             return str;
         }
 
-        XrSpace m_LocalSpace{XR_NULL_HANDLE};
-        XrSpace m_ViewSpace{XR_NULL_HANDLE};
-        OpenXrTracker* m_Tracker;
+        OpenXrTracker* m_Tracker = nullptr;
+
+        size_t m_Counter{0};
     };
 
     std::unique_ptr<OpenXrLayer> g_instance = nullptr;

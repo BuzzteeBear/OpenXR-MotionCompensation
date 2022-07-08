@@ -23,3 +23,18 @@ SpacesInContainerLiterals: false
 SpacesInParentheses: false
 SpacesInSquareBrackets: false
 UseTab: Never
+AllowAllArgumentsOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: false 
+BreakBeforeBraces: Custom
+BraceWrapping:
+    AfterClass:      true   
+    AfterControlStatement: true
+    AfterEnum:       true
+    AfterFunction:   true          
+    AfterNamespace:  true                
+    AfterStruct:     true
+    AfterUnion:      true
+    BeforeCatch:     true
+    BeforeElse:      true   
+    IndentBraces:    false
+    SplitEmptyFunction: false

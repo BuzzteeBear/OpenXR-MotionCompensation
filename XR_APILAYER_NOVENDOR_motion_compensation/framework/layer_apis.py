@@ -14,18 +14,16 @@ override_functions = [
 requested_functions = [
     "xrGetInstanceProperties",
     "xrGetSystemProperties",
-    "xrEnumerateInstanceExtensionProperties",
-    "xrEnumerateViewConfigurationViews",
     "xrCreateAction",
     "xrCreateActionSet",
+    "xrCreateActionSpace",
     "xrStringToPath",
     "xrPathToString",
     "xrSuggestInteractionProfileBindings",
-    "xrCreateActionSpace",
     "xrSyncActions",
     "xrGetActionStatePose",
-    "xrDestroyActionSet",
     "xrDestroyAction",
+    "xrDestroyActionSet",
     "xrDestroySpace"
 ]
 
