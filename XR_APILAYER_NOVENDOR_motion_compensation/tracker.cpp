@@ -24,7 +24,8 @@ void OpenXrTracker::beginSession(XrSession session)
         XrReferenceSpaceCreateInfo referenceSpaceCreateInfo{XR_TYPE_REFERENCE_SPACE_CREATE_INFO, nullptr};
         referenceSpaceCreateInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_VIEW;
         referenceSpaceCreateInfo.poseInReferenceSpace = Pose::Identity();
-        CHECK_XRCMD(m_Api->OpenXrApi::xrCreateReferenceSpace(session, &referenceSpaceCreateInfo, &m_ViewSpace));
+        CHECK_XRCMD(m_Api->xrCreateReferenceSpace(session, &referenceSpaceCreateInfo, &m_ViewSpace));
+
     }
 
     // Create the resources for the tracker space.
@@ -79,7 +80,7 @@ bool OpenXrTracker::setReferencePose(XrTime frameTime)
     XrPosef curPose;
     if (getPose(curPose, frameTime))
     {
-        m_ReferencePoseInverse = Pose::Invert(curPose);
+        m_ReferencePose = curPose;
         m_Initialized = true;
         return true;
     }
@@ -97,11 +98,11 @@ bool OpenXrTracker::getPoseDelta(XrPosef& trackerPose, XrTime frameTime)
         // TODO: move initialization to appropriate location
         if (!m_Initialized)
         {
-            m_ReferencePoseInverse = curPose;
+            m_ReferencePose = curPose;
             m_Initialized = true;
         }
 
-        trackerPose = Pose::Multiply(Pose::Invert(curPose), m_ReferencePoseInverse);
+        trackerPose = Pose::Multiply(m_ReferencePose,Pose::Invert(curPose));
         return true;
     }
     else

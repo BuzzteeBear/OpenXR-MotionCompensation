@@ -234,10 +234,11 @@ namespace
             const XrResult result = OpenXrApi::xrCreateReferenceSpace(session, createInfo, space);
             if (XR_SUCCEEDED(result))
             {
-                // memorize
+                DebugLog("xrCreateReferenceSpace: %d type: %d \n", *space, createInfo->referenceSpaceType);
+                // memorize view spaces
                 if (XR_REFERENCE_SPACE_TYPE_VIEW == createInfo->referenceSpaceType)
                 {
-                    // TODO: update view space member variable? update tracker reference space?
+                    // TODO: after recentering headset: update view space member variable? update tracker reference space?
                     DebugLog("xrCreateReferenceSpace::addViewSpace: %d\n", *space);
                     m_ViewSpaces.insert(*space);
                 }
@@ -254,36 +255,47 @@ namespace
                               TLPArg(baseSpace, "baseSpace"),
                               TLArg(time, "Time"));
             DebugLog("xrLocateSpace: %d %d\n", space, baseSpace);
+
+            // test coupling view space to tracker space
+            if (isViewSpace(space))
+            {
+                // call getPose to locate tracker space
+                XrPosef pose;
+                m_Tracker->getPose(pose, time);
+                // return location of tracker space
+                return OpenXrApi::xrLocateSpace(m_Tracker->m_TrackerSpace, baseSpace, time, location);
+            }
+            return OpenXrApi::xrLocateSpace(space, baseSpace, time, location);
+
+            // determine original location
             const XrResult result = OpenXrApi::xrLocateSpace(space, baseSpace, time, location);
             if (isViewSpace(space) || isViewSpace(baseSpace))
             {
+                // manipulate pose using tracker
                 bool spaceIsViewSpace = isViewSpace(space);
                 bool baseSpaceIsViewSpace = isViewSpace(baseSpace);
 
                 XrPosef trackerDelta = Pose::Identity();
                 bool deltaSuccess = m_Tracker->getPoseDelta(trackerDelta, time);
-                /*
+                
                 if (spaceIsViewSpace && !baseSpaceIsViewSpace)
                 {
                     location->pose = Pose::Multiply(location->pose, trackerDelta);
-                                    }
+                }
                 if (baseSpaceIsViewSpace && !spaceIsViewSpace)
                 {
                     // TODO: verify calculation
-                    location->pose = Pose::Multiply(trackerDelta, Pose::Invert(location->pose));
+                    location->pose = Pose::Multiply(location->pose, Pose::Invert(trackerDelta));
                 }
-                */
-
+                
+                /*
                 // test rotation
                 // save current location
                 XrVector3f pos = location->pose.position;
 
-                /*
+                // determine rotation angle
                 int64_t milliseconds = (time / 1000000) % 10000;
                 float angle = (float)M_PI * 0.0002f * milliseconds;
-                */
-
-                float angle = (float)M_PI * 0.002f * (m_Counter++ %1000);
                
                 if (spaceIsViewSpace && !baseSpaceIsViewSpace)
                 {
@@ -310,6 +322,7 @@ namespace
                          location->pose.orientation.x,
                          location->pose.orientation.y,
                          location->pose.orientation.z);  
+                         */
                 
             }
             return result;
@@ -321,15 +334,7 @@ namespace
                                uint32_t viewCapacityInput,
                                uint32_t* viewCountOutput,
                                XrView* views)
-        {
-            // call xrLocateViews of next layer
-            CHECK_XRCMD(OpenXrApi::xrLocateViews(session,
-                                                 viewLocateInfo,
-                                                 viewState,
-                                                 viewCapacityInput,
-                                                 viewCountOutput,
-                                                 views));
-            
+        {           
             // manipulate reference space location
             XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
             CHECK_XRCMD(xrLocateSpace(m_ViewSpace, viewLocateInfo->space, viewLocateInfo->displayTime, &location));
@@ -340,22 +345,18 @@ namespace
                                                   viewLocateInfo->viewConfigurationType,
                                                   viewLocateInfo->displayTime,
                                                   m_ViewSpace};
-            uint32_t manipulatedCount;
-            std::vector<XrView> m_ManipulatedViews;
-            m_ManipulatedViews.resize(*viewCountOutput, {XR_TYPE_VIEW});
+           
             CHECK_XRCMD(OpenXrApi::xrLocateViews(session,
                                                  &offsetLocateViewInfo,
                                                  viewState,
                                                  viewCapacityInput,
-                                                 &manipulatedCount,
-                                                 m_ManipulatedViews.data()));
-            CHECK(manipulatedCount == *viewCountOutput);
+                                                 viewCountOutput,
+                                                 views));
             
             XrView* curView = views;
             for (uint32_t i = 0; i < *viewCountOutput; i++)
             {
-                XrPosef offsetPose = Pose::Multiply(curView->pose, Pose::Invert(m_ManipulatedViews[i].pose));
-                curView->pose = Pose::Multiply(offsetPose, location.pose);
+                curView->pose = Pose::Multiply(location.pose, curView->pose);
                 curView++;
                 /*
                 DebugLog("offset pose %d:\nx: %f y: %f z: %f\na: %f b: %f, c: %f d: %f\n",
@@ -373,7 +374,6 @@ namespace
             return XR_SUCCESS;
         }
 
-        XrSpace m_ViewSpace{XR_NULL_HANDLE};
 
       private:
         bool isSystemHandled(XrSystemId systemId) const
@@ -400,9 +400,8 @@ namespace
             return str;
         }
 
+        XrSpace m_ViewSpace{XR_NULL_HANDLE};
         OpenXrTracker* m_Tracker = nullptr;
-
-        size_t m_Counter{0};
     };
 
     std::unique_ptr<OpenXrLayer> g_instance = nullptr;
