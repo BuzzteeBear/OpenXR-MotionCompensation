@@ -2,11 +2,13 @@
 override_functions = [
     "xrGetSystem",
     "xrCreateSession",
+    "xrBeginSession",
+    "xrAttachSessionActionSets",
+    "xrSuggestInteractionProfileBindings",
     "xrCreateReferenceSpace",
     "xrLocateSpace",
     "xrLocateViews",
-    "xrAttachSessionActionSets",
-    "xrSuggestInteractionProfileBindings"
+    "xrEndFrame"
 ]
 
 # The list of OpenXR functions our layer will use from the runtime.

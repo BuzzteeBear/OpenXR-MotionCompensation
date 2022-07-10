@@ -152,6 +152,22 @@ namespace LAYER_NAMESPACE
 		PFN_xrDestroySpace m_xrDestroySpace{ nullptr };
 
 	public:
+		virtual XrResult xrBeginSession(XrSession session, const XrSessionBeginInfo* beginInfo)
+		{
+			return m_xrBeginSession(session, beginInfo);
+		}
+	private:
+		PFN_xrBeginSession m_xrBeginSession{ nullptr };
+
+	public:
+		virtual XrResult xrEndFrame(XrSession session, const XrFrameEndInfo* frameEndInfo)
+		{
+			return m_xrEndFrame(session, frameEndInfo);
+		}
+	private:
+		PFN_xrEndFrame m_xrEndFrame{ nullptr };
+
+	public:
 		virtual XrResult xrLocateViews(XrSession session, const XrViewLocateInfo* viewLocateInfo, XrViewState* viewState, uint32_t viewCapacityInput, uint32_t* viewCountOutput, XrView* views)
 		{
 			return m_xrLocateViews(session, viewLocateInfo, viewState, viewCapacityInput, viewCountOutput, views);

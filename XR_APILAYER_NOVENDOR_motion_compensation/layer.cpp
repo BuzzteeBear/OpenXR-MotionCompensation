@@ -127,6 +127,49 @@ namespace
             return result;
         }
 
+        XrResult xrCreateSession(XrInstance instance,
+                                 const XrSessionCreateInfo* createInfo,
+                                 XrSession* session) override
+        {
+            if (createInfo->type != XR_TYPE_SESSION_CREATE_INFO)
+            {
+                return XR_ERROR_VALIDATION_FAILURE;
+            }
+
+            TraceLoggingWrite(g_traceProvider,
+                              "xrCreateSession",
+                              TLPArg(instance, "Instance"),
+                              TLArg((int)createInfo->systemId, "SystemId"),
+                              TLArg(createInfo->createFlags, "CreateFlags"));
+
+            const XrResult result = OpenXrApi::xrCreateSession(instance, createInfo, session);
+            if (XR_SUCCEEDED(result))
+            {
+                if (isSystemHandled(createInfo->systemId))
+                {
+                    XrReferenceSpaceCreateInfo referenceSpaceCreateInfo{XR_TYPE_REFERENCE_SPACE_CREATE_INFO,
+                                                                        nullptr,
+                                                                        XR_REFERENCE_SPACE_TYPE_VIEW,
+                                                                        Pose::Identity()};
+                    CHECK_XRCMD(xrCreateReferenceSpace(*session, &referenceSpaceCreateInfo, &m_ViewSpace));
+
+                    m_Tracker = new OpenXrTracker(this);
+                    // m_Tracker->beginSession(*session);
+                }
+
+                TraceLoggingWrite(g_traceProvider, "xrCreateSession", TLPArg(*session, "Session"));
+            }
+
+            return result;
+        }
+
+        XrResult xrBeginSession(XrSession session, const XrSessionBeginInfo* beginInfo)
+        {
+            XrResult result = OpenXrApi::xrBeginSession(session, beginInfo);
+            m_ViewConfigType = beginInfo->primaryViewConfigurationType;
+            return result;
+        }
+
         XrResult xrAttachSessionActionSets(XrSession session, const XrSessionActionSetsAttachInfo* attachInfo) override
         {
             XrSessionActionSetsAttachInfo chainAttachInfo = *attachInfo;
@@ -186,42 +229,6 @@ namespace
             return OpenXrApi::xrSuggestInteractionProfileBindings(instance, &bindingProfiles);    
         }
 
-        XrResult xrCreateSession(XrInstance instance,
-                                 const XrSessionCreateInfo* createInfo,
-                                 XrSession* session) override
-        {
-            if (createInfo->type != XR_TYPE_SESSION_CREATE_INFO)
-            {
-                return XR_ERROR_VALIDATION_FAILURE;
-            }
-
-            TraceLoggingWrite(g_traceProvider,
-                              "xrCreateSession",
-                              TLPArg(instance, "Instance"),
-                              TLArg((int)createInfo->systemId, "SystemId"),
-                              TLArg(createInfo->createFlags, "CreateFlags"));
-
-            const XrResult result = OpenXrApi::xrCreateSession(instance, createInfo, session);
-            if (XR_SUCCEEDED(result))
-            {
-                if (isSystemHandled(createInfo->systemId))
-                {
-                    XrReferenceSpaceCreateInfo referenceSpaceCreateInfo{XR_TYPE_REFERENCE_SPACE_CREATE_INFO,
-                                                                        nullptr,
-                                                                        XR_REFERENCE_SPACE_TYPE_VIEW,
-                                                                        Pose::Identity()};
-                    CHECK_XRCMD(xrCreateReferenceSpace(*session, &referenceSpaceCreateInfo, &m_ViewSpace));
-
-                    m_Tracker = new OpenXrTracker(this);
-                    m_Tracker->beginSession(*session);                    
-                }
-
-                TraceLoggingWrite(g_traceProvider, "xrCreateSession", TLPArg(*session, "Session"));
-            }
-
-            return result;
-        }
-
         XrResult xrCreateReferenceSpace(XrSession session,
                                         const XrReferenceSpaceCreateInfo* createInfo,
                                         XrSpace* space) override
@@ -256,6 +263,7 @@ namespace
                               TLArg(time, "Time"));
             DebugLog("xrLocateSpace: %d %d\n", space, baseSpace);
 
+            /*
             // test coupling view space to tracker space
             if (isViewSpace(space))
             {
@@ -266,15 +274,18 @@ namespace
                 return OpenXrApi::xrLocateSpace(m_Tracker->m_TrackerSpace, baseSpace, time, location);
             }
             return OpenXrApi::xrLocateSpace(space, baseSpace, time, location);
+            */
 
             // determine original location
             const XrResult result = OpenXrApi::xrLocateSpace(space, baseSpace, time, location);
             if (isViewSpace(space) || isViewSpace(baseSpace))
             {
+                
                 // manipulate pose using tracker
                 bool spaceIsViewSpace = isViewSpace(space);
                 bool baseSpaceIsViewSpace = isViewSpace(baseSpace);
 
+                /*
                 XrPosef trackerDelta = Pose::Identity();
                 bool deltaSuccess = m_Tracker->getPoseDelta(trackerDelta, time);
                 
@@ -287,8 +298,8 @@ namespace
                     // TODO: verify calculation
                     location->pose = Pose::Multiply(location->pose, Pose::Invert(trackerDelta));
                 }
+                */
                 
-                /*
                 // test rotation
                 // save current location
                 XrVector3f pos = location->pose.position;
@@ -313,7 +324,7 @@ namespace
                                                  DirectX::XMMatrixRotationRollPitchYaw(angle, 0.f, 0.f)));
                     location->pose.position = pos;
                 }
-
+                /*
                 DebugLog("output pose\nx: %f y: %f z: %f\na: %f b: %f, c: %f d: %f\n",
                          location->pose.position.x,
                          location->pose.position.y,
@@ -334,20 +345,21 @@ namespace
                                uint32_t viewCapacityInput,
                                uint32_t* viewCountOutput,
                                XrView* views)
-        {           
+        {       
+            DebugLog("xrLocateViews: %d\n", viewLocateInfo->space); 
             // manipulate reference space location
             XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
             CHECK_XRCMD(xrLocateSpace(m_ViewSpace, viewLocateInfo->space, viewLocateInfo->displayTime, &location));
 
             // determine eye offset
-            XrViewLocateInfo offsetLocateViewInfo{viewLocateInfo->type,
+            XrViewLocateInfo offsetViewLocateInfo{viewLocateInfo->type,
                                                   nullptr,
                                                   viewLocateInfo->viewConfigurationType,
                                                   viewLocateInfo->displayTime,
                                                   m_ViewSpace};
            
             CHECK_XRCMD(OpenXrApi::xrLocateViews(session,
-                                                 &offsetLocateViewInfo,
+                                                 &offsetViewLocateInfo,
                                                  viewState,
                                                  viewCapacityInput,
                                                  viewCountOutput,
@@ -374,6 +386,98 @@ namespace
             return XR_SUCCESS;
         }
 
+        XrResult xrEndFrame(XrSession session, const XrFrameEndInfo* frameEndInfo) override
+        {
+            XrFrameEndInfo resetInfo = *frameEndInfo;
+            std::vector<const XrCompositionLayerBaseHeader const*> resetLayers{};
+            std::vector<XrCompositionLayerProjection*> resetProjectionLayers{};
+            std::vector<std::vector<XrCompositionLayerProjectionView>*> resetViews{};
+           
+            for (uint32_t i = 0; i < frameEndInfo->layerCount; i++)
+            {
+                XrCompositionLayerBaseHeader baseHeader = *frameEndInfo->layers[i];
+                XrCompositionLayerBaseHeader* headerPtr{nullptr}; 
+                if (XR_TYPE_COMPOSITION_LAYER_PROJECTION == baseHeader.type)
+                {
+                    DebugLog("xrEndFrame: projection layer %d, space: ", i, baseHeader.space);
+
+                    const XrCompositionLayerProjection const * projectionLayer =
+                        reinterpret_cast<const XrCompositionLayerProjection const*>(frameEndInfo->layers[i]);
+
+                    std::vector<XrCompositionLayerProjectionView>* projectionViews =
+                        new std::vector<XrCompositionLayerProjectionView>{};
+                    resetViews.push_back(projectionViews);
+                    projectionViews->resize(projectionLayer->viewCount);
+                    memcpy(projectionViews->data(),
+                           projectionLayer->views,
+                           projectionLayer->viewCount * sizeof(XrCompositionLayerProjectionView));
+             
+                    XrViewLocateInfo viewLocateInfo{XR_TYPE_VIEW_LOCATE_INFO,
+                                                    nullptr,
+                                                    m_ViewConfigType,
+                                                    frameEndInfo->displayTime,
+                                                    baseHeader.space};
+                    XrViewState viewState;
+                    uint32_t numViews = getNumViews();
+                    uint32_t numOutputViews; 
+                    std::vector<XrView> views;
+                    views.resize(numViews);
+
+                    CHECK_XRCMD(OpenXrApi::xrLocateViews(session,
+                                                         &viewLocateInfo,
+                                                         &viewState,
+                                                         numViews,
+                                                         &numOutputViews,
+                                                         views.data()));
+
+                    CHECK(numViews == numOutputViews);
+                    for (uint32_t j = 0; j < numOutputViews; j++)
+                    {
+                        (*projectionViews)[j].pose = views[j].pose;
+                    }
+                    // TODO: create on heap
+                    XrCompositionLayerProjection* const resetProjectionLayer =
+                        new XrCompositionLayerProjection{baseHeader.type,
+                                                         baseHeader.next,
+                                                         baseHeader.layerFlags,
+                                                         baseHeader.space,
+                                                         numOutputViews,
+                                                         projectionViews->data()};
+                    resetProjectionLayers.push_back(resetProjectionLayer);  
+                    headerPtr = reinterpret_cast<XrCompositionLayerBaseHeader*>(resetProjectionLayer);
+                }
+                if (!headerPtr)
+                {
+                    resetLayers.push_back(frameEndInfo->layers[i]); 
+                }
+                else
+                {
+                    const XrCompositionLayerBaseHeader* const baseHeaderPtr = headerPtr;
+                    resetLayers.push_back(baseHeaderPtr);
+                }
+            }
+            XrFrameEndInfo resetFrameEndInfo{frameEndInfo->type,
+                                             frameEndInfo->next,
+                                             frameEndInfo->displayTime,
+                                             frameEndInfo->environmentBlendMode,
+                                             frameEndInfo->layerCount,
+                                             resetLayers.data()};
+
+            XrResult result  = OpenXrApi::xrEndFrame(session, frameEndInfo);
+            // clean up memory
+            for (auto layer : resetProjectionLayers)
+            {
+                delete layer;
+            }
+            for (auto views : resetViews)
+            {
+                delete views;
+            }
+
+
+            return result;
+        }
+
 
       private:
         bool isSystemHandled(XrSystemId systemId) const
@@ -386,6 +490,15 @@ namespace
         bool isViewSpace(XrSpace space) const
         {
             return m_ViewSpaces.count(space);
+        }
+
+        uint32_t getNumViews()
+        {
+            return XR_VIEW_CONFIGURATION_TYPE_PRIMARY_MONO == m_ViewConfigType                                ? 1
+                   : XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO == m_ViewConfigType                            ? 2
+                   : XR_VIEW_CONFIGURATION_TYPE_PRIMARY_QUAD_VARJO == m_ViewConfigType                        ? 4
+                   : XR_VIEW_CONFIGURATION_TYPE_SECONDARY_MONO_FIRST_PERSON_OBSERVER_MSFT == m_ViewConfigType ? 1
+                                                                                                              : 0;
         }
 
         std::set<XrSpace> m_ViewSpaces{};
@@ -401,6 +514,7 @@ namespace
         }
 
         XrSpace m_ViewSpace{XR_NULL_HANDLE};
+        XrViewConfigurationType m_ViewConfigType{XR_VIEW_CONFIGURATION_TYPE_MAX_ENUM};
         OpenXrTracker* m_Tracker = nullptr;
     };
 
