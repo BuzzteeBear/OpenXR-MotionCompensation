@@ -18,7 +18,9 @@ class OpenXrTracker
     bool getPoseDelta(XrPosef& trackerPose, XrTime frameTime);
     bool getPose(XrPosef& trackerPose, XrTime frameTime) const;
 
-    bool m_Initialized{false};
+    bool m_IsInitialized{false};
+    bool m_IsBindingSuggested{false};
+    bool m_IsActionSetAttached{false};
     XrActionSet m_ActionSet{XR_NULL_HANDLE};
     XrAction m_TrackerPoseAction{XR_NULL_HANDLE};
     XrSpace m_TrackerSpace{XR_NULL_HANDLE};
@@ -27,6 +29,8 @@ class OpenXrTracker
 
     XrSession m_Session{XR_NULL_HANDLE};
     motion_compensation_layer::OpenXrApi* m_Api;
-    XrSpace m_ViewSpace{XR_NULL_HANDLE};
+    XrSpace m_ReferenceSpace{XR_NULL_HANDLE};
     XrPosef m_ReferencePose{xr::math::Pose::Identity()};
+    XrPosef m_LastPoseDelta{xr::math::Pose::Identity()};
+    XrTime m_LastPoseTime{0};
 };

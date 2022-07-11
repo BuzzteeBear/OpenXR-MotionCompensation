@@ -91,6 +91,9 @@ namespace
             TraceLoggingWrite(g_traceProvider, "xrCreateInstance", TLArg(runtimeName.c_str(), "RuntimeName"));
             Log("Application: %s\n", GetApplicationName().c_str());
             Log("Using OpenXR runtime: %s\n", runtimeName.c_str());
+            
+            // initiate tracker object
+            m_Tracker = new OpenXrTracker(this);
 
             return XR_SUCCESS;
         }
@@ -152,9 +155,6 @@ namespace
                                                                         XR_REFERENCE_SPACE_TYPE_VIEW,
                                                                         Pose::Identity()};
                     CHECK_XRCMD(xrCreateReferenceSpace(*session, &referenceSpaceCreateInfo, &m_ViewSpace));
-
-                    m_Tracker = new OpenXrTracker(this);
-                    // m_Tracker->beginSession(*session);
                 }
 
                 TraceLoggingWrite(g_traceProvider, "xrCreateSession", TLPArg(*session, "Session"));
@@ -167,6 +167,10 @@ namespace
         {
             XrResult result = OpenXrApi::xrBeginSession(session, beginInfo);
             m_ViewConfigType = beginInfo->primaryViewConfigurationType;
+            if (m_Tracker)
+            {
+                m_Tracker->beginSession(session);
+            }
             return result;
         }
 
@@ -188,8 +192,9 @@ namespace
                     newActionSets[nextActionSetSlot++] = trackerActionSet;
 
                     chainAttachInfo.actionSets = newActionSets.data();
-                    chainAttachInfo.countActionSets++;
+                    chainAttachInfo.countActionSets = nextActionSetSlot;
                 }
+                m_Tracker->m_IsActionSetAttached = true;
             }
 
             return OpenXrApi::xrAttachSessionActionSets(session, &chainAttachInfo);
@@ -222,6 +227,7 @@ namespace
                     if (getXrPath(curBinding.binding) == "/user/hand/left/input/grip/pose")
                     {
                         curBinding.action = m_Tracker->m_TrackerPoseAction;
+                        m_Tracker->m_IsBindingSuggested = true;
                     }
                 }
                 bindingProfiles.suggestedBindings = bindings.data();
@@ -262,20 +268,7 @@ namespace
                               TLPArg(baseSpace, "baseSpace"),
                               TLArg(time, "Time"));
             DebugLog("xrLocateSpace: %d %d\n", space, baseSpace);
-
-            /*
-            // test coupling view space to tracker space
-            if (isViewSpace(space))
-            {
-                // call getPose to locate tracker space
-                XrPosef pose;
-                m_Tracker->getPose(pose, time);
-                // return location of tracker space
-                return OpenXrApi::xrLocateSpace(m_Tracker->m_TrackerSpace, baseSpace, time, location);
-            }
-            return OpenXrApi::xrLocateSpace(space, baseSpace, time, location);
-            */
-
+           
             // determine original location
             const XrResult result = OpenXrApi::xrLocateSpace(space, baseSpace, time, location);
             if (isViewSpace(space) || isViewSpace(baseSpace))
@@ -285,7 +278,6 @@ namespace
                 bool spaceIsViewSpace = isViewSpace(space);
                 bool baseSpaceIsViewSpace = isViewSpace(baseSpace);
 
-                /*
                 XrPosef trackerDelta = Pose::Identity();
                 bool deltaSuccess = m_Tracker->getPoseDelta(trackerDelta, time);
                 
@@ -298,8 +290,8 @@ namespace
                     // TODO: verify calculation
                     location->pose = Pose::Multiply(location->pose, Pose::Invert(trackerDelta));
                 }
-                */
                 
+                /*
                 // test rotation
                 // save current location
                 XrVector3f pos = location->pose.position;
@@ -324,7 +316,6 @@ namespace
                                                  DirectX::XMMatrixRotationRollPitchYaw(angle, 0.f, 0.f)));
                     location->pose.position = pos;
                 }
-                /*
                 DebugLog("output pose\nx: %f y: %f z: %f\na: %f b: %f, c: %f d: %f\n",
                          location->pose.position.x,
                          location->pose.position.y,
@@ -365,30 +356,41 @@ namespace
                                                  viewCountOutput,
                                                  views));
             
-            XrView* curView = views;
             for (uint32_t i = 0; i < *viewCountOutput; i++)
             {
-                curView->pose = Pose::Multiply(location.pose, curView->pose);
-                curView++;
-                /*
-                DebugLog("offset pose %d:\nx: %f y: %f z: %f\na: %f b: %f, c: %f d: %f\n",
-                         i,
-                         offsetPose.position.x,
-                         offsetPose.position.y,
-                         offsetPose.position.z,
-                         offsetPose.orientation.w,
-                         offsetPose.orientation.x,
-                         offsetPose.orientation.y,
-                         offsetPose.orientation.z);  
-                         */
+                views[i].pose = Pose::Multiply(views[i].pose, location.pose);
             }
 
             return XR_SUCCESS;
+        }  
+
+        XrResult xrSyncActions(XrSession session, const XrActionsSyncInfo* syncInfo) override
+        {
+            XrActionsSyncInfo chainSyncInfo = *syncInfo;
+            std::vector<XrActiveActionSet> newActiveActionSets;
+            if (m_Tracker)
+            {
+                const auto trackerActionSet = m_Tracker->m_ActionSet;
+                if (trackerActionSet != XR_NULL_HANDLE)
+                {
+                    newActiveActionSets.resize((size_t)chainSyncInfo.countActiveActionSets + 1);
+                    memcpy(newActiveActionSets.data(),
+                           chainSyncInfo.activeActionSets,
+                           chainSyncInfo.countActiveActionSets * sizeof(XrActionSet));
+                    uint32_t nextActionSetSlot = chainSyncInfo.countActiveActionSets;
+
+                    newActiveActionSets[nextActionSetSlot].actionSet = trackerActionSet;
+                    newActiveActionSets[nextActionSetSlot++].subactionPath = XR_NULL_PATH;
+
+                    chainSyncInfo.activeActionSets = newActiveActionSets.data();
+                    chainSyncInfo.countActiveActionSets = nextActionSetSlot;
+                }
+            }
+            return OpenXrApi::xrSyncActions(session, syncInfo);
         }
 
         XrResult xrEndFrame(XrSession session, const XrFrameEndInfo* frameEndInfo) override
         {
-            XrFrameEndInfo resetInfo = *frameEndInfo;
             std::vector<const XrCompositionLayerBaseHeader const*> resetLayers{};
             std::vector<XrCompositionLayerProjection*> resetProjectionLayers{};
             std::vector<std::vector<XrCompositionLayerProjectionView>*> resetViews{};
@@ -399,7 +401,7 @@ namespace
                 XrCompositionLayerBaseHeader* headerPtr{nullptr}; 
                 if (XR_TYPE_COMPOSITION_LAYER_PROJECTION == baseHeader.type)
                 {
-                    DebugLog("xrEndFrame: projection layer %d, space: ", i, baseHeader.space);
+                    DebugLog("xrEndFrame: projection layer %d, space: %d\n", i, baseHeader.space);
 
                     const XrCompositionLayerProjection const * projectionLayer =
                         reinterpret_cast<const XrCompositionLayerProjection const*>(frameEndInfo->layers[i]);
@@ -412,16 +414,17 @@ namespace
                            projectionLayer->views,
                            projectionLayer->viewCount * sizeof(XrCompositionLayerProjectionView));
              
+                    // TODO: save original eye poses and recycle here
                     XrViewLocateInfo viewLocateInfo{XR_TYPE_VIEW_LOCATE_INFO,
                                                     nullptr,
                                                     m_ViewConfigType,
                                                     frameEndInfo->displayTime,
                                                     baseHeader.space};
-                    XrViewState viewState;
+                    XrViewState viewState{XR_TYPE_VIEW_STATE};
                     uint32_t numViews = getNumViews();
                     uint32_t numOutputViews; 
                     std::vector<XrView> views;
-                    views.resize(numViews);
+                    views.resize(numViews, {XR_TYPE_VIEW});
 
                     CHECK_XRCMD(OpenXrApi::xrLocateViews(session,
                                                          &viewLocateInfo,
@@ -435,7 +438,7 @@ namespace
                     {
                         (*projectionViews)[j].pose = views[j].pose;
                     }
-                    // TODO: create on heap
+                    // create layer with reset view poses
                     XrCompositionLayerProjection* const resetProjectionLayer =
                         new XrCompositionLayerProjection{baseHeader.type,
                                                          baseHeader.next,
@@ -463,7 +466,8 @@ namespace
                                              frameEndInfo->layerCount,
                                              resetLayers.data()};
 
-            XrResult result  = OpenXrApi::xrEndFrame(session, frameEndInfo);
+            XrResult result = OpenXrApi::xrEndFrame(session, &resetFrameEndInfo);
+            
             // clean up memory
             for (auto layer : resetProjectionLayers)
             {
@@ -474,10 +478,8 @@ namespace
                 delete views;
             }
 
-
             return result;
         }
-
 
       private:
         bool isSystemHandled(XrSystemId systemId) const

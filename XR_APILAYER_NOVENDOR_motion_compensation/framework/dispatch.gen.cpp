@@ -255,6 +255,30 @@ namespace LAYER_NAMESPACE
 		return result;
 	}
 
+	XrResult xrSyncActions(XrSession session, const XrActionsSyncInfo* syncInfo)
+	{
+		TraceLoggingWrite(g_traceProvider, "xrSyncActions");
+
+		XrResult result;
+		try
+		{
+			result = LAYER_NAMESPACE::GetInstance()->xrSyncActions(session, syncInfo);
+		}
+		catch (std::exception exc)
+		{
+			TraceLoggingWrite(g_traceProvider, "xrSyncActions_Error", TLArg(exc.what(), "Error"));
+			ErrorLog("xrSyncActions: %s\n", exc.what());
+			result = XR_ERROR_RUNTIME_FAILURE;
+		}
+
+		TraceLoggingWrite(g_traceProvider, "xrSyncActions_Result", TLArg(xr::ToCString(result), "Result"));
+		if (XR_FAILED(result)) {
+			ErrorLog("xrSyncActions failed with %s\n", xr::ToCString(result));
+		}
+
+		return result;
+	}
+
 
 	// Auto-generated dispatcher handler.
 	XrResult OpenXrApi::xrGetInstanceProcAddr(XrInstance instance, const char* name, PFN_xrVoidFunction* function)
@@ -313,6 +337,11 @@ namespace LAYER_NAMESPACE
 			m_xrAttachSessionActionSets = reinterpret_cast<PFN_xrAttachSessionActionSets>(*function);
 			*function = reinterpret_cast<PFN_xrVoidFunction>(LAYER_NAMESPACE::xrAttachSessionActionSets);
 		}
+		else if (apiName == "xrSyncActions")
+		{
+			m_xrSyncActions = reinterpret_cast<PFN_xrSyncActions>(*function);
+			*function = reinterpret_cast<PFN_xrVoidFunction>(LAYER_NAMESPACE::xrSyncActions);
+		}
 
 
 		return result;
@@ -368,10 +397,6 @@ namespace LAYER_NAMESPACE
 		if (XR_FAILED(m_xrGetInstanceProcAddr(m_instance, "xrGetActionStatePose", reinterpret_cast<PFN_xrVoidFunction*>(&m_xrGetActionStatePose))))
 		{
 			throw new std::runtime_error("Failed to resolve xrGetActionStatePose");
-		}
-		if (XR_FAILED(m_xrGetInstanceProcAddr(m_instance, "xrSyncActions", reinterpret_cast<PFN_xrVoidFunction*>(&m_xrSyncActions))))
-		{
-			throw new std::runtime_error("Failed to resolve xrSyncActions");
 		}
 		m_applicationName = createInfo->applicationInfo.applicationName;
 		return XR_SUCCESS;

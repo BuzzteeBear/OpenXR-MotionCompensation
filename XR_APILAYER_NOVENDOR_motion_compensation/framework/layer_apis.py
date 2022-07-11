@@ -8,6 +8,7 @@ override_functions = [
     "xrCreateReferenceSpace",
     "xrLocateSpace",
     "xrLocateViews",
+    "xrSyncActions",
     "xrEndFrame"
 ]
 
@@ -22,7 +23,6 @@ requested_functions = [
     "xrStringToPath",
     "xrPathToString",
     "xrSuggestInteractionProfileBindings",
-    "xrSyncActions",
     "xrGetActionStatePose",
     "xrDestroyAction",
     "xrDestroyActionSet",
