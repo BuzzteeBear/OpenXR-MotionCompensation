@@ -35,6 +35,83 @@ namespace
     using namespace motion_compensation_layer::log;
     using namespace xr::math;
 
+    class PoseCache
+    {
+      public:
+        PoseCache(XrTime tolerance) : m_Tolerance(tolerance){};
+     
+        void AddPose(XrTime time, XrPosef pose)
+        {
+            DebugLog("AddPose: %d\n", time);
+
+            m_Cache.insert({time, pose});
+        }
+
+        XrPosef GetPose(XrTime time) const
+        {
+            DebugLog("GetPose: %d\n", time);
+
+            auto it = m_Cache.lower_bound(time);
+            bool itIsEnd = m_Cache.end() == it;
+            if (!itIsEnd)
+            {
+                if (it->first <= time + m_Tolerance)
+                {
+                    // exact or succeeding entry is within tolerance
+                    return it->second;
+                }
+            }
+            auto lowerIt = it;
+            lowerIt--;
+            bool lowerItIsBegin = m_Cache.begin() == lowerIt;
+            if (!lowerItIsBegin)
+            {
+                if (lowerIt->first >= time - m_Tolerance)
+                {
+                    // preceding entry is within tolerance
+                    return lowerIt->second;
+                }
+            }
+            ErrorLog("UnmodifiedEyePoseCache::GetPose(%d) unable to find eye pose +-%dms\n", time, m_Tolerance);
+            if (!itIsEnd)
+            {
+                if (!lowerItIsBegin)
+                {
+                    // both etries are valid -> select better match
+                    auto returnIt = (time - lowerIt->first < it->first - time ? lowerIt : it);
+                    ErrorLog("Using best match: t = %d \n", returnIt->first);
+                    return returnIt->second;
+                }
+                // higher entry is first in cache -> use it
+                ErrorLog("Using best match: t = %d \n", it->first);
+                return it->second;
+            }
+            if (!lowerItIsBegin)
+            {
+                // lower entry is last in cache-> use it
+                ErrorLog("Using best match: t = %d \n", lowerIt->first);
+                return lowerIt->second;
+            }
+            // cache is emtpy -> return fallback
+            ErrorLog("Using fallback!!!\n", time);
+            return Pose::Identity();
+        }
+
+        // remove outdated entries
+        void CleanUp(XrTime time)
+        {
+            auto it = m_Cache.lower_bound(time);
+            if (m_Cache.end() != it && m_Cache.begin() != it)
+            {
+                m_Cache.erase(m_Cache.begin(), it);
+            }
+        }
+
+      private:
+        std::map<XrTime, XrPosef> m_Cache{};
+        XrTime m_Tolerance;
+    };
+
     class OpenXrLayer : public motion_compensation_layer::OpenXrApi
     {
       public:
@@ -43,6 +120,10 @@ namespace
         ~OpenXrLayer()
         {
             if (m_Tracker)
+            {
+                delete m_Tracker;
+            }
+            if (m_PoseCache)
             {
                 delete m_Tracker;
             }
@@ -91,9 +172,12 @@ namespace
             TraceLoggingWrite(g_traceProvider, "xrCreateInstance", TLArg(runtimeName.c_str(), "RuntimeName"));
             Log("Application: %s\n", GetApplicationName().c_str());
             Log("Using OpenXR runtime: %s\n", runtimeName.c_str());
-            
-            // initiate tracker object
+
+            // create tracker object
             m_Tracker = new OpenXrTracker(this);
+            
+            // TODO: make tolerance configurable?
+            m_PoseCache = new PoseCache(2);
 
             return XR_SUCCESS;
         }
@@ -167,8 +251,10 @@ namespace
         {
             XrResult result = OpenXrApi::xrBeginSession(session, beginInfo);
             m_ViewConfigType = beginInfo->primaryViewConfigurationType;
+           
             if (m_Tracker)
-            {
+            {  
+                // start tracker session
                 m_Tracker->beginSession(session);
             }
             return result;
@@ -201,11 +287,11 @@ namespace
         }
 
         XrResult xrSuggestInteractionProfileBindings(XrInstance instance,
-            const XrInteractionProfileSuggestedBinding* suggestedBindings)
+                                                     const XrInteractionProfileSuggestedBinding* suggestedBindings)
         {
-            DebugLog("suggestedBindings: %s\n", getXrPath(suggestedBindings->interactionProfile).c_str());         
+            DebugLog("suggestedBindings: %s\n", getXrPath(suggestedBindings->interactionProfile).c_str());
             const XrActionSuggestedBinding* it = suggestedBindings->suggestedBindings;
-            for (size_t i = 0 ; i < suggestedBindings->countSuggestedBindings ; i++)
+            for (size_t i = 0; i < suggestedBindings->countSuggestedBindings; i++)
             {
                 DebugLog("\tbinding: %s\n", getXrPath(it->binding).c_str());
                 it++;
@@ -213,7 +299,7 @@ namespace
 
             XrInteractionProfileSuggestedBinding bindingProfiles = *suggestedBindings;
             std::vector<XrActionSuggestedBinding> bindings{};
-            
+
             if (m_Tracker)
             {
                 // override left hand pose action
@@ -232,7 +318,7 @@ namespace
                 }
                 bindingProfiles.suggestedBindings = bindings.data();
             }
-            return OpenXrApi::xrSuggestInteractionProfileBindings(instance, &bindingProfiles);    
+            return OpenXrApi::xrSuggestInteractionProfileBindings(instance, &bindingProfiles);
         }
 
         XrResult xrCreateReferenceSpace(XrSession session,
@@ -251,7 +337,8 @@ namespace
                 // memorize view spaces
                 if (XR_REFERENCE_SPACE_TYPE_VIEW == createInfo->referenceSpaceType)
                 {
-                    // TODO: after recentering headset: update view space member variable? update tracker reference space?
+                    // TODO: after recentering headset: update view space member variable? update tracker reference
+                    // space?
                     DebugLog("xrCreateReferenceSpace::addViewSpace: %d\n", *space);
                     m_ViewSpaces.insert(*space);
                 }
@@ -268,64 +355,38 @@ namespace
                               TLPArg(baseSpace, "baseSpace"),
                               TLArg(time, "Time"));
             DebugLog("xrLocateSpace: %d %d\n", space, baseSpace);
-           
+
             // determine original location
             const XrResult result = OpenXrApi::xrLocateSpace(space, baseSpace, time, location);
-            if (isViewSpace(space) || isViewSpace(baseSpace))
+            if (m_Tracker && (isViewSpace(space) || isViewSpace(baseSpace)))
             {
-                
                 // manipulate pose using tracker
                 bool spaceIsViewSpace = isViewSpace(space);
                 bool baseSpaceIsViewSpace = isViewSpace(baseSpace);
 
                 XrPosef trackerDelta = Pose::Identity();
-                bool deltaSuccess = m_Tracker->getPoseDelta(trackerDelta, time);
-                
-                if (spaceIsViewSpace && !baseSpaceIsViewSpace)
+                if (m_Tracker->getPoseDelta(trackerDelta, time))
                 {
-                    location->pose = Pose::Multiply(location->pose, trackerDelta);
+                    if (spaceIsViewSpace && !baseSpaceIsViewSpace)
+                    {
+                        // TODO: add rotational and translational filters
+                        location->pose = Pose::Multiply(location->pose, trackerDelta);
+                    }
+                    if (baseSpaceIsViewSpace && !spaceIsViewSpace)
+                    {
+                        // TODO: verify calculation
+                        location->pose = Pose::Multiply(location->pose, Pose::Invert(trackerDelta));
+                    }
                 }
-                if (baseSpaceIsViewSpace && !spaceIsViewSpace)
+                else
                 {
-                    // TODO: verify calculation
-                    location->pose = Pose::Multiply(location->pose, Pose::Invert(trackerDelta));
+                    ErrorLog("unable to retrieve tracker pose delta\n");
                 }
-                
-                /*
-                // test rotation
-                // save current location
-                XrVector3f pos = location->pose.position;
-
-                // determine rotation angle
-                int64_t milliseconds = (time / 1000000) % 10000;
-                float angle = (float)M_PI * 0.0002f * milliseconds;
-               
-                if (spaceIsViewSpace && !baseSpaceIsViewSpace)
+                // safe pose for use in xrEndFrame
+                if (m_PoseCache)
                 {
-                    location->pose.position = {0, 0, 0};
-                    StoreXrPose(&location->pose,
-                                XMMatrixMultiply(LoadXrPose(location->pose),
-                                                 DirectX::XMMatrixRotationRollPitchYaw(-angle, 0.f, 0.f)));
-                    location->pose.position = pos;
+                    m_PoseCache->AddPose(time, trackerDelta);
                 }
-                if (baseSpaceIsViewSpace && !spaceIsViewSpace)
-                {
-                    location->pose.position = {0, 0, 0};
-                    StoreXrPose(&location->pose,
-                                XMMatrixMultiply(LoadXrPose(location->pose),
-                                                 DirectX::XMMatrixRotationRollPitchYaw(angle, 0.f, 0.f)));
-                    location->pose.position = pos;
-                }
-                DebugLog("output pose\nx: %f y: %f z: %f\na: %f b: %f, c: %f d: %f\n",
-                         location->pose.position.x,
-                         location->pose.position.y,
-                         location->pose.position.z,
-                         location->pose.orientation.w,
-                         location->pose.orientation.x,
-                         location->pose.orientation.y,
-                         location->pose.orientation.z);  
-                         */
-                
             }
             return result;
         }
@@ -336,8 +397,8 @@ namespace
                                uint32_t viewCapacityInput,
                                uint32_t* viewCountOutput,
                                XrView* views)
-        {       
-            DebugLog("xrLocateViews: %d\n", viewLocateInfo->space); 
+        {
+            DebugLog("xrLocateViews: %d\n", viewLocateInfo->space);
             // manipulate reference space location
             XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
             CHECK_XRCMD(xrLocateSpace(m_ViewSpace, viewLocateInfo->space, viewLocateInfo->displayTime, &location));
@@ -348,21 +409,21 @@ namespace
                                                   viewLocateInfo->viewConfigurationType,
                                                   viewLocateInfo->displayTime,
                                                   m_ViewSpace};
-           
+
             CHECK_XRCMD(OpenXrApi::xrLocateViews(session,
                                                  &offsetViewLocateInfo,
                                                  viewState,
                                                  viewCapacityInput,
                                                  viewCountOutput,
                                                  views));
-            
+
             for (uint32_t i = 0; i < *viewCountOutput; i++)
             {
                 views[i].pose = Pose::Multiply(views[i].pose, location.pose);
             }
 
             return XR_SUCCESS;
-        }  
+        }
 
         XrResult xrSyncActions(XrSession session, const XrActionsSyncInfo* syncInfo) override
         {
@@ -391,19 +452,23 @@ namespace
 
         XrResult xrEndFrame(XrSession session, const XrFrameEndInfo* frameEndInfo) override
         {
+            if (!m_PoseCache)
+            {
+                return OpenXrApi::xrEndFrame(session, frameEndInfo);
+            }
             std::vector<const XrCompositionLayerBaseHeader const*> resetLayers{};
             std::vector<XrCompositionLayerProjection*> resetProjectionLayers{};
             std::vector<std::vector<XrCompositionLayerProjectionView>*> resetViews{};
-           
+
             for (uint32_t i = 0; i < frameEndInfo->layerCount; i++)
             {
                 XrCompositionLayerBaseHeader baseHeader = *frameEndInfo->layers[i];
-                XrCompositionLayerBaseHeader* headerPtr{nullptr}; 
+                XrCompositionLayerBaseHeader* headerPtr{nullptr};
                 if (XR_TYPE_COMPOSITION_LAYER_PROJECTION == baseHeader.type)
                 {
                     DebugLog("xrEndFrame: projection layer %d, space: %d\n", i, baseHeader.space);
 
-                    const XrCompositionLayerProjection const * projectionLayer =
+                    const XrCompositionLayerProjection const* projectionLayer =
                         reinterpret_cast<const XrCompositionLayerProjection const*>(frameEndInfo->layers[i]);
 
                     std::vector<XrCompositionLayerProjectionView>* projectionViews =
@@ -413,45 +478,29 @@ namespace
                     memcpy(projectionViews->data(),
                            projectionLayer->views,
                            projectionLayer->viewCount * sizeof(XrCompositionLayerProjectionView));
-             
-                    // TODO: save original eye poses and recycle here
-                    XrViewLocateInfo viewLocateInfo{XR_TYPE_VIEW_LOCATE_INFO,
-                                                    nullptr,
-                                                    m_ViewConfigType,
-                                                    frameEndInfo->displayTime,
-                                                    baseHeader.space};
-                    XrViewState viewState{XR_TYPE_VIEW_STATE};
-                    uint32_t numViews = getNumViews();
-                    uint32_t numOutputViews; 
-                    std::vector<XrView> views;
-                    views.resize(numViews, {XR_TYPE_VIEW});
 
-                    CHECK_XRCMD(OpenXrApi::xrLocateViews(session,
-                                                         &viewLocateInfo,
-                                                         &viewState,
-                                                         numViews,
-                                                         &numOutputViews,
-                                                         views.data()));
-
-                    CHECK(numViews == numOutputViews);
-                    for (uint32_t j = 0; j < numOutputViews; j++)
+                   
+                    XrPosef reversedManipulation = Pose::Invert(m_PoseCache->GetPose(frameEndInfo->displayTime));
+                    m_PoseCache->CleanUp(frameEndInfo->displayTime);
+                    
+                    for (uint32_t j = 0; j < projectionLayer->viewCount; j++)
                     {
-                        (*projectionViews)[j].pose = views[j].pose;
+                        (*projectionViews)[j].pose = Pose::Multiply((*projectionViews)[j].pose , reversedManipulation);
                     }
                     // create layer with reset view poses
                     XrCompositionLayerProjection* const resetProjectionLayer =
-                        new XrCompositionLayerProjection{baseHeader.type,
-                                                         baseHeader.next,
-                                                         baseHeader.layerFlags,
-                                                         baseHeader.space,
-                                                         numOutputViews,
+                        new XrCompositionLayerProjection{projectionLayer->type,
+                                                         projectionLayer->next,
+                                                         projectionLayer->layerFlags,
+                                                         projectionLayer->space,
+                                                         projectionLayer->viewCount,
                                                          projectionViews->data()};
-                    resetProjectionLayers.push_back(resetProjectionLayer);  
+                    resetProjectionLayers.push_back(resetProjectionLayer);
                     headerPtr = reinterpret_cast<XrCompositionLayerBaseHeader*>(resetProjectionLayer);
                 }
                 if (!headerPtr)
                 {
-                    resetLayers.push_back(frameEndInfo->layers[i]); 
+                    resetLayers.push_back(frameEndInfo->layers[i]);
                 }
                 else
                 {
@@ -467,7 +516,7 @@ namespace
                                              resetLayers.data()};
 
             XrResult result = OpenXrApi::xrEndFrame(session, &resetFrameEndInfo);
-            
+
             // clean up memory
             for (auto layer : resetProjectionLayers)
             {
@@ -503,8 +552,6 @@ namespace
                                                                                                               : 0;
         }
 
-        std::set<XrSpace> m_ViewSpaces{};
-
         const std::string getXrPath(XrPath path)
         {
             char buf[XR_MAX_PATH_LENGTH];
@@ -515,9 +562,33 @@ namespace
             return str;
         }
 
+        void TestRotation(XrPosef* pose, XrTime time, bool reverse)
+        {
+            // save current location
+            XrVector3f pos = pose->position;
+
+            // determine rotation angle
+            int64_t milliseconds = (time / 1000000) % 10000;
+            float angle = (float)M_PI * 0.0002f * milliseconds;
+            if (reverse)
+            {
+                angle = -angle;
+            }
+
+            // remove translation to rotate around center
+            pose->position = {0, 0, 0};
+            StoreXrPose(pose,
+                        XMMatrixMultiply(LoadXrPose(*pose), DirectX::XMMatrixRotationRollPitchYaw(0.f, angle, 0.f)));
+            // reapply translation
+            pose->position = pos;
+        }
+
+
+        std::set<XrSpace> m_ViewSpaces{};
         XrSpace m_ViewSpace{XR_NULL_HANDLE};
         XrViewConfigurationType m_ViewConfigType{XR_VIEW_CONFIGURATION_TYPE_MAX_ENUM};
         OpenXrTracker* m_Tracker = nullptr;
+        PoseCache* m_PoseCache = nullptr;
     };
 
     std::unique_ptr<OpenXrLayer> g_instance = nullptr;
