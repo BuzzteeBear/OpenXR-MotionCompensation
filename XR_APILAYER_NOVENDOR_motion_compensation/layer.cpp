@@ -26,6 +26,7 @@
 
 #include "layer.h"
 #include "tracker.h"
+#include "utility.h"
 #include <log.h>
 #include <util.h>
 
@@ -35,131 +36,11 @@ namespace
     using namespace motion_compensation_layer::log;
     using namespace xr::math;
 
-    class PoseCache
-    {
-      public:
-        PoseCache(XrTime tolerance) : m_Tolerance(tolerance){};
-     
-        void AddPose(XrTime time, XrPosef pose)
-        {
-            DebugLog("AddPose: %d\n", time);
-
-            m_Cache.insert({time, pose});
-        }
-
-        XrPosef GetPose(XrTime time) const
-        {
-            TraceLoggingWrite(g_traceProvider, "GetPose", TLArg(time, "Time"));
-
-            DebugLog("GetPose: %d\n", time);
-
-            auto it = m_Cache.lower_bound(time);
-            bool itIsEnd = m_Cache.end() == it;
-            if (!itIsEnd)
-            {
-                if (it->first <= time + m_Tolerance)
-                {
-                    // exact or succeeding entry is within tolerance
-                    TraceLoggingWrite(g_traceProvider,
-                                      "GetPose_Found",
-                                      TLArg("LaterOrEqual", "Type"),
-                                      TLArg(it->first, "Time"),
-                                      TLArg(xr::ToString(it->second).c_str(), "Pose"));
-
-                    
-                    return it->second;
-                }
-            }
-            auto lowerIt = it;
-            lowerIt--;
-            bool lowerItIsBegin = m_Cache.begin() == lowerIt;
-            if (!lowerItIsBegin)
-            {
-                if (lowerIt->first >= time - m_Tolerance)
-                {
-                    // preceding entry is within tolerance
-                    TraceLoggingWrite(g_traceProvider,
-                                      "GetPose_Found",
-                                      TLArg("Earlier", "Type"),
-                                      TLArg(lowerIt->first, "Time"),
-                                      TLArg(xr::ToString(lowerIt->second).c_str(), "Pose"));
-
-                    return lowerIt->second;
-                }
-            }
-            ErrorLog("UnmodifiedEyePoseCache::GetPose(%d) unable to find eye pose +-%dms\n", time, m_Tolerance);
-            if (!itIsEnd)
-            {
-                if (!lowerItIsBegin)
-                {
-                    // both etries are valid -> select better match
-                    auto returnIt = (time - lowerIt->first < it->first - time ? lowerIt : it);
-                    TraceLoggingWrite(g_traceProvider,
-                                      "GetPose_Found",
-                                      TLArg("Estimated Both", "Type"),
-                                      TLArg(it->first, "Time"),
-                                      TLArg(xr::ToString(it->second).c_str(), "Pose"));
-                    ErrorLog("Using best match: t = %d \n", returnIt->first);
-                    return returnIt->second;
-                }
-                // higher entry is first in cache -> use it
-                ErrorLog("Using best match: t = %d \n", it->first);
-                TraceLoggingWrite(g_traceProvider,
-                                  "GetPose_Found",
-                                  TLArg("Estimated Earlier", "Type"),
-                                  TLArg(it->first, "Time"),
-                                  TLArg(xr::ToString(it->second).c_str(), "Pose"));
-                return it->second;
-            }
-            if (!lowerItIsBegin)
-            {
-                // lower entry is last in cache-> use it
-                ErrorLog("Using best match: t = %d \n", lowerIt->first);
-                TraceLoggingWrite(g_traceProvider,
-                                  "GetPose_Found",
-                                  TLArg("Estimated Earlier", "Type"),
-                                  TLArg(lowerIt->first, "Time"),
-                                  TLArg(xr::ToString(lowerIt->second).c_str(), "Pose"));
-                return lowerIt->second;
-            }
-            // cache is emtpy -> return fallback
-            ErrorLog("Using fallback!!!\n", time);
-            TraceLoggingWrite(g_traceProvider, "GetPose_Found", TLArg("Fallback", "Type"));
-            return Pose::Identity();
-        }
-
-        // remove outdated entries
-        void CleanUp(XrTime time)
-        {
-            auto it = m_Cache.lower_bound(time);
-            if (m_Cache.end() != it && m_Cache.begin() != it)
-            {
-                m_Cache.erase(m_Cache.begin(), it);
-            }
-        }
-
-      private:
-        std::map<XrTime, XrPosef> m_Cache{};
-        XrTime m_Tolerance;
-    };
-
     class OpenXrLayer : public motion_compensation_layer::OpenXrApi
     {
       public:
         OpenXrLayer() = default;
-
-        ~OpenXrLayer()
-        {
-            if (m_Tracker)
-            {
-                delete m_Tracker;
-            }
-            if (m_PoseCache)
-            {
-                delete m_PoseCache;
-            }
-        };
-
+        
         XrResult xrCreateInstance(const XrInstanceCreateInfo* createInfo) override
         {
             if (createInfo->type != XR_TYPE_INSTANCE_CREATE_INFO)
@@ -205,12 +86,9 @@ namespace
             Log("Application: %s\n", GetApplicationName().c_str());
             Log("Using OpenXR runtime: %s\n", runtimeName.c_str());
 
-            // create tracker object
-            m_Tracker = new OpenXrTracker(this);
+            // initialize tracker object
+            m_Tracker.Init();
             
-            // TODO: make tolerance configurable?
-            m_PoseCache = new PoseCache(2);
-
             return XR_SUCCESS;
         }
 
@@ -290,11 +168,9 @@ namespace
             XrResult result = OpenXrApi::xrBeginSession(session, beginInfo);
             m_ViewConfigType = beginInfo->primaryViewConfigurationType;
            
-            if (m_Tracker)
-            {  
-                // start tracker session
-                m_Tracker->beginSession(session);
-            }
+            // start tracker session
+            m_Tracker.beginSession(session);
+            
             return result;
         }
 
@@ -310,24 +186,22 @@ namespace
 
             XrSessionActionSetsAttachInfo chainAttachInfo = *attachInfo;
             std::vector<XrActionSet> newActionSets;
-            if (m_Tracker)
+
+            const auto trackerActionSet = m_Tracker.m_ActionSet;
+            if (trackerActionSet != XR_NULL_HANDLE)
             {
-                const auto trackerActionSet = m_Tracker->m_ActionSet;
-                if (trackerActionSet != XR_NULL_HANDLE)
-                {
-                    newActionSets.resize((size_t)chainAttachInfo.countActionSets + 1);
-                    memcpy(newActionSets.data(),
-                           chainAttachInfo.actionSets,
-                           chainAttachInfo.countActionSets * sizeof(XrActionSet));
-                    uint32_t nextActionSetSlot = chainAttachInfo.countActionSets;
+                newActionSets.resize((size_t)chainAttachInfo.countActionSets + 1);
+                memcpy(newActionSets.data(),
+                       chainAttachInfo.actionSets,
+                       chainAttachInfo.countActionSets * sizeof(XrActionSet));
+                uint32_t nextActionSetSlot = chainAttachInfo.countActionSets;
 
-                    newActionSets[nextActionSetSlot++] = trackerActionSet;
+                newActionSets[nextActionSetSlot++] = trackerActionSet;
 
-                    chainAttachInfo.actionSets = newActionSets.data();
-                    chainAttachInfo.countActionSets = nextActionSetSlot;
-                }
-                m_Tracker->m_IsActionSetAttached = true;
+                chainAttachInfo.actionSets = newActionSets.data();
+                chainAttachInfo.countActionSets = nextActionSetSlot;
             }
+            m_Tracker.m_IsActionSetAttached = true;    
 
             return OpenXrApi::xrAttachSessionActionSets(session, &chainAttachInfo);
         }
@@ -335,11 +209,10 @@ namespace
         XrResult xrSuggestInteractionProfileBindings(XrInstance instance,
                                                      const XrInteractionProfileSuggestedBinding* suggestedBindings)
         {
-            TraceLoggingWrite(
-                g_traceProvider,
-                "xrSuggestInteractionProfileBindings",
-                TLPArg(instance, "Instance"),
-                TLArg(getXrPath(suggestedBindings->interactionProfile).c_str(), "InteractionProfile"));
+            TraceLoggingWrite(g_traceProvider,
+                              "xrSuggestInteractionProfileBindings",
+                              TLPArg(instance, "Instance"),
+                              TLArg(getXrPath(suggestedBindings->interactionProfile).c_str(), "InteractionProfile"));
             ;
             DebugLog("suggestedBindings: %s\n", getXrPath(suggestedBindings->interactionProfile).c_str());
             for (uint32_t i = 0; i < suggestedBindings->countSuggestedBindings; i++)
@@ -355,24 +228,22 @@ namespace
             XrInteractionProfileSuggestedBinding bindingProfiles = *suggestedBindings;
             std::vector<XrActionSuggestedBinding> bindings{};
 
-            if (m_Tracker)
+            // override left hand pose action
+            // TODO: find a way to persist original pose action?
+            bindings.resize((uint32_t)bindingProfiles.countSuggestedBindings);
+            memcpy(bindings.data(),
+                   bindingProfiles.suggestedBindings,
+                   bindingProfiles.countSuggestedBindings * sizeof(XrActionSuggestedBinding));
+            for (XrActionSuggestedBinding& curBinding : bindings)
             {
-                // override left hand pose action
-                // TODO: find a way to persist original pose action?
-                bindings.resize((uint32_t)bindingProfiles.countSuggestedBindings);
-                memcpy(bindings.data(),
-                       bindingProfiles.suggestedBindings,
-                       bindingProfiles.countSuggestedBindings * sizeof(XrActionSuggestedBinding));
-                for (XrActionSuggestedBinding& curBinding : bindings)
+                if (getXrPath(curBinding.binding) == "/user/hand/left/input/grip/pose")
                 {
-                    if (getXrPath(curBinding.binding) == "/user/hand/left/input/grip/pose")
-                    {
-                        curBinding.action = m_Tracker->m_TrackerPoseAction;
-                        m_Tracker->m_IsBindingSuggested = true;
-                    }
+                    curBinding.action = m_Tracker.m_TrackerPoseAction;
+                    m_Tracker.m_IsBindingSuggested = true;
                 }
-                bindingProfiles.suggestedBindings = bindings.data();
             }
+
+            bindingProfiles.suggestedBindings = bindings.data();
             return OpenXrApi::xrSuggestInteractionProfileBindings(instance, &bindingProfiles);
         }
 
@@ -416,7 +287,7 @@ namespace
             // determine original location
             CHECK_XRCMD(OpenXrApi::xrLocateSpace(space, baseSpace, time, location));
             
-            if (m_Tracker && (isViewSpace(space) || isViewSpace(baseSpace)))
+            if (m_Activated && (isViewSpace(space) || isViewSpace(baseSpace)))
             {
                 TraceLoggingWrite(g_traceProvider,
                                   "xrLocateSpace",
@@ -428,7 +299,7 @@ namespace
                 bool baseSpaceIsViewSpace = isViewSpace(baseSpace);
 
                 XrPosef trackerDelta = Pose::Identity();
-                if (m_Tracker->getPoseDelta(trackerDelta, time))
+                if (m_Tracker.GetPoseDelta(trackerDelta, time))
                 {
                     TraceLoggingWrite(g_traceProvider,
                                       "xrLocateSpace",
@@ -450,10 +321,8 @@ namespace
                     ErrorLog("unable to retrieve tracker pose delta\n");
                 }
                 // safe pose for use in xrEndFrame
-                if (m_PoseCache)
-                {
-                    m_PoseCache->AddPose(time, trackerDelta);
-                }
+                m_PoseCache.AddPose(time, trackerDelta);
+                
                 TraceLoggingWrite(g_traceProvider,
                                   "xrLocateSpace",
                                   TLArg(xr::ToString(location->pose).c_str(), "Pose_After"));
@@ -478,12 +347,18 @@ namespace
                               TLArg(viewCapacityInput, "ViewCapacityInput"));
 
             DebugLog("xrLocateViews: %d\n", viewLocateInfo->space);
-            
-            // manipulate reference space location
-            XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
-            CHECK_XRCMD(xrLocateSpace(m_ViewSpace, viewLocateInfo->space, viewLocateInfo->displayTime, &location));
 
-            // determine eye offset
+            if (!m_Activated)
+            {
+                return OpenXrApi::xrLocateViews(session,
+                                                viewLocateInfo,
+                                                viewState,
+                                                viewCapacityInput,
+                                                viewCountOutput,
+                                                views);
+            }
+
+            // determine eye poses
             XrViewLocateInfo offsetViewLocateInfo{viewLocateInfo->type,
                                                   nullptr,
                                                   viewLocateInfo->viewConfigurationType,
@@ -496,9 +371,13 @@ namespace
                                                  viewCapacityInput,
                                                  viewCountOutput,
                                                  views));
-            
+
             TraceLoggingWrite(g_traceProvider, "xrLocateViews", TLArg(viewState->viewStateFlags, "ViewStateFlags"));
-           
+
+            // manipulate reference space location
+            XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
+            CHECK_XRCMD(xrLocateSpace(m_ViewSpace, viewLocateInfo->space, viewLocateInfo->displayTime, &location));
+
             for (uint32_t i = 0; i < *viewCountOutput; i++)
             {
                 TraceLoggingWrite(g_traceProvider, "xrLocateViews", TLArg(xr::ToString(views[i].fov).c_str(), "Fov"));
@@ -508,11 +387,10 @@ namespace
 
                 // apply manipulation
                 views[i].pose = Pose::Multiply(views[i].pose, location.pose);
-                
+
                 TraceLoggingWrite(g_traceProvider,
                                   "xrLocateViews",
                                   TLArg(xr::ToString(views[i].pose).c_str(), "Pose_After"));
-                
             }
 
             return XR_SUCCESS;
@@ -531,24 +409,22 @@ namespace
 
             XrActionsSyncInfo chainSyncInfo = *syncInfo;
             std::vector<XrActiveActionSet> newActiveActionSets;
-            if (m_Tracker)
+            const auto trackerActionSet = m_Tracker.m_ActionSet;
+            if (trackerActionSet != XR_NULL_HANDLE)
             {
-                const auto trackerActionSet = m_Tracker->m_ActionSet;
-                if (trackerActionSet != XR_NULL_HANDLE)
-                {
-                    newActiveActionSets.resize((size_t)chainSyncInfo.countActiveActionSets + 1);
-                    memcpy(newActiveActionSets.data(),
-                           chainSyncInfo.activeActionSets,
-                           chainSyncInfo.countActiveActionSets * sizeof(XrActionSet));
-                    uint32_t nextActionSetSlot = chainSyncInfo.countActiveActionSets;
+                newActiveActionSets.resize((size_t)chainSyncInfo.countActiveActionSets + 1);
+                memcpy(newActiveActionSets.data(),
+                       chainSyncInfo.activeActionSets,
+                       chainSyncInfo.countActiveActionSets * sizeof(XrActionSet));
+                uint32_t nextActionSetSlot = chainSyncInfo.countActiveActionSets;
 
-                    newActiveActionSets[nextActionSetSlot].actionSet = trackerActionSet;
-                    newActiveActionSets[nextActionSetSlot++].subactionPath = XR_NULL_PATH;
+                newActiveActionSets[nextActionSetSlot].actionSet = trackerActionSet;
+                newActiveActionSets[nextActionSetSlot++].subactionPath = XR_NULL_PATH;
 
-                    chainSyncInfo.activeActionSets = newActiveActionSets.data();
-                    chainSyncInfo.countActiveActionSets = nextActionSetSlot;
-                }
+                chainSyncInfo.activeActionSets = newActiveActionSets.data();
+                chainSyncInfo.countActiveActionSets = nextActionSetSlot;
             }
+
             return OpenXrApi::xrSyncActions(session, syncInfo);
         }
 
@@ -560,10 +436,12 @@ namespace
                               TLArg(frameEndInfo->displayTime, "DisplayTime"),
                               TLArg(xr::ToCString(frameEndInfo->environmentBlendMode), "EnvironmentBlendMode"));
 
-            if (!m_PoseCache)
+            if (!m_Activated)
             {
+                HandleKeyboardInput(frameEndInfo->displayTime);
                 return OpenXrApi::xrEndFrame(session, frameEndInfo);
             }
+
             std::vector<const XrCompositionLayerBaseHeader*> resetLayers{};
             std::vector<XrCompositionLayerProjection*> resetProjectionLayers{};
             std::vector<std::vector<XrCompositionLayerProjectionView>*> resetViews{};
@@ -594,8 +472,8 @@ namespace
                            projectionLayer->viewCount * sizeof(XrCompositionLayerProjectionView));
 
                    
-                    XrPosef reversedManipulation = Pose::Invert(m_PoseCache->GetPose(frameEndInfo->displayTime));
-                    m_PoseCache->CleanUp(frameEndInfo->displayTime);
+                    XrPosef reversedManipulation = Pose::Invert(m_PoseCache.GetPose(frameEndInfo->displayTime));
+                    m_PoseCache.CleanUp(frameEndInfo->displayTime);
                    
                     TraceLoggingWrite(
                         g_traceProvider,
@@ -648,6 +526,8 @@ namespace
                     resetLayers.push_back(baseHeaderPtr);
                 }
             }
+            HandleKeyboardInput(frameEndInfo->displayTime);
+
             XrFrameEndInfo resetFrameEndInfo{frameEndInfo->type,
                                              frameEndInfo->next,
                                              frameEndInfo->displayTime,
@@ -655,6 +535,7 @@ namespace
                                              frameEndInfo->layerCount,
                                              resetLayers.data()};
 
+           
             XrResult result = OpenXrApi::xrEndFrame(session, &resetFrameEndInfo);
 
             // clean up memory
@@ -683,13 +564,48 @@ namespace
             return m_ViewSpaces.count(space);
         }
 
-        uint32_t getNumViews()
+        uint32_t GetNumViews()
         {
             return XR_VIEW_CONFIGURATION_TYPE_PRIMARY_MONO == m_ViewConfigType                                ? 1
                    : XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO == m_ViewConfigType                            ? 2
                    : XR_VIEW_CONFIGURATION_TYPE_PRIMARY_QUAD_VARJO == m_ViewConfigType                        ? 4
                    : XR_VIEW_CONFIGURATION_TYPE_SECONDARY_MONO_FIRST_PERSON_OBSERVER_MSFT == m_ViewConfigType ? 1
                                                                                                               : 0;
+        }
+
+        void HandleKeyboardInput(XrTime time)
+        {
+            bool isRepeat{false};
+            if (m_Input.UpdateKeyState(m_ActivateKeys, isRepeat) && !isRepeat)
+            {
+                // if tracker is not initialized, activate only after successful init
+                m_Activated = m_Tracker.m_IsInitialized ? !m_Activated : m_Tracker.ResetReferencePose(time);
+                               
+                TraceLoggingWrite(g_traceProvider,
+                                  "HandleKeyboardInput",
+                                  TLArg(m_Activated ? "Deactivated" : "Activated", "Motion_Compensation"),
+                                  TLArg(time, "Time"));
+            }
+            if (m_Input.UpdateKeyState(m_ResetKeys, isRepeat) && !isRepeat)
+            {
+                if (!m_Tracker.ResetReferencePose(time))
+                {
+                    // failed to update refernce pose -> deactivate
+                    m_Activated = false;
+                    TraceLoggingWrite(g_traceProvider,
+                                      "HandleKeyboardInput",
+                                      TLArg("Deactivated_Reset", "Motion_Compensation"),
+                                      TLArg(time, "Time"));
+                }
+                else
+                {
+                    TraceLoggingWrite(g_traceProvider,
+                                      "HandleKeyboardInput",
+                                      TLArg("Reset", "Tracker_Reference"),
+                                      TLArg(time, "Time"));
+                }
+            }
+
         }
 
         static std::string getXrPath(XrPath path)
@@ -723,18 +639,20 @@ namespace
             pose->position = pos;
         }
 
-
+        bool m_Activated{false};
         std::set<XrSpace> m_ViewSpaces{};
         XrSpace m_ViewSpace{XR_NULL_HANDLE};
-        XrViewConfigurationType m_ViewConfigType{XR_VIEW_CONFIGURATION_TYPE_MAX_ENUM};
-        OpenXrTracker* m_Tracker = nullptr;
-        PoseCache* m_PoseCache = nullptr;
+        XrViewConfigurationType m_ViewConfigType{XR_VIEW_CONFIGURATION_TYPE_MAX_ENUM}; 
+        OpenXrTracker m_Tracker;
+        // TODO: make tolerance configurable?
+        utilities::PoseCache m_PoseCache{2};
+        utilities::KeyboardInput m_Input;
+        // TODO: make configurable
+        std::set<int> m_ActivateKeys{VK_SHIFT, VK_END};
+        std::set<int> m_ResetKeys{VK_CONTROL, VK_RETURN};
     };
 
     std::unique_ptr<OpenXrLayer> g_instance = nullptr;
-
-    
-
 } // namespace
 
 namespace motion_compensation_layer
