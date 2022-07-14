@@ -11,7 +11,7 @@
       <Buffers Value="40"/>
     </EventCollector>
 
-    <EventProvider Name="{40633BC2-CA4A-4C13-88B6-7A55ED74E061}" Id="OpenXRMotionCompensation" />
+    <EventProvider Name="40633BC2-CA4A-4C13-88B6-7A55ED74E061" Id="OpenXRMotionCompensation" />
 
     <!-- Watson logging -->
     <EventProvider Name="1377561D-9312-452C-AD13-C4A1C9C906E0" Id="Microsoft.Windows.FaultReporting" />
@@ -21,11 +21,11 @@
     <!-- Debug layer traces (only works when debug layer is enabled) -->
     <EventProvider Name="F1FF64EF-FAF3-5699-8E51-F6EC2FBD97D1" Id="Microsoft-Windows-DXGIDebug" />
 
-    <Profile Id="OpenXRTemplate.Verbose.File" LoggingMode="File" Name="OpenXRTemplate" DetailLevel="Verbose" Description="Collect traces for the API layer" Default="true">
+    <Profile Id="OpenXRMotionCompensation.Verbose.File" LoggingMode="File" Name="OpenXRMotionCompensation" DetailLevel="Verbose" Description="Collect traces for the API layer" Default="true">
       <Collectors>
         <EventCollectorId Value="EventCollector">
           <EventProviders>
-            <EventProviderId Value="OpenXRTemplate"/>
+            <EventProviderId Value="OpenXRMotionCompensation"/>
             <EventProviderId Value="Microsoft.Windows.FaultReporting" />
             <EventProviderId Value="Microsoft.Windows.WindowsErrorReporting" />
             <EventProviderId Value="Microsoft.Windows.HangReporting" />

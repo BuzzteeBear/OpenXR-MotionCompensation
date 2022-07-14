@@ -32,7 +32,7 @@ namespace LAYER_NAMESPACE::log {
 
     // {40633bc2-ca4a-4c13-88b6-7a55ed74e061}
     TRACELOGGING_DEFINE_PROVIDER(g_traceProvider,
-                                 "OpenXRTemplate",
+                                 "OpenXRMotionCompensation",
                                  (0x40633bc2, 0xca4a, 0x4c13, 0x88, 0xb6, 0x7a, 0x55, 0xed, 0x74, 0xe0, 0x61));
 
     TraceLoggingActivity<g_traceProvider> g_traceActivity;
