@@ -590,7 +590,7 @@ namespace
             {
                 if (!m_Tracker.ResetReferencePose(time))
                 {
-                    // failed to update refernce pose -> deactivate
+                    // failed to update reference pose -> deactivate mc
                     m_Activated = false;
                     TraceLoggingWrite(g_traceProvider,
                                       "HandleKeyboardInput",
@@ -648,7 +648,7 @@ namespace
         utilities::PoseCache m_PoseCache{2};
         utilities::KeyboardInput m_Input;
         // TODO: make configurable
-        std::set<int> m_ActivateKeys{VK_SHIFT, VK_END};
+        std::set<int> m_ActivateKeys{VK_CONTROL, VK_END};
         std::set<int> m_ResetKeys{VK_CONTROL, VK_RETURN};
     };
 

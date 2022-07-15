@@ -10,6 +10,24 @@ using namespace motion_compensation_layer::log;
 using namespace xr::math;
 
 // TODO: add trace outputs in tracker
+OpenXrTracker::OpenXrTracker() 
+{
+    // TODO: use TEMA instead of DEMA?  make alpha configurable
+    m_TransFilter = new utilities::DoubleEmaFilter(0.8f);
+    m_RotFilter = new utilities::DoubleSlerpFilter(0.8f);
+}
+
+OpenXrTracker::~OpenXrTracker()
+{
+    if (m_TransFilter)
+    {
+        delete m_TransFilter;
+    }
+    if (m_RotFilter)
+    {
+        delete m_RotFilter;
+    }
+}
 
 void OpenXrTracker::Init()
 {
@@ -105,6 +123,8 @@ bool OpenXrTracker::ResetReferencePose(XrTime frameTime)
     XrPosef curPose;
     if (getPose(curPose, frameTime))
     {
+        m_TransFilter->Reset(curPose.position);
+        m_RotFilter->Reset(curPose.orientation);
         m_ReferencePose = curPose;
         m_IsInitialized = true;
         return true;
@@ -116,21 +136,39 @@ bool OpenXrTracker::ResetReferencePose(XrTime frameTime)
     }
 }
 
-bool OpenXrTracker::GetPoseDelta(XrPosef& trackerPose, XrTime frameTime)
+bool OpenXrTracker::GetPoseDelta(XrPosef& poseDelta, XrTime frameTime)
 {
     // pose already calulated for requested time or unable to calculate
     if (frameTime == m_LastPoseTime || !m_IsActionSetAttached || !m_IsBindingSuggested)
     {
         // already calulated for requested time;
-        trackerPose = m_LastPoseDelta;
+        poseDelta = m_LastPoseDelta;
         return true;
     }
     XrPosef curPose;
     if (getPose(curPose, frameTime))
     {
-        trackerPose = Pose::Multiply(Pose::Invert(curPose), m_ReferencePose);
+        TraceLoggingWrite(g_traceProvider,
+                          "GetPoseDelta",
+                          TLArg(xr::ToString(curPose).c_str(), "Location_Before_Filter"),
+                          TLArg(frameTime, "Time"));
+        
+        // apply translational filter
+        m_TransFilter->Filter(curPose.position);
+
+        // apply rotational filter
+        m_RotFilter->Filter(curPose.orientation);
+
+        TraceLoggingWrite(g_traceProvider,
+                          "GetPoseDelta",
+                          TLArg(xr::ToString(curPose).c_str(), "Location_After_Filter"),
+                          TLArg(frameTime, "Time"));
+
+        // calculate difference toward reference pose
+        poseDelta = Pose::Multiply(Pose::Invert(curPose), m_ReferencePose);
+  
         m_LastPoseTime = frameTime;
-        m_LastPoseDelta = trackerPose;
+        m_LastPoseDelta = poseDelta;
         return true;
     }
     else
