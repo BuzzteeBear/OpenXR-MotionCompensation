@@ -145,6 +145,10 @@ bool OpenXrTracker::GetPoseDelta(XrPosef& poseDelta, XrTime frameTime)
         poseDelta = m_LastPoseDelta;
         return true;
     }
+    if (m_ResetReferencePose)
+    {
+        m_ResetReferencePose = !ResetReferencePose(frameTime);
+    }
     XrPosef curPose;
     if (getPose(curPose, frameTime))
     {

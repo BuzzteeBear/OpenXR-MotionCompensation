@@ -117,7 +117,7 @@ namespace utilities
         // remove outdated entries
     void PoseCache::CleanUp(XrTime time)
     {
-        auto it = m_Cache.lower_bound(time);
+        auto it = m_Cache.lower_bound(time - m_Tolerance);
         if (m_Cache.end() != it && m_Cache.begin() != it)
         {
             m_Cache.erase(m_Cache.begin(), it);

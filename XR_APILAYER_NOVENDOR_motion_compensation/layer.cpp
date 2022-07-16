@@ -41,6 +41,8 @@ namespace
       public:
         OpenXrLayer() = default;
         
+        // TODO: add xrEndSesion and clean up memory
+
         XrResult xrCreateInstance(const XrInstanceCreateInfo* createInfo) override
         {
             if (createInfo->type != XR_TYPE_INSTANCE_CREATE_INFO)
@@ -261,13 +263,35 @@ namespace
             if (XR_SUCCEEDED(result))
             {
                 DebugLog("xrCreateReferenceSpace: %d type: %d \n", *space, createInfo->referenceSpaceType);
-                // memorize view spaces
+                
                 if (XR_REFERENCE_SPACE_TYPE_VIEW == createInfo->referenceSpaceType)
                 {
-                    // TODO: after recentering headset: update view space member variable? update tracker reference
-                    // space?
+                    // memorize view spaces
                     DebugLog("xrCreateReferenceSpace::addViewSpace: %d\n", *space);
+                    TraceLoggingWrite(g_traceProvider,
+                                      "xrCreateReferenceSpace",
+                                      TLArg("View_Space", "Added"));
                     m_ViewSpaces.insert(*space);
+                }
+                else if (XR_REFERENCE_SPACE_TYPE_LOCAL == createInfo->referenceSpaceType)
+                {   
+                    // view reset -> recreate tracker reference space to match
+                    TraceLoggingWrite(g_traceProvider,
+                                      "xrCreateReferenceSpace",
+                                      TLArg("Tracker_Reference_Space", "Reset"));
+
+                    if (XR_NULL_HANDLE != m_Tracker.m_ReferenceSpace)
+                    {
+                        CHECK_XRCMD(xrDestroySpace(m_Tracker.m_ReferenceSpace));
+                    }
+                    XrReferenceSpaceCreateInfo referenceSpaceCreateInfo{XR_TYPE_REFERENCE_SPACE_CREATE_INFO, nullptr};
+                    referenceSpaceCreateInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_LOCAL;
+                    referenceSpaceCreateInfo.poseInReferenceSpace = createInfo->poseInReferenceSpace;
+                    CHECK_XRCMD(OpenXrApi::xrCreateReferenceSpace(session,
+                                                                  &referenceSpaceCreateInfo,
+                                                                  &m_Tracker.m_ReferenceSpace));
+                    // and reset tracker reference pose                                              
+                    m_Tracker.m_ResetReferencePose = true;  
                 }
             }
             TraceLoggingWrite(g_traceProvider, "xrCreateReferenceSpace", TLPArg(*space, "Space"));
@@ -307,7 +331,6 @@ namespace
 
                     if (spaceIsViewSpace && !baseSpaceIsViewSpace)
                     {
-                        // TODO: add rotational and translational filters
                         location->pose = Pose::Multiply(location->pose, trackerDelta);
                     }
                     if (baseSpaceIsViewSpace && !spaceIsViewSpace)
@@ -372,6 +395,7 @@ namespace
                                                  viewCountOutput,
                                                  views));
 
+            // TODO: store eye poses to avoid recalculation in xrEndFrame?
             TraceLoggingWrite(g_traceProvider, "xrLocateViews", TLArg(viewState->viewStateFlags, "ViewStateFlags"));
 
             // manipulate reference space location
