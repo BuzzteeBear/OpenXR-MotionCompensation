@@ -45,6 +45,7 @@ using namespace std::chrono_literals;
 #define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
 #define NOMINMAX
 #include <windows.h>
+#include <io.h>
 #include <unknwn.h>
 #include <wrl.h>
 #include <wil/resource.h>

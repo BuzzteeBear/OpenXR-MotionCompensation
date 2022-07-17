@@ -10,12 +10,7 @@ using namespace motion_compensation_layer::log;
 using namespace xr::math;
 
 // TODO: add trace outputs in tracker
-OpenXrTracker::OpenXrTracker() 
-{
-    // TODO: use TEMA instead of DEMA?  make alpha configurable
-    m_TransFilter = new utilities::DoubleEmaFilter(0.8f);
-    m_RotFilter = new utilities::DoubleSlerpFilter(0.8f);
-}
+OpenXrTracker::OpenXrTracker() {}
 
 OpenXrTracker::~OpenXrTracker()
 {
@@ -47,6 +42,11 @@ void OpenXrTracker::Init()
         actionCreateInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
         actionCreateInfo.countSubactionPaths = 0;
         CHECK_XRCMD(GetInstance()->xrCreateAction(m_ActionSet, &actionCreateInfo, &m_TrackerPoseAction));
+    }
+    {
+        // TODO: use config manager
+        m_TransFilter = new utilities::DoubleEmaFilter(0.8f);
+        m_RotFilter = new utilities::DoubleSlerpFilter(0.8f);
     }
 }
 

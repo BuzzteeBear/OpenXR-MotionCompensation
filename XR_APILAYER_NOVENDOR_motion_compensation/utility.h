@@ -118,4 +118,6 @@ namespace utilities
       protected:
         XrQuaternionf m_SecondStage = xr::math::Quaternion::Identity();
     };
+
+    std::string LastErrorMsg(DWORD error);
 }

@@ -27,6 +27,7 @@
 #include "layer.h"
 #include "tracker.h"
 #include "utility.h"
+#include "config.h"
 #include <log.h>
 #include <util.h>
 
@@ -87,6 +88,12 @@ namespace
             TraceLoggingWrite(g_traceProvider, "xrCreateInstance", TLArg(GetInstance()->GetApplicationName().c_str(), "ApplicationName"));
             Log("Application: %s\n", GetApplicationName().c_str());
             Log("Using OpenXR runtime: %s\n", runtimeName.c_str());
+
+            // Initialize Configuration
+            if (m_Config.Init(GetInstance()->GetApplicationName()))
+            {
+                // TODO: prevent activation without valid configuration
+            }
 
             // initialize tracker object
             m_Tracker.Init();
@@ -238,6 +245,7 @@ namespace
                    bindingProfiles.countSuggestedBindings * sizeof(XrActionSuggestedBinding));
             for (XrActionSuggestedBinding& curBinding : bindings)
             {
+                // TODO: use config manager
                 if (getXrPath(curBinding.binding) == "/user/hand/left/input/grip/pose")
                 {
                     curBinding.action = m_Tracker.m_TrackerPoseAction;
@@ -575,6 +583,8 @@ namespace
             return result;
         }
 
+        ConfigManager m_Config;
+
       private:
         bool isSystemHandled(XrSystemId systemId) const
         {
@@ -599,6 +609,7 @@ namespace
 
         void HandleKeyboardInput(XrTime time)
         {
+            // TODO: use config manager
             bool isRepeat{false};
             if (m_Input.UpdateKeyState(m_ActivateKeys, isRepeat) && !isRepeat)
             {

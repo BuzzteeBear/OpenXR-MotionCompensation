@@ -1,6 +1,5 @@
 #include "pch.h"
 
-#include <algorithm> 
 #include <DirectXMath.h>
 #include <log.h>
 #include <util.h>
@@ -199,5 +198,27 @@ namespace utilities
         m_SecondStage = rotation;
     }
         
-    
+    std::string LastErrorMsg(DWORD error)
+    {
+        if (error)
+        {
+            LPVOID buffer;
+            DWORD bufLen = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
+                                             FORMAT_MESSAGE_IGNORE_INSERTS,
+                                         NULL,
+                                         error,
+                                         MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                                         (LPTSTR)&buffer,
+                                         0,
+                                         NULL);
+            if (bufLen)
+            {
+                LPCSTR lpStr = (LPCSTR)buffer;
+                std::string result(lpStr, lpStr + bufLen);
+                LocalFree(buffer);
+                return result;
+            }
+        }
+        return std::string();
+    }
 } // namespace utilities
