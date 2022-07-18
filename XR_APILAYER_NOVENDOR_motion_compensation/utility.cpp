@@ -1,3 +1,5 @@
+// Copyright(c) 2022 Sebastian Veith
+
 #include "pch.h"
 
 #include <DirectXMath.h>
@@ -8,8 +10,45 @@
 using namespace motion_compensation_layer::log;
 using namespace xr::math;
 
-namespace utilities
+namespace utility
 {
+    bool KeyboardInput::Init()
+    {
+        bool success = true;
+        std::set<Cfg> activities{Cfg::KeyActivate,
+                                       Cfg::KeyCenter,
+                                       Cfg::KeyTransInc,
+                                       Cfg::KeyTransDec,
+                                       Cfg::KeyRotInc,
+                                       Cfg::KeyRotDec,
+                                       Cfg::KeySaveConfig};
+        std::string errors;
+        for (const Cfg& activity : activities)
+        {
+            std::set<int> shortcut;
+            if (GetConfig()->GetShortcut(activity, shortcut))
+            {
+                m_ShortCuts[activity] = shortcut;
+            }
+            else
+            {
+                success = false;
+            }
+        }
+        return success;
+    }
+
+    bool KeyboardInput::GetKeyState(Cfg key, bool& isRepeat)
+    {
+        auto it = m_ShortCuts.find(key);
+        if (it == m_ShortCuts.end())
+        {
+            ErrorLog("KeyboardInput::GetKeyState(%d): unable to find key\n", key);
+            return false;
+        }
+        return UpdateKeyState(it->second, isRepeat);
+    }
+
     bool KeyboardInput::UpdateKeyState(const std::set<int>& vkKeySet, bool& isRepeat)
     {
         const auto isPressed =
@@ -185,7 +224,7 @@ namespace utilities
         m_FirstStage = rotation;
     }
 
-     void DoubleSlerpFilter::Filter(XrQuaternionf& rotation)
+    void DoubleSlerpFilter::Filter(XrQuaternionf& rotation)
     {
         m_FirstStage = Quaternion::Slerp(rotation, m_FirstStage, m_Strength);
         m_SecondStage = Quaternion::Slerp(m_FirstStage, m_SecondStage, m_Strength);
@@ -196,6 +235,20 @@ namespace utilities
     {
         SingleSlerpFilter::Reset(rotation);
         m_SecondStage = rotation;
+    }
+
+    void TripleSlerpFilter::Filter(XrQuaternionf& rotation)
+    {
+        m_FirstStage = Quaternion::Slerp(rotation, m_FirstStage, m_Strength);
+        m_SecondStage = Quaternion::Slerp(m_FirstStage, m_SecondStage, m_Strength);
+        m_ThirdStage = Quaternion::Slerp(m_SecondStage, m_ThirdStage, m_Strength);
+        rotation = m_ThirdStage;
+    }
+
+    void TripleSlerpFilter::Reset(const XrQuaternionf& rotation)
+    {
+        SingleSlerpFilter::Reset(rotation);
+        m_ThirdStage = rotation;
     }
         
     std::string LastErrorMsg(DWORD error)

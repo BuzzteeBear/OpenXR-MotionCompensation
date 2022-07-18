@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright(c) 2022 Matthieu Bucchianeri
+// Copyright(c) 2022 Matthieu Bucchianeri, Sebastian Veith
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this softwareand associated documentation files(the "Software"), to deal
@@ -90,13 +90,13 @@ namespace
             Log("Using OpenXR runtime: %s\n", runtimeName.c_str());
 
             // Initialize Configuration
-            if (m_Config.Init(GetInstance()->GetApplicationName()))
-            {
-                // TODO: prevent activation without valid configuration
-            }
+            m_Initialized = GetConfig()->Init(GetInstance()->GetApplicationName());
+           
+            // initialize tracker
+            m_Initialized = m_Initialized ? m_Tracker.Init() : m_Initialized;
 
-            // initialize tracker object
-            m_Tracker.Init();
+            // initialize keyboard input handler
+            m_Initialized = m_Initialized ? m_Input.Init() : m_Initialized;
             
             return XR_SUCCESS;
         }
@@ -583,8 +583,6 @@ namespace
             return result;
         }
 
-        ConfigManager m_Config;
-
       private:
         bool isSystemHandled(XrSystemId systemId) const
         {
@@ -609,19 +607,20 @@ namespace
 
         void HandleKeyboardInput(XrTime time)
         {
-            // TODO: use config manager
             bool isRepeat{false};
-            if (m_Input.UpdateKeyState(m_ActivateKeys, isRepeat) && !isRepeat)
+            if (m_Input.GetKeyState(Cfg::KeyActivate, isRepeat) && !isRepeat)
             {
-                // if tracker is not initialized, activate only after successful init
-                m_Activated = m_Tracker.m_IsInitialized ? !m_Activated : m_Tracker.ResetReferencePose(time);
+                m_Activated = m_Initialized
+                                  // if tracker is not initialized, activate only after successful init
+                                  ? m_Tracker.m_IsInitialized ? !m_Activated : m_Tracker.ResetReferencePose(time)
+                                  : false;
                                
                 TraceLoggingWrite(g_traceProvider,
                                   "HandleKeyboardInput",
                                   TLArg(m_Activated ? "Deactivated" : "Activated", "Motion_Compensation"),
                                   TLArg(time, "Time"));
             }
-            if (m_Input.UpdateKeyState(m_ResetKeys, isRepeat) && !isRepeat)
+            if (m_Input.GetKeyState(Cfg::KeyCenter, isRepeat) && !isRepeat)
             {
                 if (!m_Tracker.ResetReferencePose(time))
                 {
@@ -640,7 +639,7 @@ namespace
                                       TLArg(time, "Time"));
                 }
             }
-
+            // TODO: handle rest of keys
         }
 
         static std::string getXrPath(XrPath path)
@@ -675,16 +674,14 @@ namespace
         }
 
         bool m_Activated{false};
+        bool m_Initialized{true};
         std::set<XrSpace> m_ViewSpaces{};
         XrSpace m_ViewSpace{XR_NULL_HANDLE};
         XrViewConfigurationType m_ViewConfigType{XR_VIEW_CONFIGURATION_TYPE_MAX_ENUM}; 
+       
         OpenXrTracker m_Tracker;
-        // TODO: make tolerance configurable?
-        utilities::PoseCache m_PoseCache{2};
-        utilities::KeyboardInput m_Input;
-        // TODO: make configurable
-        std::set<int> m_ActivateKeys{VK_CONTROL, VK_END};
-        std::set<int> m_ResetKeys{VK_CONTROL, VK_RETURN};
+        utility::PoseCache m_PoseCache{2};
+        utility::KeyboardInput m_Input;
     };
 
     std::unique_ptr<OpenXrLayer> g_instance = nullptr;

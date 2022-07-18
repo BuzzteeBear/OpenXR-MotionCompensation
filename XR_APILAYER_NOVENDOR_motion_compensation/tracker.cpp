@@ -1,3 +1,5 @@
+// Copyright(c) 2022 Sebastian Veith
+
 #include "pch.h"
 
 #include "tracker.h"
@@ -24,30 +26,62 @@ OpenXrTracker::~OpenXrTracker()
     }
 }
 
-void OpenXrTracker::Init()
+bool OpenXrTracker::Init()
 {
     // Create the resources for the tracker space.
     {
         XrActionSetCreateInfo actionSetCreateInfo{XR_TYPE_ACTION_SET_CREATE_INFO, nullptr};
-        strcpy_s(actionSetCreateInfo.actionSetName, "general_tracker");
-        strcpy_s(actionSetCreateInfo.localizedActionSetName, "General Tracker");
+        strcpy_s(actionSetCreateInfo.actionSetName, "general_tracker_set");
+        strcpy_s(actionSetCreateInfo.localizedActionSetName, "General Tracker Set");
         actionSetCreateInfo.priority = 0;
-        CHECK_XRCMD(
-            GetInstance()->xrCreateActionSet(GetInstance()->GetXrInstance(), &actionSetCreateInfo, &m_ActionSet));
+        if (XR_SUCCESS != GetInstance()->xrCreateActionSet(GetInstance()->GetXrInstance(), &actionSetCreateInfo, &m_ActionSet))
+        {
+            ErrorLog("OpenXrTracker::Init: error creating action set\n");
+            return false;
+        }
     }
     {
         XrActionCreateInfo actionCreateInfo{XR_TYPE_ACTION_CREATE_INFO, nullptr};
-        strcpy_s(actionCreateInfo.actionName, "eye_tracker");
-        strcpy_s(actionCreateInfo.localizedActionName, "Eye Tracker");
+        strcpy_s(actionCreateInfo.actionName, "general_tracker");
+        strcpy_s(actionCreateInfo.localizedActionName, "General Tracker");
         actionCreateInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
         actionCreateInfo.countSubactionPaths = 0;
-        CHECK_XRCMD(GetInstance()->xrCreateAction(m_ActionSet, &actionCreateInfo, &m_TrackerPoseAction));
+        if (XR_SUCCESS != GetInstance()->xrCreateAction(m_ActionSet, &actionCreateInfo, &m_TrackerPoseAction))
+        {
+            ErrorLog("OpenXrTracker::Init: error creating action\n");
+            return false;
+        }
     }
     {
-        // TODO: use config manager
-        m_TransFilter = new utilities::DoubleEmaFilter(0.8f);
-        m_RotFilter = new utilities::DoubleSlerpFilter(0.8f);
+        // use config manager to set up filters
+        int orderTrans, orderRot;
+        float strengthTrans, strengthRot; 
+        if (!GetConfig()->GetInt(Cfg::TransOrder, orderTrans) || 
+            !GetConfig()->GetInt(Cfg::RotOrder, orderRot) ||
+            !GetConfig()->GetFloat(Cfg::TransStrength, strengthTrans) ||
+            !GetConfig()->GetFloat(Cfg::RotStrength, strengthRot))
+        {
+            return false;
+        }
+        if (1 > orderTrans || 3 < orderTrans)
+        {
+            ErrorLog("OpenXrTracker::Init: invalid order for translational filter: %d\n", orderTrans);
+            return false;
+        }
+        if (1 > orderRot || 3 < orderRot)
+        {
+            ErrorLog("OpenXrTracker::Init: invalid order for rotational filter: %d\n", orderRot);
+            return false;
+        }
+        m_TransFilter = 1 == orderTrans   ? new utility::SingleEmaFilter(strengthTrans)
+                        : 2 == orderTrans ? new utility::DoubleEmaFilter(strengthTrans)
+                                          : new utility::TripleEmaFilter(strengthTrans);
+ 
+        m_RotFilter = 1 == orderRot   ? new utility::SingleSlerpFilter(strengthTrans)
+                      : 2 == orderRot ? new utility::DoubleSlerpFilter(strengthTrans)
+                                      : new utility::TripleSlerpFilter(strengthTrans);
     }
+    return true;
 }
 
 void OpenXrTracker::beginSession(XrSession session)
@@ -131,6 +165,7 @@ bool OpenXrTracker::ResetReferencePose(XrTime frameTime)
     }
     else
     {
+        ErrorLog("OpenXrTracker::ResetReferencePose(%d): unable to get current pose", frameTime);
         m_IsInitialized = false;
         return false;
     }

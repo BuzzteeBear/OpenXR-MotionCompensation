@@ -1,17 +1,24 @@
+// Copyright(c) 2022 Sebastian Veith
+
 #pragma once
 
 #include "pch.h"
 
-namespace utilities
+#include "config.h"
+
+namespace utility
 {
     class KeyboardInput
     {
       public:
-
-        bool UpdateKeyState(const std::set<int>& vkKeySet, bool& isRepeat);
+        bool Init();
+        bool GetKeyState(Cfg key, bool& isRepeat);
 
       private:
-        std::map < std::set<int>, std::pair<bool, std::chrono::steady_clock::time_point>> m_KeyStates;
+        bool UpdateKeyState(const std::set<int>& vkKeySet, bool& isRepeat);
+
+        std::map<Cfg, std::set<int>> m_ShortCuts;
+        std::map <std::set<int>, std::pair<bool, std::chrono::steady_clock::time_point>> m_KeyStates;
         const std::chrono::milliseconds m_KeyRepeatDelay = 200ms;
     };
 
@@ -38,11 +45,14 @@ namespace utilities
     class FilterBase
     {
       public:
-        FilterBase(float strength) : m_Strength(strength){};
+        FilterBase(float strength)
+        {
+            SetStrength(strength);
+        }
         virtual ~FilterBase(){};
         virtual void SetStrength(float strength)
         {
-            float limitedStrength = std::max(1.0f, std::min(0.0f, strength));
+            float limitedStrength = std::min(1.0f, std::max(0.0f, strength));
             m_Strength = limitedStrength;
         }
         virtual void Filter(Value& value) = 0;
@@ -56,7 +66,7 @@ namespace utilities
     class SingleEmaFilter : public FilterBase<XrVector3f>
     {
       public:
-        SingleEmaFilter(float alpha) : FilterBase(alpha){}
+        SingleEmaFilter(float strength) : FilterBase(strength){};
         virtual ~SingleEmaFilter(){};
         virtual void SetStrength(float strength) override;
         virtual void Filter(XrVector3f& location) override;
@@ -72,7 +82,7 @@ namespace utilities
     class DoubleEmaFilter : public SingleEmaFilter
     {
       public:
-        DoubleEmaFilter(float alpha) : SingleEmaFilter(alpha){};
+        DoubleEmaFilter(float strength) : SingleEmaFilter(strength){};
         virtual ~DoubleEmaFilter(){};
         virtual void Filter(XrVector3f& location) override;
         virtual void Reset(const XrVector3f& location) override;
@@ -85,7 +95,7 @@ namespace utilities
     class TripleEmaFilter : public DoubleEmaFilter
     {
       public:
-        TripleEmaFilter(float alpha) : DoubleEmaFilter(alpha){};
+        TripleEmaFilter(float strength) : DoubleEmaFilter(strength){};
         virtual ~TripleEmaFilter(){};
         virtual void Filter(XrVector3f& location) override;
         virtual void Reset(const XrVector3f& location) override;
@@ -98,7 +108,7 @@ namespace utilities
     class SingleSlerpFilter : public FilterBase<XrQuaternionf>
     {
       public:
-        SingleSlerpFilter(float beta) : FilterBase(beta){};
+        SingleSlerpFilter(float strength) : FilterBase(strength){};
         virtual ~SingleSlerpFilter(){};
         virtual void Filter(XrQuaternionf& rotation) override;
         virtual void Reset(const XrQuaternionf& rotation) override;
@@ -110,13 +120,25 @@ namespace utilities
     class DoubleSlerpFilter : public SingleSlerpFilter
     {
       public:
-        DoubleSlerpFilter(float beta) : SingleSlerpFilter(beta){};
+        DoubleSlerpFilter(float strength) : SingleSlerpFilter(strength){};
         virtual ~DoubleSlerpFilter(){};
         virtual void Filter(XrQuaternionf& rotation) override;
         virtual void Reset(const XrQuaternionf& rotation) override;
 
       protected:
         XrQuaternionf m_SecondStage = xr::math::Quaternion::Identity();
+    };
+
+    class TripleSlerpFilter : public DoubleSlerpFilter
+    {
+      public:
+        TripleSlerpFilter(float strength) : DoubleSlerpFilter(strength){};
+        virtual ~TripleSlerpFilter(){};
+        virtual void Filter(XrQuaternionf& rotation) override;
+        virtual void Reset(const XrQuaternionf& rotation) override;
+
+      protected:
+        XrQuaternionf m_ThirdStage = xr::math::Quaternion::Identity();
     };
 
     std::string LastErrorMsg(DWORD error);
