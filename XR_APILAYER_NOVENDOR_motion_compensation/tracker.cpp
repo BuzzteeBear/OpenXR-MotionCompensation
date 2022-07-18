@@ -119,16 +119,25 @@ void OpenXrTracker::beginSession(XrSession session)
         CHECK_XRCMD(GetInstance()->xrStringToPath(GetInstance()->GetXrInstance(),
                                                   "/interaction_profiles/khr/simple_controller",
                                                   &suggestedBindings.interactionProfile));
-        XrActionSuggestedBinding binding;
-        binding.action = m_TrackerPoseAction;
-        CHECK_XRCMD(GetInstance()->xrStringToPath(GetInstance()->GetXrInstance(),
-                                                  "/user/hand/left/input/grip/pose",
-                                                  &binding.binding));
 
-        suggestedBindings.suggestedBindings = &binding;
-        suggestedBindings.countSuggestedBindings = 1;
-        CHECK_XRCMD(GetInstance()->OpenXrApi::xrSuggestInteractionProfileBindings(GetInstance()->GetXrInstance(),
-                                                                                  &suggestedBindings));
+        std::string side;
+        if (!GetConfig()->GetString(Cfg::TrackerParam, side) || ("right" != side && "left" != side))
+        {
+            ErrorLog("xrSuggestInteractionProfileBindings: unable to determine contoller side: %s\n", side);
+        }
+        else
+        {
+            XrActionSuggestedBinding binding;
+            binding.action = m_TrackerPoseAction;
+            CHECK_XRCMD(GetInstance()->xrStringToPath(GetInstance()->GetXrInstance(),
+                                                      ("/user/hand/" + side + "/input/grip/pose").c_str(),
+                                                      &binding.binding));
+
+            suggestedBindings.suggestedBindings = &binding;
+            suggestedBindings.countSuggestedBindings = 1;
+            CHECK_XRCMD(GetInstance()->OpenXrApi::xrSuggestInteractionProfileBindings(GetInstance()->GetXrInstance(),
+                                                                                      &suggestedBindings));
+        }
     }
 }
 
@@ -165,7 +174,7 @@ bool OpenXrTracker::ResetReferencePose(XrTime frameTime)
     }
     else
     {
-        ErrorLog("OpenXrTracker::ResetReferencePose(%d): unable to get current pose", frameTime);
+        ErrorLog("OpenXrTracker::ResetReferencePose(%d): unable to get current pose\n", frameTime);
         m_IsInitialized = false;
         return false;
     }
