@@ -237,7 +237,7 @@ namespace
             XrInteractionProfileSuggestedBinding bindingProfiles = *suggestedBindings;
             std::vector<XrActionSuggestedBinding> bindings{};
 
-            // override left hand pose action
+            // override left or right hand pose action
             // TODO: find a way to persist original pose action?
             bindings.resize((uint32_t)bindingProfiles.countSuggestedBindings);
             memcpy(bindings.data(),
@@ -245,11 +245,18 @@ namespace
                    bindingProfiles.countSuggestedBindings * sizeof(XrActionSuggestedBinding));
             for (XrActionSuggestedBinding& curBinding : bindings)
             {
-                // TODO: use config manager
-                if (getXrPath(curBinding.binding) == "/user/hand/left/input/grip/pose")
+                std::string side;
+                if (!GetConfig()->GetString(Cfg::TrackerParam, side) || ("right" != side  && "left" != side))
                 {
-                    curBinding.action = m_Tracker.m_TrackerPoseAction;
-                    m_Tracker.m_IsBindingSuggested = true;
+                    ErrorLog("xrSuggestInteractionProfileBindings: unable to determine contoller side: %s\n", side);
+                }
+                else
+                {
+                    if (getXrPath(curBinding.binding) == "/user/hand/" + side + "/input/grip/pose")
+                    {
+                        curBinding.action = m_Tracker.m_TrackerPoseAction;
+                        m_Tracker.m_IsBindingSuggested = true;
+                    }
                 }
             }
 

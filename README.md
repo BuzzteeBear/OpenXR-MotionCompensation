@@ -90,69 +90,64 @@ When an OpenXR Application is launched with the motion compensation layer active
 
 To combine multiple keys for a sigle shortcut they need to be separated by '+' with no spaces in between the key names.
 
-List of keyboard shortcut names that can be used:
+List of supported shortcut key names:
 
  - `SHIFT`: shift key
- - `CONTROL`: ctrl key
- - `MENU`: alt key
+ - `CTRL`: ctrl key
+ - `ALT`: alt key
  - `LSHIFT`: left shift key
  - `RSHIFT`: right shift key
- - `LCONTROL`: left ctrl key
- - `RCONTROL`: right ctrl key
- - `LMENU`: left alt key
- - `RMENU`: right alt key
+ - `LCTRL`: left ctrl key
+ - `RCTRL`: right ctrl key
+ - `LALT`: left alt key
+ - `RALT`: right alt key
  - `0` - `9`: numerical key
  - `A` - `Z`: alphbetical key
- - `SEMICOLON`: ;: key (US),
+ - `BACKQUOTE`: `~ key (US)
+ - `TAB`: tabulator key
+ - `CAPS`: caps lock key
  - `PLUS`: + key (any country)
+ - `MINUS`: - key (any country)
+ - `OPENBRACKET`: [{ key (US)
+ - `CLOSEBRACKET`: ]} key (US)
+ - `SEMICOLON`: ;: key (US)
+ - `QUOTE`: '" key (US)
+ - `BACKSLASH`: \\| key (US)
  - `COMMA`: , key (any country
- - `DASH`: - key (any country)
  - `PERIOD`: . key (any country)
  - `SLASH`: /? key (US)
- - `BACKQUOTE`: `~ key (US)
- - `OPENSQUARE`: [{ key (US)
- - `BACKSLASH`: \\| key (US)
- - `CLOSESQUARE`: ]} key (US)
- - `QUOTE`: '" key (US)
  - `BACK`:  backspace key
- - `TAB`: tabulator key
- - `CLEAR`: clr key
+ - `CLR`: clr key
  - `RETURN`: return key
- - `PAUSE`: pause key
- - `CAPITAL`: caps lock key
- - `ESCAPE`: esc key
+ - `ESC`: esc key
  - `SPACE`: space key
  - `LEFT`: cursor left key
  - `UP`: cursor up key
  - `RIGHT`: cursor right key
  - `DOWN`: cursor down key
- - `SELECT`: select key
- - `PRINT`: print key
- - `EXECUTE`: execute key
- - `SNAPSHOT`: print screen key
- - `PRIOR`: page up key
- - `NEXT`: page down key
- - `END`: end key
+ - `INS`: ins key
+ - `DEL`: del key
  - `HOME`: home key
- - `INSERT`: ins key
- - `DELETE`: del key
- - `HELP`: help key
- - `NUMPAD0`: 0 key on numpad
- - `NUMPAD1`: 1 key on numpad 
- - `NUMPAD2`: 2 key on numpad
- - `NUMPAD3`: 3 key on numpad
- - `NUMPAD4`: 4 key on numpad
- - `NUMPAD5`: 5 key on numpad
- - `NUMPAD6`: 6 key on numpad
- - `NUMPAD7`: 7 key on numpad
- - `NUMPAD8`: 8 key on numpad
- - `NUMPAD9`: 9 key on numpad
- - `NUMPADMULTIPLY`: * key on numpad
- - `NUMPADADD`: + key on numpad
- - `NUMPADSEPARATOR`: separator key on numpad
- - `NUMPADSUBTRACT`: - key on numpad
- - `NUMPADDECIMAL`: . key on numpad
- - `NUMPADDIVIDE`: / key on numpad
+ - `END`: end key
+ - `PGUP`: page up key
+ - `PGDN`: page down key
+ - `NUM0`: 0 key on NUM
+ - `NUM1`: 1 key on NUM 
+ - `NUM2`: 2 key on NUM
+ - `NUM3`: 3 key on NUM
+ - `NUM4`: 4 key on NUM
+ - `NUM5`: 5 key on NUM
+ - `NUM6`: 6 key on NUM
+ - `NUM7`: 7 key on NUM
+ - `NUM8`: 8 key on NUM
+ - `NUM9`: 9 key on NUM
+ - `NUMLOCK`: numlock key
+ - `NUMDIVIDE`: / key on NUM
+ - `NUMMULTIPLY`: * key on NUM
+ - `NUMSUBTRACT`: - key on NUM
+ - `NUMADD`: + key on NUM
+ - `NUMDECIMAL`: . key on NUM
+ - `NUMSEPARATOR`: separator key on NUM
  - `F1`: F1 key
  - `F2`: F2 key
  - `F3`: F3 key
@@ -165,8 +160,13 @@ List of keyboard shortcut names that can be used:
  - `F10`: F10 key
  - `F11`: F11 key
  - `F12`: F12 key
- - `NUMLOCK`: numlock key
+ - `PRTSC`: print screen key
  - `SCROLL`: scroll lock key
+ - `PAUSE`: pause key
+ - `SELECT`: select key
+ - `PRINT`: print key
+ - `HELP`: help key
+ - `EXEC`: execute key
  - `GAMEPAD_A`: A button on gamepad
  - `GAMEPAD_B`: B button on gamepad
  - `GAMEPAD_X`: X button on gamepad
@@ -179,7 +179,7 @@ List of keyboard shortcut names that can be used:
  - `GAMEPAD_DPAD_DOWN`: digital pad down on gamepad
  - `GAMEPAD_DPAD_LEFT`: digital pad left on gamepad
  - `GAMEPAD_DPAD_RIGHT`: digital pad right on gamepad
- - `GAMEPAD_MENU`: start button on gamepad
+ - `GAMEPAD_START`: start button on gamepad
  - `GAMEPAD_VIEW`: view button on gamepad
  - `GAMEPAD_LEFT_THUMBSTICK_BUTTON`: left thumbstick pressed on gamepad
  - `GAMEPAD_RIGHT_THUMBSTICK_BUTTON`: right thumbstick pressed on gamepad
