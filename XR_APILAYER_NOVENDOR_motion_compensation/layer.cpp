@@ -338,6 +338,7 @@ namespace
                 bool baseSpaceIsViewSpace = isViewSpace(baseSpace);
 
                 XrPosef trackerDelta = Pose::Identity();
+                // TestRotation(&trackerDelta, time, false);
                 if (m_Tracker.GetPoseDelta(trackerDelta, time))
                 {
                     TraceLoggingWrite(g_traceProvider,
@@ -358,8 +359,9 @@ namespace
                 {
                     ErrorLog("unable to retrieve tracker pose delta\n");
                 }
+                // TODO: use either location or eye cache?
                 // safe pose for use in xrEndFrame
-                m_PoseCache.AddPose(time, trackerDelta);
+                m_PoseCache.AddSample(time, trackerDelta);
                 
                 TraceLoggingWrite(g_traceProvider,
                                   "xrLocateSpace",
@@ -386,37 +388,52 @@ namespace
 
             DebugLog("xrLocateViews: %d\n", viewLocateInfo->space);
 
-            if (!m_Activated)
-            {
-                return OpenXrApi::xrLocateViews(session,
-                                                viewLocateInfo,
-                                                viewState,
-                                                viewCapacityInput,
-                                                viewCountOutput,
-                                                views);
-            }
-
-            // determine eye poses
-            XrViewLocateInfo offsetViewLocateInfo{viewLocateInfo->type,
-                                                  nullptr,
-                                                  viewLocateInfo->viewConfigurationType,
-                                                  viewLocateInfo->displayTime,
-                                                  m_ViewSpace};
-
             CHECK_XRCMD(OpenXrApi::xrLocateViews(session,
-                                                 &offsetViewLocateInfo,
+                                                 viewLocateInfo,
                                                  viewState,
                                                  viewCapacityInput,
                                                  viewCountOutput,
                                                  views));
 
-            // TODO: store eye poses to avoid recalculation in xrEndFrame?
             TraceLoggingWrite(g_traceProvider, "xrLocateViews", TLArg(viewState->viewStateFlags, "ViewStateFlags"));
+
+            if (!m_Activated)
+            {
+                return XR_SUCCESS;
+            }
+
+            // store eye poses to avoid recalculation in xrEndFrame?
+            std::vector<XrPosef> originalEyePoses{};
+            for (uint32_t i = 0; i < *viewCountOutput; i++)
+            {
+                originalEyePoses.push_back(views[i].pose);
+            }
+            m_EyeCache.AddSample(viewLocateInfo->displayTime, originalEyePoses);
+
+            if (m_EyeOffsets.empty())
+            {
+                // determine eye poses
+                XrViewLocateInfo offsetViewLocateInfo{viewLocateInfo->type,
+                                                      nullptr,
+                                                      viewLocateInfo->viewConfigurationType,
+                                                      viewLocateInfo->displayTime,
+                                                      m_ViewSpace};
+
+                CHECK_XRCMD(OpenXrApi::xrLocateViews(session,
+                                                     &offsetViewLocateInfo,
+                                                     viewState,
+                                                     viewCapacityInput,
+                                                     viewCountOutput,
+                                                     views));
+                for (uint32_t i = 0; i < *viewCountOutput; i++)
+                {
+                    m_EyeOffsets.push_back(views[i]);
+                }
+            }
 
             // manipulate reference space location
             XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
             CHECK_XRCMD(xrLocateSpace(m_ViewSpace, viewLocateInfo->space, viewLocateInfo->displayTime, &location));
-
             for (uint32_t i = 0; i < *viewCountOutput; i++)
             {
                 TraceLoggingWrite(g_traceProvider, "xrLocateViews", TLArg(xr::ToString(views[i].fov).c_str(), "Fov"));
@@ -425,7 +442,7 @@ namespace
                                   TLArg(xr::ToString(views[i].pose).c_str(), "Pose_Before"));
 
                 // apply manipulation
-                views[i].pose = Pose::Multiply(views[i].pose, location.pose);
+                views[i].pose = Pose::Multiply(m_EyeOffsets[i].pose, location.pose);
 
                 TraceLoggingWrite(g_traceProvider,
                                   "xrLocateViews",
@@ -510,38 +527,67 @@ namespace
                            projectionLayer->views,
                            projectionLayer->viewCount * sizeof(XrCompositionLayerProjectionView));
 
-                   
-                    XrPosef reversedManipulation = Pose::Invert(m_PoseCache.GetPose(frameEndInfo->displayTime));
-                    m_PoseCache.CleanUp(frameEndInfo->displayTime);
-                   
-                    TraceLoggingWrite(
-                        g_traceProvider,
-                        "xrEndFrame_View",
-                        TLArg("Reversed_Manipulation", "Type"),
-                        TLArg(xr::ToString(reversedManipulation).c_str(), "Pose"));
-
-                    
-                    for (uint32_t j = 0; j < projectionLayer->viewCount; j++)
+                    if(!m_EyeCache.empty())
                     {
-                        TraceLoggingWrite(
-                            g_traceProvider,
-                            "xrEndFrame_View",
-                            TLArg("View_Before", "Type"),
-                            TLArg(xr::ToString((*projectionViews)[j].pose).c_str(), "Pose"),
-                            TLArg(j, "Index"),
-                            TLPArg((*projectionViews)[j].subImage.swapchain, "Swapchain"),
-                            TLArg((*projectionViews)[j].subImage.imageArrayIndex, "ImageArrayIndex"),
-                            TLArg(xr::ToString((*projectionViews)[j].subImage.imageRect).c_str(), "ImageRect"),
-                            TLArg(xr::ToString((*projectionViews)[j].fov).c_str(), "Fov"));
+                        // use eye cache if available
+                        std::vector<XrPosef> cachedEyePoses = m_EyeCache.GetSample(frameEndInfo->displayTime);
+                        m_EyeCache.CleanUp(frameEndInfo->displayTime);
+                        m_PoseCache.CleanUp(frameEndInfo->displayTime);
+                        for (uint32_t j = 0; j < projectionLayer->viewCount; j++)
+                        {
+                            TraceLoggingWrite(
+                                g_traceProvider,
+                                "xrEndFrame_View",
+                                TLArg("View_Before", "Type"),
+                                TLArg(xr::ToString((*projectionViews)[j].pose).c_str(), "Pose"),
+                                TLArg(j, "Index"),
+                                TLPArg((*projectionViews)[j].subImage.swapchain, "Swapchain"),
+                                TLArg((*projectionViews)[j].subImage.imageArrayIndex, "ImageArrayIndex"),
+                                TLArg(xr::ToString((*projectionViews)[j].subImage.imageRect).c_str(), "ImageRect"),
+                                TLArg(xr::ToString((*projectionViews)[j].fov).c_str(), "Fov"));
 
-                        (*projectionViews)[j].pose = Pose::Multiply((*projectionViews)[j].pose , reversedManipulation);
-                       
-                        TraceLoggingWrite(
-                            g_traceProvider,
-                            "xrEndFrame_View",
-                            TLArg("View_After", "Type"),
-                            TLArg(xr::ToString((*projectionViews)[j].pose).c_str(), "Pose"),
-                            TLArg(j, "Index"));
+                            (*projectionViews)[j].pose = cachedEyePoses[j];
+
+                            TraceLoggingWrite(g_traceProvider,
+                                              "xrEndFrame_View",
+                                              TLArg("View_After", "Type"),
+                                              TLArg(xr::ToString(cachedEyePoses[j]).c_str(), "Pose"),
+                                              TLArg(j, "Index"));
+                        }
+                    }
+                    else
+                    {
+                        // use pose cache for reverse calculation
+                        XrPosef reversedManipulation = Pose::Invert(m_PoseCache.GetSample(frameEndInfo->displayTime));
+                        m_PoseCache.CleanUp(frameEndInfo->displayTime);
+
+                        TraceLoggingWrite(g_traceProvider,
+                                          "xrEndFrame_View",
+                                          TLArg("Reversed_Manipulation", "Type"),
+                                          TLArg(xr::ToString(reversedManipulation).c_str(), "Pose"));
+
+                        for (uint32_t j = 0; j < projectionLayer->viewCount; j++)
+                        {
+                            TraceLoggingWrite(
+                                g_traceProvider,
+                                "xrEndFrame_View",
+                                TLArg("View_Before", "Type"),
+                                TLArg(xr::ToString((*projectionViews)[j].pose).c_str(), "Pose"),
+                                TLArg(j, "Index"),
+                                TLPArg((*projectionViews)[j].subImage.swapchain, "Swapchain"),
+                                TLArg((*projectionViews)[j].subImage.imageArrayIndex, "ImageArrayIndex"),
+                                TLArg(xr::ToString((*projectionViews)[j].subImage.imageRect).c_str(), "ImageRect"),
+                                TLArg(xr::ToString((*projectionViews)[j].fov).c_str(), "Fov"));
+
+                            (*projectionViews)[j].pose =
+                                Pose::Multiply((*projectionViews)[j].pose, reversedManipulation);
+
+                            TraceLoggingWrite(g_traceProvider,
+                                              "xrEndFrame_View",
+                                              TLArg("View_After", "Type"),
+                                              TLArg(xr::ToString((*projectionViews)[j].pose).c_str(), "Pose"),
+                                              TLArg(j, "Index"));
+                        }
                     }
                     // create layer with reset view poses
                     XrCompositionLayerProjection* const resetProjectionLayer =
@@ -684,10 +730,14 @@ namespace
         bool m_Initialized{true};
         std::set<XrSpace> m_ViewSpaces{};
         XrSpace m_ViewSpace{XR_NULL_HANDLE};
+        std::vector<XrView> m_EyeOffsets{};
         XrViewConfigurationType m_ViewConfigType{XR_VIEW_CONFIGURATION_TYPE_MAX_ENUM}; 
        
         OpenXrTracker m_Tracker;
-        utility::PoseCache m_PoseCache{2};
+        utility::Cache<XrPosef> m_PoseCache{2, Pose::Identity()};
+        utility::Cache<std::vector<XrPosef>> m_EyeCache{
+            2,
+            std::vector<XrPosef>{Pose::Identity(), Pose::Identity(), Pose::Identity(), Pose::Identity()}};
         utility::KeyboardInput m_Input;
     };
 
