@@ -27,7 +27,7 @@
 namespace motion_compensation_layer
 {
     const std::string LayerName = "XR_APILAYER_NOVENDOR_motion_compensation";
-    const std::string VersionString = "Unreleased (0.0.0)";
+    const std::string VersionString = "prototype alpha (0.0.1)";
 
     // Singleton accessor.
     OpenXrApi* GetInstance();
