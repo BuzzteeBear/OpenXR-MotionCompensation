@@ -57,8 +57,8 @@ What you can modify in a configuration file:
 - center the in-app view
 - activate the motion controller you configured and mount it on your motion rig
 - bring your motion rig to neutral position
-- press the `activate` shortcut you configured (`.` on numpad by default). This implicitly sets the neutral reference pose for the tracker
-- if necessary you can recalibrate the tracker by pressing the `center` shortcut (`0` on numpad by default) while the motion rig is in neutral position 
+- press the `activate` shortcut you configured (`CTRL` + `HOME` by default). This implicitly sets the neutral reference pose for the tracker
+- if necessary you can recalibrate the tracker by pressing the `center` shortcut (`CRTL` + `END` by default) while the motion rig is in neutral position 
 
 ### Notes
 

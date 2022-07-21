@@ -41,7 +41,8 @@ namespace
     {
       public:
         OpenXrLayer() = default;
-        
+
+      public:      
         // TODO: add xrEndSesion and clean up memory
 
         XrResult xrCreateInstance(const XrInstanceCreateInfo* createInfo) override
@@ -281,8 +282,9 @@ namespace
                 
                 if (XR_REFERENCE_SPACE_TYPE_VIEW == createInfo->referenceSpaceType)
                 {
+                    Log("creation of view space detected: %d\n", *space);
+                   
                     // memorize view spaces
-                    DebugLog("xrCreateReferenceSpace::addViewSpace: %d\n", *space);
                     TraceLoggingWrite(g_traceProvider,
                                       "xrCreateReferenceSpace",
                                       TLArg("View_Space", "Added"));
@@ -291,6 +293,7 @@ namespace
                 else if (XR_REFERENCE_SPACE_TYPE_LOCAL == createInfo->referenceSpaceType)
                 {   
                     // view reset -> recreate tracker reference space to match
+                    Log("creation of local reference space detected: %d\n", *space);    
                     TraceLoggingWrite(g_traceProvider,
                                       "xrCreateReferenceSpace",
                                       TLArg("Tracker_Reference_Space", "Reset"));
@@ -305,7 +308,8 @@ namespace
                     CHECK_XRCMD(OpenXrApi::xrCreateReferenceSpace(session,
                                                                   &referenceSpaceCreateInfo,
                                                                   &m_Tracker.m_ReferenceSpace));
-                    // and reset tracker reference pose                                              
+                    // and reset tracker reference pose   
+                    // TODO: modify reference pose instead?
                     m_Tracker.m_ResetReferencePose = true;  
                 }
             }
@@ -341,10 +345,6 @@ namespace
                 // TestRotation(&trackerDelta, time, false);
                 if (m_Tracker.GetPoseDelta(trackerDelta, time))
                 {
-                    TraceLoggingWrite(g_traceProvider,
-                                      "xrLocateSpace",
-                                      TLArg(xr::ToString(trackerDelta).c_str(), "Pose_Tracker"));
-
                     if (spaceIsViewSpace && !baseSpaceIsViewSpace)
                     {
                         location->pose = Pose::Multiply(location->pose, trackerDelta);
@@ -663,11 +663,15 @@ namespace
             bool isRepeat{false};
             if (m_Input.GetKeyState(Cfg::KeyActivate, isRepeat) && !isRepeat)
             {
+                bool oldstate = m_Activated;
                 m_Activated = m_Initialized
                                   // if tracker is not initialized, activate only after successful init
                                   ? m_Tracker.m_IsInitialized ? !m_Activated : m_Tracker.ResetReferencePose(time)
                                   : false;
-                               
+                Log("motion compensation %s\n",
+                    oldstate != m_Activated ? (m_Activated ? "activated" : "deactivated")
+                    : m_Activated           ? "kept active"
+                                            : "could not be activated");              
                 TraceLoggingWrite(g_traceProvider,
                                   "HandleKeyboardInput",
                                   TLArg(m_Activated ? "Deactivated" : "Activated", "Motion_Compensation"),
@@ -678,6 +682,10 @@ namespace
                 if (!m_Tracker.ResetReferencePose(time))
                 {
                     // failed to update reference pose -> deactivate mc
+                    if (m_Activated)
+                    {
+                        ErrorLog("motion compensation deactivated because tracker reference pose cold not be reset\n");
+                    }
                     m_Activated = false;
                     TraceLoggingWrite(g_traceProvider,
                                       "HandleKeyboardInput",

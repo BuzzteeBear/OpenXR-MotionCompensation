@@ -11,7 +11,6 @@ using namespace motion_compensation_layer;
 using namespace motion_compensation_layer::log;
 using namespace xr::math;
 
-// TODO: add trace outputs in tracker
 OpenXrTracker::OpenXrTracker() {}
 
 OpenXrTracker::~OpenXrTracker()
@@ -39,6 +38,7 @@ bool OpenXrTracker::Init()
             ErrorLog("OpenXrTracker::Init: error creating action set\n");
             return false;
         }
+        TraceLoggingWrite(g_traceProvider, "OpenXrTracker::Init", TLPArg(m_ActionSet, "xrCreateActionSet"));
     }
     {
         XrActionCreateInfo actionCreateInfo{XR_TYPE_ACTION_CREATE_INFO, nullptr};
@@ -51,6 +51,7 @@ bool OpenXrTracker::Init()
             ErrorLog("OpenXrTracker::Init: error creating action\n");
             return false;
         }
+        TraceLoggingWrite(g_traceProvider, "OpenXrTracker::Init", TLPArg(m_TrackerPoseAction, "xrCreateAction"));
     }
     {
         // use config manager to set up filters
@@ -61,6 +62,7 @@ bool OpenXrTracker::Init()
             !GetConfig()->GetFloat(Cfg::TransStrength, strengthTrans) ||
             !GetConfig()->GetFloat(Cfg::RotStrength, strengthRot))
         {
+            ErrorLog("OpenXrTracker::Init: error reading configured values");
             return false;
         }
         if (1 > orderTrans || 3 < orderTrans)
@@ -73,13 +75,17 @@ bool OpenXrTracker::Init()
             ErrorLog("OpenXrTracker::Init: invalid order for rotational filter: %d\n", orderRot);
             return false;
         }
+        
+        Log("translational filter stages: %d\n", orderTrans);
         m_TransFilter = 1 == orderTrans   ? new utility::SingleEmaFilter(strengthTrans)
                         : 2 == orderTrans ? new utility::DoubleEmaFilter(strengthTrans)
                                           : new utility::TripleEmaFilter(strengthTrans);
- 
-        m_RotFilter = 1 == orderRot   ? new utility::SingleSlerpFilter(strengthTrans)
-                      : 2 == orderRot ? new utility::DoubleSlerpFilter(strengthTrans)
-                                      : new utility::TripleSlerpFilter(strengthTrans);
+        
+        Log("rotational filter stages: %d\n", orderRot);
+        m_RotFilter = 1 == orderRot   ? new utility::SingleSlerpFilter(strengthRot)
+                      : 2 == orderRot ? new utility::DoubleSlerpFilter(strengthRot)
+                                      : new utility::TripleSlerpFilter(strengthRot);
+        
     }
     return true;
 }
@@ -93,6 +99,9 @@ void OpenXrTracker::beginSession(XrSession session)
     referenceSpaceCreateInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_LOCAL;
     referenceSpaceCreateInfo.poseInReferenceSpace = Pose::Identity();
     CHECK_XRCMD(GetInstance()->xrCreateReferenceSpace(session, &referenceSpaceCreateInfo, &m_ReferenceSpace));
+    TraceLoggingWrite(g_traceProvider,
+                      "OpenXrTracker::beginSession",
+                      TLPArg(m_ReferenceSpace, "xrCreateReferenceSpace"));
 
     // create action space
     XrActionSpaceCreateInfo actionSpaceCreateInfo{XR_TYPE_ACTION_SPACE_CREATE_INFO, nullptr};
@@ -100,6 +109,8 @@ void OpenXrTracker::beginSession(XrSession session)
     actionSpaceCreateInfo.subactionPath = XR_NULL_PATH;
     actionSpaceCreateInfo.poseInActionSpace = Pose::Identity();
     CHECK_XRCMD(GetInstance()->xrCreateActionSpace(m_Session, &actionSpaceCreateInfo, &m_TrackerSpace));
+    TraceLoggingWrite(g_traceProvider, "OpenXrTracker::beginSession", TLPArg(m_TrackerSpace, "xrCreateActionSpace"));
+
 
     // TODO: attach actionset if application doesn't call xrAttachSessionActionSets but avoid to attach twice
     /*
@@ -137,6 +148,11 @@ void OpenXrTracker::beginSession(XrSession session)
             suggestedBindings.countSuggestedBindings = 1;
             CHECK_XRCMD(GetInstance()->OpenXrApi::xrSuggestInteractionProfileBindings(GetInstance()->GetXrInstance(),
                                                                                       &suggestedBindings));
+            TraceLoggingWrite(g_traceProvider,
+                              "OpenXrTracker::beginSession",
+                              TLArg("/interaction_profiles/khr/simple_controller", "Profile"),
+                              TLPArg(binding.action, "Action"),
+                              TLArg(("/user/hand/" + side + "/input/grip/pose").c_str(), "Path"));
         }
     }
 }
@@ -145,31 +161,27 @@ void OpenXrTracker::endSession()
 {
     m_Session = XR_NULL_HANDLE;
 
-    if (m_ActionSet != XR_NULL_HANDLE)
-    {
-        GetInstance()->xrDestroyActionSet(m_ActionSet);
-        m_ActionSet = XR_NULL_HANDLE;
-    }
     if (m_TrackerSpace != XR_NULL_HANDLE)
     {
         GetInstance()->xrDestroySpace(m_TrackerSpace);
         m_TrackerSpace = XR_NULL_HANDLE;
     }
-    if (m_TrackerPoseAction != XR_NULL_HANDLE)
+    if (m_ReferenceSpace != XR_NULL_HANDLE)
     {
-        GetInstance()->xrDestroyAction(m_TrackerPoseAction);
-        m_TrackerPoseAction = XR_NULL_HANDLE;
+        GetInstance()->xrDestroySpace(m_ReferenceSpace);
+        m_ReferenceSpace = XR_NULL_HANDLE;
     }
 }
 bool OpenXrTracker::ResetReferencePose(XrTime frameTime)
 {
     XrPosef curPose;
-    if (getPose(curPose, frameTime))
+    if (GetPose(curPose, frameTime))
     {
         m_TransFilter->Reset(curPose.position);
         m_RotFilter->Reset(curPose.orientation);
         m_ReferencePose = curPose;
         m_IsInitialized = true;
+        Log("tracker reference pose reset\n");
         return true;
     }
     else
@@ -187,6 +199,9 @@ bool OpenXrTracker::GetPoseDelta(XrPosef& poseDelta, XrTime frameTime)
     {
         // already calulated for requested time;
         poseDelta = m_LastPoseDelta;
+        TraceLoggingWrite(g_traceProvider,
+                          "GetPoseDelta",
+                          TLArg(xr::ToString(m_LastPoseDelta).c_str(), "Last_Delta"));
         return true;
     }
     if (m_ResetReferencePose)
@@ -194,13 +209,8 @@ bool OpenXrTracker::GetPoseDelta(XrPosef& poseDelta, XrTime frameTime)
         m_ResetReferencePose = !ResetReferencePose(frameTime);
     }
     XrPosef curPose;
-    if (getPose(curPose, frameTime))
-    {
-        TraceLoggingWrite(g_traceProvider,
-                          "GetPoseDelta",
-                          TLArg(xr::ToString(curPose).c_str(), "Location_Before_Filter"),
-                          TLArg(frameTime, "Time"));
-        
+    if (GetPose(curPose, frameTime))
+    {      
         // apply translational filter
         m_TransFilter->Filter(curPose.position);
 
@@ -214,6 +224,8 @@ bool OpenXrTracker::GetPoseDelta(XrPosef& poseDelta, XrTime frameTime)
 
         // calculate difference toward reference pose
         poseDelta = Pose::Multiply(Pose::Invert(curPose), m_ReferencePose);
+
+        TraceLoggingWrite(g_traceProvider, "GetPoseDelta", TLArg(xr::ToString(poseDelta).c_str(), "Delta"));
   
         m_LastPoseTime = frameTime;
         m_LastPoseDelta = poseDelta;
@@ -225,7 +237,7 @@ bool OpenXrTracker::GetPoseDelta(XrPosef& poseDelta, XrTime frameTime)
     }
 }
 
-bool OpenXrTracker::getPose(XrPosef& trackerPose, XrTime frameTime) const
+bool OpenXrTracker::GetPose(XrPosef& trackerPose, XrTime frameTime) const
 {
     // Query the latest tracker pose.
     XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
@@ -237,16 +249,24 @@ bool OpenXrTracker::getPose(XrPosef& trackerPose, XrTime frameTime) const
         XrActionsSyncInfo syncInfo{XR_TYPE_ACTIONS_SYNC_INFO, nullptr};
         syncInfo.activeActionSets = &activeActionSets;
         syncInfo.countActiveActionSets = 1;
+
+        TraceLoggingWrite(g_traceProvider, "GetPose", TLPArg(m_ActionSet, "xrSyncActions"), TLArg(frameTime, "Time"));
         CHECK_XRCMD(GetInstance()->xrSyncActions(m_Session, &syncInfo));
     }
     {
         XrActionStatePose actionStatePose{XR_TYPE_ACTION_STATE_POSE, nullptr};
         XrActionStateGetInfo getActionStateInfo{XR_TYPE_ACTION_STATE_GET_INFO, nullptr};
         getActionStateInfo.action = m_TrackerPoseAction;
+
+        TraceLoggingWrite(g_traceProvider,
+                          "GetPose",
+                          TLPArg(m_TrackerPoseAction, "xrGetActionStatePose"),
+                          TLArg(frameTime, "Time"));
         CHECK_XRCMD(GetInstance()->xrGetActionStatePose(m_Session, &getActionStateInfo, &actionStatePose));
 
         if (!actionStatePose.isActive)
         {
+            ErrorLog("OpenXrTracker::GetPose: unable to determine tracker pose - XrActionStatePose not active");
             return false;
         }
     }
@@ -255,9 +275,13 @@ bool OpenXrTracker::getPose(XrPosef& trackerPose, XrTime frameTime) const
 
     if (!Pose::IsPoseValid(location.locationFlags))
     {
+        ErrorLog("OpenXrTracker::GetPose: unable to determine tracker pose - XrSpaceLocation not valid");
         return false;
     }
-
+    TraceLoggingWrite(g_traceProvider,
+                      "GetPose",
+                      TLArg(xr::ToString(location.pose).c_str(), "Location"),
+                      TLArg(frameTime, "Time"));
     trackerPose = location.pose;
 
     return true;

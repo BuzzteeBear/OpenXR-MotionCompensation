@@ -25,7 +25,7 @@ class OpenXrTracker
     XrSpace m_ReferenceSpace{XR_NULL_HANDLE};
 
   private:
-    bool getPose(XrPosef& trackerPose, XrTime frameTime) const;
+    bool GetPose(XrPosef& trackerPose, XrTime frameTime) const;
 
     XrSession m_Session{XR_NULL_HANDLE};
     XrPosef m_ReferencePose{xr::math::Pose::Identity()};

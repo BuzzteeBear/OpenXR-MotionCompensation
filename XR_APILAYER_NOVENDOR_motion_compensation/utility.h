@@ -166,7 +166,7 @@ namespace utility
     // filters
 
     // TODO: compensate for non-equidistant sample timing?
-    template< typename Value>
+    template <typename Value>
     class FilterBase
     {
       public:
@@ -178,6 +178,7 @@ namespace utility
         virtual void SetStrength(float strength)
         {
             float limitedStrength = std::min(1.0f, std::max(0.0f, strength));
+            LAYER_NAMESPACE::log::Log("Filter(%s) set strength: %f\n", typeid(Value).name(), limitedStrength);
             m_Strength = limitedStrength;
         }
         virtual void Filter(Value& value) = 0;
