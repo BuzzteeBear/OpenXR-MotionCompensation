@@ -35,7 +35,7 @@ bool OpenXrTracker::Init()
         actionSetCreateInfo.priority = 0;
         if (XR_SUCCESS != GetInstance()->xrCreateActionSet(GetInstance()->GetXrInstance(), &actionSetCreateInfo, &m_ActionSet))
         {
-            ErrorLog("OpenXrTracker::Init: error creating action set\n");
+            ErrorLog("%s: error creating action set\n", __FUNCTION__);
             return false;
         }
         TraceLoggingWrite(g_traceProvider, "OpenXrTracker::Init", TLPArg(m_ActionSet, "xrCreateActionSet"));
@@ -48,7 +48,7 @@ bool OpenXrTracker::Init()
         actionCreateInfo.countSubactionPaths = 0;
         if (XR_SUCCESS != GetInstance()->xrCreateAction(m_ActionSet, &actionCreateInfo, &m_TrackerPoseAction))
         {
-            ErrorLog("OpenXrTracker::Init: error creating action\n");
+            ErrorLog("%s: error creating action\n", __FUNCTION__);
             return false;
         }
         TraceLoggingWrite(g_traceProvider, "OpenXrTracker::Init", TLPArg(m_TrackerPoseAction, "xrCreateAction"));
@@ -62,29 +62,32 @@ bool OpenXrTracker::Init()
             !GetConfig()->GetFloat(Cfg::TransStrength, strengthTrans) ||
             !GetConfig()->GetFloat(Cfg::RotStrength, strengthRot))
         {
-            ErrorLog("OpenXrTracker::Init: error reading configured values");
+            ErrorLog("%s: error reading configured values\n", __FUNCTION__);
             return false;
         }
         if (1 > orderTrans || 3 < orderTrans)
         {
-            ErrorLog("OpenXrTracker::Init: invalid order for translational filter: %d\n", orderTrans);
+            ErrorLog("%s: invalid order for translational filter: %d\n", __FUNCTION__, orderTrans);
             return false;
         }
         if (1 > orderRot || 3 < orderRot)
         {
-            ErrorLog("OpenXrTracker::Init: invalid order for rotational filter: %d\n", orderRot);
+            ErrorLog("%s: invalid order for rotational filter: %d\n", __FUNCTION__, orderRot);
             return false;
         }
-        
+        m_TransStrength = strengthTrans;
+        m_RotStrength = strengthRot;
+
+
         Log("translational filter stages: %d\n", orderTrans);
-        m_TransFilter = 1 == orderTrans   ? new utility::SingleEmaFilter(strengthTrans)
-                        : 2 == orderTrans ? new utility::DoubleEmaFilter(strengthTrans)
-                                          : new utility::TripleEmaFilter(strengthTrans);
+        m_TransFilter = 1 == orderTrans   ? new utility::SingleEmaFilter(m_TransStrength)
+                        : 2 == orderTrans ? new utility::DoubleEmaFilter(m_TransStrength)
+                                          : new utility::TripleEmaFilter(m_TransStrength);
         
         Log("rotational filter stages: %d\n", orderRot);
-        m_RotFilter = 1 == orderRot   ? new utility::SingleSlerpFilter(strengthRot)
-                      : 2 == orderRot ? new utility::DoubleSlerpFilter(strengthRot)
-                                      : new utility::TripleSlerpFilter(strengthRot);
+        m_RotFilter = 1 == orderRot   ? new utility::SingleSlerpFilter(m_RotStrength)
+                      : 2 == orderRot ? new utility::DoubleSlerpFilter(m_RotStrength)
+                                      : new utility::TripleSlerpFilter(m_RotStrength);
         
     }
     return true;
@@ -186,7 +189,7 @@ bool OpenXrTracker::ResetReferencePose(XrTime frameTime)
     }
     else
     {
-        ErrorLog("OpenXrTracker::ResetReferencePose(%d): unable to get current pose\n", frameTime);
+        ErrorLog("%s: unable to get current pose\n", __FUNCTION__);
         m_IsInitialized = false;
         return false;
     }
@@ -237,6 +240,25 @@ bool OpenXrTracker::GetPoseDelta(XrPosef& poseDelta, XrTime frameTime)
     }
 }
 
+void OpenXrTracker::ModifyFilterStrength(bool trans, bool increase)
+{
+    float* currentValue = trans ? &m_TransStrength : &m_RotStrength;
+    float amount = (1.0f - *currentValue) * 0.05f;
+    float newValue = *currentValue + (increase ? amount : -amount);
+    if (trans)
+    {
+        *currentValue = m_TransFilter->SetStrength(newValue);
+        GetConfig()->SetValue(Cfg::TransStrength, *currentValue);
+        Log("translational filter strength %screased to %f\n", increase ? "in" : "de", *currentValue);
+    }
+    else
+    {
+        *currentValue = m_RotFilter->SetStrength(newValue);
+        GetConfig()->SetValue(Cfg::RotStrength, *currentValue);
+        Log("rotational filter strength %screased to %f\n", increase ? "in" : "de", *currentValue);
+    }
+}
+
 bool OpenXrTracker::GetPose(XrPosef& trackerPose, XrTime frameTime) const
 {
     // Query the latest tracker pose.
@@ -266,7 +288,7 @@ bool OpenXrTracker::GetPose(XrPosef& trackerPose, XrTime frameTime) const
 
         if (!actionStatePose.isActive)
         {
-            ErrorLog("OpenXrTracker::GetPose: unable to determine tracker pose - XrActionStatePose not active");
+            ErrorLog("%s: unable to determine tracker pose - XrActionStatePose not active\n", __FUNCTION__);
             return false;
         }
     }
@@ -275,7 +297,7 @@ bool OpenXrTracker::GetPose(XrPosef& trackerPose, XrTime frameTime) const
 
     if (!Pose::IsPoseValid(location.locationFlags))
     {
-        ErrorLog("OpenXrTracker::GetPose: unable to determine tracker pose - XrSpaceLocation not valid");
+        ErrorLog("%s: unable to determine tracker pose - XrSpaceLocation not valid\n", __FUNCTION__);
         return false;
     }
     TraceLoggingWrite(g_traceProvider,

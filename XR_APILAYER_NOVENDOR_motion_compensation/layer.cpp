@@ -677,6 +677,7 @@ namespace
                                   TLArg(m_Activated ? "Deactivated" : "Activated", "Motion_Compensation"),
                                   TLArg(time, "Time"));
             }
+            isRepeat = false;
             if (m_Input.GetKeyState(Cfg::KeyCenter, isRepeat) && !isRepeat)
             {
                 if (!m_Tracker.ResetReferencePose(time))
@@ -700,7 +701,31 @@ namespace
                                       TLArg(time, "Time"));
                 }
             }
-            // TODO: handle rest of keys
+            isRepeat = false;
+            if (m_Input.GetKeyState(Cfg::KeyTransInc, isRepeat))
+            {
+                m_Tracker.ModifyFilterStrength(true, true);
+            }
+            isRepeat = false;
+            if (m_Input.GetKeyState(Cfg::KeyTransDec, isRepeat))
+            {
+                m_Tracker.ModifyFilterStrength(true, false);
+            }
+            isRepeat = false;
+            if (m_Input.GetKeyState(Cfg::KeyRotInc, isRepeat))
+            {
+                m_Tracker.ModifyFilterStrength(false, true);
+            }
+            isRepeat = false;
+            if (m_Input.GetKeyState(Cfg::KeyRotDec, isRepeat))
+            {
+                m_Tracker.ModifyFilterStrength(false, false);
+            }
+            isRepeat = false;
+            if (m_Input.GetKeyState(Cfg::KeySaveConfig, isRepeat) && !isRepeat)
+            {
+                GetConfig()->WriteConfig();
+            }
         }
 
         static std::string getXrPath(XrPath path)

@@ -43,7 +43,7 @@ namespace utility
         auto it = m_ShortCuts.find(key);
         if (it == m_ShortCuts.end())
         {
-            ErrorLog("KeyboardInput::GetKeyState(%d): unable to find key\n", key);
+            ErrorLog("%s(%d): unable to find key\n", __FUNCTION__, key);
             return false;
         }
         return UpdateKeyState(it->second, isRepeat);
@@ -60,8 +60,14 @@ namespace utility
             // remember keyState for next call
             keyState = m_KeyStates.insert({vkKeySet, {false, now}}).first;
         }
-        const auto prevState = std::exchange(keyState->second, {isPressed, now});
-        isRepeat = isPressed && prevState.first && (now - keyState->second.second) > m_KeyRepeatDelay;
+        const auto lastToggleTime = isPressed != keyState->second.first ? now : keyState->second.second;
+        const auto prevState = std::exchange(keyState->second, {isPressed, lastToggleTime});
+        isRepeat = isPressed && prevState.first && (now - prevState.second) > m_KeyRepeatDelay;
+        if (isRepeat)
+        {
+            // reset toggle time for next repetition
+            keyState->second.second = now;
+        }
         return isPressed && (!prevState.first || isRepeat);
     }
   
@@ -70,11 +76,12 @@ namespace utility
         return m_Alpha * current + m_OneMinusAlpha * stored;
     }
 
-    void SingleEmaFilter::SetStrength(float strength)
+    float SingleEmaFilter::SetStrength(float strength)
     {
         FilterBase::SetStrength(strength);
         m_Alpha = {1.0f - m_Strength, 1.0f - m_Strength, 1.0f - m_Strength};
         m_OneMinusAlpha = {m_Strength, m_Strength, m_Strength};
+        return m_Strength;
     }
 
     void SingleEmaFilter::Filter(XrVector3f& location)

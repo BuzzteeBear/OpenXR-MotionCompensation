@@ -20,7 +20,7 @@ namespace utility
 
         std::map<Cfg, std::set<int>> m_ShortCuts;
         std::map <std::set<int>, std::pair<bool, std::chrono::steady_clock::time_point>> m_KeyStates;
-        const std::chrono::milliseconds m_KeyRepeatDelay = 200ms;
+        const std::chrono::milliseconds m_KeyRepeatDelay = 300ms;
     };
 
     template <typename Sample>
@@ -175,11 +175,12 @@ namespace utility
             SetStrength(strength);
         }
         virtual ~FilterBase(){};
-        virtual void SetStrength(float strength)
+        virtual float SetStrength(float strength)
         {
             float limitedStrength = std::min(1.0f, std::max(0.0f, strength));
-            LAYER_NAMESPACE::log::Log("Filter(%s) set strength: %f\n", typeid(Value).name(), limitedStrength);
+            LAYER_NAMESPACE::log::DebugLog("Filter(%s) set strength: %f\n", typeid(Value).name(), limitedStrength);
             m_Strength = limitedStrength;
+            return m_Strength;
         }
         virtual void Filter(Value& value) = 0;
         virtual void Reset(const Value& value) = 0;
@@ -194,7 +195,7 @@ namespace utility
       public:
         SingleEmaFilter(float strength) : FilterBase(strength){};
         virtual ~SingleEmaFilter(){};
-        virtual void SetStrength(float strength) override;
+        virtual float SetStrength(float strength) override;
         virtual void Filter(XrVector3f& location) override;
         virtual void Reset(const XrVector3f& location) override;
 

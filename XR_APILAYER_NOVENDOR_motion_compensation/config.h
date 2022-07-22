@@ -37,8 +37,10 @@ class ConfigManager
 
   private:
     bool InitDirectory();
-
+    
     std::string m_DllDirectory;
+    std::string m_ApplicationIni;
+
     // needs to include all values of enum ConfigKey
     std::map<Cfg, std::pair<std::string, std::string>> m_Keys{
         {Cfg::TrackerType, {"tracker", "type"}},
@@ -54,6 +56,8 @@ class ConfigManager
         {Cfg::KeyRotInc, {"shortcuts", "rotation_increase"}},
         {Cfg::KeyRotDec, {"shortcuts", "rotation_decrease"}},
         {Cfg::KeySaveConfig, {"shortcuts", "save_config"}}};
+
+    std::set<Cfg> m_KeysToSave{Cfg::TransStrength, Cfg::RotStrength};
 
     std::map<std::string, int> m_ShortCuts{
         {"BACK", VK_BACK},

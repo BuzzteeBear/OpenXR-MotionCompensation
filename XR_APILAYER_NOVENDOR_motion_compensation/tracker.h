@@ -14,6 +14,7 @@ class OpenXrTracker
     void endSession();
     bool ResetReferencePose(XrTime frameTime);
     bool GetPoseDelta(XrPosef& poseDelta, XrTime frameTime);
+    void ModifyFilterStrength(bool trans, bool increase);
 
     bool m_IsInitialized{false};
     bool m_ResetReferencePose{false};
@@ -31,6 +32,7 @@ class OpenXrTracker
     XrPosef m_ReferencePose{xr::math::Pose::Identity()};
     XrPosef m_LastPoseDelta{xr::math::Pose::Identity()};
     XrTime m_LastPoseTime{0};
+    float m_TransStrength, m_RotStrength;
     utility::FilterBase<XrVector3f>* m_TransFilter = nullptr;
     utility::FilterBase<XrQuaternionf>* m_RotFilter = nullptr;
 };

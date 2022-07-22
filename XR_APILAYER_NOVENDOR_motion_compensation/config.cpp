@@ -17,20 +17,21 @@ bool ConfigManager::Init(const std::string& application)
         return false;
     }
     // create application config file if not existing
-    const std::string applicationIni(m_DllDirectory + application + ".ini");
-    if ((_access(applicationIni.c_str(), 0)) == -1)
+    m_ApplicationIni = m_DllDirectory + application + ".ini";
+    if ((_access(m_ApplicationIni.c_str(), 0)) == -1)
     {
-        if (!WritePrivateProfileString("placeholder", "created", "1", applicationIni.c_str()) && 2 != GetLastError())
+        if (!WritePrivateProfileString("placeholder", "created", "1", m_ApplicationIni.c_str()) && 2 != GetLastError())
         {
             int err = GetLastError();
-            ErrorLog("ConfigManager::Init: unable to create %s, error = %d : %s\n",
-                     applicationIni.c_str(),
+            ErrorLog("%s: unable to create %s, error = %d : %s\n",
+                     __FUNCTION__,
+                     m_ApplicationIni.c_str(),
                      err,
                      LastErrorMsg(err).c_str());
         }
     }
     const std::string coreIni(m_DllDirectory + "OpenXR-MotionCompensation.ini");
-    if ((_access((m_DllDirectory + application + ".ini").c_str(), 0)) != -1)
+    if ((_access(coreIni.c_str(), 0)) != -1)
     {
         std::string errors;
         for (const auto& entry : m_Keys)
@@ -42,7 +43,7 @@ bool ConfigManager::Init(const std::string& application)
                                             NULL,
                                             buffer,
                                             2047,
-                                            applicationIni.c_str()))
+                                            m_ApplicationIni.c_str()))
             {
                 m_Values.insert({entry.first, buffer});
             }
@@ -64,15 +65,13 @@ bool ConfigManager::Init(const std::string& application)
         }
         if (!errors.empty())
         {
-            ErrorLog("ConfigManager::Init: unable to read configuration:\n%s", errors.c_str());
+            ErrorLog("%s: unable to read configuration: %s\n", __FUNCTION__, errors.c_str());
             return false;
         }
     }
     else
     {
-        ErrorLog("ConfigManager::Init: unable to find config file %s%s.ini\n",
-                 m_DllDirectory.c_str(),
-                 application.c_str());
+        ErrorLog("%s: unable to find config file %s\n", __FUNCTION__, coreIni.c_str());
         return false;
     }
     
@@ -91,7 +90,8 @@ bool ConfigManager::GetBool(Cfg key, bool& val)
         }
         catch (std::exception e)
         {
-            ErrorLog("ConfigManager::GetBool: unable to convert value (%s) for key (%s) to integer: %s\n",
+            ErrorLog("%s: unable to convert value (%s) for key (%s) to integer: %s\n",
+                     __FUNCTION__,
                      strVal.c_str(),
                      m_Keys[key].first,
                      e.what());
@@ -111,7 +111,8 @@ bool ConfigManager::GetInt(Cfg key, int& val)
         }
         catch (std::exception e)
         {
-            ErrorLog("ConfigManager::GetInt: unable to convert value (%s) for key (%s) to integer: %s\n",
+            ErrorLog("%s: unable to convert value (%s) for key (%s) to integer: %s\n",
+                     __FUNCTION__,
                      strVal.c_str(),
                      m_Keys[key].first,
                      e.what());
@@ -131,7 +132,8 @@ bool ConfigManager::GetFloat(Cfg key, float& val)
         }
         catch (std::exception e)
         {
-            ErrorLog("ConfigManager::GetDouble: unable to convert value (%s) for key (%s) to double: %s\n",
+            ErrorLog("%s: unable to convert value (%s) for key (%s) to double: %s\n",
+                     __FUNCTION__,
                      strVal.c_str(),
                      m_Keys[key].first,
                      e.what());
@@ -145,7 +147,7 @@ bool ConfigManager::GetString(Cfg key, std::string& val)
     const auto it = m_Values.find(key);
     if (m_Values.end() == it)
     {
-        ErrorLog("ConfigManager::GetString: unable to find value for key: %s\n", m_Keys[key].first);
+        ErrorLog("%s: unable to find value for key: %s\n", __FUNCTION__, m_Keys[key].first);
         return false;
     }
     val = it->second;
@@ -176,7 +178,8 @@ bool ConfigManager::GetShortcut(Cfg key, std::set<int>& val)
     }
     if (!errors.empty())
     {
-        ErrorLog("ConfigManager::GetShortcut: unable to convert value (%s) for key (%s) to shortcut:\n%s",
+        ErrorLog("%s: unable to convert value (%s) for key (%s) to shortcut:\n%s",
+                 __FUNCTION__,
                  strVal.c_str(),
                  m_Keys[key].first,
                  errors.c_str());
@@ -202,9 +205,48 @@ void ConfigManager::SetValue(Cfg key, const std::string& val)
     m_Values[key] = val;
 }
 
-void WriteConfig()
+
+void ConfigManager::WriteConfig()
 {
-    // TODO: implement
+    for (const auto key : m_KeysToSave)
+    {
+        const auto& keyEntry = m_Keys.find(key);
+        if (m_Keys.end() != keyEntry)
+        {
+            const auto& valueEntry = m_Values.find(key);
+            if (m_Values.end() != valueEntry)
+            {
+                if (!WritePrivateProfileString(keyEntry->second.first.c_str(),
+                                               keyEntry->second.second.c_str(),
+                                               valueEntry->second.c_str(),
+                                               m_ApplicationIni.c_str()) &&
+                    2 != GetLastError())
+                {
+                    int err = GetLastError();
+                    ErrorLog("%s: unable to write value %s into key %s to section %s in %s, error = %d : %s\n",
+                             __FUNCTION__,
+                             valueEntry->second.c_str(),
+                             keyEntry->second.second.c_str(),
+                             keyEntry->second.first.c_str(),
+                             m_ApplicationIni.c_str(),
+                             err,
+                             LastErrorMsg(err).c_str());
+                }
+            }
+            else
+            {
+                ErrorLog("%s: key not found in value map: %s:%s\n",
+                         __FUNCTION__,
+                         keyEntry->second.first.c_str(),
+                         keyEntry->second.second.c_str());
+            }
+        }
+        else
+        {
+            ErrorLog("%s: key not found in key map: %d\n", __FUNCTION__, key);
+        }
+    }
+    Log("current configuration saved to %s\n", m_ApplicationIni.c_str());
 }
 
 bool ConfigManager::InitDirectory()
@@ -217,24 +259,20 @@ bool ConfigManager::InitDirectory()
                           &hm) == 0)
     {
         int err = GetLastError();
-        ErrorLog("ConfigManager::InitDirectory: GetModuleHandle failed, error = %d : %s\n",
-                 err,
-                 LastErrorMsg(err).c_str());
+        ErrorLog("%s: GetModuleHandle failed, error = %d : %s\n", __FUNCTION__, err, LastErrorMsg(err).c_str());
         return false;
     }
     if (GetModuleFileName(hm, path, sizeof(path)) == 0)
     {
         int err = GetLastError();
-        ErrorLog("ConfigManager::InitDirectory: GetModuleFileName failed, error = %d : %s\n",
-                 err,
-                 LastErrorMsg(err).c_str());
+        ErrorLog("%s: GetModuleFileName failed, error = %d : %s\n", __FUNCTION__, err, LastErrorMsg(err).c_str());
         return false;
     }
     std::string dllName(path); 
     size_t lastBackSlash = dllName.find_last_of("\\/");
     if (std::string::npos == lastBackSlash)
     {
-        ErrorLog("ConfigManager::InitDirectory: DllName does not contain (back)slash: %s\n", dllName.c_str());
+        ErrorLog("%s: DllName does not contain (back)slash: %s\n", __FUNCTION__, dllName.c_str());
         return false;
     }
     m_DllDirectory = dllName.substr(0,lastBackSlash + 1);
