@@ -22,11 +22,11 @@ Copy the files contained in this archive to a directory of your choice. The dire
 - The will create a registry entry making it possible for to load the api layer on OpenXR initialization
 
 ### Optional: Confirm correct installation
-You can use the application [OpenXR Explroer](https://github.com/maluoi/openxr-explorer/releases) to verify the correct installation:
+You can use the application [OpenXR Explorer](https://github.com/maluoi/openxr-explorer/releases) to verify the correct installation:
 - Install OpenXR Explorer
 - Connect your headset
 - Start your corresponding VR runtime application (e.g. SteamVR, Oculus App, Mixed Reality Portal, Varjo Base, PiTool, etc.)
-- Start OpenXR explorer/releases
+- Start OpenXR explorer
 - Search for the section `xrEnumerateInstanceExtensionProperties` (should be in the middle column at the bottom by default)
 - Check if the entry `XR_APILAYER_NOVENDOR_motion_compensation` with version `v1` exists
 
@@ -59,10 +59,17 @@ What you can modify in a configuration file:
 - bring your motion rig to neutral position
 - press the `activate` shortcut you configured (`CTRL` + `HOME` by default). This implicitly sets the neutral reference pose for the tracker
 - if necessary you can recalibrate the tracker by pressing the `center` shortcut (`CRTL` + `END` by default) while the motion rig is in neutral position 
+- you can increase the filter strength of translational and rotational filter using the following shortcuts:
+    * `translation_increase` (`CTRL` + `+` by default)
+    * `translation_decrease` (`CTRL` + `-` by default)
+    * `rotation_increase` (`CTRL` + `0` by default)
+    * `translation_decrease` (`CTRL` + `9` by default)
+- after modifying filter strength you can save your changes to the application specific configuration file using the `save_config` shortcut (`CTRL` + `SHIFT` + `S` by default). If you want to use these values globally for all applicattions you can copy them to the default configuration file `OpenXR-MotionCompensation.ini`.
 
 ### Notes
+Upon activating a shortcut you get audible feedback, using either the confirmation, warning or error sound configured in your windows system control, depending on the successful execution of the action you activated.
 
-If you recenter the in-app view during session, it is possible (depending on the application) that you need to do the following steps to get correct motion compensation:
+If you recenter the in-app view during a session the reference pose is reset by default. Therefore you should only do that while your motion rig is in neutral position. It is possible (depending on the application) that this automatic recalibration is not triggered, causing the view and reference pose to be out of sync and leading to erroneous motion compensation. You should do the following steps to get this corrected again:
 - deactivate motion compensation by pressing the `activate` shortcut
 - bring your motion rig to neutral position
 - press the `center` shortcut 
