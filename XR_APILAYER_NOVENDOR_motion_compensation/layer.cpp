@@ -40,10 +40,7 @@ namespace
     class OpenXrLayer : public motion_compensation_layer::OpenXrApi
     {
       public:
-        OpenXrLayer() = default;
-
-      public:      
-        // TODO: add xrEndSesion and clean up memory
+        OpenXrLayer() = default;   
 
         XrResult xrCreateInstance(const XrInstanceCreateInfo* createInfo) override
         {
@@ -184,6 +181,16 @@ namespace
             return result;
         }
 
+        XrResult xrEndSession(XrSession session) override
+        {
+            TraceLoggingWrite(
+                g_traceProvider,
+                "xrEndssion",
+                TLPArg(session, "Session"));
+            m_Tracker.endSession();
+            return OpenXrApi::xrEndSession(session);
+        }
+
         XrResult xrAttachSessionActionSets(XrSession session, const XrSessionActionSetsAttachInfo* attachInfo) override
         {
             TraceLoggingWrite(g_traceProvider, "xrAttachSessionActionSets", TLPArg(session, "Session"));
@@ -298,16 +305,8 @@ namespace
                                       "xrCreateReferenceSpace",
                                       TLArg("Tracker_Reference_Space", "Reset"));
 
-                    if (XR_NULL_HANDLE != m_Tracker.m_ReferenceSpace)
-                    {
-                        CHECK_XRCMD(xrDestroySpace(m_Tracker.m_ReferenceSpace));
-                    }
-                    XrReferenceSpaceCreateInfo referenceSpaceCreateInfo{XR_TYPE_REFERENCE_SPACE_CREATE_INFO, nullptr};
-                    referenceSpaceCreateInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_LOCAL;
-                    referenceSpaceCreateInfo.poseInReferenceSpace = createInfo->poseInReferenceSpace;
-                    CHECK_XRCMD(OpenXrApi::xrCreateReferenceSpace(session,
-                                                                  &referenceSpaceCreateInfo,
-                                                                  &m_Tracker.m_ReferenceSpace));
+                    m_Tracker.m_ReferenceSpace = *space;
+                    
                     // and reset tracker reference pose   
                     // TODO: modify reference pose instead?
                     m_Tracker.m_ResetReferencePose = true;  
@@ -663,7 +662,7 @@ namespace
             const bool oldstate = m_Activated;
             m_Activated = m_Initialized
                               // if tracker is not initialized, activate only after successful init
-                              ? m_Tracker.m_IsInitialized ? !m_Activated : m_Tracker.ResetReferencePose(time)
+                              ? m_Tracker.m_IsCalibrated ? !m_Activated : m_Tracker.ResetReferencePose(time)
                               : false;
             Log("motion compensation %s\n",
                 oldstate != m_Activated ? (m_Activated ? "activated" : "deactivated")

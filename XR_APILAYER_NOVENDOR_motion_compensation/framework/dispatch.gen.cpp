@@ -159,6 +159,30 @@ namespace LAYER_NAMESPACE
 		return result;
 	}
 
+	XrResult xrEndSession(XrSession session)
+	{
+		TraceLoggingWrite(g_traceProvider, "xrEndSession");
+
+		XrResult result;
+		try
+		{
+			result = LAYER_NAMESPACE::GetInstance()->xrEndSession(session);
+		}
+		catch (std::exception exc)
+		{
+			TraceLoggingWrite(g_traceProvider, "xrEndSession_Error", TLArg(exc.what(), "Error"));
+			ErrorLog("xrEndSession: %s\n", exc.what());
+			result = XR_ERROR_RUNTIME_FAILURE;
+		}
+
+		TraceLoggingWrite(g_traceProvider, "xrEndSession_Result", TLArg(xr::ToCString(result), "Result"));
+		if (XR_FAILED(result)) {
+			ErrorLog("xrEndSession failed with %s\n", xr::ToCString(result));
+		}
+
+		return result;
+	}
+
 	XrResult xrEndFrame(XrSession session, const XrFrameEndInfo* frameEndInfo)
 	{
 		TraceLoggingWrite(g_traceProvider, "xrEndFrame");
@@ -316,6 +340,11 @@ namespace LAYER_NAMESPACE
 		{
 			m_xrBeginSession = reinterpret_cast<PFN_xrBeginSession>(*function);
 			*function = reinterpret_cast<PFN_xrVoidFunction>(LAYER_NAMESPACE::xrBeginSession);
+		}
+		else if (apiName == "xrEndSession")
+		{
+			m_xrEndSession = reinterpret_cast<PFN_xrEndSession>(*function);
+			*function = reinterpret_cast<PFN_xrVoidFunction>(LAYER_NAMESPACE::xrEndSession);
 		}
 		else if (apiName == "xrEndFrame")
 		{

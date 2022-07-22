@@ -3,6 +3,7 @@ override_functions = [
     "xrGetSystem",
     "xrCreateSession",
     "xrBeginSession",
+    "xrEndSession",
     "xrAttachSessionActionSets",
     "xrSuggestInteractionProfileBindings",
     "xrCreateReferenceSpace",

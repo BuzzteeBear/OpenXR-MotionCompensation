@@ -16,7 +16,7 @@ class OpenXrTracker
     bool GetPoseDelta(XrPosef& poseDelta, XrTime frameTime);
     void ModifyFilterStrength(bool trans, bool increase);
 
-    bool m_IsInitialized{false};
+    bool m_IsCalibrated{false};
     bool m_ResetReferencePose{false};
     bool m_IsBindingSuggested{false};
     bool m_IsActionSetAttached{false};

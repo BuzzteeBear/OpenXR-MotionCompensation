@@ -175,6 +175,7 @@ void OpenXrTracker::endSession()
         m_ReferenceSpace = XR_NULL_HANDLE;
     }
 }
+
 bool OpenXrTracker::ResetReferencePose(XrTime frameTime)
 {
     XrPosef curPose;
@@ -183,14 +184,14 @@ bool OpenXrTracker::ResetReferencePose(XrTime frameTime)
         m_TransFilter->Reset(curPose.position);
         m_RotFilter->Reset(curPose.orientation);
         m_ReferencePose = curPose;
-        m_IsInitialized = true;
+        m_IsCalibrated = true;
         Log("tracker reference pose reset\n");
         return true;
     }
     else
     {
         ErrorLog("%s: unable to get current pose\n", __FUNCTION__);
-        m_IsInitialized = false;
+        m_IsCalibrated = false;
         return false;
     }
 }
