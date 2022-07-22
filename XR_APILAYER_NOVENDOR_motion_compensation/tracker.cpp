@@ -243,7 +243,8 @@ bool OpenXrTracker::GetPoseDelta(XrPosef& poseDelta, XrTime frameTime)
 void OpenXrTracker::ModifyFilterStrength(bool trans, bool increase)
 {
     float* currentValue = trans ? &m_TransStrength : &m_RotStrength;
-    float amount = (1.0f - *currentValue) * 0.05f;
+    float prevValue = *currentValue;
+    float amount = (1.1f - *currentValue) * 0.05f;
     float newValue = *currentValue + (increase ? amount : -amount);
     if (trans)
     {
@@ -257,6 +258,7 @@ void OpenXrTracker::ModifyFilterStrength(bool trans, bool increase)
         GetConfig()->SetValue(Cfg::RotStrength, *currentValue);
         Log("rotational filter strength %screased to %f\n", increase ? "in" : "de", *currentValue);
     }
+    MessageBeep(*currentValue != prevValue ? MB_OK : MB_ICONERROR);
 }
 
 bool OpenXrTracker::GetPose(XrPosef& trackerPose, XrTime frameTime) const

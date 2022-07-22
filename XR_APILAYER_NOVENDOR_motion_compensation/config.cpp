@@ -208,6 +208,7 @@ void ConfigManager::SetValue(Cfg key, const std::string& val)
 
 void ConfigManager::WriteConfig()
 {
+    bool error{false};
     for (const auto key : m_KeysToSave)
     {
         const auto& keyEntry = m_Keys.find(key);
@@ -222,6 +223,7 @@ void ConfigManager::WriteConfig()
                                                m_ApplicationIni.c_str()) &&
                     2 != GetLastError())
                 {
+                    error = true;
                     int err = GetLastError();
                     ErrorLog("%s: unable to write value %s into key %s to section %s in %s, error = %d : %s\n",
                              __FUNCTION__,
@@ -235,6 +237,7 @@ void ConfigManager::WriteConfig()
             }
             else
             {
+                error = true;
                 ErrorLog("%s: key not found in value map: %s:%s\n",
                          __FUNCTION__,
                          keyEntry->second.first.c_str(),
@@ -243,10 +246,12 @@ void ConfigManager::WriteConfig()
         }
         else
         {
+            error = true;
             ErrorLog("%s: key not found in key map: %d\n", __FUNCTION__, key);
         }
     }
     Log("current configuration saved to %s\n", m_ApplicationIni.c_str());
+    MessageBeep(!error ? MB_OK : MB_ICONERROR);
 }
 
 bool ConfigManager::InitDirectory()

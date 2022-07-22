@@ -658,48 +658,68 @@ namespace
                                                                                                               : 0;
         }
 
+        void ToggleActive(XrTime time)
+        {
+            const bool oldstate = m_Activated;
+            m_Activated = m_Initialized
+                              // if tracker is not initialized, activate only after successful init
+                              ? m_Tracker.m_IsInitialized ? !m_Activated : m_Tracker.ResetReferencePose(time)
+                              : false;
+            Log("motion compensation %s\n",
+                oldstate != m_Activated ? (m_Activated ? "activated" : "deactivated")
+                : m_Activated           ? "kept active"
+                                        : "could not be activated");
+            if (oldstate != m_Activated)
+            {
+                MessageBeep(m_Activated ? MB_OK : MB_ICONWARNING);
+            }
+            else if (!m_Activated)
+            {
+                MessageBeep(MB_ICONERROR);
+            }
+            TraceLoggingWrite(g_traceProvider,
+                                  "ToggleActive",
+                                  TLArg(m_Activated ? "Deactivated" : "Activated", "Motion_Compensation"),
+                                  TLArg(time, "Time"));
+        }
+         
+        void Recalibrate(XrTime time)
+        {
+            if (!m_Tracker.ResetReferencePose(time))
+            {
+                // failed to update reference pose -> deactivate mc
+                if (m_Activated)
+                {
+                    ErrorLog("motion compensation deactivated because tracker reference pose cold not be reset\n");
+                }
+                m_Activated = false;
+                MessageBeep(MB_ICONERROR);
+                TraceLoggingWrite(g_traceProvider,
+                                  "HandleKeyboardInput",
+                                  TLArg("Deactivated_Reset", "Motion_Compensation"),
+                                  TLArg(time, "Time"));
+            }
+            else
+            {
+                MessageBeep(MB_OK);
+                TraceLoggingWrite(g_traceProvider,
+                                  "HandleKeyboardInput",
+                                  TLArg("Reset", "Tracker_Reference"),
+                                  TLArg(time, "Time"));
+            }
+        }
+
         void HandleKeyboardInput(XrTime time)
         {
             bool isRepeat{false};
             if (m_Input.GetKeyState(Cfg::KeyActivate, isRepeat) && !isRepeat)
             {
-                bool oldstate = m_Activated;
-                m_Activated = m_Initialized
-                                  // if tracker is not initialized, activate only after successful init
-                                  ? m_Tracker.m_IsInitialized ? !m_Activated : m_Tracker.ResetReferencePose(time)
-                                  : false;
-                Log("motion compensation %s\n",
-                    oldstate != m_Activated ? (m_Activated ? "activated" : "deactivated")
-                    : m_Activated           ? "kept active"
-                                            : "could not be activated");              
-                TraceLoggingWrite(g_traceProvider,
-                                  "HandleKeyboardInput",
-                                  TLArg(m_Activated ? "Deactivated" : "Activated", "Motion_Compensation"),
-                                  TLArg(time, "Time"));
+                ToggleActive(time);
             }
             isRepeat = false;
             if (m_Input.GetKeyState(Cfg::KeyCenter, isRepeat) && !isRepeat)
             {
-                if (!m_Tracker.ResetReferencePose(time))
-                {
-                    // failed to update reference pose -> deactivate mc
-                    if (m_Activated)
-                    {
-                        ErrorLog("motion compensation deactivated because tracker reference pose cold not be reset\n");
-                    }
-                    m_Activated = false;
-                    TraceLoggingWrite(g_traceProvider,
-                                      "HandleKeyboardInput",
-                                      TLArg("Deactivated_Reset", "Motion_Compensation"),
-                                      TLArg(time, "Time"));
-                }
-                else
-                {
-                    TraceLoggingWrite(g_traceProvider,
-                                      "HandleKeyboardInput",
-                                      TLArg("Reset", "Tracker_Reference"),
-                                      TLArg(time, "Time"));
-                }
+                Recalibrate(time);
             }
             isRepeat = false;
             if (m_Input.GetKeyState(Cfg::KeyTransInc, isRepeat))
