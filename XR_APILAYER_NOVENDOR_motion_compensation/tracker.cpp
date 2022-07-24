@@ -168,15 +168,6 @@ void OpenXrTracker::beginSession(XrSession session)
 {
     m_Session = session;
 
-    // Create a reference space.
-    XrReferenceSpaceCreateInfo referenceSpaceCreateInfo{XR_TYPE_REFERENCE_SPACE_CREATE_INFO, nullptr};
-    referenceSpaceCreateInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_LOCAL;
-    referenceSpaceCreateInfo.poseInReferenceSpace = Pose::Identity();
-    CHECK_XRCMD(GetInstance()->xrCreateReferenceSpace(session, &referenceSpaceCreateInfo, &m_ReferenceSpace));
-    TraceLoggingWrite(g_traceProvider,
-                      "OpenXrTracker::beginSession",
-                      TLPArg(m_ReferenceSpace, "xrCreateReferenceSpace"));
-
     // create action space
     XrActionSpaceCreateInfo actionSpaceCreateInfo{XR_TYPE_ACTION_SPACE_CREATE_INFO, nullptr};
     actionSpaceCreateInfo.action = m_TrackerPoseAction;
@@ -184,8 +175,6 @@ void OpenXrTracker::beginSession(XrSession session)
     actionSpaceCreateInfo.poseInActionSpace = Pose::Identity();
     CHECK_XRCMD(GetInstance()->xrCreateActionSpace(m_Session, &actionSpaceCreateInfo, &m_TrackerSpace));
     TraceLoggingWrite(g_traceProvider, "OpenXrTracker::beginSession", TLPArg(m_TrackerSpace, "xrCreateActionSpace"));
-
-
 }
 
 void OpenXrTracker::endSession()
