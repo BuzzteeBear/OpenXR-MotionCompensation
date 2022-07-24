@@ -15,7 +15,8 @@ enum class Cfg
     KeyTransDec,
     KeyRotInc,
     KeyRotDec,
-    KeySaveConfig
+    KeySaveConfig,
+    TestRotation
 };
 
 class ConfigManager
@@ -42,20 +43,20 @@ class ConfigManager
     std::string m_ApplicationIni;
 
     // needs to include all values of enum ConfigKey
-    std::map<Cfg, std::pair<std::string, std::string>> m_Keys{
-        {Cfg::TrackerType, {"tracker", "type"}},
-        {Cfg::TrackerParam, {"tracker", "parameter"}},
-        {Cfg::TransStrength, {"translation_filter", "strength"}},
-        {Cfg::TransOrder, {"translation_filter", "order"}},
-        {Cfg::RotStrength, {"rotation_filter", "strength"}},
-        {Cfg::RotOrder, {"rotation_filter", "order"}},
-        {Cfg::KeyActivate, {"shortcuts", "activate"}},
-        {Cfg::KeyCenter, {"shortcuts", "center"}},
-        {Cfg::KeyTransInc, {"shortcuts", "translation_increase"}},
-        {Cfg::KeyTransDec, {"shortcuts", "translation_decrease"}},
-        {Cfg::KeyRotInc, {"shortcuts", "rotation_increase"}},
-        {Cfg::KeyRotDec, {"shortcuts", "rotation_decrease"}},
-        {Cfg::KeySaveConfig, {"shortcuts", "save_config"}}};
+    std::map<Cfg, std::pair<std::string, std::string>> m_Keys{{Cfg::TrackerType, {"tracker", "type"}},
+                                                              {Cfg::TrackerParam, {"tracker", "parameter"}},
+                                                              {Cfg::TransStrength, {"translation_filter", "strength"}},
+                                                              {Cfg::TransOrder, {"translation_filter", "order"}},
+                                                              {Cfg::RotStrength, {"rotation_filter", "strength"}},
+                                                              {Cfg::RotOrder, {"rotation_filter", "order"}},
+                                                              {Cfg::KeyActivate, {"shortcuts", "activate"}},
+                                                              {Cfg::KeyCenter, {"shortcuts", "center"}},
+                                                              {Cfg::KeyTransInc, {"shortcuts", "translation_increase"}},
+                                                              {Cfg::KeyTransDec, {"shortcuts", "translation_decrease"}},
+                                                              {Cfg::KeyRotInc, {"shortcuts", "rotation_increase"}},
+                                                              {Cfg::KeyRotDec, {"shortcuts", "rotation_decrease"}},
+                                                              {Cfg::KeySaveConfig, {"shortcuts", "save_config"}},
+                                                              {Cfg::TestRotation, {"debug", "testrotation"}}};
 
     std::set<Cfg> m_KeysToSave{Cfg::TransStrength, Cfg::RotStrength};
 

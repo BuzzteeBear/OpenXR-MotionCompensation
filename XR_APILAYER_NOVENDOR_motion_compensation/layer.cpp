@@ -95,6 +95,12 @@ namespace
 
             // initialize keyboard input handler
             m_Initialized = m_Initialized ? m_Input.Init() : m_Initialized;
+
+            // enable debug test rotation
+            if (m_Initialized)
+            {
+                GetConfig()->GetBool(Cfg::TestRotation, m_TestRotation);
+            }
             
             return XR_SUCCESS;
         }
@@ -317,10 +323,10 @@ namespace
                                       TLArg("Tracker_Reference_Space", "Reset"));
 
                     m_Tracker.m_ReferenceSpace = *space;
-                    
-                    // and reset tracker reference pose   
+
+                    // and reset tracker reference pose
                     // TODO: modify reference pose instead?
-                    m_Tracker.m_ResetReferencePose = true;  
+                    m_Tracker.m_ResetReferencePose = true;      
                 }
             }
             TraceLoggingWrite(g_traceProvider, "xrCreateReferenceSpace", TLPArg(*space, "Space"));
@@ -353,7 +359,9 @@ namespace
 
                 XrPosef trackerDelta = Pose::Identity();
                 // TestRotation(&trackerDelta, time, false);
-                if (m_Tracker.GetPoseDelta(trackerDelta, time))
+                bool success = !m_TestRotation ? m_Tracker.GetPoseDelta(trackerDelta, time)
+                                              : TestRotation(&trackerDelta, time, false);
+                if (success)
                 {
                     if (spaceIsViewSpace && !baseSpaceIsViewSpace)
                     {
@@ -670,6 +678,15 @@ namespace
 
         void ToggleActive(XrTime time)
         {
+            // handle debug test rotation
+            if (m_TestRotation)
+            {
+                m_TestRotStart = time;
+                m_Activated = !m_Activated;
+                Log("test rotation motion compensation % s\n", m_Activated ? "activated" : "deactivated");
+                return;
+            }
+
             // perform last-minute tracker initialization
             bool lazySuccess = m_Tracker.LazyInit();
             
@@ -698,7 +715,22 @@ namespace
          
         void Recalibrate(XrTime time)
         {
-            if (!m_Tracker.ResetReferencePose(time))
+            if (m_TestRotation)
+            {
+                m_TestRotStart = time;
+                Log("test rotation motion compensation recalibrated");
+                return;
+            }
+                
+            if(m_Tracker.ResetReferencePose(time))
+            {
+                MessageBeep(MB_OK);
+                TraceLoggingWrite(g_traceProvider,
+                                  "HandleKeyboardInput",
+                                  TLArg("Reset", "Tracker_Reference"),
+                                  TLArg(time, "Time"));
+            }
+            else
             {
                 // failed to update reference pose -> deactivate mc
                 if (m_Activated)
@@ -711,15 +743,7 @@ namespace
                                   "HandleKeyboardInput",
                                   TLArg("Deactivated_Reset", "Motion_Compensation"),
                                   TLArg(time, "Time"));
-            }
-            else
-            {
-                MessageBeep(MB_OK);
-                TraceLoggingWrite(g_traceProvider,
-                                  "HandleKeyboardInput",
-                                  TLArg("Reset", "Tracker_Reference"),
-                                  TLArg(time, "Time"));
-            }
+            }    
         }
 
         void HandleKeyboardInput(XrTime time)
@@ -771,13 +795,13 @@ namespace
             return str;
         }
 
-        void TestRotation(XrPosef* pose, XrTime time, bool reverse)
+        bool TestRotation(XrPosef* pose, XrTime time, bool reverse)
         {
             // save current location
             XrVector3f pos = pose->position;
 
             // determine rotation angle
-            int64_t milliseconds = (time / 1000000) % 10000;
+            int64_t milliseconds = ((time - m_TestRotStart) / 1000000) % 10000;
             float angle = (float)M_PI * 0.0002f * milliseconds;
             if (reverse)
             {
@@ -790,6 +814,8 @@ namespace
                         XMMatrixMultiply(LoadXrPose(*pose), DirectX::XMMatrixRotationRollPitchYaw(0.f, angle, 0.f)));
             // reapply translation
             pose->position = pos;
+            
+            return true;
         }
 
         bool m_Initialized{true};
@@ -798,6 +824,10 @@ namespace
         XrSpace m_ViewSpace{XR_NULL_HANDLE};
         std::vector<XrView> m_EyeOffsets{};
         XrViewConfigurationType m_ViewConfigType{XR_VIEW_CONFIGURATION_TYPE_MAX_ENUM}; 
+
+        // debugging
+        bool m_TestRotation{false};
+        XrTime m_TestRotStart;
        
         OpenXrTracker m_Tracker;
         utility::Cache<XrPosef> m_PoseCache{2, Pose::Identity()};

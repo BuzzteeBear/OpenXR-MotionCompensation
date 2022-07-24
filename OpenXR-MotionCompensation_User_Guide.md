@@ -95,6 +95,11 @@ To capture a trace for the API layer:
 
 You can send the trace file to the developer or use an application such as [Tabnalysis](https://apps.microsoft.com/store/detail/tabnalysis/9NQLK2M4RP4J?hl=en-id&gl=ID) to inspect the content yourself.
 
+## Debugging
+For debugging reasons you can test if the motion compensation functionality generally works on your system without usning tracker input from the motion controllers. To do so, you have to set `testrotation` in the `debug` section to `1` and (re)start your OpenXR application of choice. You should then be able to see the world rotating around you after pressing the activation shortcut.
+
+*Beware that this can be a nauseating experience because your eyes suggest that your head is turning in the virtual world, while your inner ear tells your brain otherwise. You can stop motion compensation at any time by pressing the activation shortcut again* 
+
 ## Appendix: List of keyboard bindings
 To combine multiple keys for a single shortcut they need to be separated by '+' with no spaces in between the key descriptors.
 
