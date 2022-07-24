@@ -166,12 +166,13 @@ namespace
 
         XrResult xrBeginSession(XrSession session, const XrSessionBeginInfo* beginInfo)
         {
+            DebugLog("xrBeginSession\n");
             TraceLoggingWrite(
                 g_traceProvider,
                 "xrBeginSession",
                 TLPArg(session, "Session"),
                 TLArg(xr::ToCString(beginInfo->primaryViewConfigurationType), "PrimaryViewConfigurationType"));
-            
+      
             XrResult result = OpenXrApi::xrBeginSession(session, beginInfo);
             m_ViewConfigType = beginInfo->primaryViewConfigurationType;
            
@@ -183,6 +184,7 @@ namespace
 
         XrResult xrEndSession(XrSession session) override
         {
+            DebugLog("xrEndSession\n");
             TraceLoggingWrite(
                 g_traceProvider,
                 "xrEndssion",
@@ -193,6 +195,7 @@ namespace
 
         XrResult xrAttachSessionActionSets(XrSession session, const XrSessionActionSetsAttachInfo* attachInfo) override
         {
+            DebugLog("xrAttachSessionActionSets\n");
             TraceLoggingWrite(g_traceProvider, "xrAttachSessionActionSets", TLPArg(session, "Session"));
             for (uint32_t i = 0; i < attachInfo->countActionSets; i++)
             {
@@ -207,31 +210,35 @@ namespace
             const auto trackerActionSet = m_Tracker.m_ActionSet;
             if (trackerActionSet != XR_NULL_HANDLE)
             {
-                newActionSets.resize((size_t)chainAttachInfo.countActionSets + 1);
+                newActionSets.resize((size_t)chainAttachInfo.countActionSets);
                 memcpy(newActionSets.data(),
                        chainAttachInfo.actionSets,
                        chainAttachInfo.countActionSets * sizeof(XrActionSet));
-                uint32_t nextActionSetSlot = chainAttachInfo.countActionSets;
-
-                newActionSets[nextActionSetSlot++] = trackerActionSet;
+                newActionSets.push_back(trackerActionSet);
 
                 chainAttachInfo.actionSets = newActionSets.data();
-                chainAttachInfo.countActionSets = nextActionSetSlot;
+                chainAttachInfo.countActionSets = (uint32_t)newActionSets.size();
             }
-            m_Tracker.m_IsActionSetAttached = true;    
 
-            return OpenXrApi::xrAttachSessionActionSets(session, &chainAttachInfo);
+            XrResult result = OpenXrApi::xrAttachSessionActionSets(session, &chainAttachInfo);
+            if (XR_SUCCEEDED(result))
+            {
+                Log("tracker action set attached\n");
+                m_Tracker.m_SkipLazyInit = true;
+            }
+            return result;
         }
 
         XrResult xrSuggestInteractionProfileBindings(XrInstance instance,
                                                      const XrInteractionProfileSuggestedBinding* suggestedBindings)
         {
+            const std::string profile = getXrPath(suggestedBindings->interactionProfile);
             TraceLoggingWrite(g_traceProvider,
                               "xrSuggestInteractionProfileBindings",
                               TLPArg(instance, "Instance"),
-                              TLArg(getXrPath(suggestedBindings->interactionProfile).c_str(), "InteractionProfile"));
-            ;
-            DebugLog("suggestedBindings: %s\n", getXrPath(suggestedBindings->interactionProfile).c_str());
+                              TLArg(profile.c_str(), "InteractionProfile"));
+            
+            DebugLog("xrSuggestInteractionProfileBindings: %s\n" ,profile.c_str());
             for (uint32_t i = 0; i < suggestedBindings->countSuggestedBindings; i++)
             {
                 TraceLoggingWrite(g_traceProvider,
@@ -239,11 +246,23 @@ namespace
                                   TLPArg(suggestedBindings->suggestedBindings[i].action, "Action"),
                                   TLArg(getXrPath(suggestedBindings->suggestedBindings[i].binding).c_str(), "Path"));
 
-                DebugLog("\tbinding: %s\n", getXrPath(suggestedBindings->suggestedBindings[i].binding).c_str());
+                DebugLog("binding: %s\n", getXrPath(suggestedBindings->suggestedBindings[i].binding).c_str());
             }
 
             XrInteractionProfileSuggestedBinding bindingProfiles = *suggestedBindings;
             std::vector<XrActionSuggestedBinding> bindings{};
+
+            std::string side{"left"};
+            if (!GetConfig()->GetString(Cfg::TrackerParam, side))
+            {
+                ErrorLog("%s: unable to determine contoller side. Defaulting to %s\n",__FUNCTION__, side);
+            } 
+            if ("right" != side && "left" != side)
+            {
+                ErrorLog("%s: invalid contoller side: %s. Defaulting to 'left'\n", side);
+                side = "left";
+            }
+            const std::string path("/user/hand/" + side + "/input/grip/pose");
 
             // override left or right hand pose action
             // TODO: find a way to persist original pose action?
@@ -253,22 +272,14 @@ namespace
                    bindingProfiles.countSuggestedBindings * sizeof(XrActionSuggestedBinding));
             for (XrActionSuggestedBinding& curBinding : bindings)
             {
-                std::string side;
-                if (!GetConfig()->GetString(Cfg::TrackerParam, side) || ("right" != side  && "left" != side))
+                if (getXrPath(curBinding.binding) == path)
                 {
-                    ErrorLog("xrSuggestInteractionProfileBindings: unable to determine contoller side: %s\n", side);
-                }
-                else
-                {
-                    if (getXrPath(curBinding.binding) == "/user/hand/" + side + "/input/grip/pose")
-                    {
-                        curBinding.action = m_Tracker.m_TrackerPoseAction;
-                        m_Tracker.m_IsBindingSuggested = true;
-                    }
+                    curBinding.action = m_Tracker.m_TrackerPoseAction;
+                    Log("Binding %s - %s overridden with reference tracker action\n", profile.c_str(), path.c_str());
                 }
             }
-
             bindingProfiles.suggestedBindings = bindings.data();
+            bindingProfiles.countSuggestedBindings = (uint32_t)bindings.size();
             return OpenXrApi::xrSuggestInteractionProfileBindings(instance, &bindingProfiles);
         }
 
@@ -659,10 +670,13 @@ namespace
 
         void ToggleActive(XrTime time)
         {
+            // perform last-minute tracker initialization
+            bool lazySuccess = m_Tracker.LazyInit();
+            
             const bool oldstate = m_Activated;
-            m_Activated = m_Initialized
+            m_Activated = m_Initialized && lazySuccess
                               // if tracker is not initialized, activate only after successful init
-                              ? m_Tracker.m_IsCalibrated ? !m_Activated : m_Tracker.ResetReferencePose(time)
+                              ? m_Tracker.m_Calibrated ? !m_Activated : m_Tracker.ResetReferencePose(time)
                               : false;
             Log("motion compensation %s\n",
                 oldstate != m_Activated ? (m_Activated ? "activated" : "deactivated")
@@ -778,8 +792,8 @@ namespace
             pose->position = pos;
         }
 
-        bool m_Activated{false};
         bool m_Initialized{true};
+        bool m_Activated{false};
         std::set<XrSpace> m_ViewSpaces{};
         XrSpace m_ViewSpace{XR_NULL_HANDLE};
         std::vector<XrView> m_EyeOffsets{};

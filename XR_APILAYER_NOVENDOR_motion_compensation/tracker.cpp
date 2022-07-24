@@ -54,7 +54,41 @@ bool OpenXrTracker::Init()
         TraceLoggingWrite(g_traceProvider, "OpenXrTracker::Init", TLPArg(m_TrackerPoseAction, "xrCreateAction"));
     }
     {
-        // use config manager to set up filters
+        // suggest simple controller
+        XrInteractionProfileSuggestedBinding suggestedBindings{XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING, nullptr};
+        CHECK_XRCMD(GetInstance()->xrStringToPath(GetInstance()->GetXrInstance(),
+                                                  "/interaction_profiles/khr/simple_controller",
+                                                  &suggestedBindings.interactionProfile));
+        std::string side{"left"};
+        if (!GetConfig()->GetString(Cfg::TrackerParam, side))
+        {
+            ErrorLog("%s: unable to determine contoller side. Defaulting to %s\n", __FUNCTION__, side);
+        }
+        if ("right" != side && "left" != side)
+        {
+            ErrorLog("%s: invalid contoller side: %s. Defaulting to 'left'\n", __FUNCTION__, side);
+            side = "left";
+        }
+        else
+        {
+            const std::string path("/user/hand/" + side + "/input/grip/pose");
+            XrActionSuggestedBinding binding;
+            binding.action = m_TrackerPoseAction;
+            CHECK_XRCMD(GetInstance()->xrStringToPath(GetInstance()->GetXrInstance(), path.c_str(), &binding.binding));
+
+            suggestedBindings.suggestedBindings = &binding;
+            suggestedBindings.countSuggestedBindings = 1;
+            CHECK_XRCMD(GetInstance()->xrSuggestInteractionProfileBindings(GetInstance()->GetXrInstance(),
+                                                                                      &suggestedBindings));
+            TraceLoggingWrite(g_traceProvider,
+                              "OpenXrTracker::Init",
+                              TLArg("/interaction_profiles/khr/simple_controller", "Profile"),
+                              TLPArg(binding.action, "Action"),
+                              TLArg(path.c_str(), "Path"));
+        }
+    }
+    {
+        // set up filters
         int orderTrans, orderRot;
         float strengthTrans, strengthRot; 
         if (!GetConfig()->GetInt(Cfg::TransOrder, orderTrans) || 
@@ -93,6 +127,43 @@ bool OpenXrTracker::Init()
     return true;
 }
 
+bool OpenXrTracker::LazyInit()
+{
+    bool success = true;
+    if (m_ReferenceSpace == XR_NULL_HANDLE)
+    {
+        Log("reference space created during lazy init\n");
+        // Create a reference space.
+        XrReferenceSpaceCreateInfo referenceSpaceCreateInfo{XR_TYPE_REFERENCE_SPACE_CREATE_INFO, nullptr};
+        referenceSpaceCreateInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_LOCAL;
+        referenceSpaceCreateInfo.poseInReferenceSpace = Pose::Identity();
+        TraceLoggingWrite(g_traceProvider, "OpenXrTracker::LazyInit", TLPArg("Executed", "xrCreateReferenceSpace"));
+        if (!XR_SUCCEEDED(GetInstance()->xrCreateReferenceSpace(m_Session, &referenceSpaceCreateInfo, &m_ReferenceSpace)))
+        {
+            ErrorLog("%s: xrCreateReferenceSpace failed\n", __FUNCTION__ );
+            success = false;
+        }
+    }
+
+    if (!m_SkipLazyInit)
+    {
+        Log("action set attached during lazy init\n");
+        std::vector<XrActionSet> actionSets;
+        XrSessionActionSetsAttachInfo actionSetAttachInfo{XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO,
+                                                          nullptr,
+                                                          0,
+                                                          actionSets.data()};
+        TraceLoggingWrite(g_traceProvider,
+                          "OpenXrTracker::LazyInit", TLPArg("Executed", "xrAttachSessionActionSets"));
+        if (!XR_SUCCEEDED(GetInstance()->xrAttachSessionActionSets(m_Session, &actionSetAttachInfo)))
+        {
+            ErrorLog("%s: xrAttachSessionActionSets failed\n", __FUNCTION__);
+            success = false;
+        }
+    }
+    return success;
+}
+
 void OpenXrTracker::beginSession(XrSession session)
 {
     m_Session = session;
@@ -115,49 +186,6 @@ void OpenXrTracker::beginSession(XrSession session)
     TraceLoggingWrite(g_traceProvider, "OpenXrTracker::beginSession", TLPArg(m_TrackerSpace, "xrCreateActionSpace"));
 
 
-    // TODO: attach actionset if application doesn't call xrAttachSessionActionSets but avoid to attach twice
-    /*
-    if (!m_IsActionSetAttached)
-    {
-        XrSessionActionSetsAttachInfo actionSetAttachInfo{XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO,
-                                                      nullptr,
-                                                      1,
-                                                      &m_ActionSet};
-         CHECK_XRCMD(GetInstance()->OpenXrApi::xrAttachSessionActionSets(session, &actionSetAttachInfo));
-    }
-    */
-    if (!m_IsBindingSuggested)
-    {
-        // suggest left controller if app has not suggested controller binding for left controller pose
-        XrInteractionProfileSuggestedBinding suggestedBindings{XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING, nullptr};
-        CHECK_XRCMD(GetInstance()->xrStringToPath(GetInstance()->GetXrInstance(),
-                                                  "/interaction_profiles/khr/simple_controller",
-                                                  &suggestedBindings.interactionProfile));
-
-        std::string side;
-        if (!GetConfig()->GetString(Cfg::TrackerParam, side) || ("right" != side && "left" != side))
-        {
-            ErrorLog("xrSuggestInteractionProfileBindings: unable to determine contoller side: %s\n", side);
-        }
-        else
-        {
-            XrActionSuggestedBinding binding;
-            binding.action = m_TrackerPoseAction;
-            CHECK_XRCMD(GetInstance()->xrStringToPath(GetInstance()->GetXrInstance(),
-                                                      ("/user/hand/" + side + "/input/grip/pose").c_str(),
-                                                      &binding.binding));
-
-            suggestedBindings.suggestedBindings = &binding;
-            suggestedBindings.countSuggestedBindings = 1;
-            CHECK_XRCMD(GetInstance()->OpenXrApi::xrSuggestInteractionProfileBindings(GetInstance()->GetXrInstance(),
-                                                                                      &suggestedBindings));
-            TraceLoggingWrite(g_traceProvider,
-                              "OpenXrTracker::beginSession",
-                              TLArg("/interaction_profiles/khr/simple_controller", "Profile"),
-                              TLPArg(binding.action, "Action"),
-                              TLArg(("/user/hand/" + side + "/input/grip/pose").c_str(), "Path"));
-        }
-    }
 }
 
 void OpenXrTracker::endSession()
@@ -169,11 +197,6 @@ void OpenXrTracker::endSession()
         GetInstance()->xrDestroySpace(m_TrackerSpace);
         m_TrackerSpace = XR_NULL_HANDLE;
     }
-    if (m_ReferenceSpace != XR_NULL_HANDLE)
-    {
-        GetInstance()->xrDestroySpace(m_ReferenceSpace);
-        m_ReferenceSpace = XR_NULL_HANDLE;
-    }
 }
 
 bool OpenXrTracker::ResetReferencePose(XrTime frameTime)
@@ -184,14 +207,14 @@ bool OpenXrTracker::ResetReferencePose(XrTime frameTime)
         m_TransFilter->Reset(curPose.position);
         m_RotFilter->Reset(curPose.orientation);
         m_ReferencePose = curPose;
-        m_IsCalibrated = true;
+        m_Calibrated = true;
         Log("tracker reference pose reset\n");
         return true;
     }
     else
     {
         ErrorLog("%s: unable to get current pose\n", __FUNCTION__);
-        m_IsCalibrated = false;
+        m_Calibrated = false;
         return false;
     }
 }
@@ -199,7 +222,7 @@ bool OpenXrTracker::ResetReferencePose(XrTime frameTime)
 bool OpenXrTracker::GetPoseDelta(XrPosef& poseDelta, XrTime frameTime)
 {
     // pose already calulated for requested time or unable to calculate
-    if (frameTime == m_LastPoseTime || !m_IsActionSetAttached || !m_IsBindingSuggested)
+    if (frameTime == m_LastPoseTime)
     {
         // already calulated for requested time;
         poseDelta = m_LastPoseDelta;
