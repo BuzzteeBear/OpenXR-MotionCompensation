@@ -4,32 +4,31 @@
 #include "pch.h"
 #include "utility.h"
 
-class OpenXrTracker
+class TrackerBase
 {
   public:
-    OpenXrTracker();
-    ~OpenXrTracker();
-    bool Init();
+    virtual ~TrackerBase();
+
+    virtual bool Init() = 0;
+    virtual void beginSession(XrSession session) = 0;
+    virtual bool LazyInit() = 0;
     bool LoadFilters();
-    bool LazyInit();
-    void beginSession(XrSession session);
-    void endSession();
-    bool ResetReferencePose(XrTime frameTime);
-    bool GetPoseDelta(XrPosef& poseDelta, XrTime frameTime);
     void ModifyFilterStrength(bool trans, bool increase);
+    virtual bool ResetReferencePose(XrTime frameTime) = 0;
+    bool GetPoseDelta(XrPosef& poseDelta, XrTime frameTime);
+    virtual void endSession() = 0;
 
     bool m_SkipLazyInit{false};
     bool m_Calibrated{false};
     bool m_ResetReferencePose{false};
-    XrActionSet m_ActionSet{XR_NULL_HANDLE};
-    XrAction m_TrackerPoseAction{XR_NULL_HANDLE};
-    XrSpace m_TrackerSpace{XR_NULL_HANDLE};
-    XrSpace m_ReferenceSpace{XR_NULL_HANDLE};
+
+  protected:
+    void SetReferencePose(XrPosef pose);
+    virtual bool GetPose(XrPosef& trackerPose, XrTime frameTime) = 0;
+   
+    XrSession m_Session{XR_NULL_HANDLE};
 
   private:
-    bool GetPose(XrPosef& trackerPose, XrTime frameTime) const;
-
-    XrSession m_Session{XR_NULL_HANDLE};
     XrPosef m_ReferencePose{xr::math::Pose::Identity()};
     XrPosef m_LastPoseDelta{xr::math::Pose::Identity()};
     XrTime m_LastPoseTime{0};
@@ -37,4 +36,25 @@ class OpenXrTracker
     float m_RotStrength{0.0f};
     utility::FilterBase<XrVector3f>* m_TransFilter = nullptr;
     utility::FilterBase<XrQuaternionf>* m_RotFilter = nullptr;
+};
+
+
+class OpenXrTracker : public TrackerBase
+{
+  public:
+    OpenXrTracker();
+    ~OpenXrTracker();
+    virtual bool Init() override;
+    virtual bool LazyInit() override;
+    virtual void beginSession(XrSession session) override;
+    virtual void endSession() override;
+    virtual bool ResetReferencePose(XrTime frameTime) override;
+
+    XrActionSet m_ActionSet{XR_NULL_HANDLE};
+    XrAction m_TrackerPoseAction{XR_NULL_HANDLE};
+    XrSpace m_TrackerSpace{XR_NULL_HANDLE};
+    XrSpace m_ReferenceSpace{XR_NULL_HANDLE};
+
+  protected:
+    virtual bool GetPose(XrPosef& trackerPose, XrTime frameTime) override;
 };

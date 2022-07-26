@@ -11,9 +11,7 @@ using namespace motion_compensation_layer;
 using namespace motion_compensation_layer::log;
 using namespace xr::math;
 
-OpenXrTracker::OpenXrTracker() {}
-
-OpenXrTracker::~OpenXrTracker()
+TrackerBase::~TrackerBase()
 {
     if (m_TransFilter)
     {
@@ -24,6 +22,132 @@ OpenXrTracker::~OpenXrTracker()
         delete m_RotFilter;
     }
 }
+
+bool TrackerBase::LoadFilters()
+{
+    // set up filters
+    int orderTrans = 2, orderRot = 2;
+    float strengthTrans = 0.0f, strengthRot = 0.0f;
+    if (!GetConfig()->GetInt(Cfg::TransOrder, orderTrans) || !GetConfig()->GetInt(Cfg::RotOrder, orderRot) ||
+        !GetConfig()->GetFloat(Cfg::TransStrength, strengthTrans) ||
+        !GetConfig()->GetFloat(Cfg::RotStrength, strengthRot))
+    {
+        ErrorLog("%s: error reading configured values for filters\n", __FUNCTION__);
+    }
+    if (1 > orderTrans || 3 < orderTrans)
+    {
+        ErrorLog("%s: invalid order for translational filter: %d\n", __FUNCTION__, orderTrans);
+        return false;
+    }
+    if (1 > orderRot || 3 < orderRot)
+    {
+        ErrorLog("%s: invalid order for rotational filter: %d\n", __FUNCTION__, orderRot);
+        return false;
+    }
+    // remove previous filter objects
+    if (m_TransFilter)
+    {
+        delete m_TransFilter;
+    }
+    if (m_RotFilter)
+    {
+        delete m_RotFilter;
+    }
+
+    m_TransStrength = strengthTrans;
+    m_RotStrength = strengthRot;
+
+    Log("translational filter stages: %d\n", orderTrans);
+    Log("translational filter strength: %d\n", m_TransStrength);
+    m_TransFilter = 1 == orderTrans   ? new utility::SingleEmaFilter(m_TransStrength)
+                    : 2 == orderTrans ? new utility::DoubleEmaFilter(m_TransStrength)
+                                      : new utility::TripleEmaFilter(m_TransStrength);
+
+    Log("rotational filter stages: %d\n", orderRot);
+    Log("rotational filter strength: %d\n", m_TransStrength);
+    m_RotFilter = 1 == orderRot   ? new utility::SingleSlerpFilter(m_RotStrength)
+                  : 2 == orderRot ? new utility::DoubleSlerpFilter(m_RotStrength)
+                                  : new utility::TripleSlerpFilter(m_RotStrength);
+
+    return true;
+}
+
+void TrackerBase::ModifyFilterStrength(bool trans, bool increase)
+{
+    float* currentValue = trans ? &m_TransStrength : &m_RotStrength;
+    float prevValue = *currentValue;
+    float amount = (1.1f - *currentValue) * 0.05f;
+    float newValue = *currentValue + (increase ? amount : -amount);
+    if (trans)
+    {
+        *currentValue = m_TransFilter->SetStrength(newValue);
+        GetConfig()->SetValue(Cfg::TransStrength, *currentValue);
+        Log("translational filter strength %screased to %f\n", increase ? "in" : "de", *currentValue);
+    }
+    else
+    {
+        *currentValue = m_RotFilter->SetStrength(newValue);
+        GetConfig()->SetValue(Cfg::RotStrength, *currentValue);
+        Log("rotational filter strength %screased to %f\n", increase ? "in" : "de", *currentValue);
+    }
+    MessageBeep(*currentValue != prevValue ? MB_OK : MB_ICONERROR);
+}
+
+
+void TrackerBase::SetReferencePose(XrPosef pose)
+{
+    m_TransFilter->Reset(pose.position);
+    m_RotFilter->Reset(pose.orientation);
+    m_ReferencePose = pose;
+    m_Calibrated = true;
+}
+
+bool TrackerBase::GetPoseDelta(XrPosef& poseDelta, XrTime frameTime)
+{
+    // pose already calulated for requested time or unable to calculate
+    if (frameTime == m_LastPoseTime)
+    {
+        // already calulated for requested time;
+        poseDelta = m_LastPoseDelta;
+        TraceLoggingWrite(g_traceProvider, "GetPoseDelta", TLArg(xr::ToString(m_LastPoseDelta).c_str(), "Last_Delta"));
+        return true;
+    }
+    if (m_ResetReferencePose)
+    {
+        m_ResetReferencePose = !ResetReferencePose(frameTime);
+    }
+    XrPosef curPose;
+    if (GetPose(curPose, frameTime))
+    {
+        // apply translational filter
+        m_TransFilter->Filter(curPose.position);
+
+        // apply rotational filter
+        m_RotFilter->Filter(curPose.orientation);
+
+        TraceLoggingWrite(g_traceProvider,
+                          "GetPoseDelta",
+                          TLArg(xr::ToString(curPose).c_str(), "Location_After_Filter"),
+                          TLArg(frameTime, "Time"));
+
+        // calculate difference toward reference pose
+        poseDelta = Pose::Multiply(Pose::Invert(curPose), m_ReferencePose);
+
+        TraceLoggingWrite(g_traceProvider, "GetPoseDelta", TLArg(xr::ToString(poseDelta).c_str(), "Delta"));
+
+        m_LastPoseTime = frameTime;
+        m_LastPoseDelta = poseDelta;
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+OpenXrTracker::OpenXrTracker(){}
+
+OpenXrTracker::~OpenXrTracker(){}
 
 bool OpenXrTracker::Init()
 {
@@ -90,54 +214,6 @@ bool OpenXrTracker::Init()
     return LoadFilters();
 }
 
-bool OpenXrTracker::LoadFilters()
-{
-    // set up filters
-    int orderTrans = 2, orderRot = 2;
-    float strengthTrans = 0.0f, strengthRot = 0.0f;
-    if (!GetConfig()->GetInt(Cfg::TransOrder, orderTrans) || !GetConfig()->GetInt(Cfg::RotOrder, orderRot) ||
-        !GetConfig()->GetFloat(Cfg::TransStrength, strengthTrans) ||
-        !GetConfig()->GetFloat(Cfg::RotStrength, strengthRot))
-    {
-        ErrorLog("%s: error reading configured values for filters\n", __FUNCTION__);
-    }
-    if (1 > orderTrans || 3 < orderTrans)
-    {
-        ErrorLog("%s: invalid order for translational filter: %d\n", __FUNCTION__, orderTrans);
-        return false;
-    }
-    if (1 > orderRot || 3 < orderRot)
-    {
-        ErrorLog("%s: invalid order for rotational filter: %d\n", __FUNCTION__, orderRot);
-        return false;
-    }
-    // remove previous filter objects
-    if (m_TransFilter)
-    {
-        delete m_TransFilter;
-    }
-    if (m_RotFilter)
-    {
-        delete m_RotFilter;
-    }
-
-    m_TransStrength = strengthTrans;
-    m_RotStrength = strengthRot;
-
-    Log("translational filter stages: %d\n", orderTrans);
-    Log("translational filter strength: %d\n", m_TransStrength);
-    m_TransFilter = 1 == orderTrans   ? new utility::SingleEmaFilter(m_TransStrength)
-                    : 2 == orderTrans ? new utility::DoubleEmaFilter(m_TransStrength)
-                                      : new utility::TripleEmaFilter(m_TransStrength);
-
-    Log("rotational filter stages: %d\n", orderRot);
-    Log("rotational filter strength: %d\n", m_TransStrength);
-    m_RotFilter = 1 == orderRot   ? new utility::SingleSlerpFilter(m_RotStrength)
-                  : 2 == orderRot ? new utility::DoubleSlerpFilter(m_RotStrength)
-                                  : new utility::TripleSlerpFilter(m_RotStrength);
-    
-    return true;
-}
 
 bool OpenXrTracker::LazyInit()
 {
@@ -209,11 +285,7 @@ bool OpenXrTracker::ResetReferencePose(XrTime frameTime)
     XrPosef curPose;
     if (GetPose(curPose, frameTime))
     {
-        m_TransFilter->Reset(curPose.position);
-        m_RotFilter->Reset(curPose.orientation);
-        m_ReferencePose = curPose;
-        m_Calibrated = true;
-        Log("tracker reference pose reset\n");
+        SetReferencePose(curPose);
         return true;
     }
     else
@@ -224,73 +296,8 @@ bool OpenXrTracker::ResetReferencePose(XrTime frameTime)
     }
 }
 
-bool OpenXrTracker::GetPoseDelta(XrPosef& poseDelta, XrTime frameTime)
-{
-    // pose already calulated for requested time or unable to calculate
-    if (frameTime == m_LastPoseTime)
-    {
-        // already calulated for requested time;
-        poseDelta = m_LastPoseDelta;
-        TraceLoggingWrite(g_traceProvider,
-                          "GetPoseDelta",
-                          TLArg(xr::ToString(m_LastPoseDelta).c_str(), "Last_Delta"));
-        return true;
-    }
-    if (m_ResetReferencePose)
-    {
-        m_ResetReferencePose = !ResetReferencePose(frameTime);
-    }
-    XrPosef curPose;
-    if (GetPose(curPose, frameTime))
-    {      
-        // apply translational filter
-        m_TransFilter->Filter(curPose.position);
 
-        // apply rotational filter
-        m_RotFilter->Filter(curPose.orientation);
-
-        TraceLoggingWrite(g_traceProvider,
-                          "GetPoseDelta",
-                          TLArg(xr::ToString(curPose).c_str(), "Location_After_Filter"),
-                          TLArg(frameTime, "Time"));
-
-        // calculate difference toward reference pose
-        poseDelta = Pose::Multiply(Pose::Invert(curPose), m_ReferencePose);
-
-        TraceLoggingWrite(g_traceProvider, "GetPoseDelta", TLArg(xr::ToString(poseDelta).c_str(), "Delta"));
-  
-        m_LastPoseTime = frameTime;
-        m_LastPoseDelta = poseDelta;
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-}
-
-void OpenXrTracker::ModifyFilterStrength(bool trans, bool increase)
-{
-    float* currentValue = trans ? &m_TransStrength : &m_RotStrength;
-    float prevValue = *currentValue;
-    float amount = (1.1f - *currentValue) * 0.05f;
-    float newValue = *currentValue + (increase ? amount : -amount);
-    if (trans)
-    {
-        *currentValue = m_TransFilter->SetStrength(newValue);
-        GetConfig()->SetValue(Cfg::TransStrength, *currentValue);
-        Log("translational filter strength %screased to %f\n", increase ? "in" : "de", *currentValue);
-    }
-    else
-    {
-        *currentValue = m_RotFilter->SetStrength(newValue);
-        GetConfig()->SetValue(Cfg::RotStrength, *currentValue);
-        Log("rotational filter strength %screased to %f\n", increase ? "in" : "de", *currentValue);
-    }
-    MessageBeep(*currentValue != prevValue ? MB_OK : MB_ICONERROR);
-}
-
-bool OpenXrTracker::GetPose(XrPosef& trackerPose, XrTime frameTime) const
+bool OpenXrTracker::GetPose(XrPosef& trackerPose, XrTime frameTime)
 {
     // Query the latest tracker pose.
     XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};

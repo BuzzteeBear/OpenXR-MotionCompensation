@@ -20,6 +20,14 @@ enum class Cfg
     TestRotation
 };
 
+enum class Tracker
+{
+    Controller = 0,
+    Yaw,
+    Mover,
+    SRS
+};
+
 class ConfigManager
 {
   public:
