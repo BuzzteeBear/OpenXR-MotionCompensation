@@ -16,12 +16,13 @@ namespace utility
     {
         bool success = true;
         std::set<Cfg> activities{Cfg::KeyActivate,
-                                       Cfg::KeyCenter,
-                                       Cfg::KeyTransInc,
-                                       Cfg::KeyTransDec,
-                                       Cfg::KeyRotInc,
-                                       Cfg::KeyRotDec,
-                                       Cfg::KeySaveConfig};
+                                 Cfg::KeyCenter,
+                                 Cfg::KeyTransInc,
+                                 Cfg::KeyTransDec,
+                                 Cfg::KeyRotInc,
+                                 Cfg::KeyRotDec,
+                                 Cfg::KeySaveConfig,
+                                 Cfg::KeyReloadConfig};
         std::string errors;
         for (const Cfg& activity : activities)
         {

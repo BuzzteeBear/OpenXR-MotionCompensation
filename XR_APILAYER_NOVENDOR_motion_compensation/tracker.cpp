@@ -87,43 +87,55 @@ bool OpenXrTracker::Init()
                               TLArg(path.c_str(), "Path"));
         }
     }
+    return LoadFilters();
+}
+
+bool OpenXrTracker::LoadFilters()
+{
+    // set up filters
+    int orderTrans = 2, orderRot = 2;
+    float strengthTrans = 0.0f, strengthRot = 0.0f;
+    if (!GetConfig()->GetInt(Cfg::TransOrder, orderTrans) || !GetConfig()->GetInt(Cfg::RotOrder, orderRot) ||
+        !GetConfig()->GetFloat(Cfg::TransStrength, strengthTrans) ||
+        !GetConfig()->GetFloat(Cfg::RotStrength, strengthRot))
     {
-        // set up filters
-        int orderTrans, orderRot;
-        float strengthTrans, strengthRot; 
-        if (!GetConfig()->GetInt(Cfg::TransOrder, orderTrans) || 
-            !GetConfig()->GetInt(Cfg::RotOrder, orderRot) ||
-            !GetConfig()->GetFloat(Cfg::TransStrength, strengthTrans) ||
-            !GetConfig()->GetFloat(Cfg::RotStrength, strengthRot))
-        {
-            ErrorLog("%s: error reading configured values\n", __FUNCTION__);
-            return false;
-        }
-        if (1 > orderTrans || 3 < orderTrans)
-        {
-            ErrorLog("%s: invalid order for translational filter: %d\n", __FUNCTION__, orderTrans);
-            return false;
-        }
-        if (1 > orderRot || 3 < orderRot)
-        {
-            ErrorLog("%s: invalid order for rotational filter: %d\n", __FUNCTION__, orderRot);
-            return false;
-        }
-        m_TransStrength = strengthTrans;
-        m_RotStrength = strengthRot;
-
-
-        Log("translational filter stages: %d\n", orderTrans);
-        m_TransFilter = 1 == orderTrans   ? new utility::SingleEmaFilter(m_TransStrength)
-                        : 2 == orderTrans ? new utility::DoubleEmaFilter(m_TransStrength)
-                                          : new utility::TripleEmaFilter(m_TransStrength);
-        
-        Log("rotational filter stages: %d\n", orderRot);
-        m_RotFilter = 1 == orderRot   ? new utility::SingleSlerpFilter(m_RotStrength)
-                      : 2 == orderRot ? new utility::DoubleSlerpFilter(m_RotStrength)
-                                      : new utility::TripleSlerpFilter(m_RotStrength);
-        
+        ErrorLog("%s: error reading configured values for filters\n", __FUNCTION__);
     }
+    if (1 > orderTrans || 3 < orderTrans)
+    {
+        ErrorLog("%s: invalid order for translational filter: %d\n", __FUNCTION__, orderTrans);
+        return false;
+    }
+    if (1 > orderRot || 3 < orderRot)
+    {
+        ErrorLog("%s: invalid order for rotational filter: %d\n", __FUNCTION__, orderRot);
+        return false;
+    }
+    // remove previous filter objects
+    if (m_TransFilter)
+    {
+        delete m_TransFilter;
+    }
+    if (m_RotFilter)
+    {
+        delete m_RotFilter;
+    }
+
+    m_TransStrength = strengthTrans;
+    m_RotStrength = strengthRot;
+
+    Log("translational filter stages: %d\n", orderTrans);
+    Log("translational filter strength: %d\n", m_TransStrength);
+    m_TransFilter = 1 == orderTrans   ? new utility::SingleEmaFilter(m_TransStrength)
+                    : 2 == orderTrans ? new utility::DoubleEmaFilter(m_TransStrength)
+                                      : new utility::TripleEmaFilter(m_TransStrength);
+
+    Log("rotational filter stages: %d\n", orderRot);
+    Log("rotational filter strength: %d\n", m_TransStrength);
+    m_RotFilter = 1 == orderRot   ? new utility::SingleSlerpFilter(m_RotStrength)
+                  : 2 == orderRot ? new utility::DoubleSlerpFilter(m_RotStrength)
+                                  : new utility::TripleSlerpFilter(m_RotStrength);
+    
     return true;
 }
 
@@ -159,6 +171,10 @@ bool OpenXrTracker::LazyInit()
         {
             ErrorLog("%s: xrAttachSessionActionSets failed\n", __FUNCTION__);
             success = false;
+        }
+        else
+        {
+            m_SkipLazyInit = true;
         }
     }
     return success;
@@ -279,6 +295,7 @@ bool OpenXrTracker::GetPose(XrPosef& trackerPose, XrTime frameTime) const
     // Query the latest tracker pose.
     XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
     {
+        // TODO: skip xrSyncActions if other actions are active as well?
         XrActiveActionSet activeActionSets;
         activeActionSets.actionSet = m_ActionSet;
         activeActionSets.subactionPath = XR_NULL_PATH;

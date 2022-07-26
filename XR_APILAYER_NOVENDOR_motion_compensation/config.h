@@ -16,6 +16,7 @@ enum class Cfg
     KeyRotInc,
     KeyRotDec,
     KeySaveConfig,
+    KeyReloadConfig,
     TestRotation
 };
 
@@ -56,6 +57,7 @@ class ConfigManager
                                                               {Cfg::KeyRotInc, {"shortcuts", "rotation_increase"}},
                                                               {Cfg::KeyRotDec, {"shortcuts", "rotation_decrease"}},
                                                               {Cfg::KeySaveConfig, {"shortcuts", "save_config"}},
+                                                              {Cfg::KeyReloadConfig, {"shortcuts", "reload_config"}},
                                                               {Cfg::TestRotation, {"debug", "testrotation"}}};
 
     std::set<Cfg> m_KeysToSave{Cfg::TransStrength, Cfg::RotStrength};

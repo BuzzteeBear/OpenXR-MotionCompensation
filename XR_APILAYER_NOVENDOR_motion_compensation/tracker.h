@@ -10,6 +10,7 @@ class OpenXrTracker
     OpenXrTracker();
     ~OpenXrTracker();
     bool Init();
+    bool LoadFilters();
     bool LazyInit();
     void beginSession(XrSession session);
     void endSession();

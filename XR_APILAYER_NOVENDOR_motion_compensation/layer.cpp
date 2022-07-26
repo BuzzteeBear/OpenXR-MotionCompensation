@@ -74,6 +74,8 @@ namespace
             // Needed to resolve the requested function pointers.
             OpenXrApi::xrCreateInstance(createInfo);
 
+            m_Application = GetApplicationName();
+
             // Dump the application name and OpenXR runtime information to help debugging issues.
             XrInstanceProperties instanceProperties = {XR_TYPE_INSTANCE_PROPERTIES};
             CHECK_XRCMD(OpenXrApi::xrGetInstanceProperties(GetXrInstance(), &instanceProperties));
@@ -83,23 +85,29 @@ namespace
                                                  XR_VERSION_MINOR(instanceProperties.runtimeVersion),
                                                  XR_VERSION_PATCH(instanceProperties.runtimeVersion));
             TraceLoggingWrite(g_traceProvider, "xrCreateInstance", TLArg(runtimeName.c_str(), "RuntimeName"));
-            TraceLoggingWrite(g_traceProvider, "xrCreateInstance", TLArg(GetInstance()->GetApplicationName().c_str(), "ApplicationName"));
-            Log("Application: %s\n", GetApplicationName().c_str());
+            TraceLoggingWrite(g_traceProvider, "xrCreateInstance", TLArg(m_Application.c_str(), "ApplicationName"));
+            Log("Application: %s\n", m_Application.c_str());
             Log("Using OpenXR runtime: %s\n", runtimeName.c_str());
 
             // Initialize Configuration
-            m_Initialized = GetConfig()->Init(GetInstance()->GetApplicationName());
-           
-            // initialize tracker
-            m_Initialized = m_Initialized ? m_Tracker.Init() : m_Initialized;
-
-            // initialize keyboard input handler
-            m_Initialized = m_Initialized ? m_Input.Init() : m_Initialized;
+            m_Initialized = GetConfig()->Init(m_Application);
 
             // enable debug test rotation
             if (m_Initialized)
             {
                 GetConfig()->GetBool(Cfg::TestRotation, m_TestRotation);
+            }
+           
+            // initialize tracker
+            if (!m_Tracker.Init())
+            {
+                m_Initialized = false;
+            }
+
+            // initialize keyboard input handler
+            if (!m_Input.Init())
+            {
+                m_Initialized = false;
             }
             
             return XR_SUCCESS;
@@ -691,10 +699,15 @@ namespace
             bool lazySuccess = m_Tracker.LazyInit();
             
             const bool oldstate = m_Activated;
-            m_Activated = m_Initialized && lazySuccess
-                              // if tracker is not initialized, activate only after successful init
-                              ? m_Tracker.m_Calibrated ? !m_Activated : m_Tracker.ResetReferencePose(time)
-                              : false;
+            if (m_Initialized && lazySuccess)
+            {
+                // if tracker is not initialized, activate only after successful init
+                m_Activated = m_Tracker.m_Calibrated ? !m_Activated : m_Tracker.ResetReferencePose(time);
+            }
+            else
+            {
+                ErrorLog("layer intitalization failed or incomplete!");
+            }
             Log("motion compensation %s\n",
                 oldstate != m_Activated ? (m_Activated ? "activated" : "deactivated")
                 : m_Activated           ? "kept active"
@@ -708,9 +721,9 @@ namespace
                 MessageBeep(MB_ICONERROR);
             }
             TraceLoggingWrite(g_traceProvider,
-                                  "ToggleActive",
-                                  TLArg(m_Activated ? "Deactivated" : "Activated", "Motion_Compensation"),
-                                  TLArg(time, "Time"));
+                              "ToggleActive",
+                              TLArg(m_Activated ? "Deactivated" : "Activated", "Motion_Compensation"),
+                              TLArg(time, "Time"));
         }
          
         void Recalibrate(XrTime time)
@@ -744,6 +757,22 @@ namespace
                                   TLArg("Deactivated_Reset", "Motion_Compensation"),
                                   TLArg(time, "Time"));
             }    
+        }
+
+        void ReloadConfig()
+        {
+            m_Tracker.m_Calibrated = false;
+            m_Activated = false;
+            bool success = GetConfig()->Init(m_Application);
+            if (success)
+            {
+                GetConfig()->GetBool(Cfg::TestRotation, m_TestRotation);
+            }
+            if (!m_Tracker.LoadFilters())
+            {
+                success = false;
+            }
+            MessageBeep(success ? MB_OK : MB_ICONERROR);
         }
 
         void HandleKeyboardInput(XrTime time)
@@ -783,6 +812,11 @@ namespace
             {
                 GetConfig()->WriteConfig();
             }
+            isRepeat = false;
+            if (m_Input.GetKeyState(Cfg::KeyReloadConfig, isRepeat) && !isRepeat)
+            {
+                ReloadConfig();
+            }
         }
 
         static std::string getXrPath(XrPath path)
@@ -820,6 +854,7 @@ namespace
 
         bool m_Initialized{true};
         bool m_Activated{false};
+        std::string m_Application;
         std::set<XrSpace> m_ViewSpaces{};
         XrSpace m_ViewSpace{XR_NULL_HANDLE};
         std::vector<XrView> m_EyeOffsets{};
