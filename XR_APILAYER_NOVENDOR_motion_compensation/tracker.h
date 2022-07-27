@@ -58,3 +58,5 @@ class OpenXrTracker : public TrackerBase
   protected:
     virtual bool GetPose(XrPosef& trackerPose, XrTime frameTime) override;
 };
+
+void GetTracker(TrackerBase** tracker);

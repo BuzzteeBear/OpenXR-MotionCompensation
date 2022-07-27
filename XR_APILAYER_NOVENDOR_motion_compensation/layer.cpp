@@ -40,7 +40,15 @@ namespace
     class OpenXrLayer : public motion_compensation_layer::OpenXrApi
     {
       public:
-        OpenXrLayer() = default;   
+        OpenXrLayer() = default;
+
+        virtual ~OpenXrLayer()
+        {
+            if (m_Tracker)
+            {
+                delete m_Tracker;
+            }
+        }
 
         XrResult xrCreateInstance(const XrInstanceCreateInfo* createInfo) override
         {
@@ -97,9 +105,10 @@ namespace
             {
                 GetConfig()->GetBool(Cfg::TestRotation, m_TestRotation);
             }
-           
+
             // initialize tracker
-            if (!m_Tracker.Init())
+            GetTracker(&m_Tracker);
+            if (!m_Tracker->Init())
             {
                 m_Initialized = false;
             }
@@ -191,7 +200,7 @@ namespace
             m_ViewConfigType = beginInfo->primaryViewConfigurationType;
            
             // start tracker session
-            m_Tracker.beginSession(session);
+            m_Tracker->beginSession(session);
             
             return result;
         }
@@ -203,12 +212,19 @@ namespace
                 g_traceProvider,
                 "xrEndssion",
                 TLPArg(session, "Session"));
-            m_Tracker.endSession();
+            m_Tracker->endSession();
             return OpenXrApi::xrEndSession(session);
         }
 
         XrResult xrAttachSessionActionSets(XrSession session, const XrSessionActionSetsAttachInfo* attachInfo) override
         {
+            OpenXrTracker* controllerTracker = dynamic_cast<OpenXrTracker*>(m_Tracker);
+            if (!controllerTracker)
+            {
+                // just pass through if tracker is not a motion controller
+                return OpenXrApi::xrAttachSessionActionSets(session, attachInfo);
+            }
+
             DebugLog("xrAttachSessionActionSets\n");
             TraceLoggingWrite(g_traceProvider, "xrAttachSessionActionSets", TLPArg(session, "Session"));
             for (uint32_t i = 0; i < attachInfo->countActionSets; i++)
@@ -221,7 +237,7 @@ namespace
             XrSessionActionSetsAttachInfo chainAttachInfo = *attachInfo;
             std::vector<XrActionSet> newActionSets;
 
-            const auto trackerActionSet = m_Tracker.m_ActionSet;
+            const auto trackerActionSet = controllerTracker->m_ActionSet;
             if (trackerActionSet != XR_NULL_HANDLE)
             {
                 newActionSets.resize((size_t)chainAttachInfo.countActionSets);
@@ -238,7 +254,7 @@ namespace
             if (XR_SUCCEEDED(result))
             {
                 Log("tracker action set attached\n");
-                m_Tracker.m_SkipLazyInit = true;
+                m_Tracker->m_SkipLazyInit = true;
             }
             return result;
         }
@@ -246,6 +262,13 @@ namespace
         XrResult xrSuggestInteractionProfileBindings(XrInstance instance,
                                                      const XrInteractionProfileSuggestedBinding* suggestedBindings)
         {
+            OpenXrTracker* controllerTracker = dynamic_cast<OpenXrTracker*>(m_Tracker);
+            if (!controllerTracker)
+            {
+                // just pass through if tracker is not a motion controller
+                return OpenXrApi::xrSuggestInteractionProfileBindings(instance, suggestedBindings);
+            }
+
             const std::string profile = getXrPath(suggestedBindings->interactionProfile);
             TraceLoggingWrite(g_traceProvider,
                               "xrSuggestInteractionProfileBindings",
@@ -288,7 +311,7 @@ namespace
             {
                 if (getXrPath(curBinding.binding) == path)
                 {
-                    curBinding.action = m_Tracker.m_TrackerPoseAction;
+                    curBinding.action = controllerTracker->m_TrackerPoseAction;
                     Log("Binding %s - %s overridden with reference tracker action\n", profile.c_str(), path.c_str());
                 }
             }
@@ -322,19 +345,23 @@ namespace
                                       TLArg("View_Space", "Added"));
                     m_ViewSpaces.insert(*space);
                 }
-                else if (XR_REFERENCE_SPACE_TYPE_LOCAL == createInfo->referenceSpaceType)
-                {   
-                    // view reset -> recreate tracker reference space to match
-                    Log("creation of local reference space detected: %d\n", *space);    
-                    TraceLoggingWrite(g_traceProvider,
-                                      "xrCreateReferenceSpace",
-                                      TLArg("Tracker_Reference_Space", "Reset"));
+                else
+                {
+                    OpenXrTracker* controllerTracker = dynamic_cast<OpenXrTracker*>(m_Tracker);
+                    if (controllerTracker && XR_REFERENCE_SPACE_TYPE_LOCAL == createInfo->referenceSpaceType)
+                    {
+                        // view reset -> recreate tracker reference space to match
+                        Log("creation of local reference space detected: %d\n", *space);
+                        TraceLoggingWrite(g_traceProvider,
+                                          "xrCreateReferenceSpace",
+                                          TLArg("Tracker_Reference_Space", "Reset"));
 
-                    m_Tracker.m_ReferenceSpace = *space;
+                        controllerTracker->m_ReferenceSpace = *space;
 
-                    // and reset tracker reference pose
-                    // TODO: modify reference pose instead?
-                    m_Tracker.m_ResetReferencePose = true;      
+                        // and reset tracker reference pose
+                        // TODO: modify reference pose instead?
+                        controllerTracker->m_ResetReferencePose = true;
+                    }
                 }
             }
             TraceLoggingWrite(g_traceProvider, "xrCreateReferenceSpace", TLPArg(*space, "Space"));
@@ -367,7 +394,7 @@ namespace
 
                 XrPosef trackerDelta = Pose::Identity();
                 // TestRotation(&trackerDelta, time, false);
-                bool success = !m_TestRotation ? m_Tracker.GetPoseDelta(trackerDelta, time)
+                bool success = !m_TestRotation ? m_Tracker->GetPoseDelta(trackerDelta, time)
                                               : TestRotation(&trackerDelta, time, false);
                 if (success)
                 {
@@ -480,6 +507,13 @@ namespace
 
         XrResult xrSyncActions(XrSession session, const XrActionsSyncInfo* syncInfo) override
         {
+            OpenXrTracker* controllerTracker = dynamic_cast<OpenXrTracker*>(m_Tracker);
+            if (!controllerTracker)
+            {
+                // just pass through if tracker is not a motion controller
+                return OpenXrApi::xrSyncActions(session, syncInfo);
+            }
+
             TraceLoggingWrite(g_traceProvider, "xrSyncActions", TLPArg(session, "Session"));
             for (uint32_t i = 0; i < syncInfo->countActiveActionSets; i++)
             {
@@ -491,7 +525,7 @@ namespace
 
             XrActionsSyncInfo chainSyncInfo = *syncInfo;
             std::vector<XrActiveActionSet> newActiveActionSets;
-            const auto trackerActionSet = m_Tracker.m_ActionSet;
+            const auto trackerActionSet = controllerTracker->m_ActionSet;
             if (trackerActionSet != XR_NULL_HANDLE)
             {
                 newActiveActionSets.resize((size_t)chainSyncInfo.countActiveActionSets + 1);
@@ -696,13 +730,13 @@ namespace
             }
 
             // perform last-minute tracker initialization
-            bool lazySuccess = m_Tracker.LazyInit();
+            bool lazySuccess = m_Tracker->LazyInit();
             
             const bool oldstate = m_Activated;
             if (m_Initialized && lazySuccess)
             {
                 // if tracker is not initialized, activate only after successful init
-                m_Activated = m_Tracker.m_Calibrated ? !m_Activated : m_Tracker.ResetReferencePose(time);
+                m_Activated = m_Tracker->m_Calibrated ? !m_Activated : m_Tracker->ResetReferencePose(time);
             }
             else
             {
@@ -735,7 +769,7 @@ namespace
                 return;
             }
                 
-            if(m_Tracker.ResetReferencePose(time))
+            if(m_Tracker->ResetReferencePose(time))
             {
                 MessageBeep(MB_OK);
                 TraceLoggingWrite(g_traceProvider,
@@ -761,14 +795,15 @@ namespace
 
         void ReloadConfig()
         {
-            m_Tracker.m_Calibrated = false;
+            m_Tracker->m_Calibrated = false;
             m_Activated = false;
             bool success = GetConfig()->Init(m_Application);
             if (success)
             {
                 GetConfig()->GetBool(Cfg::TestRotation, m_TestRotation);
+                GetTracker(&m_Tracker);
             }
-            if (!m_Tracker.LoadFilters())
+            if (!m_Tracker->LoadFilters())
             {
                 success = false;
             }
@@ -790,22 +825,22 @@ namespace
             isRepeat = false;
             if (m_Input.GetKeyState(Cfg::KeyTransInc, isRepeat))
             {
-                m_Tracker.ModifyFilterStrength(true, true);
+                m_Tracker->ModifyFilterStrength(true, true);
             }
             isRepeat = false;
             if (m_Input.GetKeyState(Cfg::KeyTransDec, isRepeat))
             {
-                m_Tracker.ModifyFilterStrength(true, false);
+                m_Tracker->ModifyFilterStrength(true, false);
             }
             isRepeat = false;
             if (m_Input.GetKeyState(Cfg::KeyRotInc, isRepeat))
             {
-                m_Tracker.ModifyFilterStrength(false, true);
+                m_Tracker->ModifyFilterStrength(false, true);
             }
             isRepeat = false;
             if (m_Input.GetKeyState(Cfg::KeyRotDec, isRepeat))
             {
-                m_Tracker.ModifyFilterStrength(false, false);
+                m_Tracker->ModifyFilterStrength(false, false);
             }
             isRepeat = false;
             if (m_Input.GetKeyState(Cfg::KeySaveConfig, isRepeat) && !isRepeat)
@@ -864,7 +899,7 @@ namespace
         bool m_TestRotation{false};
         XrTime m_TestRotStart;
        
-        OpenXrTracker m_Tracker;
+        TrackerBase* m_Tracker;
         utility::Cache<XrPosef> m_PoseCache{2, Pose::Identity()};
         utility::Cache<std::vector<XrPosef>> m_EyeCache{
             2,

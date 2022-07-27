@@ -347,3 +347,43 @@ bool OpenXrTracker::GetPose(XrPosef& trackerPose, XrTime frameTime)
 
     return true;
 }
+
+void GetTracker(TrackerBase** tracker)
+{
+    TrackerBase* previousTracker = *tracker;
+    std::string trackerType;
+    if (GetConfig()->GetString(Cfg::TrackerType, trackerType))
+    {
+        OpenXrTracker* controllerTracker = dynamic_cast<OpenXrTracker*>(previousTracker);
+        if ("controller" == trackerType)
+        {
+            Log("using motion cotroller as tracker\n");
+            if (controllerTracker)
+            {
+                return;
+            }
+            if (previousTracker)
+            {
+                delete previousTracker;
+                ErrorLog("motion controller initialization maybe incomplete!\n");
+            }
+            *tracker = new OpenXrTracker();
+            return;
+        }
+        else
+        {
+            ErrorLog("unknown tracker type: %s\n", trackerType.c_str());
+        }
+    }
+    else 
+    {
+        ErrorLog("unable to determine tracker type, defaulting to 'controller'\n"); 
+    }
+    if (previousTracker)
+    {
+        ErrorLog("retaining previous tracker type\n");
+        return;
+    }
+    ErrorLog("defaulting to 'controller'\n");
+    *tracker = new OpenXrTracker();
+}

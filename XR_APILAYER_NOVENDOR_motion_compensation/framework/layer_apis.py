@@ -6,10 +6,10 @@ override_functions = [
     "xrEndSession",
     "xrAttachSessionActionSets",
     "xrSuggestInteractionProfileBindings",
+    "xrSyncActions",
     "xrCreateReferenceSpace",
     "xrLocateSpace",
     "xrLocateViews",
-    "xrSyncActions",
     "xrEndFrame"
 ]
 
@@ -18,12 +18,12 @@ override_functions = [
 requested_functions = [
     "xrGetInstanceProperties",
     "xrGetSystemProperties",
-    "xrCreateAction",
-    "xrCreateActionSet",
-    "xrCreateActionSpace",
     "xrStringToPath",
     "xrPathToString",
     "xrSuggestInteractionProfileBindings",
+    "xrCreateAction",
+    "xrCreateActionSet",
+    "xrCreateActionSpace",
     "xrGetActionStatePose",
     "xrDestroyAction",
     "xrDestroyActionSet",
