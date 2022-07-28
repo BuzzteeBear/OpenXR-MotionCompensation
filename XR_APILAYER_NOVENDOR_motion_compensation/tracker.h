@@ -50,10 +50,23 @@ class OpenXrTracker : public TrackerBase
     virtual void endSession() override;
     virtual bool ResetReferencePose(XrTime frameTime) override;
 
-    XrActionSet m_ActionSet{XR_NULL_HANDLE};
-    XrAction m_TrackerPoseAction{XR_NULL_HANDLE};
-    XrSpace m_TrackerSpace{XR_NULL_HANDLE};
-    XrSpace m_ReferenceSpace{XR_NULL_HANDLE};
+  protected:
+    virtual bool GetPose(XrPosef& trackerPose, XrTime frameTime) override;
+};
+
+class YawTracker : public TrackerBase
+{
+  public:
+    YawTracker();
+    ~YawTracker();
+    virtual bool Init() override;
+    virtual bool LazyInit() override;
+    virtual void beginSession(XrSession session) override;
+    virtual void endSession() override;
+    virtual bool ResetReferencePose(XrTime frameTime) override;
+
+    int m_Offsets[2]{0};
+    XrSpace m_StageSpace{XR_NULL_HANDLE};
 
   protected:
     virtual bool GetPose(XrPosef& trackerPose, XrTime frameTime) override;

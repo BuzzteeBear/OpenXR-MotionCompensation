@@ -23,11 +23,81 @@
 #pragma once
 
 #include "framework/dispatch.gen.h"
+#include "tracker.h"
 
 namespace motion_compensation_layer
 {
     const std::string LayerName = "XR_APILAYER_NOVENDOR_motion_compensation";
     const std::string VersionString = "prototype alpha (0.0.6)";
+
+    class OpenXrLayer : public motion_compensation_layer::OpenXrApi
+    {
+      public:
+        OpenXrLayer() = default;
+
+        virtual ~OpenXrLayer();
+
+        XrResult xrCreateInstance(const XrInstanceCreateInfo* createInfo) override;
+        XrResult xrGetSystem(XrInstance instance, const XrSystemGetInfo* getInfo, XrSystemId* systemId) override;
+        XrResult xrCreateSession(XrInstance instance,
+                                 const XrSessionCreateInfo* createInfo,
+                                 XrSession* session) override;
+        XrResult xrBeginSession(XrSession session, const XrSessionBeginInfo* beginInfo) override;
+        XrResult xrEndSession(XrSession session) override;
+        XrResult xrAttachSessionActionSets(XrSession session, const XrSessionActionSetsAttachInfo* attachInfo) override;
+        XrResult
+        xrSuggestInteractionProfileBindings(XrInstance instance,
+                                            const XrInteractionProfileSuggestedBinding* suggestedBindings) override;
+        XrResult xrCreateReferenceSpace(XrSession session,
+                                        const XrReferenceSpaceCreateInfo* createInfo,
+                                        XrSpace* space) override;
+        XrResult xrLocateSpace(XrSpace space, XrSpace baseSpace, XrTime time, XrSpaceLocation* location) override;
+        XrResult xrLocateViews(XrSession session,
+                               const XrViewLocateInfo* viewLocateInfo,
+                               XrViewState* viewState,
+                               uint32_t viewCapacityInput,
+                               uint32_t* viewCountOutput,
+                               XrView* views) override;
+        XrResult xrSyncActions(XrSession session, const XrActionsSyncInfo* syncInfo) override;
+        XrResult xrEndFrame(XrSession session, const XrFrameEndInfo* frameEndInfo) override;
+
+        XrActionSet m_ActionSet{XR_NULL_HANDLE};
+        XrAction m_TrackerPoseAction{XR_NULL_HANDLE};
+        XrSpace m_TrackerSpace{XR_NULL_HANDLE};
+        XrSpace m_ReferenceSpace{XR_NULL_HANDLE};
+
+      private:
+        bool isSystemHandled(XrSystemId systemId) const;
+        bool isViewSpace(XrSpace space) const;
+        uint32_t GetNumViews();
+        void ToggleActive(XrTime time);
+        void Recalibrate(XrTime time);
+        void ReloadConfig();
+        bool LazyInit();
+        void HandleKeyboardInput(XrTime time);
+        static std::string getXrPath(XrPath path);
+        bool TestRotation(XrPosef* pose, XrTime time, bool reverse);
+
+        XrSystemId m_systemId{XR_NULL_SYSTEM_ID};
+        XrSession m_Session{XR_NULL_HANDLE};
+        bool m_Initialized{true};
+        bool m_Activated{false};
+        std::string m_Application;
+        std::set<XrSpace> m_ViewSpaces{};
+        XrSpace m_ViewSpace{XR_NULL_HANDLE};
+        std::vector<XrView> m_EyeOffsets{};
+        XrViewConfigurationType m_ViewConfigType{XR_VIEW_CONFIGURATION_TYPE_MAX_ENUM};
+        TrackerBase* m_Tracker;
+        utility::Cache<XrPosef> m_PoseCache{2, xr::math::Pose::Identity()};
+        utility::Cache<std::vector<XrPosef>> m_EyeCache{
+            2,
+            std::vector<XrPosef>{xr::math::Pose::Identity(), xr::math::Pose::Identity(), xr::math::Pose::Identity(), xr::math::Pose::Identity()}};
+        utility::KeyboardInput m_Input;
+       
+        // debugging
+        bool m_TestRotation{false};
+        XrTime m_TestRotStart;
+    };
 
     // Singleton accessor.
     OpenXrApi* GetInstance();

@@ -2,7 +2,6 @@
 
 #include "pch.h"
 
-#include "tracker.h"
 #include "layer.h"
 #include <log.h>
 #include <util.h>
@@ -93,7 +92,6 @@ void TrackerBase::ModifyFilterStrength(bool trans, bool increase)
     MessageBeep(*currentValue != prevValue ? MB_OK : MB_ICONERROR);
 }
 
-
 void TrackerBase::SetReferencePose(XrPosef pose)
 {
     m_TransFilter->Reset(pose.position);
@@ -145,94 +143,20 @@ bool TrackerBase::GetPoseDelta(XrPosef& poseDelta, XrTime frameTime)
     }
 }
 
-OpenXrTracker::OpenXrTracker(){}
+OpenXrTracker::OpenXrTracker()
+{}
 
-OpenXrTracker::~OpenXrTracker(){}
+OpenXrTracker::~OpenXrTracker()
+{}
 
 bool OpenXrTracker::Init()
 {
-    // Create the resources for the tracker space.
-    {
-        XrActionSetCreateInfo actionSetCreateInfo{XR_TYPE_ACTION_SET_CREATE_INFO, nullptr};
-        strcpy_s(actionSetCreateInfo.actionSetName, "general_tracker_set");
-        strcpy_s(actionSetCreateInfo.localizedActionSetName, "General Tracker Set");
-        actionSetCreateInfo.priority = 0;
-        if (XR_SUCCESS != GetInstance()->xrCreateActionSet(GetInstance()->GetXrInstance(), &actionSetCreateInfo, &m_ActionSet))
-        {
-            ErrorLog("%s: error creating action set\n", __FUNCTION__);
-            return false;
-        }
-        TraceLoggingWrite(g_traceProvider, "OpenXrTracker::Init", TLPArg(m_ActionSet, "xrCreateActionSet"));
-    }
-    {
-        XrActionCreateInfo actionCreateInfo{XR_TYPE_ACTION_CREATE_INFO, nullptr};
-        strcpy_s(actionCreateInfo.actionName, "general_tracker");
-        strcpy_s(actionCreateInfo.localizedActionName, "General Tracker");
-        actionCreateInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
-        actionCreateInfo.countSubactionPaths = 0;
-        if (XR_SUCCESS != GetInstance()->xrCreateAction(m_ActionSet, &actionCreateInfo, &m_TrackerPoseAction))
-        {
-            ErrorLog("%s: error creating action\n", __FUNCTION__);
-            return false;
-        }
-        TraceLoggingWrite(g_traceProvider, "OpenXrTracker::Init", TLPArg(m_TrackerPoseAction, "xrCreateAction"));
-    }
-    {
-        // suggest simple controller
-        XrInteractionProfileSuggestedBinding suggestedBindings{XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING, nullptr};
-        CHECK_XRCMD(GetInstance()->xrStringToPath(GetInstance()->GetXrInstance(),
-                                                  "/interaction_profiles/khr/simple_controller",
-                                                  &suggestedBindings.interactionProfile));
-        std::string side{"left"};
-        if (!GetConfig()->GetString(Cfg::TrackerParam, side))
-        {
-            ErrorLog("%s: unable to determine contoller side. Defaulting to %s\n", __FUNCTION__, side);
-        }
-        if ("right" != side && "left" != side)
-        {
-            ErrorLog("%s: invalid contoller side: %s. Defaulting to 'left'\n", __FUNCTION__, side);
-            side = "left";
-        }
-        else
-        {
-            const std::string path("/user/hand/" + side + "/input/grip/pose");
-            XrActionSuggestedBinding binding;
-            binding.action = m_TrackerPoseAction;
-            CHECK_XRCMD(GetInstance()->xrStringToPath(GetInstance()->GetXrInstance(), path.c_str(), &binding.binding));
-
-            suggestedBindings.suggestedBindings = &binding;
-            suggestedBindings.countSuggestedBindings = 1;
-            CHECK_XRCMD(GetInstance()->xrSuggestInteractionProfileBindings(GetInstance()->GetXrInstance(),
-                                                                                      &suggestedBindings));
-            TraceLoggingWrite(g_traceProvider,
-                              "OpenXrTracker::Init",
-                              TLArg("/interaction_profiles/khr/simple_controller", "Profile"),
-                              TLPArg(binding.action, "Action"),
-                              TLArg(path.c_str(), "Path"));
-        }
-    }
     return LoadFilters();
 }
-
 
 bool OpenXrTracker::LazyInit()
 {
     bool success = true;
-    if (m_ReferenceSpace == XR_NULL_HANDLE)
-    {
-        Log("reference space created during lazy init\n");
-        // Create a reference space.
-        XrReferenceSpaceCreateInfo referenceSpaceCreateInfo{XR_TYPE_REFERENCE_SPACE_CREATE_INFO, nullptr};
-        referenceSpaceCreateInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_LOCAL;
-        referenceSpaceCreateInfo.poseInReferenceSpace = Pose::Identity();
-        TraceLoggingWrite(g_traceProvider, "OpenXrTracker::LazyInit", TLPArg("Executed", "xrCreateReferenceSpace"));
-        if (!XR_SUCCEEDED(GetInstance()->xrCreateReferenceSpace(m_Session, &referenceSpaceCreateInfo, &m_ReferenceSpace)))
-        {
-            ErrorLog("%s: xrCreateReferenceSpace failed\n", __FUNCTION__ );
-            success = false;
-        }
-    }
-
     if (!m_SkipLazyInit)
     {
         Log("action set attached during lazy init\n");
@@ -241,8 +165,7 @@ bool OpenXrTracker::LazyInit()
                                                           nullptr,
                                                           0,
                                                           actionSets.data()};
-        TraceLoggingWrite(g_traceProvider,
-                          "OpenXrTracker::LazyInit", TLPArg("Executed", "xrAttachSessionActionSets"));
+        TraceLoggingWrite(g_traceProvider, "OpenXrTracker::LazyInit", TLPArg("Executed", "xrAttachSessionActionSets"));
         if (!XR_SUCCEEDED(GetInstance()->xrAttachSessionActionSets(m_Session, &actionSetAttachInfo)))
         {
             ErrorLog("%s: xrAttachSessionActionSets failed\n", __FUNCTION__);
@@ -259,25 +182,11 @@ bool OpenXrTracker::LazyInit()
 void OpenXrTracker::beginSession(XrSession session)
 {
     m_Session = session;
-
-    // create action space
-    XrActionSpaceCreateInfo actionSpaceCreateInfo{XR_TYPE_ACTION_SPACE_CREATE_INFO, nullptr};
-    actionSpaceCreateInfo.action = m_TrackerPoseAction;
-    actionSpaceCreateInfo.subactionPath = XR_NULL_PATH;
-    actionSpaceCreateInfo.poseInActionSpace = Pose::Identity();
-    CHECK_XRCMD(GetInstance()->xrCreateActionSpace(m_Session, &actionSpaceCreateInfo, &m_TrackerSpace));
-    TraceLoggingWrite(g_traceProvider, "OpenXrTracker::beginSession", TLPArg(m_TrackerSpace, "xrCreateActionSpace"));
 }
 
 void OpenXrTracker::endSession()
 {
     m_Session = XR_NULL_HANDLE;
-
-    if (m_TrackerSpace != XR_NULL_HANDLE)
-    {
-        GetInstance()->xrDestroySpace(m_TrackerSpace);
-        m_TrackerSpace = XR_NULL_HANDLE;
-    }
 }
 
 bool OpenXrTracker::ResetReferencePose(XrTime frameTime)
@@ -296,56 +205,192 @@ bool OpenXrTracker::ResetReferencePose(XrTime frameTime)
     }
 }
 
-
 bool OpenXrTracker::GetPose(XrPosef& trackerPose, XrTime frameTime)
 {
-    // Query the latest tracker pose.
-    XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
+    OpenXrLayer* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
+    if (layer)
     {
-        // TODO: skip xrSyncActions if other actions are active as well?
-        XrActiveActionSet activeActionSets;
-        activeActionSets.actionSet = m_ActionSet;
-        activeActionSets.subactionPath = XR_NULL_PATH;
-
-        XrActionsSyncInfo syncInfo{XR_TYPE_ACTIONS_SYNC_INFO, nullptr};
-        syncInfo.activeActionSets = &activeActionSets;
-        syncInfo.countActiveActionSets = 1;
-
-        TraceLoggingWrite(g_traceProvider, "GetPose", TLPArg(m_ActionSet, "xrSyncActions"), TLArg(frameTime, "Time"));
-        CHECK_XRCMD(GetInstance()->xrSyncActions(m_Session, &syncInfo));
-    }
-    {
-        XrActionStatePose actionStatePose{XR_TYPE_ACTION_STATE_POSE, nullptr};
-        XrActionStateGetInfo getActionStateInfo{XR_TYPE_ACTION_STATE_GET_INFO, nullptr};
-        getActionStateInfo.action = m_TrackerPoseAction;
-
-        TraceLoggingWrite(g_traceProvider,
-                          "GetPose",
-                          TLPArg(m_TrackerPoseAction, "xrGetActionStatePose"),
-                          TLArg(frameTime, "Time"));
-        CHECK_XRCMD(GetInstance()->xrGetActionStatePose(m_Session, &getActionStateInfo, &actionStatePose));
-
-        if (!actionStatePose.isActive)
+        // Query the latest tracker pose.
+        XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
         {
-            ErrorLog("%s: unable to determine tracker pose - XrActionStatePose not active\n", __FUNCTION__);
+            // TODO: skip xrSyncActions if other actions are active as well?
+            XrActiveActionSet activeActionSets;
+            activeActionSets.actionSet = layer->m_ActionSet;
+            activeActionSets.subactionPath = XR_NULL_PATH;
+
+            XrActionsSyncInfo syncInfo{XR_TYPE_ACTIONS_SYNC_INFO, nullptr};
+            syncInfo.activeActionSets = &activeActionSets;
+            syncInfo.countActiveActionSets = 1;
+
+            TraceLoggingWrite(g_traceProvider,
+                              "GetPose",
+                              TLPArg(layer->m_ActionSet, "xrSyncActions"),
+                              TLArg(frameTime, "Time"));
+            CHECK_XRCMD(GetInstance()->xrSyncActions(m_Session, &syncInfo));
+        }
+        {
+            XrActionStatePose actionStatePose{XR_TYPE_ACTION_STATE_POSE, nullptr};
+            XrActionStateGetInfo getActionStateInfo{XR_TYPE_ACTION_STATE_GET_INFO, nullptr};
+            getActionStateInfo.action = layer->m_TrackerPoseAction;
+
+            TraceLoggingWrite(g_traceProvider,
+                              "GetPose",
+                              TLPArg(layer->m_TrackerPoseAction, "xrGetActionStatePose"),
+                              TLArg(frameTime, "Time"));
+            CHECK_XRCMD(GetInstance()->xrGetActionStatePose(m_Session, &getActionStateInfo, &actionStatePose));
+
+            if (!actionStatePose.isActive)
+            {
+                ErrorLog("%s: unable to determine tracker pose - XrActionStatePose not active\n", __FUNCTION__);
+                return false;
+            }
+        }
+
+        CHECK_XRCMD(GetInstance()->xrLocateSpace(layer->m_TrackerSpace, layer->m_ReferenceSpace, frameTime, &location));
+
+        if (!Pose::IsPoseValid(location.locationFlags))
+        {
+            ErrorLog("%s: unable to determine tracker pose - XrSpaceLocation not valid\n", __FUNCTION__);
             return false;
         }
+        TraceLoggingWrite(g_traceProvider,
+                          "GetPose",
+                          TLArg(xr::ToString(location.pose).c_str(), "Location"),
+                          TLArg(frameTime, "Time"));
+        trackerPose = location.pose;
+
+        return true;
     }
-
-    CHECK_XRCMD(GetInstance()->xrLocateSpace(m_TrackerSpace, m_ReferenceSpace, frameTime, &location));
-
-    if (!Pose::IsPoseValid(location.locationFlags))
+    else
     {
-        ErrorLog("%s: unable to determine tracker pose - XrSpaceLocation not valid\n", __FUNCTION__);
+        ErrorLog("unable to cast instance to OpenXrLayer\n");
         return false;
     }
-    TraceLoggingWrite(g_traceProvider,
-                      "GetPose",
-                      TLArg(xr::ToString(location.pose).c_str(), "Location"),
-                      TLArg(frameTime, "Time"));
-    trackerPose = location.pose;
+}
 
-    return true;
+YawTracker::YawTracker()
+{}
+
+YawTracker::~YawTracker()
+{}
+
+bool YawTracker::Init()
+{
+    return LoadFilters();
+}
+
+bool YawTracker::LazyInit()
+{
+    bool success = true;
+    if (!m_SkipLazyInit)
+    {
+        Log("action set attached during lazy init\n");
+        std::vector<XrActionSet> actionSets;
+        XrSessionActionSetsAttachInfo actionSetAttachInfo{XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO,
+                                                          nullptr,
+                                                          0,
+                                                          actionSets.data()};
+        TraceLoggingWrite(g_traceProvider, "YawTracker::LazyInit", TLPArg("Executed", "xrAttachSessionActionSets"));
+        if (!XR_SUCCEEDED(GetInstance()->xrAttachSessionActionSets(m_Session, &actionSetAttachInfo)))
+        {
+            ErrorLog("%s: xrAttachSessionActionSets failed\n", __FUNCTION__);
+            success = false;
+        }
+        else
+        {
+            m_SkipLazyInit = true;
+        }
+    }
+    return success;
+}
+
+void YawTracker::beginSession(XrSession session)
+{
+    m_Session = session;
+}
+
+void YawTracker::endSession()
+{
+    m_Session = XR_NULL_HANDLE;
+}
+
+bool YawTracker::ResetReferencePose(XrTime frameTime)
+{
+    XrPosef curPose;
+    if (GetPose(curPose, frameTime))
+    {
+        SetReferencePose(curPose);
+        return true;
+    }
+    else
+    {
+        ErrorLog("%s: unable to get current pose\n", __FUNCTION__);
+        m_Calibrated = false;
+        return false;
+    }
+}
+
+bool YawTracker::GetPose(XrPosef& trackerPose, XrTime frameTime)
+{
+    OpenXrLayer* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
+    if (layer)
+    {
+        // Query the latest tracker pose.
+        XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
+        {
+            // TODO: skip xrSyncActions if other actions are active as well?
+            XrActiveActionSet activeActionSets;
+            activeActionSets.actionSet = layer->m_ActionSet;
+            activeActionSets.subactionPath = XR_NULL_PATH;
+
+            XrActionsSyncInfo syncInfo{XR_TYPE_ACTIONS_SYNC_INFO, nullptr};
+            syncInfo.activeActionSets = &activeActionSets;
+            syncInfo.countActiveActionSets = 1;
+
+            TraceLoggingWrite(g_traceProvider,
+                              "GetPose",
+                              TLPArg(layer->m_ActionSet, "xrSyncActions"),
+                              TLArg(frameTime, "Time"));
+            CHECK_XRCMD(GetInstance()->xrSyncActions(m_Session, &syncInfo));
+        }
+        {
+            XrActionStatePose actionStatePose{XR_TYPE_ACTION_STATE_POSE, nullptr};
+            XrActionStateGetInfo getActionStateInfo{XR_TYPE_ACTION_STATE_GET_INFO, nullptr};
+            getActionStateInfo.action = layer->m_TrackerPoseAction;
+
+            TraceLoggingWrite(g_traceProvider,
+                              "GetPose",
+                              TLPArg(layer->m_TrackerPoseAction, "xrGetActionStatePose"),
+                              TLArg(frameTime, "Time"));
+            CHECK_XRCMD(GetInstance()->xrGetActionStatePose(m_Session, &getActionStateInfo, &actionStatePose));
+
+            if (!actionStatePose.isActive)
+            {
+                ErrorLog("%s: unable to determine tracker pose - XrActionStatePose not active\n", __FUNCTION__);
+                return false;
+            }
+        }
+
+        CHECK_XRCMD(GetInstance()->xrLocateSpace(layer->m_TrackerSpace, layer->m_ReferenceSpace, frameTime, &location));
+
+        if (!Pose::IsPoseValid(location.locationFlags))
+        {
+            ErrorLog("%s: unable to determine tracker pose - XrSpaceLocation not valid\n", __FUNCTION__);
+            return false;
+        }
+        TraceLoggingWrite(g_traceProvider,
+                          "GetPose",
+                          TLArg(xr::ToString(location.pose).c_str(), "Location"),
+                          TLArg(frameTime, "Time"));
+        trackerPose = location.pose;
+
+        return true;
+    }
+    else
+    {
+        ErrorLog("unable to cast instance to OpenXrLayer\n");
+        return false;
+    }
 }
 
 void GetTracker(TrackerBase** tracker)
@@ -354,18 +399,21 @@ void GetTracker(TrackerBase** tracker)
     std::string trackerType;
     if (GetConfig()->GetString(Cfg::TrackerType, trackerType))
     {
-        OpenXrTracker* controllerTracker = dynamic_cast<OpenXrTracker*>(previousTracker);
-        if ("controller" == trackerType)
+        if ("yaw" == trackerType)
         {
-            Log("using motion cotroller as tracker\n");
-            if (controllerTracker)
-            {
-                return;
-            }
+            Log("using yaw mapped memory file as tracker\n");
             if (previousTracker)
             {
                 delete previousTracker;
-                ErrorLog("motion controller initialization maybe incomplete!\n");
+            }
+            *tracker = new YawTracker();
+        }
+        else if ("controller" == trackerType)
+        {
+            Log("using motion cotroller as tracker\n");
+            if (previousTracker)
+            {
+                delete previousTracker;
             }
             *tracker = new OpenXrTracker();
             return;
@@ -375,9 +423,9 @@ void GetTracker(TrackerBase** tracker)
             ErrorLog("unknown tracker type: %s\n", trackerType.c_str());
         }
     }
-    else 
+    else
     {
-        ErrorLog("unable to determine tracker type, defaulting to 'controller'\n"); 
+        ErrorLog("unable to determine tracker type, defaulting to 'controller'\n");
     }
     if (previousTracker)
     {

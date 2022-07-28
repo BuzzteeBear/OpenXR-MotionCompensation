@@ -4,7 +4,9 @@
 enum class Cfg
 {
     TrackerType = 0,
-    TrackerParam,
+    TrackerSide,
+    TrackerOffsetForward,
+    TrackerOffsetDown,
     TransStrength,
     TransOrder,
     RotStrength,
@@ -44,21 +46,24 @@ class ConfigManager
     std::string m_ApplicationIni;
 
     // needs to include all values of enum ConfigKey
-    std::map<Cfg, std::pair<std::string, std::string>> m_Keys{{Cfg::TrackerType, {"tracker", "type"}},
-                                                              {Cfg::TrackerParam, {"tracker", "parameter"}},
-                                                              {Cfg::TransStrength, {"translation_filter", "strength"}},
-                                                              {Cfg::TransOrder, {"translation_filter", "order"}},
-                                                              {Cfg::RotStrength, {"rotation_filter", "strength"}},
-                                                              {Cfg::RotOrder, {"rotation_filter", "order"}},
-                                                              {Cfg::KeyActivate, {"shortcuts", "activate"}},
-                                                              {Cfg::KeyCenter, {"shortcuts", "center"}},
-                                                              {Cfg::KeyTransInc, {"shortcuts", "translation_increase"}},
-                                                              {Cfg::KeyTransDec, {"shortcuts", "translation_decrease"}},
-                                                              {Cfg::KeyRotInc, {"shortcuts", "rotation_increase"}},
-                                                              {Cfg::KeyRotDec, {"shortcuts", "rotation_decrease"}},
-                                                              {Cfg::KeySaveConfig, {"shortcuts", "save_config"}},
-                                                              {Cfg::KeyReloadConfig, {"shortcuts", "reload_config"}},
-                                                              {Cfg::TestRotation, {"debug", "testrotation"}}};
+    std::map<Cfg, std::pair<std::string, std::string>> m_Keys{
+        {Cfg::TrackerType, {"tracker", "type"}},
+        {Cfg::TrackerSide, {"tracker", "side"}},
+        {Cfg::TrackerOffsetForward, {"tracker", "offset_forward"}},
+        {Cfg::TrackerOffsetDown, {"tracker", "offset_down"}},
+        {Cfg::TransStrength, {"translation_filter", "strength"}},
+        {Cfg::TransOrder, {"translation_filter", "order"}},
+        {Cfg::RotStrength, {"rotation_filter", "strength"}},
+        {Cfg::RotOrder, {"rotation_filter", "order"}},
+        {Cfg::KeyActivate, {"shortcuts", "activate"}},
+        {Cfg::KeyCenter, {"shortcuts", "center"}},
+        {Cfg::KeyTransInc, {"shortcuts", "translation_increase"}},
+        {Cfg::KeyTransDec, {"shortcuts", "translation_decrease"}},
+        {Cfg::KeyRotInc, {"shortcuts", "rotation_increase"}},
+        {Cfg::KeyRotDec, {"shortcuts", "rotation_decrease"}},
+        {Cfg::KeySaveConfig, {"shortcuts", "save_config"}},
+        {Cfg::KeyReloadConfig, {"shortcuts", "reload_config"}},
+        {Cfg::TestRotation, {"debug", "testrotation"}}};
 
     std::set<Cfg> m_KeysToSave{Cfg::TransStrength, Cfg::RotStrength};
 
