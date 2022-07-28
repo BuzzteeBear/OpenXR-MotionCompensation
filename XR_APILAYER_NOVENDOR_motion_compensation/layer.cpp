@@ -833,10 +833,10 @@ namespace motion_compensation_layer
         {
             GetConfig()->GetBool(Cfg::TestRotation, m_TestRotation);
             GetTracker(&m_Tracker);
-        }
-        if (!m_Tracker->LoadFilters())
-        {
-            success = false;
+            if (!m_Tracker->Init())
+            {
+                success = false;
+            }
         }
         MessageBeep(success ? MB_OK : MB_ICONERROR);
     }
