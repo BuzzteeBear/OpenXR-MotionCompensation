@@ -22,6 +22,17 @@ TrackerBase::~TrackerBase()
     }
 }
 
+bool TrackerBase::Init()
+{
+    return LoadFilters();
+}
+
+bool TrackerBase::LazyInit(XrTime time)
+{
+    m_SkipLazyInit = true;
+    return true;
+}
+
 bool TrackerBase::LoadFilters()
 {
     // set up filters
@@ -57,13 +68,13 @@ bool TrackerBase::LoadFilters()
     m_RotStrength = strengthRot;
 
     Log("translational filter stages: %d\n", orderTrans);
-    Log("translational filter strength: %d\n", m_TransStrength);
+    Log("translational filter strength: %f\n", m_TransStrength);
     m_TransFilter = 1 == orderTrans   ? new utility::SingleEmaFilter(m_TransStrength)
                     : 2 == orderTrans ? new utility::DoubleEmaFilter(m_TransStrength)
                                       : new utility::TripleEmaFilter(m_TransStrength);
 
     Log("rotational filter stages: %d\n", orderRot);
-    Log("rotational filter strength: %d\n", m_TransStrength);
+    Log("rotational filter strength: %f\n", m_TransStrength);
     m_RotFilter = 1 == orderRot   ? new utility::SingleSlerpFilter(m_RotStrength)
                   : 2 == orderRot ? new utility::DoubleSlerpFilter(m_RotStrength)
                                   : new utility::TripleSlerpFilter(m_RotStrength);
@@ -100,10 +111,10 @@ void TrackerBase::SetReferencePose(XrPosef pose)
     m_Calibrated = true;
 }
 
-bool TrackerBase::GetPoseDelta(XrPosef& poseDelta, XrTime frameTime)
+bool TrackerBase::GetPoseDelta(XrPosef& poseDelta, XrSession session, XrTime time)
 {
     // pose already calulated for requested time or unable to calculate
-    if (frameTime == m_LastPoseTime)
+    if (time == m_LastPoseTime)
     {
         // already calulated for requested time;
         poseDelta = m_LastPoseDelta;
@@ -112,10 +123,10 @@ bool TrackerBase::GetPoseDelta(XrPosef& poseDelta, XrTime frameTime)
     }
     if (m_ResetReferencePose)
     {
-        m_ResetReferencePose = !ResetReferencePose(frameTime);
+        m_ResetReferencePose = !ResetReferencePose(session, time);
     }
     XrPosef curPose;
-    if (GetPose(curPose, frameTime))
+    if (GetPose(curPose, session, time))
     {
         // apply translational filter
         m_TransFilter->Filter(curPose.position);
@@ -126,14 +137,14 @@ bool TrackerBase::GetPoseDelta(XrPosef& poseDelta, XrTime frameTime)
         TraceLoggingWrite(g_traceProvider,
                           "GetPoseDelta",
                           TLArg(xr::ToString(curPose).c_str(), "Location_After_Filter"),
-                          TLArg(frameTime, "Time"));
+                          TLArg(time, "Time"));
 
         // calculate difference toward reference pose
         poseDelta = Pose::Multiply(Pose::Invert(curPose), m_ReferencePose);
 
         TraceLoggingWrite(g_traceProvider, "GetPoseDelta", TLArg(xr::ToString(poseDelta).c_str(), "Delta"));
 
-        m_LastPoseTime = frameTime;
+        m_LastPoseTime = time;
         m_LastPoseDelta = poseDelta;
         return true;
     }
@@ -149,50 +160,10 @@ OpenXrTracker::OpenXrTracker()
 OpenXrTracker::~OpenXrTracker()
 {}
 
-bool OpenXrTracker::Init()
-{
-    return LoadFilters();
-}
-
-bool OpenXrTracker::LazyInit()
-{
-    bool success = true;
-    if (!m_SkipLazyInit)
-    {
-        Log("action set attached during lazy init\n");
-        std::vector<XrActionSet> actionSets;
-        XrSessionActionSetsAttachInfo actionSetAttachInfo{XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO,
-                                                          nullptr,
-                                                          0,
-                                                          actionSets.data()};
-        TraceLoggingWrite(g_traceProvider, "OpenXrTracker::LazyInit", TLPArg("Executed", "xrAttachSessionActionSets"));
-        if (!XR_SUCCEEDED(GetInstance()->xrAttachSessionActionSets(m_Session, &actionSetAttachInfo)))
-        {
-            ErrorLog("%s: xrAttachSessionActionSets failed\n", __FUNCTION__);
-            success = false;
-        }
-        else
-        {
-            m_SkipLazyInit = true;
-        }
-    }
-    return success;
-}
-
-void OpenXrTracker::beginSession(XrSession session)
-{
-    m_Session = session;
-}
-
-void OpenXrTracker::endSession()
-{
-    m_Session = XR_NULL_HANDLE;
-}
-
-bool OpenXrTracker::ResetReferencePose(XrTime frameTime)
+bool OpenXrTracker::ResetReferencePose(XrSession session, XrTime time)
 {
     XrPosef curPose;
-    if (GetPose(curPose, frameTime))
+    if (GetPose(curPose, session, time))
     {
         SetReferencePose(curPose);
         return true;
@@ -205,7 +176,7 @@ bool OpenXrTracker::ResetReferencePose(XrTime frameTime)
     }
 }
 
-bool OpenXrTracker::GetPose(XrPosef& trackerPose, XrTime frameTime)
+bool OpenXrTracker::GetPose(XrPosef& trackerPose, XrSession session, XrTime time)
 {
     OpenXrLayer* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
     if (layer)
@@ -225,8 +196,8 @@ bool OpenXrTracker::GetPose(XrPosef& trackerPose, XrTime frameTime)
             TraceLoggingWrite(g_traceProvider,
                               "GetPose",
                               TLPArg(layer->m_ActionSet, "xrSyncActions"),
-                              TLArg(frameTime, "Time"));
-            CHECK_XRCMD(GetInstance()->xrSyncActions(m_Session, &syncInfo));
+                              TLArg(time, "Time"));
+            CHECK_XRCMD(GetInstance()->xrSyncActions(session, &syncInfo));
         }
         {
             XrActionStatePose actionStatePose{XR_TYPE_ACTION_STATE_POSE, nullptr};
@@ -236,8 +207,8 @@ bool OpenXrTracker::GetPose(XrPosef& trackerPose, XrTime frameTime)
             TraceLoggingWrite(g_traceProvider,
                               "GetPose",
                               TLPArg(layer->m_TrackerPoseAction, "xrGetActionStatePose"),
-                              TLArg(frameTime, "Time"));
-            CHECK_XRCMD(GetInstance()->xrGetActionStatePose(m_Session, &getActionStateInfo, &actionStatePose));
+                              TLArg(time, "Time"));
+            CHECK_XRCMD(GetInstance()->xrGetActionStatePose(session, &getActionStateInfo, &actionStatePose));
 
             if (!actionStatePose.isActive)
             {
@@ -246,7 +217,7 @@ bool OpenXrTracker::GetPose(XrPosef& trackerPose, XrTime frameTime)
             }
         }
 
-        CHECK_XRCMD(GetInstance()->xrLocateSpace(layer->m_TrackerSpace, layer->m_ReferenceSpace, frameTime, &location));
+        CHECK_XRCMD(GetInstance()->xrLocateSpace(layer->m_TrackerSpace, layer->m_ReferenceSpace, time, &location));
 
         if (!Pose::IsPoseValid(location.locationFlags))
         {
@@ -256,7 +227,7 @@ bool OpenXrTracker::GetPose(XrPosef& trackerPose, XrTime frameTime)
         TraceLoggingWrite(g_traceProvider,
                           "GetPose",
                           TLArg(xr::ToString(location.pose).c_str(), "Location"),
-                          TLArg(frameTime, "Time"));
+                          TLArg(time, "Time"));
         trackerPose = location.pose;
 
         return true;
@@ -276,62 +247,117 @@ YawTracker::~YawTracker()
 
 bool YawTracker::Init()
 {
-    return LoadFilters();
-}
-
-bool YawTracker::LazyInit()
-{
-    bool success = true;
-    if (!m_SkipLazyInit)
+    bool success{true};
+    float value;
+    if (GetConfig()->GetFloat(Cfg::TrackerOffsetForward, value))
     {
-        Log("action set attached during lazy init\n");
-        std::vector<XrActionSet> actionSets;
-        XrSessionActionSetsAttachInfo actionSetAttachInfo{XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO,
-                                                          nullptr,
-                                                          0,
-                                                          actionSets.data()};
-        TraceLoggingWrite(g_traceProvider, "YawTracker::LazyInit", TLPArg("Executed", "xrAttachSessionActionSets"));
-        if (!XR_SUCCEEDED(GetInstance()->xrAttachSessionActionSets(m_Session, &actionSetAttachInfo)))
-        {
-            ErrorLog("%s: xrAttachSessionActionSets failed\n", __FUNCTION__);
-            success = false;
-        }
-        else
-        {
-            m_SkipLazyInit = true;
-        }
+        m_Offset.position.z = -value / 100.0f;
+        DebugLog("Offset z = %f\n", m_Offset.position.z);
+    }
+    else
+    {
+        success = false;  
+    }
+    if (GetConfig()->GetFloat(Cfg::TrackerOffsetDown, value))
+    {
+        m_Offset.position.y = -value / 100.0f;
+        DebugLog("Offset y = %f\n", m_Offset.position.y);
+    }
+    else
+    {
+        success = false;
+    }
+    if (GetConfig()->GetFloat(Cfg::TrackerOffsetRight, value))
+    {
+        m_Offset.position.x = value / 100.0f;
+        DebugLog("Offset x = %f\n", m_Offset.position.x);
+    }
+    else
+    {
+        success = false;
+    }
+    if (!TrackerBase::Init())
+    {
+        success = false;    
     }
     return success;
 }
 
-void YawTracker::beginSession(XrSession session)
+bool YawTracker::LazyInit(XrTime time)
 {
-    m_Session = session;
-}
-
-void YawTracker::endSession()
-{
-    m_Session = XR_NULL_HANDLE;
-}
-
-bool YawTracker::ResetReferencePose(XrTime frameTime)
-{
-    XrPosef curPose;
-    if (GetPose(curPose, frameTime))
+    bool success = true;
+    if (!m_SkipLazyInit)
     {
-        SetReferencePose(curPose);
-        return true;
+        m_Mmf = memory_mapped_file::read_only_mmf("YawVRGEFile");
+        // TODO: activate
+        if (true || m_Mmf.is_open())
+        {
+            
+        }
+        else
+        {
+            ErrorLog("unable to open mmf 'YawVRGEFile'. Check if Game Engine is running and motion compensation is "
+                     "activated!\n");
+            success = false;
+        }
+    }
+    m_SkipLazyInit = success;
+    return success;
+}
+
+bool YawTracker::ResetReferencePose(XrSession session, XrTime time)
+{
+    // TODO: determine reference pose using saved pose in stage
+    bool success = true;
+    OpenXrLayer* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
+    if (layer)
+    {
+        XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
+        if (XR_SUCCEEDED(layer->OpenXrApi::xrLocateSpace(layer->m_ViewSpace, layer->m_ReferenceSpace, time, &location)))
+        {
+            // TODO: eliminate pitch and roll before applying offset
+            XrPosef refPose = Pose::Multiply(m_Offset, location.pose);
+            // TODO: remove rotation offset before using mmf
+            XrPosef controllerPose;
+            if (GetControllerPose(controllerPose, session, time))
+            {
+                refPose.orientation = controllerPose.orientation;
+            }
+            TrackerBase::SetReferencePose(refPose);
+        }
+        else
+        {
+            ErrorLog("%s: xrLocateSpace(view) failed\n", __FUNCTION__);
+            success = false;
+        }
     }
     else
     {
-        ErrorLog("%s: unable to get current pose\n", __FUNCTION__);
-        m_Calibrated = false;
-        return false;
+        ErrorLog("%s: cast of layer failed\n", __FUNCTION__);
+        success = false;
     }
+
+    m_Calibrated = success;
+    return success;
 }
 
-bool YawTracker::GetPose(XrPosef& trackerPose, XrTime frameTime)
+bool YawTracker::GetPose(XrPosef& trackerPose, XrSession session, XrTime time)
 {
+    // TODO: use mmf and apply to reference pose
+    bool success = GetControllerPose(trackerPose, session, time);
+    if (success)
+    {
+        // remove translation towards reference pose
+        StoreXrVector3(&trackerPose.position,
+                       DirectX::XMVector3Rotate(LoadXrVector3(m_ReferencePose.position),
+                                                LoadXrQuaternion(m_ReferencePose.orientation)));
+    }
+    return success;
+}
+
+bool YawTracker::GetControllerPose(XrPosef& trackerPose, XrSession session, XrTime time)
+{
+    // todo read pose from mmf and apply to reference pose
     OpenXrLayer* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
     if (layer)
     {
@@ -350,8 +376,8 @@ bool YawTracker::GetPose(XrPosef& trackerPose, XrTime frameTime)
             TraceLoggingWrite(g_traceProvider,
                               "GetPose",
                               TLPArg(layer->m_ActionSet, "xrSyncActions"),
-                              TLArg(frameTime, "Time"));
-            CHECK_XRCMD(GetInstance()->xrSyncActions(m_Session, &syncInfo));
+                              TLArg(time, "Time"));
+            CHECK_XRCMD(GetInstance()->xrSyncActions(session, &syncInfo));
         }
         {
             XrActionStatePose actionStatePose{XR_TYPE_ACTION_STATE_POSE, nullptr};
@@ -361,8 +387,8 @@ bool YawTracker::GetPose(XrPosef& trackerPose, XrTime frameTime)
             TraceLoggingWrite(g_traceProvider,
                               "GetPose",
                               TLPArg(layer->m_TrackerPoseAction, "xrGetActionStatePose"),
-                              TLArg(frameTime, "Time"));
-            CHECK_XRCMD(GetInstance()->xrGetActionStatePose(m_Session, &getActionStateInfo, &actionStatePose));
+                              TLArg(time, "Time"));
+            CHECK_XRCMD(GetInstance()->xrGetActionStatePose(session, &getActionStateInfo, &actionStatePose));
 
             if (!actionStatePose.isActive)
             {
@@ -371,7 +397,7 @@ bool YawTracker::GetPose(XrPosef& trackerPose, XrTime frameTime)
             }
         }
 
-        CHECK_XRCMD(GetInstance()->xrLocateSpace(layer->m_TrackerSpace, layer->m_ReferenceSpace, frameTime, &location));
+        CHECK_XRCMD(GetInstance()->xrLocateSpace(layer->m_TrackerSpace, layer->m_ReferenceSpace, time, &location));
 
         if (!Pose::IsPoseValid(location.locationFlags))
         {
@@ -381,9 +407,9 @@ bool YawTracker::GetPose(XrPosef& trackerPose, XrTime frameTime)
         TraceLoggingWrite(g_traceProvider,
                           "GetPose",
                           TLArg(xr::ToString(location.pose).c_str(), "Location"),
-                          TLArg(frameTime, "Time"));
-        trackerPose = location.pose;
+                          TLArg(time, "Time"));
 
+        trackerPose = location.pose;
         return true;
     }
     else
@@ -407,6 +433,7 @@ void GetTracker(TrackerBase** tracker)
                 delete previousTracker;
             }
             *tracker = new YawTracker();
+            return;
         }
         else if ("controller" == trackerType)
         {

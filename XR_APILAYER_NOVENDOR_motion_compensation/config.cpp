@@ -45,7 +45,7 @@ bool ConfigManager::Init(const std::string& application)
                                             2047,
                                             m_ApplicationIni.c_str()))
             {
-                m_Values.insert({entry.first, buffer});
+                m_Values[entry.first] = buffer;
             }
             else if ((0 < GetPrivateProfileString(entry.second.first.c_str(),
                                                   entry.second.second.c_str(),
@@ -54,7 +54,7 @@ bool ConfigManager::Init(const std::string& application)
                                                   2047,
                                                   coreIni.c_str())))
             {
-                m_Values.insert({entry.first, buffer});
+                m_Values[entry.first] = buffer;
             }
             else
             {

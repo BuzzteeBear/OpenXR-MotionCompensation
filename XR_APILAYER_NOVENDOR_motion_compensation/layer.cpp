@@ -31,7 +31,6 @@
 #include <log.h>
 #include <util.h>
 
-
 using namespace motion_compensation_layer::log;
 using namespace xr::math;
 namespace motion_compensation_layer
@@ -106,9 +105,9 @@ namespace motion_compensation_layer
             strcpy_s(actionSetCreateInfo.actionSetName, "general_tracker_set");
             strcpy_s(actionSetCreateInfo.localizedActionSetName, "General Tracker Set");
             actionSetCreateInfo.priority = 0;
-            if (XR_SUCCESS != xrCreateActionSet(GetXrInstance(), &actionSetCreateInfo, &m_ActionSet))
+            if (!XR_SUCCEEDED(xrCreateActionSet(GetXrInstance(), &actionSetCreateInfo, &m_ActionSet)))
             {
-                ErrorLog("%s: error creating action set\n", __FUNCTION__);
+                ErrorLog("%s: unable to create action set\n", __FUNCTION__);
                 m_Initialized = false;
             }
             TraceLoggingWrite(g_traceProvider, "OpenXrTracker::Init", TLPArg(m_ActionSet, "xrCreateActionSet"));
@@ -119,9 +118,9 @@ namespace motion_compensation_layer
             strcpy_s(actionCreateInfo.localizedActionName, "General Tracker");
             actionCreateInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
             actionCreateInfo.countSubactionPaths = 0;
-            if (XR_SUCCESS != xrCreateAction(m_ActionSet, &actionCreateInfo, &m_TrackerPoseAction))
+            if (!XR_SUCCEEDED(xrCreateAction(m_ActionSet, &actionCreateInfo, &m_TrackerPoseAction)))
             {
-                ErrorLog("%s: error creating action\n", __FUNCTION__);
+                ErrorLog("%s: unable to create action\n", __FUNCTION__);
                 m_Initialized = false;
             }
             TraceLoggingWrite(g_traceProvider, "OpenXrTracker::Init", TLPArg(m_TrackerPoseAction, "xrCreateAction"));
@@ -265,9 +264,6 @@ namespace motion_compensation_layer
                           "OpenXrTracker::beginSession",
                           TLPArg(m_TrackerSpace, "xrCreateActionSpace"));
 
-        // start tracker session
-        m_Tracker->beginSession(session);
-
         return result;
     }
 
@@ -280,38 +276,7 @@ namespace motion_compensation_layer
             GetInstance()->xrDestroySpace(m_TrackerSpace);
             m_TrackerSpace = XR_NULL_HANDLE;
         }
-        m_Tracker->endSession();
         return OpenXrApi::xrEndSession(session);
-    }
-
-    XrResult OpenXrLayer::xrAttachSessionActionSets(XrSession session, const XrSessionActionSetsAttachInfo* attachInfo)
-    {
-        DebugLog("xrAttachSessionActionSets\n");
-        TraceLoggingWrite(g_traceProvider, "xrAttachSessionActionSets", TLPArg(session, "Session"));
-        for (uint32_t i = 0; i < attachInfo->countActionSets; i++)
-        {
-            TraceLoggingWrite(g_traceProvider,
-                              "xrAttachSessionActionSets",
-                              TLPArg(attachInfo->actionSets[i], "ActionSet"));
-        }
-
-        XrSessionActionSetsAttachInfo chainAttachInfo = *attachInfo;
-        std::vector<XrActionSet> newActionSets;
-
-        newActionSets.resize((size_t)chainAttachInfo.countActionSets);
-        memcpy(newActionSets.data(), chainAttachInfo.actionSets, chainAttachInfo.countActionSets * sizeof(XrActionSet));
-        newActionSets.push_back(m_ActionSet);
-
-        chainAttachInfo.actionSets = newActionSets.data();
-        chainAttachInfo.countActionSets = (uint32_t)newActionSets.size();
-
-        XrResult result = OpenXrApi::xrAttachSessionActionSets(session, &chainAttachInfo);
-        if (XR_SUCCEEDED(result))
-        {
-            Log("tracker action set attached\n");
-            m_Tracker->m_SkipLazyInit = true;
-        }
-        return result;
     }
 
     XrResult
@@ -367,6 +332,36 @@ namespace motion_compensation_layer
         bindingProfiles.suggestedBindings = bindings.data();
         bindingProfiles.countSuggestedBindings = (uint32_t)bindings.size();
         return OpenXrApi::xrSuggestInteractionProfileBindings(instance, &bindingProfiles);
+    }
+
+    XrResult OpenXrLayer::xrAttachSessionActionSets(XrSession session, const XrSessionActionSetsAttachInfo* attachInfo)
+    {
+        DebugLog("xrAttachSessionActionSets\n");
+        TraceLoggingWrite(g_traceProvider, "xrAttachSessionActionSets", TLPArg(session, "Session"));
+        for (uint32_t i = 0; i < attachInfo->countActionSets; i++)
+        {
+            TraceLoggingWrite(g_traceProvider,
+                              "xrAttachSessionActionSets",
+                              TLPArg(attachInfo->actionSets[i], "ActionSet"));
+        }
+
+        XrSessionActionSetsAttachInfo chainAttachInfo = *attachInfo;
+        std::vector<XrActionSet> newActionSets;
+
+        newActionSets.resize((size_t)chainAttachInfo.countActionSets);
+        memcpy(newActionSets.data(), chainAttachInfo.actionSets, chainAttachInfo.countActionSets * sizeof(XrActionSet));
+        newActionSets.push_back(m_ActionSet);
+
+        chainAttachInfo.actionSets = newActionSets.data();
+        chainAttachInfo.countActionSets = (uint32_t)newActionSets.size();
+
+        XrResult result = OpenXrApi::xrAttachSessionActionSets(session, &chainAttachInfo);
+        if (XR_SUCCEEDED(result))
+        {
+            Log("tracker action set attached\n");
+            m_ActionSetAttached = true;
+        }
+        return result;
     }
 
     XrResult OpenXrLayer::xrCreateReferenceSpace(XrSession session,
@@ -440,7 +435,7 @@ namespace motion_compensation_layer
 
             XrPosef trackerDelta = Pose::Identity();
             // TestRotation(&trackerDelta, time, false);
-            bool success = !m_TestRotation ? m_Tracker->GetPoseDelta(trackerDelta, time)
+            bool success = !m_TestRotation ? m_Tracker->GetPoseDelta(trackerDelta, m_Session, time)
                                            : TestRotation(&trackerDelta, time, false);
             if (success)
             {
@@ -760,18 +755,18 @@ namespace motion_compensation_layer
             return;
         }
 
-        // perform last-minute tracker initialization
-        bool lazySuccess = m_Tracker->LazyInit();
+        // perform last-minute initialization before activation
+        bool lazySuccess = m_Activated || LazyInit(time);
 
         const bool oldstate = m_Activated;
         if (m_Initialized && lazySuccess)
         {
             // if tracker is not initialized, activate only after successful init
-            m_Activated = m_Tracker->m_Calibrated ? !m_Activated : m_Tracker->ResetReferencePose(time);
+            m_Activated = m_Tracker->m_Calibrated ? !m_Activated : m_Tracker->ResetReferencePose(m_Session, time);
         }
         else
         {
-            ErrorLog("layer intitalization failed or incomplete!");
+            ErrorLog("layer intitalization failed or incomplete!\n");
         }
         Log("motion compensation %s\n",
             oldstate != m_Activated ? (m_Activated ? "activated" : "deactivated")
@@ -796,11 +791,11 @@ namespace motion_compensation_layer
         if (m_TestRotation)
         {
             m_TestRotStart = time;
-            Log("test rotation motion compensation recalibrated");
+            Log("test rotation motion compensation recalibrated\n");
             return;
         }
 
-        if (m_Tracker->ResetReferencePose(time))
+        if (m_Tracker->ResetReferencePose(m_Session, time))
         {
             MessageBeep(MB_OK);
             TraceLoggingWrite(g_traceProvider,
@@ -841,7 +836,7 @@ namespace motion_compensation_layer
         MessageBeep(success ? MB_OK : MB_ICONERROR);
     }
 
-    bool OpenXrLayer::LazyInit()
+    bool OpenXrLayer::LazyInit(XrTime time)
     {
         bool success = true;
         if (m_ReferenceSpace == XR_NULL_HANDLE)
@@ -858,13 +853,37 @@ namespace motion_compensation_layer
                 success = false;
             }
         }
-        if (!m_Tracker->LazyInit())
+        // TODO: initialize only for motion controller tracker
+        if (!m_ActionSetAttached)
+        {
+            Log("action set attached during lazy init\n");
+            std::vector<XrActionSet> actionSets;
+            XrSessionActionSetsAttachInfo actionSetAttachInfo{XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO,
+                                                              nullptr,
+                                                              0,
+                                                              actionSets.data()};
+            TraceLoggingWrite(g_traceProvider,
+                              "OpenXrLayer::LazyInit",
+                              TLPArg("Executed", "xrAttachSessionActionSets"));
+            if (XR_SUCCEEDED(GetInstance()->xrAttachSessionActionSets(m_Session, &actionSetAttachInfo)))
+            {
+                m_ActionSetAttached = true;
+            }
+            else
+            {
+                if (dynamic_cast<OpenXrTracker*>(m_Tracker))
+                {
+                    ErrorLog("%s: xrAttachSessionActionSets failed\n", __FUNCTION__);
+                    success = false;
+                }
+            }
+        }
+        if (!m_Tracker->LazyInit(time))
         {
             success = false;
         }
         return success;
     }
-
 
     void OpenXrLayer::HandleKeyboardInput(XrTime time)
     {

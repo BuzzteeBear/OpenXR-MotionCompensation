@@ -3,33 +3,31 @@
 #pragma once
 #include "pch.h"
 #include "utility.h"
+#include "mmf.h"
 
 class TrackerBase
 {
   public:
     virtual ~TrackerBase();
 
-    virtual bool Init() = 0;
-    virtual void beginSession(XrSession session) = 0;
-    virtual bool LazyInit() = 0;
-    bool LoadFilters();
+    virtual bool Init();
+    virtual bool LazyInit(XrTime time);
     void ModifyFilterStrength(bool trans, bool increase);
-    virtual bool ResetReferencePose(XrTime frameTime) = 0;
-    bool GetPoseDelta(XrPosef& poseDelta, XrTime frameTime);
-    virtual void endSession() = 0;
-
+    virtual bool ResetReferencePose(XrSession session, XrTime time) = 0;
+    bool GetPoseDelta(XrPosef& poseDelta, XrSession session, XrTime time);
     bool m_SkipLazyInit{false};
     bool m_Calibrated{false};
     bool m_ResetReferencePose{false};
 
   protected:
     void SetReferencePose(XrPosef pose);
-    virtual bool GetPose(XrPosef& trackerPose, XrTime frameTime) = 0;
-   
-    XrSession m_Session{XR_NULL_HANDLE};
+    virtual bool GetPose(XrPosef& trackerPose, XrSession session, XrTime time) = 0;
+
+    XrPosef m_ReferencePose{xr::math::Pose::Identity()};
 
   private:
-    XrPosef m_ReferencePose{xr::math::Pose::Identity()};
+    bool LoadFilters();
+
     XrPosef m_LastPoseDelta{xr::math::Pose::Identity()};
     XrTime m_LastPoseTime{0};
     float m_TransStrength{0.0f};
@@ -44,14 +42,11 @@ class OpenXrTracker : public TrackerBase
   public:
     OpenXrTracker();
     ~OpenXrTracker();
-    virtual bool Init() override;
-    virtual bool LazyInit() override;
-    virtual void beginSession(XrSession session) override;
-    virtual void endSession() override;
-    virtual bool ResetReferencePose(XrTime frameTime) override;
+    
+    virtual bool ResetReferencePose(XrSession session, XrTime time) override;
 
   protected:
-    virtual bool GetPose(XrPosef& trackerPose, XrTime frameTime) override;
+    virtual bool GetPose(XrPosef& trackerPose, XrSession session, XrTime time) override;
 };
 
 class YawTracker : public TrackerBase
@@ -60,16 +55,24 @@ class YawTracker : public TrackerBase
     YawTracker();
     ~YawTracker();
     virtual bool Init() override;
-    virtual bool LazyInit() override;
-    virtual void beginSession(XrSession session) override;
-    virtual void endSession() override;
-    virtual bool ResetReferencePose(XrTime frameTime) override;
-
-    int m_Offsets[2]{0};
-    XrSpace m_StageSpace{XR_NULL_HANDLE};
+    virtual bool LazyInit(XrTime time) override;
+    virtual bool ResetReferencePose(XrSession session, XrTime time) override;
 
   protected:
-    virtual bool GetPose(XrPosef& trackerPose, XrTime frameTime) override;
+    virtual bool GetPose(XrPosef& trackerPose, XrSession session, XrTime time) override;
+
+  private:
+    virtual bool GetControllerPose(XrPosef& trackerPose, XrSession session, XrTime time);
+
+    struct YawData
+    {
+        float yaw, pitch, roll, battery, rotationHeight, rotationForwardHead;
+        bool sixDof, usePos;
+        float autoX, autoY;
+    };
+
+    XrPosef m_Offset{xr::math::Pose::Identity()};
+    memory_mapped_file::read_only_mmf m_Mmf;
 };
 
 void GetTracker(TrackerBase** tracker);

@@ -64,6 +64,7 @@ namespace motion_compensation_layer
         XrActionSet m_ActionSet{XR_NULL_HANDLE};
         XrAction m_TrackerPoseAction{XR_NULL_HANDLE};
         XrSpace m_TrackerSpace{XR_NULL_HANDLE};
+        XrSpace m_ViewSpace{XR_NULL_HANDLE};
         XrSpace m_ReferenceSpace{XR_NULL_HANDLE};
 
       private:
@@ -73,21 +74,21 @@ namespace motion_compensation_layer
         void ToggleActive(XrTime time);
         void Recalibrate(XrTime time);
         void ReloadConfig();
-        bool LazyInit();
+        bool LazyInit(XrTime time);
         void HandleKeyboardInput(XrTime time);
         static std::string getXrPath(XrPath path);
         bool TestRotation(XrPosef* pose, XrTime time, bool reverse);
 
         XrSystemId m_systemId{XR_NULL_SYSTEM_ID};
         XrSession m_Session{XR_NULL_HANDLE};
+        bool m_ActionSetAttached{false};
         bool m_Initialized{true};
         bool m_Activated{false};
         std::string m_Application;
         std::set<XrSpace> m_ViewSpaces{};
-        XrSpace m_ViewSpace{XR_NULL_HANDLE};
         std::vector<XrView> m_EyeOffsets{};
         XrViewConfigurationType m_ViewConfigType{XR_VIEW_CONFIGURATION_TYPE_MAX_ENUM};
-        TrackerBase* m_Tracker;
+        TrackerBase* m_Tracker{nullptr};
         utility::Cache<XrPosef> m_PoseCache{2, xr::math::Pose::Identity()};
         utility::Cache<std::vector<XrPosef>> m_EyeCache{
             2,
@@ -96,7 +97,7 @@ namespace motion_compensation_layer
        
         // debugging
         bool m_TestRotation{false};
-        XrTime m_TestRotStart;
+        XrTime m_TestRotStart{0};
     };
 
     // Singleton accessor.

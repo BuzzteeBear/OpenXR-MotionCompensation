@@ -65,7 +65,7 @@ namespace LAYER_NAMESPACE::log {
         if (g_globalErrorCount++ < k_maxLoggedErrors) {
             va_list va;
             va_start(va, fmt);
-            InternalLog(fmt, va);
+            InternalLog((std::string("error - ")+ fmt).c_str(), va);
             va_end(va);
             if (g_globalErrorCount == k_maxLoggedErrors) {
                 Log("Maximum number of errors logged. Going silent.");
