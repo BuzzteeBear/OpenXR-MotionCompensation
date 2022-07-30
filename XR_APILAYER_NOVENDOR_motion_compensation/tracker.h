@@ -22,6 +22,7 @@ class TrackerBase
   protected:
     void SetReferencePose(XrPosef pose);
     virtual bool GetPose(XrPosef& trackerPose, XrSession session, XrTime time) = 0;
+    virtual bool GetControllerPose(XrPosef& trackerPose, XrSession session, XrTime time);
 
     XrPosef m_ReferencePose{xr::math::Pose::Identity()};
 
@@ -57,13 +58,12 @@ class YawTracker : public TrackerBase
     virtual bool Init() override;
     virtual bool LazyInit(XrTime time) override;
     virtual bool ResetReferencePose(XrSession session, XrTime time) override;
+    bool ToggleDebugMode(XrSession session, XrTime time);
 
   protected:
     virtual bool GetPose(XrPosef& trackerPose, XrSession session, XrTime time) override;
 
   private:
-    virtual bool GetControllerPose(XrPosef& trackerPose, XrSession session, XrTime time);
-
     struct YawData
     {
         float yaw, pitch, roll, battery, rotationHeight, rotationForwardHead;
@@ -71,8 +71,10 @@ class YawTracker : public TrackerBase
         float autoX, autoY;
     };
 
-    XrPosef m_Offset{xr::math::Pose::Identity()};
+    float m_OffsetForward{0.0f}, m_OffsetDown{0.0f}, m_OffsetRight{0.0f};
     memory_mapped_file::read_only_mmf m_Mmf;
+    bool m_DebugMode{false};
+    XrPosef m_OriginalRefPose{xr::math::Pose::Identity()};
 };
 
 void GetTracker(TrackerBase** tracker);

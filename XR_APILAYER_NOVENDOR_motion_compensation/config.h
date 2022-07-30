@@ -20,6 +20,7 @@ enum class Cfg
     KeyRotDec,
     KeySaveConfig,
     KeyReloadConfig,
+    KeyDebugCor,
     TestRotation
 };
 
@@ -53,6 +54,7 @@ class ConfigManager
         {Cfg::TrackerOffsetForward, {"tracker", "offset_forward"}},
         {Cfg::TrackerOffsetDown, {"tracker", "offset_down"}},
         {Cfg::TrackerOffsetRight, {"tracker", "offset_right"}},
+        {Cfg::TrackerOffsetRight, {"tracker", "controller_debug_mode"}},
         {Cfg::TransStrength, {"translation_filter", "strength"}},
         {Cfg::TransOrder, {"translation_filter", "order"}},
         {Cfg::RotStrength, {"rotation_filter", "strength"}},
@@ -65,7 +67,9 @@ class ConfigManager
         {Cfg::KeyRotDec, {"shortcuts", "rotation_decrease"}},
         {Cfg::KeySaveConfig, {"shortcuts", "save_config"}},
         {Cfg::KeyReloadConfig, {"shortcuts", "reload_config"}},
+        {Cfg::KeyDebugCor, {"shortcuts", "cor_debug_mode"}},
         {Cfg::TestRotation, {"debug", "testrotation"}}};
+
 
     std::set<Cfg> m_KeysToSave{Cfg::TransStrength, Cfg::RotStrength};
 

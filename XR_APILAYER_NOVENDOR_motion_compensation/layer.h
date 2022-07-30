@@ -74,6 +74,7 @@ namespace motion_compensation_layer
         void ToggleActive(XrTime time);
         void Recalibrate(XrTime time);
         void ReloadConfig();
+        void ToggleCorDebug(XrTime time);
         bool LazyInit(XrTime time);
         void HandleKeyboardInput(XrTime time);
         static std::string getXrPath(XrPath path);

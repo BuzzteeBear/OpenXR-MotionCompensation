@@ -819,6 +819,38 @@ void OpenXrLayer::ReloadConfig()
     MessageBeep(success ? MB_OK : MB_ICONERROR);
 }
 
+void OpenXrLayer::ToggleCorDebug(XrTime time)
+{
+    bool success = true;
+    std::string trackerType;
+    if (GetConfig()->GetString(Cfg::TrackerType, trackerType))
+    {
+        if ("yaw" == trackerType)
+        {
+            YawTracker* yawTracker = reinterpret_cast<YawTracker*>(m_Tracker);
+            if (yawTracker)
+            {
+                success = yawTracker->ToggleDebugMode(m_Session, time);
+            }
+            else
+            {
+                ErrorLog("unable to cast tracker to YawTracker\n");
+                success = false;
+            }
+        }
+        else
+        {
+            ErrorLog("unable to activate cor debug mode, wrong type of tracker: %s\n", trackerType);
+            success = false;
+        }
+    }
+    else
+    {
+        success = false;
+    }
+    MessageBeep(success ? MB_OK : MB_ICONERROR);
+}
+
 bool OpenXrLayer::LazyInit(XrTime time)
 {
     bool success = true;
@@ -907,6 +939,11 @@ void OpenXrLayer::HandleKeyboardInput(XrTime time)
     if (m_Input.GetKeyState(Cfg::KeyReloadConfig, isRepeat) && !isRepeat)
     {
         ReloadConfig();
+    }
+    isRepeat = false;
+    if (m_Input.GetKeyState(Cfg::KeyDebugCor, isRepeat) && !isRepeat)
+    {
+        ToggleCorDebug(time);
     }
 }
 

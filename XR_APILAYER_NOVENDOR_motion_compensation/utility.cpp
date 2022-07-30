@@ -22,7 +22,8 @@ namespace utility
                                  Cfg::KeyRotInc,
                                  Cfg::KeyRotDec,
                                  Cfg::KeySaveConfig,
-                                 Cfg::KeyReloadConfig};
+                                 Cfg::KeyReloadConfig,
+                                 Cfg::KeyDebugCor};
         std::string errors;
         for (const Cfg& activity : activities)
         {
@@ -52,8 +53,9 @@ namespace utility
 
     bool KeyboardInput::UpdateKeyState(const std::set<int>& vkKeySet, bool& isRepeat)
     {
-        const auto isPressed =
-            std::all_of(vkKeySet.begin(), vkKeySet.end(), [](int vk) { return GetAsyncKeyState(vk) < 0; });
+        const auto isPressed = vkKeySet.size() > 0 && std::all_of(vkKeySet.begin(), vkKeySet.end(), [](int vk) {
+                                   return GetAsyncKeyState(vk) < 0;
+                               });
         auto keyState = m_KeyStates.find(vkKeySet);
         const auto now = std::chrono::steady_clock::now();
         if (m_KeyStates.end() == keyState)

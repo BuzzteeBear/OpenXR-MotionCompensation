@@ -38,7 +38,7 @@ namespace utility
         {
             TraceLoggingWrite(LAYER_NAMESPACE::log::g_traceProvider, "GetSample", TLArg(time, "Time"));
 
-            LAYER_NAMESPACE::log::DebugLog("GetSample(%s): %d\n", typeid(Sample).name(), time);
+            LAYER_NAMESPACE::log::DebugLog("GetSample(%s): %u\n", typeid(Sample).name(), time);
 
             auto it = m_Cache.lower_bound(time);
             bool itIsEnd = m_Cache.end() == it;
@@ -65,7 +65,7 @@ namespace utility
                                       TLArg(typeid(Sample).name(), "Type"),
                                       TLArg("Later", "Match"),
                                       TLArg(it->first, "Time"));
-                    LAYER_NAMESPACE::log::DebugLog("GetSample(%s): later match found %d\n",
+                    LAYER_NAMESPACE::log::DebugLog("GetSample(%s): later match found %u\n",
                                                    typeid(Sample).name(),
                                                    it->first);
 
@@ -85,14 +85,14 @@ namespace utility
                                       TLArg(typeid(Sample).name(), "Type"),
                                       TLArg("Earlier", "Match"),
                                       TLArg(lowerIt->first, "Time"));
-                    LAYER_NAMESPACE::log::DebugLog("GetSample(%s): earlier match found: %d\n",
+                    LAYER_NAMESPACE::log::DebugLog("GetSample(%s): earlier match found: %u\n",
                                                    typeid(Sample).name(),
                                                    lowerIt->first);
 
                     return lowerIt->second;
                 }
             }
-            LAYER_NAMESPACE::log::ErrorLog("GetSample(%s) unable to find sample %d+-%dms\n",
+            LAYER_NAMESPACE::log::ErrorLog("GetSample(%s) unable to find sample %u+-%dms\n",
                                            typeid(Sample).name(),
                                            time,
                                            m_Tolerance);
@@ -109,7 +109,7 @@ namespace utility
                                       TLArg(typeid(Sample).name(), "Type"),
                                       TLArg("Estimated Both", "Match"),
                                       TLArg(it->first, "Time"));
-                    LAYER_NAMESPACE::log::ErrorLog("Using best match: t = %d \n", returnIt->first);
+                    LAYER_NAMESPACE::log::ErrorLog("Using best match: t = %u \n", returnIt->first);
 
                     return returnIt->second;
                 }
@@ -120,7 +120,7 @@ namespace utility
                                   TLArg(typeid(Sample).name(), "Type"),
                                   TLArg("Estimated Earlier", "Match"),
                                   TLArg(it->first, "Time"));
-                LAYER_NAMESPACE::log::ErrorLog("Using best match: t = %d \n", it->first);
+                LAYER_NAMESPACE::log::ErrorLog("Using best match: t = %u \n", it->first);
                 return it->second;
             }
             if (!itIsBegin)
@@ -128,7 +128,7 @@ namespace utility
                 auto lowerIt = it;
                 lowerIt--;
                 // lower entry is last in cache-> use it
-                LAYER_NAMESPACE::log::ErrorLog("Using best match: t = %d \n", lowerIt->first);
+                LAYER_NAMESPACE::log::ErrorLog("Using best match: t = %u \n", lowerIt->first);
                 TraceLoggingWrite(LAYER_NAMESPACE::log::g_traceProvider,
                                   "GetSample_Failed",
                                   TLArg(typeid(Sample).name(), "Type"),
