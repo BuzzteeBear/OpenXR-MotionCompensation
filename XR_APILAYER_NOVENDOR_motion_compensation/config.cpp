@@ -22,7 +22,7 @@ bool ConfigManager::Init(const std::string& application)
     {
         if (!WritePrivateProfileString("placeholder", "created", "1", m_ApplicationIni.c_str()) && 2 != GetLastError())
         {
-            int err = GetLastError();
+            DWORD err = GetLastError();
             ErrorLog("%s: unable to create %s, error = %d : %s\n",
                      __FUNCTION__,
                      m_ApplicationIni.c_str(),
@@ -224,7 +224,7 @@ void ConfigManager::WriteConfig()
                     2 != GetLastError())
                 {
                     error = true;
-                    int err = GetLastError();
+                    DWORD err = GetLastError();
                     ErrorLog("%s: unable to write value %s into key %s to section %s in %s, error = %d : %s\n",
                              __FUNCTION__,
                              valueEntry->second.c_str(),
@@ -263,13 +263,13 @@ bool ConfigManager::InitDirectory()
                           (LPCSTR)&LastErrorMsg,
                           &hm) == 0)
     {
-        int err = GetLastError();
+        DWORD err = GetLastError();
         ErrorLog("%s: GetModuleHandle failed, error = %d : %s\n", __FUNCTION__, err, LastErrorMsg(err).c_str());
         return false;
     }
     if (GetModuleFileName(hm, path, sizeof(path)) == 0)
     {
-        int err = GetLastError();
+        DWORD err = GetLastError();
         ErrorLog("%s: GetModuleFileName failed, error = %d : %s\n", __FUNCTION__, err, LastErrorMsg(err).c_str());
         return false;
     }

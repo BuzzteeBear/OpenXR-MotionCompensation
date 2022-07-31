@@ -73,97 +73,72 @@ namespace utility
         }
         return isPressed && (!prevState.first || isRepeat);
     }
-  
-    XrVector3f SingleEmaFilter::EmaFunction(XrVector3f current, XrVector3f stored) const
+
+    void Mmf::SetName(const std::string& name)
     {
-        return m_Alpha * current + m_OneMinusAlpha * stored;
+        m_Name = name;
     }
 
-    float SingleEmaFilter::SetStrength(float strength)
+    bool Mmf::Exists()
     {
-        FilterBase::SetStrength(strength);
-        m_Alpha = {1.0f - m_Strength, 1.0f - m_Strength, 1.0f - m_Strength};
-        m_OneMinusAlpha = {m_Strength, m_Strength, m_Strength};
-        return m_Strength;
+        m_FileHandle = OpenFileMapping(FILE_MAP_READ, FALSE, m_Name.c_str());
+
+        if (m_FileHandle == NULL)
+        {
+            DWORD err = GetLastError();
+            ErrorLog("could not open file mapping object %s: %d - %s\n",
+                     m_Name.c_str(),
+                     err,
+                     LastErrorMsg(err).c_str());
+            return false;
+        }
+        CloseHandle(m_FileHandle);
+
+        return true;
+    }
+    bool Mmf::Read(void* buffer, size_t size)
+    {
+        LPVOID localBuffer;
+        m_FileHandle = OpenFileMapping(FILE_MAP_READ,
+                                   FALSE,
+                                   m_Name.c_str());
+
+        if (m_FileHandle == NULL)
+        {
+            DWORD err = GetLastError();
+            ErrorLog("Could not open mmf %s: %d - %s\n",
+                     m_Name.c_str(),
+                     err,
+                     LastErrorMsg(err).c_str());
+            return false;
+        }
+
+        localBuffer = MapViewOfFile(m_FileHandle, FILE_MAP_READ, 0, 0, 0);
+        if (localBuffer == NULL)
+        {
+            DWORD err = GetLastError();
+            ErrorLog("Could not map view of mmf %s: %d - %s\n", m_Name.c_str(), err, LastErrorMsg(err).c_str());
+            CloseHandle(m_FileHandle);
+            return false;
+        }
+
+        try
+        {
+            memcpy(buffer, localBuffer, size);
+        }
+        catch (std::exception e)
+        {
+            ErrorLog("Error reading from mmf %s: %s\n", m_Name.c_str(), e.what());
+            UnmapViewOfFile(localBuffer);
+            CloseHandle(m_FileHandle);
+            return false;
+        }
+        UnmapViewOfFile(localBuffer);
+        CloseHandle(m_FileHandle);
+
+        return true;
     }
 
-    void SingleEmaFilter::Filter(XrVector3f& location)
-    {
-        m_Ema = EmaFunction(location, m_Ema);
-        location = m_Ema;
-    }
-
-    void SingleEmaFilter::Reset(const XrVector3f& location)
-    {
-        m_Ema = location;
-    }
-
-    void DoubleEmaFilter::Filter(XrVector3f& location)
-    {
-        m_Ema = EmaFunction(location, m_Ema);
-        m_EmaEma = EmaFunction(m_Ema, m_EmaEma);
-        location = XrVector3f{2, 2, 2} * m_Ema - m_EmaEma;
-    }
-
-    void DoubleEmaFilter::Reset(const XrVector3f& location)
-    {
-        SingleEmaFilter::Reset(location);
-        m_EmaEma = location;
-    }
-
-    void TripleEmaFilter::Filter(XrVector3f& location)
-    {
-        m_Ema = EmaFunction(location, m_Ema);
-        m_EmaEma = EmaFunction(m_Ema, m_EmaEma);
-        m_EmaEmaEma = EmaFunction(m_EmaEma, m_EmaEmaEma);
-        XrVector3f three{3, 3, 3};
-        location = three* m_Ema - three* m_EmaEma + m_EmaEmaEma;    
-    }
-
-    void TripleEmaFilter::Reset(const XrVector3f& location)
-    {
-        DoubleEmaFilter::Reset(location);
-        m_EmaEmaEma = location;
-    }
-
-    void SingleSlerpFilter::Filter(XrQuaternionf& rotation)
-    {
-        m_FirstStage = Quaternion::Slerp(rotation, m_FirstStage, m_Strength);
-        rotation = m_FirstStage;
-    }
-
-    void SingleSlerpFilter::Reset(const XrQuaternionf& rotation)
-    {
-        m_FirstStage = rotation;
-    }
-
-    void DoubleSlerpFilter::Filter(XrQuaternionf& rotation)
-    {
-        m_FirstStage = Quaternion::Slerp(rotation, m_FirstStage, m_Strength);
-        m_SecondStage = Quaternion::Slerp(m_FirstStage, m_SecondStage, m_Strength);
-        rotation = m_SecondStage;
-    }
-
-    void DoubleSlerpFilter::Reset(const XrQuaternionf& rotation)
-    {
-        SingleSlerpFilter::Reset(rotation);
-        m_SecondStage = rotation;
-    }
-
-    void TripleSlerpFilter::Filter(XrQuaternionf& rotation)
-    {
-        m_FirstStage = Quaternion::Slerp(rotation, m_FirstStage, m_Strength);
-        m_SecondStage = Quaternion::Slerp(m_FirstStage, m_SecondStage, m_Strength);
-        m_ThirdStage = Quaternion::Slerp(m_SecondStage, m_ThirdStage, m_Strength);
-        rotation = m_ThirdStage;
-    }
-
-    void TripleSlerpFilter::Reset(const XrQuaternionf& rotation)
-    {
-        SingleSlerpFilter::Reset(rotation);
-        m_ThirdStage = rotation;
-    }
-        
     std::string LastErrorMsg(DWORD error)
     {
         if (error)

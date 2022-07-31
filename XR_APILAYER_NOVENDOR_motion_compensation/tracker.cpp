@@ -69,15 +69,15 @@ bool TrackerBase::LoadFilters()
 
     Log("translational filter stages: %d\n", orderTrans);
     Log("translational filter strength: %f\n", m_TransStrength);
-    m_TransFilter = 1 == orderTrans   ? new utility::SingleEmaFilter(m_TransStrength)
-                    : 2 == orderTrans ? new utility::DoubleEmaFilter(m_TransStrength)
-                                      : new utility::TripleEmaFilter(m_TransStrength);
+    m_TransFilter = 1 == orderTrans   ? new Filter::SingleEmaFilter(m_TransStrength)
+                    : 2 == orderTrans ? new Filter::DoubleEmaFilter(m_TransStrength)
+                                      : new Filter::TripleEmaFilter(m_TransStrength);
 
     Log("rotational filter stages: %d\n", orderRot);
     Log("rotational filter strength: %f\n", m_TransStrength);
-    m_RotFilter = 1 == orderRot   ? new utility::SingleSlerpFilter(m_RotStrength)
-                  : 2 == orderRot ? new utility::DoubleSlerpFilter(m_RotStrength)
-                                  : new utility::TripleSlerpFilter(m_RotStrength);
+    m_RotFilter = 1 == orderRot   ? new Filter::SingleSlerpFilter(m_RotStrength)
+                  : 2 == orderRot ? new Filter::DoubleSlerpFilter(m_RotStrength)
+                                  : new Filter::TripleSlerpFilter(m_RotStrength);
 
     return true;
 }
@@ -294,11 +294,11 @@ bool YawTracker::LazyInit(XrTime time)
     bool success = true;
     if (!m_SkipLazyInit)
     {
-        m_Mmf = memory_mapped_file::read_only_mmf("YawVRGEFile");
+        m_Mmf.SetName("YawVRGEFile");
         
-        if (m_DebugMode || m_Mmf.is_open())
+        if (m_DebugMode || m_Mmf.Exists())
         {
-            
+            // TODO: use offset from yaw data
         }
         else
         {
@@ -406,8 +406,28 @@ bool YawTracker::ToggleDebugMode(XrSession session, XrTime time)
 bool YawTracker::GetPose(XrPosef& trackerPose, XrSession session, XrTime time)
 {
     bool success{true};
-    // TODO: use mmf and apply to reference pose
-    if (m_DebugMode)
+    
+    if (!m_DebugMode)
+    {
+        YawData data;
+        if (m_Mmf.Read(&data, sizeof(data)))
+        {
+            DebugLog("YAWDATA:\n\tyaw: %f, pitch: %f, roll: %f\n\tbattery: %f, rotationHeight: %f, "
+                     "rotationForwardHead: %f\n\tsixDof: %d, usePos: %d, autoX: %f, autoY: %f\n",
+                     data.yaw,
+                     data.pitch,
+                     data.roll,
+                     data.battery,
+                     data.rotationHeight,
+                     data.rotationForwardHead,
+                     data.sixDof,
+                     data.usePos,
+                     data.autoX,
+                     data.autoY);
+        }
+        // TODO: apply to reference pose
+    }
+    else
     { 
         if (GetControllerPose(trackerPose, session, time))
         {

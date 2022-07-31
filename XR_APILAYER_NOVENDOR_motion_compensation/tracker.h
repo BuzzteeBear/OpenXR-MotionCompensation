@@ -3,7 +3,7 @@
 #pragma once
 #include "pch.h"
 #include "utility.h"
-#include "mmf.h"
+#include "filter.h"
 
 class TrackerBase
 {
@@ -33,8 +33,8 @@ class TrackerBase
     XrTime m_LastPoseTime{0};
     float m_TransStrength{0.0f};
     float m_RotStrength{0.0f};
-    utility::FilterBase<XrVector3f>* m_TransFilter = nullptr;
-    utility::FilterBase<XrQuaternionf>* m_RotFilter = nullptr;
+    Filter::FilterBase<XrVector3f>* m_TransFilter = nullptr;
+    Filter::FilterBase<XrQuaternionf>* m_RotFilter = nullptr;
 };
 
 
@@ -72,7 +72,7 @@ class YawTracker : public TrackerBase
     };
 
     float m_OffsetForward{0.0f}, m_OffsetDown{0.0f}, m_OffsetRight{0.0f};
-    memory_mapped_file::read_only_mmf m_Mmf;
+    utility::Mmf m_Mmf;
     bool m_DebugMode{false};
     XrPosef m_OriginalRefPose{xr::math::Pose::Identity()};
 };

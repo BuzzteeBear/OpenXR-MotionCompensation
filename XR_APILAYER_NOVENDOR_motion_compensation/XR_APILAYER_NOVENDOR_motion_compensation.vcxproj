@@ -148,7 +148,7 @@ copy $(SolutionDir)\configuration\OpenXR-MotionCompensation.ini $(OutDir)</Comma
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="config.h" />
-    <ClInclude Include="mmf.h" />
+    <ClInclude Include="filter.h" />
     <ClInclude Include="utility.h" />
     <ClInclude Include="framework\dispatch.gen.h" />
     <ClInclude Include="framework\dispatch.h" />
@@ -160,7 +160,7 @@ copy $(SolutionDir)\configuration\OpenXR-MotionCompensation.ini $(OutDir)</Comma
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="config.cpp" />
-    <ClCompile Include="mmf.cpp" />
+    <ClCompile Include="filter.cpp" />
     <ClCompile Include="utility.cpp" />
     <ClCompile Include="framework\dispatch.cpp" />
     <ClCompile Include="framework\dispatch.gen.cpp" />
