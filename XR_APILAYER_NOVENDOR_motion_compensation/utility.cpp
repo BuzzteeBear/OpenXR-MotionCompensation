@@ -106,7 +106,7 @@ namespace utility
         if (m_FileHandle == NULL)
         {
             DWORD err = GetLastError();
-            ErrorLog("Could not open mmf %s: %d - %s\n",
+            ErrorLog("unable to open mmf %s: %d - %s\n",
                      m_Name.c_str(),
                      err,
                      LastErrorMsg(err).c_str());
@@ -117,7 +117,7 @@ namespace utility
         if (localBuffer == NULL)
         {
             DWORD err = GetLastError();
-            ErrorLog("Could not map view of mmf %s: %d - %s\n", m_Name.c_str(), err, LastErrorMsg(err).c_str());
+            ErrorLog("unable to map view of mmf %s: %d - %s\n", m_Name.c_str(), err, LastErrorMsg(err).c_str());
             CloseHandle(m_FileHandle);
             return false;
         }
@@ -128,7 +128,7 @@ namespace utility
         }
         catch (std::exception e)
         {
-            ErrorLog("Error reading from mmf %s: %s\n", m_Name.c_str(), e.what());
+            ErrorLog("unable to read from mmf %s: %s\n", m_Name.c_str(), e.what());
             UnmapViewOfFile(localBuffer);
             CloseHandle(m_FileHandle);
             return false;

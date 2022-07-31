@@ -41,8 +41,6 @@ class TrackerBase
 class OpenXrTracker : public TrackerBase
 {
   public:
-    OpenXrTracker();
-    ~OpenXrTracker();
     
     virtual bool ResetReferencePose(XrSession session, XrTime time) override;
 
@@ -50,18 +48,37 @@ class OpenXrTracker : public TrackerBase
     virtual bool GetPose(XrPosef& trackerPose, XrSession session, XrTime time) override;
 };
 
-class YawTracker : public TrackerBase
+class VirtualTracker : public TrackerBase
 {
   public:
-    YawTracker();
-    ~YawTracker();
     virtual bool Init() override;
     virtual bool LazyInit(XrTime time) override;
     virtual bool ResetReferencePose(XrSession session, XrTime time) override;
     bool ToggleDebugMode(XrSession session, XrTime time);
 
+
   protected:
     virtual bool GetPose(XrPosef& trackerPose, XrSession session, XrTime time) override;
+    virtual bool GetVirtualPose(XrPosef& trackerPose, XrSession session, XrTime time) = 0;
+    void SetOffset(float forward, float down, float right);
+   
+    utility::Mmf m_Mmf;
+
+  private:
+    float m_OffsetForward{0.0f}, m_OffsetDown{0.0f}, m_OffsetRight{0.0f};
+    bool m_DebugMode{false};
+    XrPosef m_OriginalRefPose{xr::math::Pose::Identity()};
+};
+
+void GetTracker(TrackerBase** tracker);
+
+class YawTracker : public VirtualTracker
+{
+  public:
+    virtual bool LazyInit(XrTime time) override;
+
+  protected:
+    virtual bool GetVirtualPose(XrPosef& trackerPose, XrSession session, XrTime time) override;
 
   private:
     struct YawData
@@ -70,11 +87,27 @@ class YawTracker : public TrackerBase
         bool sixDof, usePos;
         float autoX, autoY;
     };
+};
 
-    float m_OffsetForward{0.0f}, m_OffsetDown{0.0f}, m_OffsetRight{0.0f};
-    utility::Mmf m_Mmf;
-    bool m_DebugMode{false};
-    XrPosef m_OriginalRefPose{xr::math::Pose::Identity()};
+
+class SrsTracker : public VirtualTracker
+{
+  public:
+    virtual bool LazyInit(XrTime time) override;
+
+  protected:
+    virtual bool GetVirtualPose(XrPosef& trackerPose, XrSession session, XrTime time) override;
+
+  private:
+    struct SrsData
+    {
+        double sway;
+        double surge;
+        double heave;
+        double yaw;
+        double roll;
+        double pitch;
+    };
 };
 
 void GetTracker(TrackerBase** tracker);

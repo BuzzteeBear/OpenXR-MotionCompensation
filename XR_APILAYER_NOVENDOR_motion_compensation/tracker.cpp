@@ -125,7 +125,7 @@ bool TrackerBase::GetPoseDelta(XrPosef& poseDelta, XrSession session, XrTime tim
     {
         m_ResetReferencePose = !ResetReferencePose(session, time);
     }
-    XrPosef curPose;
+    XrPosef curPose{Pose::Identity()};
     if (GetPose(curPose, session, time))
     {
         // apply translational filter
@@ -217,13 +217,6 @@ bool TrackerBase::GetControllerPose(XrPosef& trackerPose, XrSession session, XrT
     }
 }
 
-
-OpenXrTracker::OpenXrTracker()
-{}
-
-OpenXrTracker::~OpenXrTracker()
-{}
-
 bool OpenXrTracker::ResetReferencePose(XrSession session, XrTime time)
 {
     XrPosef curPose;
@@ -245,13 +238,7 @@ bool OpenXrTracker::GetPose(XrPosef& trackerPose, XrSession session, XrTime time
     return GetControllerPose(trackerPose, session, time);
 }
 
-YawTracker::YawTracker()
-{}
-
-YawTracker::~YawTracker()
-{}
-
-bool YawTracker::Init()
+bool VirtualTracker::Init()
 {
     bool success{true};
     float value;
@@ -262,7 +249,7 @@ bool YawTracker::Init()
     }
     else
     {
-        success = false;  
+        success = false;
     }
     if (GetConfig()->GetFloat(Cfg::TrackerOffsetDown, value))
     {
@@ -284,18 +271,18 @@ bool YawTracker::Init()
     }
     if (!TrackerBase::Init())
     {
-        success = false;    
+        success = false;
     }
     return success;
 }
 
-bool YawTracker::LazyInit(XrTime time)
+bool VirtualTracker::LazyInit(XrTime time)
 {
     bool success = true;
     if (!m_SkipLazyInit)
     {
         m_Mmf.SetName("YawVRGEFile");
-        
+
         if (m_DebugMode || m_Mmf.Exists())
         {
             // TODO: use offset from yaw data
@@ -311,7 +298,7 @@ bool YawTracker::LazyInit(XrTime time)
     return success;
 }
 
-bool YawTracker::ResetReferencePose(XrSession session, XrTime time)
+bool VirtualTracker::ResetReferencePose(XrSession session, XrTime time)
 {
     // TODO: determine reference pose using saved pose in stage
     bool success = true;
@@ -331,13 +318,19 @@ bool YawTracker::ResetReferencePose(XrSession session, XrTime time)
             forward.y = 0;
             forward = Normalize(forward);
             XrVector3f right{-forward.z, 0.0f, forward.x};
-            
-            // calculate and apply offset
-            XrVector3f offset = m_OffsetForward * forward + m_OffsetRight * right + XrVector3f{0.0f, -m_OffsetDown, 0.0f};
+
+            // calculate and apply translational offset
+            XrVector3f offset =
+                m_OffsetForward * forward + m_OffsetRight * right + XrVector3f{0.0f, -m_OffsetDown, 0.0f};
             location.pose.position = location.pose.position + offset;
 
+            // calculate orientation parallel to floor
+            float yawAngle = atan2f(forward.x, forward.z);
+            StoreXrQuaternion(&location.pose.orientation,
+                              DirectX::XMQuaternionRotationRollPitchYaw(0.0f, yawAngle, 0.0f));
+
             XrPosef refPose = location.pose;
-           
+
             if (m_DebugMode)
             {
                 // manipulate ref pose orientation to match motion controller
@@ -366,7 +359,7 @@ bool YawTracker::ResetReferencePose(XrSession session, XrTime time)
     return success;
 }
 
-bool YawTracker::ToggleDebugMode(XrSession session, XrTime time)
+bool VirtualTracker::ToggleDebugMode(XrSession session, XrTime time)
 {
     bool success = true;
     if (!m_DebugMode)
@@ -403,32 +396,16 @@ bool YawTracker::ToggleDebugMode(XrSession session, XrTime time)
     return success;
 }
 
-bool YawTracker::GetPose(XrPosef& trackerPose, XrSession session, XrTime time)
+bool VirtualTracker::GetPose(XrPosef& trackerPose, XrSession session, XrTime time)
 {
     bool success{true};
-    
+
     if (!m_DebugMode)
     {
-        YawData data;
-        if (m_Mmf.Read(&data, sizeof(data)))
-        {
-            DebugLog("YAWDATA:\n\tyaw: %f, pitch: %f, roll: %f\n\tbattery: %f, rotationHeight: %f, "
-                     "rotationForwardHead: %f\n\tsixDof: %d, usePos: %d, autoX: %f, autoY: %f\n",
-                     data.yaw,
-                     data.pitch,
-                     data.roll,
-                     data.battery,
-                     data.rotationHeight,
-                     data.rotationForwardHead,
-                     data.sixDof,
-                     data.usePos,
-                     data.autoX,
-                     data.autoY);
-        }
-        // TODO: apply to reference pose
+        success = GetVirtualPose(trackerPose, session, time);
     }
     else
-    { 
+    {
         if (GetControllerPose(trackerPose, session, time))
         {
             // remove translation towards reference pose
@@ -444,6 +421,116 @@ bool YawTracker::GetPose(XrPosef& trackerPose, XrSession session, XrTime time)
     return success;
 }
 
+void VirtualTracker::SetOffset(float forward, float down, float right)
+{
+    m_OffsetForward = forward;
+    m_OffsetDown = down;
+    m_OffsetRight = right;
+}
+
+bool YawTracker::LazyInit(XrTime time)
+{
+    bool success = true;
+    if (!m_SkipLazyInit)
+    {
+        m_Mmf.SetName("Local\\YawVRGEFile");
+        YawData data;
+        if (m_Mmf.Read(&data, sizeof(data)))
+        {
+            //TODO: calculate difference between floor and headset and set offset according to file values
+        }
+        else
+        {
+            ErrorLog("unable to open mmf 'YawVRGEFile'. Check if Game Engine is running and motion compensation is "
+                     "activated!\n");
+            success = false;
+        }
+    }
+    m_SkipLazyInit = success;
+    return success;
+}
+
+
+bool YawTracker::GetVirtualPose(XrPosef& trackerPose, XrSession session, XrTime time)
+{
+    YawData data;
+    XrPosef rotation{Pose::Identity()};
+    if (!m_Mmf.Read(&data, sizeof(data)))
+    {
+        return false;
+    }
+
+    DebugLog("YAWDATA:\n\tyaw: %f, pitch: %f, roll: %f\n\tbattery: %f, rotationHeight: %f, "
+             "rotationForwardHead: %f\n\tsixDof: %d, usePos: %d, autoX: %f, autoY: %f\n",
+             data.yaw,
+             data.pitch,
+             data.roll,
+             data.battery,
+             data.rotationHeight,
+             data.rotationForwardHead,
+             data.sixDof,
+             data.usePos,
+             data.autoX,
+             data.autoY);
+
+    // TODO: determine signum of angles
+    StoreXrQuaternion(&rotation.orientation,
+                      DirectX::XMQuaternionRotationRollPitchYaw(-data.pitch / 360.0f * (float)M_PI,
+                                                                data.yaw / 360.0f * (float)M_PI,
+                                                                data.roll / 360.0f * (float)M_PI));
+
+    trackerPose = Pose::Multiply(rotation, m_ReferencePose);
+    return true;
+}
+
+bool SrsTracker::LazyInit(XrTime time)
+{
+    bool success = true;
+    if (!m_SkipLazyInit)
+    {
+        m_Mmf.SetName("Local\\SimRacingStudioMotionRigPose");
+
+        if (!m_Mmf.Exists())
+        {
+            ErrorLog("unable to open mmf 'Local\\SimRacingStudioMotionRigPose'. Check if Game Engine is running and "
+                     "motion compensation is activated!\n");
+            success = false;
+        }
+    }
+    m_SkipLazyInit = success;
+    return success;
+}
+
+bool SrsTracker::GetVirtualPose(XrPosef& trackerPose, XrSession session, XrTime time)
+{
+    SrsData data;
+    XrPosef rigPose{Pose::Identity()};
+    if (!m_Mmf.Read(&data, sizeof(data)))
+    {
+        return false;
+    }
+
+    DebugLog("SRSDATA:\n\tyaw: %f, pitch: %f, roll: %f\n\tsway: %f, surge: %f, heave: %f\n"
+             "rotationForwardHead: %f\n\tsixDof: %d, usePos: %d, autoX: %f, autoY: %f\n",
+             data.yaw,
+             data.pitch,
+             data.roll,
+             data.sway,
+             data.surge,
+             data.heave);
+
+    // TODO: determine signum of angles
+    StoreXrQuaternion(&rigPose.orientation,
+                      DirectX::XMQuaternionRotationRollPitchYaw(-(float)data.pitch / 360.0f * (float)M_PI,
+                                                                (float)data.yaw / 360.0f * (float)M_PI,
+                                                                (float)data.roll / 360.0f * (float)M_PI));
+    rigPose.position =
+        XrVector3f{(float)data.sway / 1000.0f, (float)data.heave / 1000.0f, (float)data.surge / -1000.0f};
+
+    trackerPose = Pose::Multiply(rigPose, m_ReferencePose);
+    return true;
+}
+
 void GetTracker(TrackerBase** tracker)
 {
     TrackerBase* previousTracker = *tracker;
@@ -452,12 +539,22 @@ void GetTracker(TrackerBase** tracker)
     {
         if ("yaw" == trackerType)
         {
-            Log("using yaw mapped memory file as tracker\n");
+            Log("using yaw memory mapped file as tracker\n");
             if (previousTracker)
             {
                 delete previousTracker;
             }
             *tracker = new YawTracker();
+            return;
+        }
+        if ("srs" == trackerType)
+        {
+            Log("using srs memory mapped file as tracker\n");
+            if (previousTracker)
+            {
+                delete previousTracker;
+            }
+            *tracker = new SrsTracker();
             return;
         }
         else if ("controller" == trackerType)

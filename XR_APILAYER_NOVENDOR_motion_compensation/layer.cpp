@@ -843,12 +843,12 @@ namespace motion_compensation_layer
         std::string trackerType;
         if (GetConfig()->GetString(Cfg::TrackerType, trackerType))
         {
-            if ("yaw" == trackerType)
+            if ("yaw" == trackerType || "srs" == trackerType)
             {
-                YawTracker* yawTracker = reinterpret_cast<YawTracker*>(m_Tracker);
-                if (yawTracker)
+                VirtualTracker* tracker = reinterpret_cast<VirtualTracker*>(m_Tracker);
+                if (tracker)
                 {
-                    success = yawTracker->ToggleDebugMode(m_Session, time);
+                    success = tracker->ToggleDebugMode(m_Session, time);
                 }
                 else
                 {
