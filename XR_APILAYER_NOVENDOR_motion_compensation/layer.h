@@ -89,7 +89,7 @@ namespace motion_compensation_layer
         std::set<XrSpace> m_ViewSpaces{};
         std::vector<XrView> m_EyeOffsets{};
         XrViewConfigurationType m_ViewConfigType{XR_VIEW_CONFIGURATION_TYPE_MAX_ENUM};
-        TrackerBase* m_Tracker{nullptr};
+        Tracker::TrackerBase* m_Tracker{nullptr};
         utility::Cache<XrPosef> m_PoseCache{2, xr::math::Pose::Identity()};
         utility::Cache<std::vector<XrPosef>> m_EyeCache{
             2,

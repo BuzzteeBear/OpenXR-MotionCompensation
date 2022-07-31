@@ -44,10 +44,10 @@ Upon starting an OpenXR application with the API layer active for the first time
 What you can modify in a configuration file:
 - the tracker to use for motion compensation
 - the strength and the number of filtering stages for both translational and rotational filters
-- keyboard inputs to activate/deactivate or recalibrate motion compensation during runtime
+- keyboard inputs (e.g. to activate/deactivate or recalibrate motion compensation during runtime)
 
 ### Sections in configuration file
-- `tracker`: use either the left or the right motion controller as reference tracker. Valid options for the key `parameter` are `left` and `right`. The key `type` has no funcionality yet
+- `tracker`: use either the left or the right motion controller as reference tracker. Valid options for the key `side` are `left` and `right`. The key `type` has no funcionality yet
 - `translational_filter` and `rotational_filter`: modify the filtering magnitude (key `strength `with valid options between `0.0` and `1.0`) number of filtering stages (key `order`with valid options: `1`,`2`,`3`)  
 - `shortcuts`: `activate` to turn motion compensation on or off. `center` to reset the neutral reference pose of the tracker. Other keys are not funtional yet. See [List of keyboard bindings](appendix:_list-of-keyboard-bindings) for valid options.
 
@@ -65,6 +65,7 @@ What you can modify in a configuration file:
     * `rotation_increase` (`CTRL` + `0` by default)
     * `translation_decrease` (`CTRL` + `9` by default)
 - after modifying filter strength you can save your changes to the application specific configuration file using the `save_config` shortcut (`CTRL` + `SHIFT` + `S` by default). If you want to use these values globally for all applicattions you can copy them to the default configuration file `OpenXR-MotionCompensation.ini`.
+- after modifying the config file(s) can use the `reload_config` shortcut to use the new values. For technical reasons motion compensation is automatically deactivated and the reference tracker pose is invalidated upon configuration reload. Controller side cannot be changed during runtime in the current version.
 
 ### Notes
 Upon activating a shortcut you get audible feedback, using either the confirmation, warning or error sound configured in your windows system control, depending on the successful execution of the action you activated.

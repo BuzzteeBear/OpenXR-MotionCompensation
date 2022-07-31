@@ -80,15 +80,18 @@ namespace LAYER_NAMESPACE {
 
         std::vector<std::string> blockedExtensions;
         std::vector<std::string> implicitExtensions;
-
+        
+        /* not neccessary
         for (const auto& extension : extensions)
         {
+           
             if (!strcmp(XR_EXT_HP_MIXED_REALITY_CONTROLLER_EXTENSION_NAME, extension.extensionName) 
                 || !strcmp(XR_MSFT_CONTROLLER_MODEL_EXTENSION_NAME, extension.extensionName))
             {
                 implicitExtensions.push_back(extension.extensionName); 
             }
         }
+        */
 
         LAYER_NAMESPACE::GetInstance()->SetExtensions(implicitExtensions);
 

@@ -162,7 +162,7 @@ namespace motion_compensation_layer
         }
 
         // initialize tracker
-        GetTracker(&m_Tracker);
+        Tracker::GetTracker(&m_Tracker);
         if (!m_Tracker->Init())
         {
             m_Initialized = false;
@@ -828,7 +828,7 @@ namespace motion_compensation_layer
         if (success)
         {
             GetConfig()->GetBool(Cfg::TestRotation, m_TestRotation);
-            GetTracker(&m_Tracker);
+            Tracker::GetTracker(&m_Tracker);
             if (!m_Tracker->Init())
             {
                 success = false;
@@ -843,16 +843,16 @@ namespace motion_compensation_layer
         std::string trackerType;
         if (GetConfig()->GetString(Cfg::TrackerType, trackerType))
         {
-            if ("yaw" == trackerType || "srs" == trackerType)
+            if ("yaw" == trackerType || "srs" == trackerType || "flypt" == trackerType)
             {
-                VirtualTracker* tracker = reinterpret_cast<VirtualTracker*>(m_Tracker);
+                Tracker::VirtualTracker* tracker = reinterpret_cast<Tracker::VirtualTracker*>(m_Tracker);
                 if (tracker)
                 {
                     success = tracker->ToggleDebugMode(m_Session, time);
                 }
                 else
                 {
-                    ErrorLog("unable to cast tracker to YawTracker\n");
+                    ErrorLog("unable to cast tracker to VirtualTracker pointer\n");
                     success = false;
                 }
             }
@@ -886,7 +886,6 @@ namespace motion_compensation_layer
                 success = false;
             }
         }
-        // TODO: initialize only for motion controller tracker
         if (!m_ActionSetAttached)
         {
             Log("action set attached during lazy init\n");
@@ -904,11 +903,8 @@ namespace motion_compensation_layer
             }
             else
             {
-                if (dynamic_cast<OpenXrTracker*>(m_Tracker))
-                {
-                    ErrorLog("%s: xrAttachSessionActionSets failed\n", __FUNCTION__);
-                    success = false;
-                }
+                ErrorLog("%s: xrAttachSessionActionSets failed\n", __FUNCTION__);
+                success = false;
             }
         }
         if (!m_Tracker->LazyInit(time))
