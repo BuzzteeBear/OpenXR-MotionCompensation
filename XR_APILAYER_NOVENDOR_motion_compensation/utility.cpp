@@ -21,7 +21,16 @@ namespace utility
                                  Cfg::KeyTransDec,
                                  Cfg::KeyRotInc,
                                  Cfg::KeyRotDec,
+                                 Cfg::KeyOffForward,
+                                 Cfg::KeyOffBack,
+                                 Cfg::KeyOffUp,
+                                 Cfg::KeyOffDown,
+                                 Cfg::KeyOffRight,
+                                 Cfg::KeyOffLeft,
+                                 Cfg::KeyRotRight,
+                                 Cfg::KeyRotLeft,
                                  Cfg::KeySaveConfig,
+                                 Cfg::KeySaveConfigApp,
                                  Cfg::KeyReloadConfig,
                                  Cfg::KeyDebugCor};
         std::string errors;
@@ -88,14 +97,14 @@ namespace utility
     {
         m_FileHandle = OpenFileMapping(FILE_MAP_READ, FALSE, m_Name.c_str());
 
-        if (m_FileHandle != NULL)
+        if (m_FileHandle)
         {
             m_View = MapViewOfFile(m_FileHandle, FILE_MAP_READ, 0, 0, 0);
             if (m_View == NULL)
             {
                 DWORD err = GetLastError();
                 ErrorLog("unable to map view of mmf %s: %d - %s\n", m_Name.c_str(), err, LastErrorMsg(err).c_str());
-                CloseHandle(m_FileHandle);
+                Close();
                 return false;
             }
         }
@@ -108,8 +117,6 @@ namespace utility
                      LastErrorMsg(err).c_str());
             return false;
         }
-        CloseHandle(m_FileHandle);
-
         return true;
     }
     bool Mmf::Read(void* buffer, size_t size)
@@ -143,10 +150,11 @@ namespace utility
             UnmapViewOfFile(m_View);
         }
         m_View = nullptr;
-        if (INVALID_HANDLE_VALUE != m_FileHandle)
+        if (m_FileHandle)
         {
             CloseHandle(m_FileHandle);
         }
+        m_FileHandle = nullptr;
     }
 
     std::string LastErrorMsg(DWORD error)

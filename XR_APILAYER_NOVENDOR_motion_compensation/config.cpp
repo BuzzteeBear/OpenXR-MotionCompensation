@@ -206,9 +206,10 @@ void ConfigManager::SetValue(Cfg key, const std::string& val)
 }
 
 
-void ConfigManager::WriteConfig()
+void ConfigManager::WriteConfig(bool forApp)
 {
     bool error{false};
+    const std::string configFile = forApp ? m_ApplicationIni : m_DllDirectory + "OpenXR-MotionCompensation.ini";
     for (const auto key : m_KeysToSave)
     {
         const auto& keyEntry = m_Keys.find(key);
@@ -220,7 +221,7 @@ void ConfigManager::WriteConfig()
                 if (!WritePrivateProfileString(keyEntry->second.first.c_str(),
                                                keyEntry->second.second.c_str(),
                                                valueEntry->second.c_str(),
-                                               m_ApplicationIni.c_str()) &&
+                                               configFile.c_str()) &&
                     2 != GetLastError())
                 {
                     error = true;
@@ -230,7 +231,7 @@ void ConfigManager::WriteConfig()
                              valueEntry->second.c_str(),
                              keyEntry->second.second.c_str(),
                              keyEntry->second.first.c_str(),
-                             m_ApplicationIni.c_str(),
+                             configFile.c_str(),
                              err,
                              LastErrorMsg(err).c_str());
                 }

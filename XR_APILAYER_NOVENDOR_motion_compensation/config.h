@@ -18,7 +18,16 @@ enum class Cfg
     KeyTransDec,
     KeyRotInc,
     KeyRotDec,
+    KeyOffForward,
+    KeyOffBack,
+    KeyOffUp,
+    KeyOffDown,
+    KeyOffRight,
+    KeyOffLeft,
+    KeyRotRight,
+    KeyRotLeft,
     KeySaveConfig,
+    KeySaveConfigApp,
     KeyReloadConfig,
     KeyDebugCor,
     TestRotation
@@ -39,7 +48,8 @@ class ConfigManager
     void SetValue(Cfg key, float val);
     void SetValue(Cfg key, const std::string& val);
 
-    void WriteConfig();
+    void WriteConfig(bool forApp);
+
 
   private:
     bool InitDirectory();
@@ -55,23 +65,44 @@ class ConfigManager
         {Cfg::TrackerOffsetDown, {"tracker", "offset_down"}},
         {Cfg::TrackerOffsetRight, {"tracker", "offset_right"}},
         {Cfg::TrackerOffsetRight, {"tracker", "controller_debug_mode"}},
+        
         {Cfg::TransStrength, {"translation_filter", "strength"}},
         {Cfg::TransOrder, {"translation_filter", "order"}},
         {Cfg::RotStrength, {"rotation_filter", "strength"}},
         {Cfg::RotOrder, {"rotation_filter", "order"}},
+       
         {Cfg::KeyActivate, {"shortcuts", "activate"}},
         {Cfg::KeyCenter, {"shortcuts", "center"}},
+        
         {Cfg::KeyTransInc, {"shortcuts", "translation_increase"}},
         {Cfg::KeyTransDec, {"shortcuts", "translation_decrease"}},
         {Cfg::KeyRotInc, {"shortcuts", "rotation_increase"}},
         {Cfg::KeyRotDec, {"shortcuts", "rotation_decrease"}},
-        {Cfg::KeySaveConfig, {"shortcuts", "save_config"}},
-        {Cfg::KeyReloadConfig, {"shortcuts", "reload_config"}},
+        
+        {Cfg::KeyOffForward, {"shortcuts", "offset_forward"}},
+        {Cfg::KeyOffBack, {"shortcuts", "offset_back"}},
+        {Cfg::KeyOffUp, {"shortcuts", "offset_up"}},
+        {Cfg::KeyOffDown, {"shortcuts", "offset_down"}},
+        {Cfg::KeyOffRight, {"shortcuts", "offset_right"}},
+        {Cfg::KeyOffLeft, {"shortcuts", "offset_left"}},
+
+        {Cfg::KeyRotRight, {"shortcuts", "rotate_right"}},
+        {Cfg::KeyRotLeft, {"shortcuts", "rotate_left"}},
+
         {Cfg::KeyDebugCor, {"shortcuts", "cor_debug_mode"}},
+
+        {Cfg::KeySaveConfig, {"shortcuts", "save_config"}},
+        {Cfg::KeySaveConfigApp, {"shortcuts", "save_config_app"}},
+        {Cfg::KeyReloadConfig, {"shortcuts", "reload_config"}},
+        
         {Cfg::TestRotation, {"debug", "testrotation"}}};
 
 
-    std::set<Cfg> m_KeysToSave{Cfg::TransStrength, Cfg::RotStrength};
+    std::set<Cfg> m_KeysToSave{Cfg::TransStrength,
+                               Cfg::RotStrength,
+                               Cfg::TrackerOffsetForward,
+                               Cfg::TrackerOffsetDown,
+                               Cfg::TrackerOffsetRight};
 
     std::map<std::string, int> m_ShortCuts{
         {"BACK", VK_BACK},

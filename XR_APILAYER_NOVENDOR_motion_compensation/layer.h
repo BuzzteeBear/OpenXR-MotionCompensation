@@ -68,11 +68,24 @@ namespace motion_compensation_layer
         XrSpace m_ReferenceSpace{XR_NULL_HANDLE};
 
       private:
+        enum class Direction
+        {
+            Fwd,
+            Back,
+            Up,
+            Down,
+            Left,
+            Right,
+            RotRight,
+            RotLeft
+        };
+
         bool isSystemHandled(XrSystemId systemId) const;
         bool isViewSpace(XrSpace space) const;
         uint32_t GetNumViews();
         void ToggleActive(XrTime time);
         void Recalibrate(XrTime time);
+        void ChangeOffset(Direction dir);
         void ReloadConfig();
         void ToggleCorDebug(XrTime time);
         bool LazyInit(XrTime time);

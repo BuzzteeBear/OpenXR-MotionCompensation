@@ -175,7 +175,7 @@ namespace utility
 
       private: 
         std::string m_Name;
-        HANDLE m_FileHandle{INVALID_HANDLE_VALUE};
+        HANDLE m_FileHandle{nullptr};
         void* m_View{nullptr};
     };
 

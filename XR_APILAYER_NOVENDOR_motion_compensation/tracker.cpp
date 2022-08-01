@@ -341,6 +341,43 @@ namespace Tracker
         return success;
     }
 
+    bool VirtualTracker::ChangeOffset(XrVector3f modification)
+    {
+        if (m_DebugMode)
+        {
+            ErrorLog("%s: unable to change offset while cor debug mode is active");
+            return false;
+        }
+
+        m_OffsetForward += modification.z;
+        GetConfig()->SetValue(Cfg::TrackerOffsetForward, m_OffsetForward * 100.0f);
+
+        m_OffsetDown -= modification.y;
+        GetConfig()->SetValue(Cfg::TrackerOffsetDown, m_OffsetDown * 100.0f);
+
+        m_OffsetRight += modification.x;
+        GetConfig()->SetValue(Cfg::TrackerOffsetRight, m_OffsetRight * 100.0f);
+
+        XrPosef adjustment{{Quaternion::Identity()}, modification};
+        SetReferencePose(Pose::Multiply(adjustment, m_ReferencePose));
+        return true;
+    }
+
+    bool VirtualTracker::ChangeRotation(bool right)
+    {
+        if (m_DebugMode)
+        {
+            ErrorLog("%s: unable to change offset while cor debug mode is active");
+            return false;
+        }
+        XrPosef adjustment{Pose::Identity()};
+        StoreXrQuaternion(&adjustment.orientation,
+                          DirectX::XMQuaternionRotationRollPitchYaw(0.0f, (right ? -1.0f : 1.0f) * angleToRadian, 0.0f));
+
+        SetReferencePose(Pose::Multiply(adjustment, m_ReferencePose));
+        return true;
+    }
+
     bool VirtualTracker::ToggleDebugMode(XrSession session, XrTime time)
     {
         bool success = true;

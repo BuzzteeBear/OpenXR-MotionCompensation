@@ -819,6 +819,53 @@ namespace motion_compensation_layer
                               TLArg(time, "Time"));
         }
     }
+    void OpenXrLayer::ChangeOffset(Direction dir)
+    {
+        bool success = true;
+        std::string trackerType;
+        if (GetConfig()->GetString(Cfg::TrackerType, trackerType))
+        {
+            if ("yaw" == trackerType || "srs" == trackerType || "flypt" == trackerType)
+            {
+                Tracker::VirtualTracker* tracker = reinterpret_cast<Tracker::VirtualTracker*>(m_Tracker);
+                if (tracker)
+                {
+                    if (Direction::RotLeft != dir && Direction::RotRight != dir)
+                    {
+                        XrVector3f direction{Direction::Left == dir    ? 0.01f
+                                             : Direction::Right == dir ? -0.01f
+                                                                       : 0.0f,
+                                             Direction::Up == dir     ? 0.01f
+                                             : Direction::Down == dir ? -0.01f
+                                                                      : 0.0f,
+                                             Direction::Fwd == dir    ? 0.01f
+                                             : Direction::Back == dir ? -0.01f
+                                                                      : 0.0f};
+                        success = tracker->ChangeOffset(direction);
+                    }
+                    else
+                    {
+                        success = tracker->ChangeRotation(Direction::RotRight == dir);
+                    }
+                }
+                else
+                {
+                    ErrorLog("unable to cast tracker to VirtualTracker pointer\n");
+                    success = false;
+                }
+            }
+            else
+            {
+                ErrorLog("unable to modify offset, wrong type of tracker: %s\n", trackerType);
+                success = false;
+            }
+        }
+        else
+        {
+            success = false;
+        }
+        MessageBeep(success ? MB_OK : MB_ICONERROR);
+    }
 
     void OpenXrLayer::ReloadConfig()
     {
@@ -921,42 +968,70 @@ namespace motion_compensation_layer
         {
             ToggleActive(time);
         }
-        isRepeat = false;
         if (m_Input.GetKeyState(Cfg::KeyCenter, isRepeat) && !isRepeat)
         {
             Recalibrate(time);
         }
-        isRepeat = false;
         if (m_Input.GetKeyState(Cfg::KeyTransInc, isRepeat))
         {
             m_Tracker->ModifyFilterStrength(true, true);
         }
-        isRepeat = false;
         if (m_Input.GetKeyState(Cfg::KeyTransDec, isRepeat))
         {
             m_Tracker->ModifyFilterStrength(true, false);
         }
-        isRepeat = false;
         if (m_Input.GetKeyState(Cfg::KeyRotInc, isRepeat))
         {
             m_Tracker->ModifyFilterStrength(false, true);
         }
-        isRepeat = false;
         if (m_Input.GetKeyState(Cfg::KeyRotDec, isRepeat))
         {
             m_Tracker->ModifyFilterStrength(false, false);
         }
-        isRepeat = false;
+        if (m_Input.GetKeyState(Cfg::KeyOffForward, isRepeat))
+        {
+           ChangeOffset(Direction::Fwd);
+        }
+        if (m_Input.GetKeyState(Cfg::KeyOffBack, isRepeat))
+        {
+            ChangeOffset(Direction::Back);
+        }
+        if (m_Input.GetKeyState(Cfg::KeyOffUp, isRepeat))
+        {
+            ChangeOffset(Direction::Up);
+        }
+        if (m_Input.GetKeyState(Cfg::KeyOffDown, isRepeat))
+        {
+            ChangeOffset(Direction::Down);
+        }
+        if (m_Input.GetKeyState(Cfg::KeyOffRight, isRepeat))
+        {
+            ChangeOffset(Direction::Right);
+        }
+        if (m_Input.GetKeyState(Cfg::KeyOffLeft, isRepeat))
+        {
+            ChangeOffset(Direction::Left);
+        }
+        if (m_Input.GetKeyState(Cfg::KeyRotRight, isRepeat))
+        {
+            ChangeOffset(Direction::RotRight);
+        }
+        if (m_Input.GetKeyState(Cfg::KeyRotLeft, isRepeat))
+        {
+            ChangeOffset(Direction::RotLeft);
+        }
         if (m_Input.GetKeyState(Cfg::KeySaveConfig, isRepeat) && !isRepeat)
         {
-            GetConfig()->WriteConfig();
+            GetConfig()->WriteConfig(false);
         }
-        isRepeat = false;
+        if (m_Input.GetKeyState(Cfg::KeySaveConfigApp, isRepeat) && !isRepeat)
+        {
+            GetConfig()->WriteConfig(true);
+        }
         if (m_Input.GetKeyState(Cfg::KeyReloadConfig, isRepeat) && !isRepeat)
         {
             ReloadConfig();
         }
-        isRepeat = false;
         if (m_Input.GetKeyState(Cfg::KeyDebugCor, isRepeat) && !isRepeat)
         {
             ToggleCorDebug(time);

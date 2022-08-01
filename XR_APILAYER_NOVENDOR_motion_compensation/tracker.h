@@ -53,6 +53,8 @@ namespace Tracker
       public:
         virtual bool Init() override;
         virtual bool ResetReferencePose(XrSession session, XrTime time) override;
+        bool ChangeOffset(XrVector3f modification);
+        bool ChangeRotation(bool right);
         bool ToggleDebugMode(XrSession session, XrTime time);
 
       protected:
