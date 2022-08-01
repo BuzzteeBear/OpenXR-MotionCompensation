@@ -25,7 +25,14 @@ namespace Filter
             m_Strength = limitedStrength;
             return m_Strength;
         }
-        virtual void Filter(Value& value) = 0;
+        void Filter(Value& value)
+        {
+            if (0.0f < m_Strength)
+            {
+                ApplyFilter(value);
+            }
+        }
+        virtual void ApplyFilter(Value& value) = 0;
         virtual void Reset(const Value& value) = 0;
 
       protected:
@@ -39,7 +46,7 @@ namespace Filter
         SingleEmaFilter(float strength) : FilterBase(strength){};
         virtual ~SingleEmaFilter(){};
         virtual float SetStrength(float strength) override;
-        virtual void Filter(XrVector3f& location) override;
+        virtual void ApplyFilter(XrVector3f& location) override;
         virtual void Reset(const XrVector3f& location) override;
 
       protected:
@@ -54,7 +61,7 @@ namespace Filter
       public:
         DoubleEmaFilter(float strength) : SingleEmaFilter(strength){};
         virtual ~DoubleEmaFilter(){};
-        virtual void Filter(XrVector3f& location) override;
+        virtual void ApplyFilter(XrVector3f& location) override;
         virtual void Reset(const XrVector3f& location) override;
 
       protected:
@@ -66,7 +73,7 @@ namespace Filter
       public:
         TripleEmaFilter(float strength) : DoubleEmaFilter(strength){};
         virtual ~TripleEmaFilter(){};
-        virtual void Filter(XrVector3f& location) override;
+        virtual void ApplyFilter(XrVector3f& location) override;
         virtual void Reset(const XrVector3f& location) override;
 
       protected:
@@ -79,7 +86,7 @@ namespace Filter
       public:
         SingleSlerpFilter(float strength) : FilterBase(strength){};
         virtual ~SingleSlerpFilter(){};
-        virtual void Filter(XrQuaternionf& rotation) override;
+        virtual void ApplyFilter(XrQuaternionf& rotation) override;
         virtual void Reset(const XrQuaternionf& rotation) override;
 
       protected:
@@ -91,7 +98,7 @@ namespace Filter
       public:
         DoubleSlerpFilter(float strength) : SingleSlerpFilter(strength){};
         virtual ~DoubleSlerpFilter(){};
-        virtual void Filter(XrQuaternionf& rotation) override;
+        virtual void ApplyFilter(XrQuaternionf& rotation) override;
         virtual void Reset(const XrQuaternionf& rotation) override;
 
       protected:
@@ -103,7 +110,7 @@ namespace Filter
       public:
         TripleSlerpFilter(float strength) : DoubleSlerpFilter(strength){};
         virtual ~TripleSlerpFilter(){};
-        virtual void Filter(XrQuaternionf& rotation) override;
+        virtual void ApplyFilter(XrQuaternionf& rotation) override;
         virtual void Reset(const XrQuaternionf& rotation) override;
 
       protected:

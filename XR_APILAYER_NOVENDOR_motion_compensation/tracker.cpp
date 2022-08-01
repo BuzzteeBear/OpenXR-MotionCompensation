@@ -416,15 +416,24 @@ namespace Tracker
         if (!m_SkipLazyInit)
         {
             m_Mmf.SetName("Local\\YawVRGEFile");
-            YawData data;
-            if (m_Mmf.Read(&data, sizeof(data)))
+            if (m_Mmf.Open())
             {
-                // TODO: calculate difference between floor and headset and set offset according to file values
+                YawData data;
+                if (m_Mmf.Read(&data, sizeof(data)))
+                {
+                    // TODO: calculate difference between floor and headset and set offset according to file values
+                }
+                else
+                {
+                    ErrorLog("%s: unable to read from mmf 'YawVRGEFile'\n", __FUNCTION__);
+                    success = false;
+                }
             }
             else
             {
-                ErrorLog("unable to open mmf 'YawVRGEFile'. Check if Game Engine is running and motion compensation is "
-                         "activated!\n");
+                ErrorLog("%s: unable to open mmf 'YawVRGEFile'. Check if Game Engine is running and motion "
+                         "compensation is activated!\n",
+                         __FUNCTION__);
                 success = false;
             }
         }
@@ -455,9 +464,9 @@ namespace Tracker
                  data.autoY);
 
         StoreXrQuaternion(&rotation.orientation,
-                          DirectX::XMQuaternionRotationRollPitchYaw(-data.pitch / 360.0f * (float)M_PI,
-                                                                    -data.yaw / 360.0f * (float)M_PI,
-                                                                    data.roll / 360.0f * (float)M_PI));
+                          DirectX::XMQuaternionRotationRollPitchYaw(-data.pitch * angleToRadian,
+                                                                    -data.yaw * angleToRadian,
+                                                                    data.roll * angleToRadian));
 
         trackerPose = Pose::Multiply(rotation, m_ReferencePose);
         return true;
@@ -470,7 +479,7 @@ namespace Tracker
         {
             m_Mmf.SetName(m_Filename);
 
-            if (!m_Mmf.Exists())
+            if (!m_Mmf.Open())
             {
                 ErrorLog("unable to open mmf '%s'. Check if motion software is running and motion compensation is "
                          "activated!\n",
@@ -484,7 +493,7 @@ namespace Tracker
 
     bool SixDofTracker::GetVirtualPose(XrPosef& trackerPose, XrSession session, XrTime time)
     {
-        SrsData data;
+        SixDofData data;
         XrPosef rigPose{Pose::Identity()};
         if (!m_Mmf.Read(&data, sizeof(data)))
         {
@@ -501,9 +510,9 @@ namespace Tracker
 
         // TODO: determine signum of angles
         StoreXrQuaternion(&rigPose.orientation,
-                          DirectX::XMQuaternionRotationRollPitchYaw(-(float)data.pitch / 360.0f * (float)M_PI,
-                                                                    -(float)data.yaw / 360.0f * (float)M_PI,
-                                                                    (float)data.roll / 360.0f * (float)M_PI));
+                          DirectX::XMQuaternionRotationRollPitchYaw(-(float)data.pitch * angleToRadian,
+                                                                    -(float)data.yaw * angleToRadian,
+                                                                    (float)data.roll * angleToRadian));
         rigPose.position =
             XrVector3f{(float)data.sway / 1000.0f, (float)data.heave / 1000.0f, (float)data.surge / -1000.0f};
 

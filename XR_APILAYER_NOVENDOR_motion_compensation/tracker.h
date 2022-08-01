@@ -61,14 +61,13 @@ namespace Tracker
         void SetOffset(float forward, float down, float right);
 
         utility::Mmf m_Mmf;
+        
 
       private:
         float m_OffsetForward{0.0f}, m_OffsetDown{0.0f}, m_OffsetRight{0.0f};
         bool m_DebugMode{false};
         XrPosef m_OriginalRefPose{xr::math::Pose::Identity()};
     };
-
-    void GetTracker(TrackerBase** tracker);
 
     class YawTracker : public VirtualTracker
     {
@@ -97,7 +96,7 @@ namespace Tracker
         std::string m_Filename;
 
       private:
-        struct SrsData
+        struct SixDofData
         {
             double sway;
             double surge;
@@ -113,7 +112,7 @@ namespace Tracker
       public:
         FlyPtTracker()
         {
-            m_Filename = "Local\\SimRacingStudioMotionRigPose";
+            m_Filename = "Local\\motionRigPose";
         }
     };
 
@@ -122,9 +121,11 @@ namespace Tracker
       public:
         SrsTracker()
         {
-            m_Filename = "Local\\motionRigPose";
+            m_Filename = "Local\\SimRacingStudioMotionRigPose";
         }
     };
+
+    constexpr float angleToRadian{(float)M_PI / 180.0f};
 
     void GetTracker(TrackerBase** tracker);
 } // namespace Tracker

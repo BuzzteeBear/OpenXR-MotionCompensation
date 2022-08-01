@@ -74,16 +74,32 @@ namespace utility
         return isPressed && (!prevState.first || isRepeat);
     }
 
+    Mmf::~Mmf()
+    {
+        Close();
+    }
+
     void Mmf::SetName(const std::string& name)
     {
         m_Name = name;
     }
 
-    bool Mmf::Exists()
+    bool Mmf::Open()
     {
         m_FileHandle = OpenFileMapping(FILE_MAP_READ, FALSE, m_Name.c_str());
 
-        if (m_FileHandle == NULL)
+        if (m_FileHandle != NULL)
+        {
+            m_View = MapViewOfFile(m_FileHandle, FILE_MAP_READ, 0, 0, 0);
+            if (m_View == NULL)
+            {
+                DWORD err = GetLastError();
+                ErrorLog("unable to map view of mmf %s: %d - %s\n", m_Name.c_str(), err, LastErrorMsg(err).c_str());
+                CloseHandle(m_FileHandle);
+                return false;
+            }
+        }
+        else
         {
             DWORD err = GetLastError();
             ErrorLog("could not open file mapping object %s: %d - %s\n",
@@ -98,45 +114,39 @@ namespace utility
     }
     bool Mmf::Read(void* buffer, size_t size)
     {
-        LPVOID localBuffer;
-        m_FileHandle = OpenFileMapping(FILE_MAP_READ,
-                                   FALSE,
-                                   m_Name.c_str());
-
-        if (m_FileHandle == NULL)
+        if (!m_View)
         {
-            DWORD err = GetLastError();
-            ErrorLog("unable to open mmf %s: %d - %s\n",
-                     m_Name.c_str(),
-                     err,
-                     LastErrorMsg(err).c_str());
-            return false;
+           Open();
         }
-
-        localBuffer = MapViewOfFile(m_FileHandle, FILE_MAP_READ, 0, 0, 0);
-        if (localBuffer == NULL)
+        if (m_View)
         {
-            DWORD err = GetLastError();
-            ErrorLog("unable to map view of mmf %s: %d - %s\n", m_Name.c_str(), err, LastErrorMsg(err).c_str());
+            try
+            {
+                memcpy(buffer, m_View, size);
+            }
+            catch (std::exception e)
+            {
+                ErrorLog("%s: unable to read from mmf %s: %s\n", __FUNCTION__, m_Name.c_str(), e.what());
+                // reset mmf connection
+                Close();
+                return false;
+            }
+            return true;
+        }
+        return false;
+    }
+    
+    void Mmf::Close()
+    {
+        if (m_View)
+        {
+            UnmapViewOfFile(m_View);
+        }
+        m_View = nullptr;
+        if (INVALID_HANDLE_VALUE != m_FileHandle)
+        {
             CloseHandle(m_FileHandle);
-            return false;
         }
-
-        try
-        {
-            memcpy(buffer, localBuffer, size);
-        }
-        catch (std::exception e)
-        {
-            ErrorLog("unable to read from mmf %s: %s\n", m_Name.c_str(), e.what());
-            UnmapViewOfFile(localBuffer);
-            CloseHandle(m_FileHandle);
-            return false;
-        }
-        UnmapViewOfFile(localBuffer);
-        CloseHandle(m_FileHandle);
-
-        return true;
     }
 
     std::string LastErrorMsg(DWORD error)

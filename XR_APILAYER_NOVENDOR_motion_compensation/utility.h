@@ -166,14 +166,17 @@ namespace utility
     class Mmf
     {
       public:
+        ~Mmf();
         void SetName(const std::string& name);
-        bool Exists();
+        bool Open();
         bool Read(void* buffer, size_t size);
+        void Close();
 
 
       private: 
         std::string m_Name;
         HANDLE m_FileHandle{INVALID_HANDLE_VALUE};
+        void* m_View{nullptr};
     };
 
     std::string LastErrorMsg(DWORD error);
