@@ -355,11 +355,12 @@ namespace Tracker
         m_OffsetDown -= modification.y;
         GetConfig()->SetValue(Cfg::TrackerOffsetDown, m_OffsetDown * 100.0f);
 
-        m_OffsetRight += modification.x;
+        m_OffsetRight -= modification.x;
         GetConfig()->SetValue(Cfg::TrackerOffsetRight, m_OffsetRight * 100.0f);
 
         XrPosef adjustment{{Quaternion::Identity()}, modification};
-        SetReferencePose(Pose::Multiply(adjustment, m_ReferencePose));
+        m_ReferencePose = Pose::Multiply(adjustment, m_ReferencePose);
+        // SetReferencePose(Pose::Multiply(adjustment, m_ReferencePose));
         return true;
     }
 
