@@ -111,6 +111,8 @@ namespace Tracker
         m_RotFilter->Reset(pose.orientation);
         m_ReferencePose = pose;
         m_Calibrated = true;
+        TraceLoggingWrite(g_traceProvider, "SetReferencePose", TLArg(xr::ToString(pose).c_str(), "Reference_Pose"));
+        Log("tracker reference pose set\m");
     }
 
     bool TrackerBase::GetPoseDelta(XrPosef& poseDelta, XrSession session, XrTime time)
@@ -176,7 +178,7 @@ namespace Tracker
                 syncInfo.countActiveActionSets = 1;
 
                 TraceLoggingWrite(g_traceProvider,
-                                  "GetPose",
+                                  "GetControllerPose",
                                   TLPArg(layer->m_ActionSet, "xrSyncActions"),
                                   TLArg(time, "Time"));
                 CHECK_XRCMD(GetInstance()->xrSyncActions(session, &syncInfo));
@@ -187,7 +189,7 @@ namespace Tracker
                 getActionStateInfo.action = layer->m_TrackerPoseAction;
 
                 TraceLoggingWrite(g_traceProvider,
-                                  "GetPose",
+                                  "GetControllerPose",
                                   TLPArg(layer->m_TrackerPoseAction, "xrGetActionStatePose"),
                                   TLArg(time, "Time"));
                 CHECK_XRCMD(GetInstance()->xrGetActionStatePose(session, &getActionStateInfo, &actionStatePose));
@@ -207,7 +209,7 @@ namespace Tracker
                 return false;
             }
             TraceLoggingWrite(g_traceProvider,
-                              "GetPose",
+                              "GetControllerPose",
                               TLArg(xr::ToString(location.pose).c_str(), "Location"),
                               TLArg(time, "Time"));
 
@@ -358,9 +360,16 @@ namespace Tracker
         m_OffsetRight -= modification.x;
         GetConfig()->SetValue(Cfg::TrackerOffsetRight, m_OffsetRight * 100.0f);
 
+        
+        Log("offset modified, new values: forward: %f, down: %f, right: %f\n",
+            m_OffsetForward,
+            m_OffsetDown,
+            m_OffsetRight);
         XrPosef adjustment{{Quaternion::Identity()}, modification};
         m_ReferencePose = Pose::Multiply(adjustment, m_ReferencePose);
-        // SetReferencePose(Pose::Multiply(adjustment, m_ReferencePose));
+        TraceLoggingWrite(g_traceProvider,
+                          "ChangeOffset",
+                          TLArg(xr::ToString(m_ReferencePose).c_str(), "Reference_Pose"));
         return true;
     }
 
@@ -374,7 +383,7 @@ namespace Tracker
         XrPosef adjustment{Pose::Identity()};
         StoreXrQuaternion(&adjustment.orientation,
                           DirectX::XMQuaternionRotationRollPitchYaw(0.0f, (right ? -1.0f : 1.0f) * angleToRadian, 0.0f));
-
+        Log("cor orientation rotated to the %s\n", right ? "right" : "left");
         SetReferencePose(Pose::Multiply(adjustment, m_ReferencePose));
         return true;
     }
@@ -423,6 +432,7 @@ namespace Tracker
         if (!m_DebugMode)
         {
             success = GetVirtualPose(trackerPose, session, time);
+
         }
         else
         {
@@ -439,13 +449,6 @@ namespace Tracker
             }
         }
         return success;
-    }
-
-    void VirtualTracker::SetOffset(float forward, float down, float right)
-    {
-        m_OffsetForward = forward;
-        m_OffsetDown = down;
-        m_OffsetRight = right;
     }
 
     bool YawTracker::LazyInit(XrTime time)
@@ -501,6 +504,19 @@ namespace Tracker
                  data.autoX,
                  data.autoY);
 
+        TraceLoggingWrite(g_traceProvider,
+                          "SixDofTracker::GetVirtualPose",
+                          TLArg(data.yaw, "Yaw"),
+                          TLArg(data.pitch, "Pitch"),
+                          TLArg(data.roll, "Yaw"),
+                          TLArg(data.battery, "Battery"),
+                          TLArg(data.rotationHeight, "RotationHeight"),
+                          TLArg(data.rotationForwardHead, "RotationForwardHead"),
+                          TLArg(data.sixDof, "SixDof"),
+                          TLArg(data.usePos, "UsePos"),
+                          TLArg(data.autoX, "AutoX"),
+                          TLArg(data.autoY, "AutoY"));
+
         StoreXrQuaternion(&rotation.orientation,
                           DirectX::XMQuaternionRotationRollPitchYaw(-data.pitch * angleToRadian,
                                                                     -data.yaw * angleToRadian,
@@ -546,13 +562,22 @@ namespace Tracker
                  data.surge,
                  data.heave);
 
+        TraceLoggingWrite(g_traceProvider,
+                          "SixDofTracker::GetVirtualPose",
+                          TLArg(data.yaw, "Yaw"),
+                          TLArg(data.pitch, "Pitch"),
+                          TLArg(data.roll, "Roll"),
+                          TLArg(data.sway, "Sway"),
+                          TLArg(data.surge, "Surge"),
+                          TLArg(data.heave, "Heave"));
+
         // TODO: determine signum of angles
         StoreXrQuaternion(&rigPose.orientation,
-                          DirectX::XMQuaternionRotationRollPitchYaw(-(float)data.pitch * angleToRadian,
-                                                                    -(float)data.yaw * angleToRadian,
-                                                                    (float)data.roll * angleToRadian));
+                          DirectX::XMQuaternionRotationRollPitchYaw((float)data.pitch * -angleToRadian,
+                                                                    (float)data.yaw * angleToRadian,
+                                                                    (float)data.roll * (m_IsSrs ? -angleToRadian : angleToRadian)));
         rigPose.position =
-            XrVector3f{(float)data.sway / 1000.0f, (float)data.heave / 1000.0f, (float)data.surge / -1000.0f};
+            XrVector3f{(float)data.sway / -1000.0f, (float)data.heave / 1000.0f, (float)data.surge / 1000.0f};
 
         trackerPose = Pose::Multiply(rigPose, m_ReferencePose);
         return true;
@@ -594,7 +619,7 @@ namespace Tracker
                 *tracker = new FlyPtTracker();
                 return;
             }
-            else if ("controller" == trackerType)
+            if ("controller" == trackerType)
             {
                 Log("using motion cotroller as tracker\n");
                 if (previousTracker)

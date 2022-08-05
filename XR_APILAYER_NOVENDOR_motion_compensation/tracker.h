@@ -60,7 +60,6 @@ namespace Tracker
       protected:
         virtual bool GetPose(XrPosef& trackerPose, XrSession session, XrTime time) override;
         virtual bool GetVirtualPose(XrPosef& trackerPose, XrSession session, XrTime time) = 0;
-        void SetOffset(float forward, float down, float right);
 
         utility::Mmf m_Mmf;
         
@@ -95,7 +94,9 @@ namespace Tracker
 
       protected:
         virtual bool GetVirtualPose(XrPosef& trackerPose, XrSession session, XrTime time) override;
+       
         std::string m_Filename;
+        bool m_IsSrs{false};
 
       private:
         struct SixDofData
@@ -115,6 +116,7 @@ namespace Tracker
         FlyPtTracker()
         {
             m_Filename = "Local\\motionRigPose";
+            m_IsSrs = false;
         }
     };
 
@@ -124,6 +126,7 @@ namespace Tracker
         SrsTracker()
         {
             m_Filename = "Local\\SimRacingStudioMotionRigPose";
+            m_IsSrs = true;
         }
     };
 

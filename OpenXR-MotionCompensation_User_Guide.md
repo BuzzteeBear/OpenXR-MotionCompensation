@@ -18,7 +18,7 @@ The following steps are necessary to deploy the API layer on your System:
 
 ### Extract archive
 
-Copy the files contained in this archive to a directory of your choice. The directory should not have any special write access restrictions since the binary creates a configuration file for each application it is loaded from (see [Configuration](#configuration) section below).
+Copy the files contained in this archive to a subdirectory (name it as you like) in your **Program Files** location. The directory should not have any special write access restrictions since the binary creates a configuration file for each application it is loaded from (see [Configuration](#configuration) section below).
 
 ### Execute install script
 
@@ -33,7 +33,7 @@ You can use the application [OpenXR Explorer](https://github.com/maluoi/openxr-e
 - Connect your headset
 - Start your corresponding VR runtime application (e.g. SteamVR, Oculus App, Mixed Reality Portal, Varjo Base, PiTool, etc.)
 - Start OpenXR explorer
-- Search for the section `xrEnumerateInstanceExtensionProperties` (should be in the middle column at the bottom by default)
+- Search for the section `xrEnumerateApiLayerProperties` (should be in the middle column at the bottom by default)
 - Check if the entry `XR_APILAYER_NOVENDOR_motion_compensation` with version `v1` exists
 
 ### Uninstallation
