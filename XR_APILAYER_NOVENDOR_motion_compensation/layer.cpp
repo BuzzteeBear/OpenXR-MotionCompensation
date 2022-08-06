@@ -884,6 +884,27 @@ namespace motion_compensation_layer
         MessageBeep(success ? MB_OK : MB_ICONERROR);
     }
 
+    void OpenXrLayer::SaveConfig(bool forApp)
+    {
+        std::string trackerType;
+        if (GetConfig()->GetString(Cfg::TrackerType, trackerType))
+        {
+            if ("yaw" == trackerType || "srs" == trackerType || "flypt" == trackerType)
+            {
+                Tracker::VirtualTracker* tracker = reinterpret_cast<Tracker::VirtualTracker*>(m_Tracker);
+                if (tracker)
+                {
+                    tracker->SaveReferencePose();
+                }
+                else
+                {
+                    ErrorLog("unable to cast tracker to VirtualTracker pointer\n");
+                }
+            }
+        }
+        GetConfig()->WriteConfig(forApp);
+    }
+
     void OpenXrLayer::ToggleCorDebug(XrTime time)
     {
         bool success = true;
@@ -1022,11 +1043,11 @@ namespace motion_compensation_layer
         }
         if (m_Input.GetKeyState(Cfg::KeySaveConfig, isRepeat) && !isRepeat)
         {
-            GetConfig()->WriteConfig(false);
+            SaveConfig(false);
         }
         if (m_Input.GetKeyState(Cfg::KeySaveConfigApp, isRepeat) && !isRepeat)
         {
-            GetConfig()->WriteConfig(true);
+            SaveConfig(true);
         }
         if (m_Input.GetKeyState(Cfg::KeyReloadConfig, isRepeat) && !isRepeat)
         {

@@ -87,6 +87,7 @@ namespace motion_compensation_layer
         void Recalibrate(XrTime time);
         void ChangeOffset(Direction dir);
         void ReloadConfig();
+        void SaveConfig(bool forApp);
         void ToggleCorDebug(XrTime time);
         bool LazyInit(XrTime time);
         void HandleKeyboardInput(XrTime time);

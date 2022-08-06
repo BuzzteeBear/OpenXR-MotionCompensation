@@ -105,14 +105,14 @@ namespace Tracker
         MessageBeep(*currentValue != prevValue ? MB_OK : MB_ICONERROR);
     }
 
-    void TrackerBase::SetReferencePose(XrPosef pose)
+    void TrackerBase::SetReferencePose(const XrPosef& pose)
     {
         m_TransFilter->Reset(pose.position);
         m_RotFilter->Reset(pose.orientation);
         m_ReferencePose = pose;
         m_Calibrated = true;
         TraceLoggingWrite(g_traceProvider, "SetReferencePose", TLArg(xr::ToString(pose).c_str(), "Reference_Pose"));
-        Log("tracker reference pose set\m");
+        Log("tracker reference pose set\n");
     }
 
     bool TrackerBase::GetPoseDelta(XrPosef& poseDelta, XrSession session, XrTime time)
@@ -275,6 +275,14 @@ namespace Tracker
         {
             success = false;
         }
+        if (GetConfig()->GetBool(Cfg::UseCorPos, m_LoadPoseFromFile))
+        {
+            Log("center of rotation is %s read from config file\n", m_LoadPoseFromFile ? "" : "not ");
+        }
+        else
+        {
+            success = false;
+        }
         if (!TrackerBase::Init())
         {
             success = false;
@@ -286,57 +294,66 @@ namespace Tracker
     {
         // TODO: determine reference pose using saved pose in stage
         bool success = true;
-        OpenXrLayer* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
-        if (layer)
+        if (m_LoadPoseFromFile)
         {
-            XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
-            if (XR_SUCCEEDED(
-                    layer->OpenXrApi::xrLocateSpace(layer->m_ViewSpace, layer->m_ReferenceSpace, time, &location)) &&
-                Pose::IsPoseValid(location.locationFlags))
-            {
-                // project forward and right vector of view onto 'floor plane'
-                XrVector3f forward;
-                StoreXrVector3(&forward,
-                               DirectX::XMVector3Rotate(LoadXrVector3(XrVector3f{0.0f, 0.0f, -1.0f}),
-                                                        LoadXrQuaternion(location.pose.orientation)));
-                forward.y = 0;
-                forward = Normalize(forward);
-                XrVector3f right{-forward.z, 0.0f, forward.x};
-
-                // calculate and apply translational offset
-                XrVector3f offset =
-                    m_OffsetForward * forward + m_OffsetRight * right + XrVector3f{0.0f, -m_OffsetDown, 0.0f};
-                location.pose.position = location.pose.position + offset;
-
-                // calculate orientation parallel to floor
-                float yawAngle = atan2f(forward.x, forward.z);
-                StoreXrQuaternion(&location.pose.orientation,
-                                  DirectX::XMQuaternionRotationRollPitchYaw(0.0f, yawAngle, 0.0f));
-
-                XrPosef refPose = location.pose;
-
-                if (m_DebugMode)
-                {
-                    // manipulate ref pose orientation to match motion controller
-                    m_OriginalRefPose = m_ReferencePose;
-                    XrPosef controllerPose;
-                    if (GetControllerPose(controllerPose, session, time))
-                    {
-                        refPose.orientation = controllerPose.orientation;
-                    }
-                }
-                TrackerBase::SetReferencePose(refPose);
-            }
-            else
-            {
-                ErrorLog("%s: xrLocateSpace(view) failed\n", __FUNCTION__);
-                success = false;
-            }
+            success = LoadReferencePose(session, time);
         }
         else
         {
-            ErrorLog("%s: cast of layer failed\n", __FUNCTION__);
-            success = false;
+            OpenXrLayer* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
+            if (layer)
+            {
+                XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
+                if (XR_SUCCEEDED(layer->OpenXrApi::xrLocateSpace(layer->m_ViewSpace,
+                                                                 layer->m_ReferenceSpace,
+                                                                 time,
+                                                                 &location)) &&
+                    Pose::IsPoseValid(location.locationFlags))
+                {
+                    // project forward and right vector of view onto 'floor plane'
+                    XrVector3f forward;
+                    StoreXrVector3(&forward,
+                                   DirectX::XMVector3Rotate(LoadXrVector3(XrVector3f{0.0f, 0.0f, -1.0f}),
+                                                            LoadXrQuaternion(location.pose.orientation)));
+                    forward.y = 0;
+                    forward = Normalize(forward);
+                    XrVector3f right{-forward.z, 0.0f, forward.x};
+
+                    // calculate and apply translational offset
+                    XrVector3f offset =
+                        m_OffsetForward * forward + m_OffsetRight * right + XrVector3f{0.0f, -m_OffsetDown, 0.0f};
+                    location.pose.position = location.pose.position + offset;
+
+                    // calculate orientation parallel to floor
+                    float yawAngle = atan2f(forward.x, forward.z);
+                    StoreXrQuaternion(&location.pose.orientation,
+                                      DirectX::XMQuaternionRotationRollPitchYaw(0.0f, yawAngle, 0.0f));
+
+                    XrPosef refPose = location.pose;
+
+                    if (m_DebugMode)
+                    {
+                        // manipulate ref pose orientation to match motion controller
+                        m_OriginalRefPose = refPose;
+                        XrPosef controllerPose;
+                        if (GetControllerPose(controllerPose, session, time))
+                        {
+                            refPose.orientation = controllerPose.orientation;
+                        }
+                    }
+                    TrackerBase::SetReferencePose(refPose);
+                }
+                else
+                {
+                    ErrorLog("%s: xrLocateSpace(view) failed\n", __FUNCTION__);
+                    success = false;
+                }
+            }
+            else
+            {
+                ErrorLog("%s: cast of layer failed\n", __FUNCTION__);
+                success = false;
+            }
         }
 
         m_Calibrated = success;
@@ -386,6 +403,64 @@ namespace Tracker
         Log("cor orientation rotated to the %s\n", right ? "right" : "left");
         SetReferencePose(Pose::Multiply(adjustment, m_ReferencePose));
         return true;
+    }
+
+    void VirtualTracker::SaveReferencePose()
+    {
+        if (m_Calibrated)
+        {
+            GetConfig()->SetValue(Cfg::CorX, m_ReferencePose.position.x);
+            GetConfig()->SetValue(Cfg::CorY, m_ReferencePose.position.y);
+            GetConfig()->SetValue(Cfg::CorZ, m_ReferencePose.position.z);
+            GetConfig()->SetValue(Cfg::CorA, m_ReferencePose.orientation.w);
+            GetConfig()->SetValue(Cfg::CorB, m_ReferencePose.orientation.x);
+            GetConfig()->SetValue(Cfg::CorC, m_ReferencePose.orientation.y);
+            GetConfig()->SetValue(Cfg::CorD, m_ReferencePose.orientation.z);
+        }
+    }
+
+    
+    bool VirtualTracker::LoadReferencePose(XrSession session, XrTime time)
+    {
+        bool success = true;
+        XrPosef refPose;
+        auto ReadValue = [&success](Cfg key, float& value) {
+            if (!GetConfig()->GetFloat(key, value))
+            {
+                success = false;
+            }
+        };
+        ReadValue(Cfg::CorX, refPose.position.x);
+        ReadValue(Cfg::CorY, refPose.position.y);
+        ReadValue(Cfg::CorZ, refPose.position.z);
+        ReadValue(Cfg::CorA, refPose.orientation.w);
+        ReadValue(Cfg::CorB, refPose.orientation.x);
+        ReadValue(Cfg::CorC, refPose.orientation.y);
+        ReadValue(Cfg::CorD, refPose.orientation.z);
+        if (success)
+        {
+            if (Quaternion::IsNormalized(refPose.orientation))
+            {
+                Log("referance pose loaded from config file");
+                if (m_DebugMode)
+                {
+                    // manipulate ref pose orientation to match motion controller
+                    m_OriginalRefPose = refPose;
+                    XrPosef controllerPose;
+                    if (GetControllerPose(controllerPose, session, time))
+                    {
+                        refPose.orientation = controllerPose.orientation;
+                    }
+                }
+                SetReferencePose(refPose);
+            }
+            else
+            {
+                ErrorLog("%s: rotation values are invalid in config file\n");
+                success = false;
+            }
+        }
+        return success;
     }
 
     bool VirtualTracker::ToggleDebugMode(XrSession session, XrTime time)

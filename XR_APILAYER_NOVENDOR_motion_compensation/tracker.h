@@ -22,7 +22,7 @@ namespace Tracker
         bool m_ResetReferencePose{false};
 
       protected:
-        void SetReferencePose(XrPosef pose);
+        void SetReferencePose(const XrPosef& pose);
         virtual bool GetPose(XrPosef& trackerPose, XrSession session, XrTime time) = 0;
         virtual bool GetControllerPose(XrPosef& trackerPose, XrSession session, XrTime time);
 
@@ -55,6 +55,7 @@ namespace Tracker
         virtual bool ResetReferencePose(XrSession session, XrTime time) override;
         bool ChangeOffset(XrVector3f modification);
         bool ChangeRotation(bool right);
+        void SaveReferencePose();
         bool ToggleDebugMode(XrSession session, XrTime time);
 
       protected:
@@ -65,8 +66,10 @@ namespace Tracker
         
 
       private:
+        bool LoadReferencePose(XrSession session, XrTime time);
+
         float m_OffsetForward{0.0f}, m_OffsetDown{0.0f}, m_OffsetRight{0.0f};
-        bool m_DebugMode{false};
+        bool m_DebugMode{false}, m_LoadPoseFromFile{false};
         XrPosef m_OriginalRefPose{xr::math::Pose::Identity()};
     };
 
