@@ -376,52 +376,6 @@ namespace motion_compensation_layer
                           TLArg(xr::ToCString(createInfo->referenceSpaceType), "ReferenceSpaceType"),
                           TLArg(xr::ToString(createInfo->poseInReferenceSpace).c_str(), "PoseInReferenceSpace"));
 
-        if (XR_REFERENCE_SPACE_TYPE_LOCAL == createInfo->referenceSpaceType)
-        {
-            Log("creation of local reference space detected: %u\n", *space);
-            XrReferenceSpaceCreateInfo referenceSpaceCreateInfo{XR_TYPE_REFERENCE_SPACE_CREATE_INFO,
-                                                                nullptr,
-                                                                XR_REFERENCE_SPACE_TYPE_LOCAL};
-            referenceSpaceCreateInfo.poseInReferenceSpace = createInfo->poseInReferenceSpace;
-            DebugLog("local pose: %s\n", xr::ToString(referenceSpaceCreateInfo.poseInReferenceSpace).c_str());
-            /*
-            if (m_Activated && false) // TODO: remove mc effect for OpenComposite
-            {
-                // remove additonal yaw rotation caused by motion correction before creating reference space
-                XrPosef yawCorrection = m_Tracker->m_LastPoseDelta;
-                yawCorrection.orientation = utility::RotateYawOnly(yawCorrection.orientation);
-                referenceSpaceCreateInfo.poseInReferenceSpace =
-                    Pose::Multiply(Pose::Invert(yawCorrection), referenceSpaceCreateInfo.poseInReferenceSpace);
-
-                // Normalize rotation (just to be safe)
-                StoreXrQuaternion(&referenceSpaceCreateInfo.poseInReferenceSpace.orientation,
-                                  DirectX::XMQuaternionNormalize(
-                                      LoadXrQuaternion(referenceSpaceCreateInfo.poseInReferenceSpace.orientation)));
-                DebugLog("fixed pose: %s\n", xr::ToString(referenceSpaceCreateInfo.poseInReferenceSpace).c_str());
-            }
-            */
-
-            XrResult res = OpenXrApi::xrCreateReferenceSpace(session, &referenceSpaceCreateInfo, space);
-            if (XR_SUCCEEDED(res))
-            {
-                m_RecenterInProgress = true;
-                m_LocalRefSpaceCreated = true;
-                
-                if (m_Tracker->m_Calibrated)
-                {
-                    // adjust reference pose to match newly created ref space
-                    XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
-                    if (XR_SUCCEEDED(xrLocateSpace(m_ReferenceSpace , *space, m_LastFrameTime, &location)))
-                    {
-                        DebugLog("old space to new space: %s\n", xr::ToString(location.pose).c_str());
-                        m_Tracker->AdjustReferencePose(location.pose);
-                    }
-                }
-                m_ReferenceSpace = *space;
-            }
-            return res;
-        }
-
         const XrResult result = OpenXrApi::xrCreateReferenceSpace(session, createInfo, space);
         if (XR_SUCCEEDED(result))
         {
@@ -433,6 +387,31 @@ namespace motion_compensation_layer
                 // memorize view spaces
                 TraceLoggingWrite(g_traceProvider, "xrCreateReferenceSpace", TLArg("View_Space", "Added"));
                 m_ViewSpaces.insert(*space);
+            }
+            else if (XR_REFERENCE_SPACE_TYPE_LOCAL == createInfo->referenceSpaceType)
+            {
+                Log("creation of local reference space detected: %u\n", *space);
+                DebugLog("local pose: %s\n", xr::ToString(createInfo->poseInReferenceSpace).c_str());
+                
+                // disable mc temporarily until series of reference space creations is over
+                m_RecenterInProgress = true;
+                m_LocalRefSpaceCreated = true;
+
+                if (m_Tracker->m_Calibrated)
+                {
+                    // adjust reference pose to match newly created ref space
+                    XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
+                    if (XR_SUCCEEDED(xrLocateSpace(m_ReferenceSpace, *space, m_LastFrameTime, &location)))
+                    {
+                        DebugLog("old space to new space: %s\n", xr::ToString(location.pose).c_str());
+                        m_Tracker->AdjustReferencePose(location.pose);
+                    }
+                    else
+                    {
+                        ErrorLog("unable to adjust reference pose to newly created reference space");
+                    }
+                }
+                m_ReferenceSpace = *space;
             }
         }
         TraceLoggingWrite(g_traceProvider, "xrCreateReferenceSpace", TLPArg(*space, "Space"));
