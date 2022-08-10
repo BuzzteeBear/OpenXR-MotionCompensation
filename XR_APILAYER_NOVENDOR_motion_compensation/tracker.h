@@ -16,10 +16,13 @@ namespace Tracker
         virtual bool LazyInit(XrTime time);
         void ModifyFilterStrength(bool trans, bool increase);
         virtual bool ResetReferencePose(XrSession session, XrTime time) = 0;
+        void AdjustReferencePose(const XrPosef& pose);
         bool GetPoseDelta(XrPosef& poseDelta, XrSession session, XrTime time);
         bool m_SkipLazyInit{false};
         bool m_Calibrated{false};
         bool m_ResetReferencePose{false};
+       
+        XrPosef m_LastPoseDelta{xr::math::Pose::Identity()};
 
       protected:
         void SetReferencePose(const XrPosef& pose);
@@ -28,10 +31,10 @@ namespace Tracker
 
         XrPosef m_ReferencePose{xr::math::Pose::Identity()};
 
+
       private:
         bool LoadFilters();
 
-        XrPosef m_LastPoseDelta{xr::math::Pose::Identity()};
         XrTime m_LastPoseTime{0};
         float m_TransStrength{0.0f};
         float m_RotStrength{0.0f};

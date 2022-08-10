@@ -115,6 +115,11 @@ namespace Tracker
         Log("tracker reference pose set\n");
     }
 
+    void TrackerBase::AdjustReferencePose(const XrPosef& pose)
+    {
+        SetReferencePose(Pose::Multiply(m_ReferencePose, pose));
+    }
+
     bool TrackerBase::GetPoseDelta(XrPosef& poseDelta, XrSession session, XrTime time)
     {
         // pose already calulated for requested time or unable to calculate
@@ -407,6 +412,7 @@ namespace Tracker
 
     void VirtualTracker::SaveReferencePose()
     {
+        // TODO: locate current reference space in stage an add offset to reference pose
         if (m_Calibrated)
         {
             GetConfig()->SetValue(Cfg::CorX, m_ReferencePose.position.x);
@@ -442,6 +448,7 @@ namespace Tracker
             if (Quaternion::IsNormalized(refPose.orientation))
             {
                 Log("referance pose loaded from config file");
+                // TODO: locate current reference space in stage an add offset to reference pose
                 if (m_DebugMode)
                 {
                     // manipulate ref pose orientation to match motion controller

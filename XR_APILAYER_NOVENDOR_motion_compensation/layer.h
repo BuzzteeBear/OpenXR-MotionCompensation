@@ -66,6 +66,7 @@ namespace motion_compensation_layer
         XrSpace m_TrackerSpace{XR_NULL_HANDLE};
         XrSpace m_ViewSpace{XR_NULL_HANDLE};
         XrSpace m_ReferenceSpace{XR_NULL_HANDLE};
+        XrSpace m_StageSpace{XR_NULL_HANDLE};
 
       private:
         enum class Direction
@@ -91,7 +92,9 @@ namespace motion_compensation_layer
         void ToggleCorDebug(XrTime time);
         bool LazyInit(XrTime time);
         void HandleKeyboardInput(XrTime time);
+
         static std::string getXrPath(XrPath path);
+
         bool TestRotation(XrPosef* pose, XrTime time, bool reverse);
 
         XrSystemId m_systemId{XR_NULL_SYSTEM_ID};
@@ -110,7 +113,12 @@ namespace motion_compensation_layer
             std::vector<XrPosef>{xr::math::Pose::Identity(), xr::math::Pose::Identity(), xr::math::Pose::Identity(), xr::math::Pose::Identity()}};
         utility::KeyboardInput m_Input;
        
-        // debugging
+        // recentering of in-game view
+        XrTime m_LastFrameTime{0};
+        bool m_LocalRefSpaceCreated{false};
+        bool m_RecenterInProgress{false};
+       
+            // debugging
         bool m_TestRotation{false};
         XrTime m_TestRotStart{0};
     };
