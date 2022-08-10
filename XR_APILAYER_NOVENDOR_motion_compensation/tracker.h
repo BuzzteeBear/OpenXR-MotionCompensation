@@ -58,7 +58,7 @@ namespace Tracker
         virtual bool ResetReferencePose(XrSession session, XrTime time) override;
         bool ChangeOffset(XrVector3f modification);
         bool ChangeRotation(bool right);
-        void SaveReferencePose();
+        void SaveReferencePose(XrTime time);
         bool ToggleDebugMode(XrSession session, XrTime time);
 
       protected:

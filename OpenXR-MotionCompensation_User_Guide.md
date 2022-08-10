@@ -12,9 +12,18 @@ Limitations:
 
 **DISCLAIMER: This software is distributed as-is, without any warranties or conditions of any kind. Use at your own risks!**
 
+## Contact
+Feel free to join our Discord community at https://discord.gg/BVWugph5XF for feedback and assistance.
+
+To actively support the project you can apply to become an **@Alpha Tester** on the Discord server to get access to early development builds of the software, provide feedback, and report bugs and crashes.
+
+If you are (or know someone) willing and able to support the software development (mostly c++, maybe some GUI stuff later on) side of the project feel free to contact **@BuzzteeBear** on the Discord server about ways to contribute.
+
+Donations to the project are very welcome and can be made at https://www.paypal.com/donate/?hosted_button_id=Q64DT2ADFCBU8 
+
 ## Installation
 
-The following steps are necessary to deploy the API layer on your System:
+A proper Installer is planned for a future release. Until that is implemented, the following steps are necessary to deploy the API layer on your System:
 
 ### Extract archive
 
@@ -36,11 +45,18 @@ You can use the application [OpenXR Explorer](https://github.com/maluoi/openxr-e
 - Search for the section `xrEnumerateApiLayerProperties` (should be in the middle column at the bottom by default)
 - Check if the entry `XR_APILAYER_NOVENDOR_motion_compensation` with version `v1` exists
 
+### Update
+
+To use an updated version of OXRMC it is sufficient to replace the binary (OpenXR-MotionCompensation.dll) in the installation directory. Replacing the user guide with the latest version upon updating is highly recommended :). It is **not** necessary to execute uninstallation and installation script for each new release **unless** you want to use **another directory**.
+
 ### Uninstallation
 
 To remove the OpenXr Motion Compensation layer: 
-- execute the script `Uninstall-OpenXR-MotionCompensation.ps1` as described in the [Execute install script](#execute-install-script) section above
+- execute the script `Uninstall-OpenXR-MotionCompensation.ps1` as described in the [Execute install script](#execute-install-script) section above.  
+**This only works correctly when executed from the same directory the installation script was executed from!**
 - optional: delete the files in the directory you chose for installation
+
+Note: You can check if your (un)installation is correct in the windows registry. The path `Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\OpenXR\1\ApiLayers\Implicit` should always only contain one entry ending on `XR_APILAYER_NOVENDOR_motion_compensation.json`. If there are more than one entry present, delete the ones pointing to the directories you're not using.
 
 ## Configuration
 
@@ -57,12 +73,17 @@ What you can modify in a configuration file:
 
 ### Sections in configuration file
 
-- `tracker`: use either the left or the right motion controller as reference tracker. Valid options for the key `side` are `left` and `right`. The key `type` has no funcionality yet
-- `translational_filter` and `rotational_filter`: set the filtering magnitude (key `strength` with valid options between **0.0** and **1.0**) number of filtering stages (key `order`with valid options: **1, 2, 3**)  
-- `shortcuts`: Can be used to ocnfigure shortcuts for different commands (See [List of keyboard bindings](appendix:_list-of-keyboard-bindings) for valid values):
+- `tracker`: The following tracker `type` keys are available:
+  - `controller`: use either the left or the right motion controller as reference tracker. Valid options for the key `side` are `left` and `right` (this is also used for motion controller based debug mode)  
+  - `srs`: use the virtual tradcker data provided by SRS motion software when using a Witmotion (or similar?) sensor on the motion rig.
+  - `flypt` use the virtual tracker data provided by FlyPT Mover.
+  - `yaw`: use the virtual tracker data provided by Yaw VR and Yaw 2. Either while using SRS or Game Engine.
+  - the keys `offset_...`, `use_cor_pos` and `cor_...` are used to handle the configuration of the center of rotation (cor) for all available virtual trackers.
+- `translational_filter` and `rotational_filter`: set the filtering magnitude (key `strength` with valid options between **0.0** and **1.0**) number of filtering stages (key `order`with valid options: **1, 2, 3**).  
+- `shortcuts`: can be used to ocnfigure shortcuts for different commands (See [List of keyboard bindings](appendix:_list-of-keyboard-bindings) for valid values):
   - `activate`- turn motion compensation on or off. Note that this implicitly triggers the `center` action if that hasn't been executed before.
   - `center` - recalibrate the neutral reference pose of the tracker
-  - `translation_increase`, `translation_decrease` - modify the strength of the translational filter. Changes made during runtime can be saved by using a save command (see below)
+  - `translation_increase`, `translation_decrease` - modify the strength of the translational filter. Changes made during runtime can be saved by using a save command (see below).
   - `rotation_increase`, `rotation_decrease` = see above, but for rotational filter
   - `offset_forward`, `offset_back`, `offset_up`, `offset_down`, `offset_right`, `offset_left` - move the center of rotation (cor) for a virtual tracker. The directions are aligned with the forward vector set with the `center` command. Changes made during runtime can be saved by using a save command (see below)
   - `rotate_right`, `rotate_left` - rotate the aforementioned forward vector aroung the gravitational (yaw-)axis. Note that these changes cannot be saved. Therefore changing the offset position AFTER rotating manually and saving the offset values will result in the cor being a different offset position after relaoding those saved values
@@ -95,7 +116,10 @@ To enable OXRMC to correlate translation and rotation of the rig to the virtual 
 4. put your headset on and face forward (~ direction surge). Potential rotation of the hmd on roll and pitch angle is ignored for the calculation
 5. issue the `center` command py activated the correspnding shortcut. You can also do this implicitly by activating motion compensation if you haven't (re)centered since last loading of the configuration.
 
-Unfortunately it's currently only possible to save the offset towards the hmd position but not the exact position of the cor between game sessions. So you have to recalibrate the cor everytime you start the game
+### Saving and the cor location (experimental)
+The current position and orientation of the cor is part of the configuration and can be saved to the (global or app-specific) config file. When your satisfied with the current setting you can set the config key `use_cor_pos` to `1`. This causes the cor position to be loaded from the config file when calibrating instead of being determined using the hmd position and the offset values.
+**Note that this functionality is still expermiental and may not work with all HMD vendors. Setting up the playspace in the VR runtime configuration of your hmd might help to get this orking correctly. Rumor has it that some HMDs need to be started/initialized at the exact same location for the playspace coordinates to be consistent in between uses.**
+Feedback on success or failure of this functionality using different VR systems is expicitly welcome and can be left on the [discord server](#contact) of the project.
 
 ## Running your application
 1. make sure your using OpenXR as runtime in the application you wish to use motion compensation in
@@ -246,13 +270,3 @@ List of supported shortcut key names:
 - `GAMEPAD_RIGHT_THUMBSTICK_DOWN`: right thumbstick down on gamepad
 - `GAMEPAD_RIGHT_THUMBSTICK_RIGHT`: right thumbstick left on gamepad
 - `GAMEPAD_RIGHT_THUMBSTICK_LEFT`: right thumbstick right on gamepad
-
-
-## Contact
-Feel free to join our Discord community at https://discord.gg/BVWugph5XF for feedback and assistance.
-
-To actively support the project you can apply to become an **@Alpha Tester** on the Discord server to get access to early development builds of the software, provide feedback, and report bugs and crashes.
-
-If you are (or know someone) willing and able to support the software development (mostly c++, maybe some GUI stuff later on) side of the project feel free to contact **@BuzzteeBear** on the Discord server about ways to contribute.
-
-Donations to the project are very welcome and can be made at https://www.paypal.com/donate/?hosted_button_id=Q64DT2ADFCBU8 

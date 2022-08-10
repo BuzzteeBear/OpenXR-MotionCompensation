@@ -111,7 +111,7 @@ namespace Tracker
         m_RotFilter->Reset(pose.orientation);
         m_ReferencePose = pose;
         m_Calibrated = true;
-        TraceLoggingWrite(g_traceProvider, "SetReferencePose", TLArg(xr::ToString(pose).c_str(), "Reference_Pose"));
+        TraceLoggingWrite(g_traceProvider, "SetReferencePose", TLArg(xr::ToString(pose).c_str(), "ReferencePose"));
         Log("tracker reference pose set\n");
     }
 
@@ -129,7 +129,7 @@ namespace Tracker
             poseDelta = m_LastPoseDelta;
             TraceLoggingWrite(g_traceProvider,
                               "GetPoseDelta",
-                              TLArg(xr::ToString(m_LastPoseDelta).c_str(), "Last_Delta"));
+                              TLArg(xr::ToString(m_LastPoseDelta).c_str(), "LastDelta"));
             return true;
         }
         if (m_ResetReferencePose)
@@ -147,7 +147,7 @@ namespace Tracker
 
             TraceLoggingWrite(g_traceProvider,
                               "GetPoseDelta",
-                              TLArg(xr::ToString(curPose).c_str(), "Location_After_Filter"),
+                              TLArg(xr::ToString(curPose).c_str(), "LocationAfterFilter"),
                               TLArg(time, "Time"));
 
             // calculate difference toward reference pose
@@ -297,7 +297,6 @@ namespace Tracker
 
     bool VirtualTracker::ResetReferencePose(XrSession session, XrTime time)
     {
-        // TODO: determine reference pose using saved pose in stage
         bool success = true;
         if (m_LoadPoseFromFile)
         {
@@ -369,7 +368,7 @@ namespace Tracker
     {
         if (m_DebugMode)
         {
-            ErrorLog("%s: unable to change offset while cor debug mode is active");
+            ErrorLog("%s: unable to change offset while cor debug mode is active\n", __FUNCTION__);
             return false;
         }
 
@@ -391,7 +390,7 @@ namespace Tracker
         m_ReferencePose = Pose::Multiply(adjustment, m_ReferencePose);
         TraceLoggingWrite(g_traceProvider,
                           "ChangeOffset",
-                          TLArg(xr::ToString(m_ReferencePose).c_str(), "Reference_Pose"));
+                          TLArg(xr::ToString(m_ReferencePose).c_str(), "ReferencePose"));
         return true;
     }
 
@@ -399,7 +398,7 @@ namespace Tracker
     {
         if (m_DebugMode)
         {
-            ErrorLog("%s: unable to change offset while cor debug mode is active");
+            ErrorLog("%s: unable to change offset while cor debug mode is active\n", __FUNCTION__);
             return false;
         }
         XrPosef adjustment{Pose::Identity()};
@@ -410,18 +409,32 @@ namespace Tracker
         return true;
     }
 
-    void VirtualTracker::SaveReferencePose()
+    void VirtualTracker::SaveReferencePose(XrTime time)
     {
-        // TODO: locate current reference space in stage an add offset to reference pose
         if (m_Calibrated)
         {
-            GetConfig()->SetValue(Cfg::CorX, m_ReferencePose.position.x);
-            GetConfig()->SetValue(Cfg::CorY, m_ReferencePose.position.y);
-            GetConfig()->SetValue(Cfg::CorZ, m_ReferencePose.position.z);
-            GetConfig()->SetValue(Cfg::CorA, m_ReferencePose.orientation.w);
-            GetConfig()->SetValue(Cfg::CorB, m_ReferencePose.orientation.x);
-            GetConfig()->SetValue(Cfg::CorC, m_ReferencePose.orientation.y);
-            GetConfig()->SetValue(Cfg::CorD, m_ReferencePose.orientation.z);
+            XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
+            OpenXrLayer* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
+            if (!layer)
+            {
+                ErrorLog("%s: unable to cast layer to OpenXrLayer\n", __FUNCTION__);
+                return;
+            }
+            XrPosef stageToLocal{Pose::Identity()};
+            if (!layer->GetStageToLocalSpace(time, stageToLocal))
+            {
+                ErrorLog("%s: unable to determine local to stage pose\n", __FUNCTION__);
+                return;
+            }
+            XrPosef refPosInStageSpace = Pose::Multiply(m_ReferencePose, Pose::Invert(stageToLocal));
+
+            GetConfig()->SetValue(Cfg::CorX, refPosInStageSpace.position.x);
+            GetConfig()->SetValue(Cfg::CorY, refPosInStageSpace.position.y);
+            GetConfig()->SetValue(Cfg::CorZ, refPosInStageSpace.position.z);
+            GetConfig()->SetValue(Cfg::CorA, refPosInStageSpace.orientation.w);
+            GetConfig()->SetValue(Cfg::CorB, refPosInStageSpace.orientation.x);
+            GetConfig()->SetValue(Cfg::CorC, refPosInStageSpace.orientation.y);
+            GetConfig()->SetValue(Cfg::CorD, refPosInStageSpace.orientation.z);
         }
     }
 
@@ -443,29 +456,49 @@ namespace Tracker
         ReadValue(Cfg::CorB, refPose.orientation.x);
         ReadValue(Cfg::CorC, refPose.orientation.y);
         ReadValue(Cfg::CorD, refPose.orientation.z);
+        if (success && !Quaternion::IsNormalized(refPose.orientation))
+        {
+            ErrorLog("%s: rotation values are invalid in config file\n", __FUNCTION__);
+            return false;
+        }
+        
+        OpenXrLayer* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
+        if (success && !layer)
+        {
+            ErrorLog("%s: unable to cast layer to OpenXrLayer\n", __FUNCTION__);
+            return false;
+        }
+        XrPosef stageToLocal{Pose::Identity()};
+        if (success && !layer->GetStageToLocalSpace(time, stageToLocal))
+        {
+            ErrorLog("%s: unable to determine local to stage pose\n", __FUNCTION__);
+            return false;
+        }
         if (success)
         {
-            if (Quaternion::IsNormalized(refPose.orientation))
+            Log("referance pose succesfully loaded from config file\n");
+
+            TraceLoggingWrite(g_traceProvider,
+                              "LoadReferencePose",
+                              TLArg(xr::ToString(refPose).c_str(), "LoadedPose"));
+            refPose = Pose::Multiply(refPose, stageToLocal);   
+            TraceLoggingWrite(g_traceProvider,
+                              "LoadReferencePose",
+                              TLArg(xr::ToString(refPose).c_str(), "ReferencePose"));
+            if (m_DebugMode)
             {
-                Log("referance pose loaded from config file");
-                // TODO: locate current reference space in stage an add offset to reference pose
-                if (m_DebugMode)
+                // manipulate ref pose orientation to match motion controller
+                m_OriginalRefPose = refPose;
+                XrPosef controllerPose;
+                if (GetControllerPose(controllerPose, session, time))
                 {
-                    // manipulate ref pose orientation to match motion controller
-                    m_OriginalRefPose = refPose;
-                    XrPosef controllerPose;
-                    if (GetControllerPose(controllerPose, session, time))
-                    {
-                        refPose.orientation = controllerPose.orientation;
-                    }
+                    refPose.orientation = controllerPose.orientation;
+                    TraceLoggingWrite(g_traceProvider,
+                                      "LoadReferencePose",
+                                      TLArg(xr::ToString(refPose).c_str(), "DebugPose"));
                 }
-                SetReferencePose(refPose);
             }
-            else
-            {
-                ErrorLog("%s: rotation values are invalid in config file\n");
-                success = false;
-            }
+            SetReferencePose(refPose);    
         }
         return success;
     }
@@ -653,7 +686,6 @@ namespace Tracker
                           TLArg(data.surge, "Surge"),
                           TLArg(data.heave, "Heave"));
 
-        // TODO: determine signum of angles
         StoreXrQuaternion(&rigPose.orientation,
                           DirectX::XMQuaternionRotationRollPitchYaw((float)data.pitch * -angleToRadian,
                                                                     (float)data.yaw * angleToRadian,

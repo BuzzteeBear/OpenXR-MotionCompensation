@@ -28,7 +28,7 @@
 namespace motion_compensation_layer
 {
     const std::string LayerName = "XR_APILAYER_NOVENDOR_motion_compensation";
-    const std::string VersionString = "prototype alpha (0.1.3)";
+    const std::string VersionString = "prototype alpha (0.1.4)";
 
     class OpenXrLayer : public motion_compensation_layer::OpenXrApi
     {
@@ -60,6 +60,7 @@ namespace motion_compensation_layer
                                XrView* views) override;
         XrResult xrSyncActions(XrSession session, const XrActionsSyncInfo* syncInfo) override;
         XrResult xrEndFrame(XrSession session, const XrFrameEndInfo* frameEndInfo) override;
+        bool GetStageToLocalSpace(XrTime time, XrPosef& location);
 
         XrActionSet m_ActionSet{XR_NULL_HANDLE};
         XrAction m_TrackerPoseAction{XR_NULL_HANDLE};
@@ -88,7 +89,7 @@ namespace motion_compensation_layer
         void Recalibrate(XrTime time);
         void ChangeOffset(Direction dir);
         void ReloadConfig();
-        void SaveConfig(bool forApp);
+        void SaveConfig(XrTime time, bool forApp);
         void ToggleCorDebug(XrTime time);
         bool LazyInit(XrTime time);
         void HandleKeyboardInput(XrTime time);

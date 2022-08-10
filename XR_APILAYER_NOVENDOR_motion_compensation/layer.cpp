@@ -435,7 +435,7 @@ namespace motion_compensation_layer
         {
             TraceLoggingWrite(g_traceProvider,
                               "xrLocateSpace",
-                              TLArg(xr::ToString(location->pose).c_str(), "Pose_Before"),
+                              TLArg(xr::ToString(location->pose).c_str(), "PoseBefore"),
                               TLArg(location->locationFlags, "LocationFlags"));
 
             // manipulate pose using tracker
@@ -467,7 +467,7 @@ namespace motion_compensation_layer
 
             TraceLoggingWrite(g_traceProvider,
                               "xrLocateSpace",
-                              TLArg(xr::ToString(location->pose).c_str(), "Pose_After"));
+                              TLArg(xr::ToString(location->pose).c_str(), "PoseAfter"));
         }
 
         return XR_SUCCESS;
@@ -537,14 +537,14 @@ namespace motion_compensation_layer
             TraceLoggingWrite(g_traceProvider, "xrLocateViews", TLArg(xr::ToString(views[i].fov).c_str(), "Fov"));
             TraceLoggingWrite(g_traceProvider,
                               "xrLocateViews",
-                              TLArg(xr::ToString(views[i].pose).c_str(), "Pose_Before"));
+                              TLArg(xr::ToString(views[i].pose).c_str(), "PoseBefore"));
 
             // apply manipulation
             views[i].pose = Pose::Multiply(m_EyeOffsets[i].pose, location.pose);
 
             TraceLoggingWrite(g_traceProvider,
                               "xrLocateViews",
-                              TLArg(xr::ToString(views[i].pose).c_str(), "Pose_After"));
+                              TLArg(xr::ToString(views[i].pose).c_str(), "PoseAfter"));
         }
 
         return XR_SUCCESS;
@@ -741,6 +741,44 @@ namespace motion_compensation_layer
         return result;
     }
 
+    bool OpenXrLayer::GetStageToLocalSpace(XrTime time, XrPosef& pose)
+    {
+        if (m_StageSpace == XR_NULL_HANDLE)
+        {
+            LazyInit(time);
+        }
+        if (m_StageSpace != XR_NULL_HANDLE)
+        {
+            XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
+            if (XR_SUCCEEDED(xrLocateSpace(m_StageSpace, m_ReferenceSpace, time, &location)))
+            {
+                if (Pose::IsPoseValid(location.locationFlags))
+                {
+                    DebugLog("local space to stage space: %s\n", xr::ToString(location.pose).c_str()); 
+                    pose = location.pose;
+                    TraceLoggingWrite(g_traceProvider,
+                                      "LocateLocalInStageSpace",
+                                      TLArg(xr::ToString(pose).c_str(), "StageToLocalPose"));
+                    return true;
+                }
+                else
+                {
+                    ErrorLog("pose of local space in stage space not vaild. locationFlags: %d\n",
+                             location.locationFlags);
+                }
+            }
+            else
+            {
+                ErrorLog("unable to locate local reference space in stage reference space\n");
+            }
+        }
+        else
+        {
+            ErrorLog("stage reference space not initialized\n");
+        }
+        return false;
+    }
+
     // private
     bool OpenXrLayer::isSystemHandled(XrSystemId systemId) const
     {
@@ -799,7 +837,7 @@ namespace motion_compensation_layer
         }
         TraceLoggingWrite(g_traceProvider,
                           "ToggleActive",
-                          TLArg(m_Activated ? "Deactivated" : "Activated", "Motion_Compensation"),
+                          TLArg(m_Activated ? "Deactivated" : "Activated", "MotionCompensation"),
                           TLArg(time, "Time"));
     }
 
@@ -831,7 +869,7 @@ namespace motion_compensation_layer
             MessageBeep(MB_ICONERROR);
             TraceLoggingWrite(g_traceProvider,
                               "HandleKeyboardInput",
-                              TLArg("Deactivated_Reset", "Motion_Compensation"),
+                              TLArg("Deactivated_Reset", "MotionCompensation"),
                               TLArg(time, "Time"));
         }
     }
@@ -900,7 +938,7 @@ namespace motion_compensation_layer
         MessageBeep(success ? MB_OK : MB_ICONERROR);
     }
 
-    void OpenXrLayer::SaveConfig(bool forApp)
+    void OpenXrLayer::SaveConfig(XrTime time, bool forApp)
     {
         std::string trackerType;
         if (GetConfig()->GetString(Cfg::TrackerType, trackerType))
@@ -910,7 +948,7 @@ namespace motion_compensation_layer
                 Tracker::VirtualTracker* tracker = reinterpret_cast<Tracker::VirtualTracker*>(m_Tracker);
                 if (tracker)
                 {
-                    tracker->SaveReferencePose();
+                    tracker->SaveReferencePose(time);
                 }
                 else
                 {
@@ -1077,11 +1115,11 @@ namespace motion_compensation_layer
         }
         if (m_Input.GetKeyState(Cfg::KeySaveConfig, isRepeat) && !isRepeat)
         {
-            SaveConfig(false);
+            SaveConfig(time, false);
         }
         if (m_Input.GetKeyState(Cfg::KeySaveConfigApp, isRepeat) && !isRepeat)
         {
-            SaveConfig(true);
+            SaveConfig(time, true);
         }
         if (m_Input.GetKeyState(Cfg::KeyReloadConfig, isRepeat) && !isRepeat)
         {
