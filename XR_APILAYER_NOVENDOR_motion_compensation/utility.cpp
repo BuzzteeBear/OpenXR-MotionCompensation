@@ -157,19 +157,6 @@ namespace utility
         m_FileHandle = nullptr;
     }
 
-    XrQuaternionf RotateYawOnly(const XrQuaternionf& q)
-    {
-        float angle = atan2(q.y, q.w);
-        return {0.0f, sinf(angle), 0.0f, cosf(angle)};
-    }
-
-    XrQuaternionf RotateYawOnly(const XrQuaternionf& q1, const XrQuaternionf& q2)
-    {
-        float angle = atan2(q1.y, q1.w);
-        angle += atan2(q2.y, q2.w);
-        return {0.0f, sinf(angle), 0.0f, cosf(angle)};
-    }
-
     std::string LastErrorMsg(DWORD error)
     {
         if (error)

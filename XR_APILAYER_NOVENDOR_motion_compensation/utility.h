@@ -179,10 +179,6 @@ namespace utility
         void* m_View{nullptr};
     };
 
-    XrQuaternionf RotateYawOnly(const XrQuaternionf& q);
-
-    XrQuaternionf RotateYawOnly(const XrQuaternionf& q1, const XrQuaternionf& q2);
-
     std::string LastErrorMsg(DWORD error);
 
 } // namespace utility

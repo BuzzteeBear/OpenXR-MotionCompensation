@@ -1,6 +1,6 @@
 # OpenXR Motion Compensation
 
-Version: 0.1.4
+Version: 0.1.5
 
 **Please open this file with a browser or another application able to display [markdown files](https://www.markdownguide.org/getting-started) correctly.**
 
