@@ -35,13 +35,12 @@ namespace LAYER_NAMESPACE
 	private:
 		XrInstance m_instance{ XR_NULL_HANDLE };
 		std::string m_applicationName;
+		std::set<std::string> m_grantedExtensions;
 
 	protected:
 		OpenXrApi() = default;
 
 		PFN_xrGetInstanceProcAddr m_xrGetInstanceProcAddr{ nullptr };
-        
-        std::set<std::string> m_extensions;
 
 	public:
 		virtual ~OpenXrApi() = default;
@@ -56,20 +55,25 @@ namespace LAYER_NAMESPACE
 			return m_applicationName;
 		}
 
+		const std::set<std::string>& GetGrantedExtensions() const
+		{
+			return m_grantedExtensions;
+		}
+
 		void SetGetInstanceProcAddr(PFN_xrGetInstanceProcAddr pfn_xrGetInstanceProcAddr, XrInstance instance)
 		{
 			m_xrGetInstanceProcAddr = pfn_xrGetInstanceProcAddr;
 			m_instance = instance;
 		}
 
-        void SetExtensions(const std::vector<std::string>& extensions)
-        {
-            m_extensions = std::set(extensions.begin(), extensions.end());
-        }
+		void SetGrantedExtensions(std::vector<std::string>& grantedExtensions)
+		{
+			m_grantedExtensions = std::set(grantedExtensions.begin(), grantedExtensions.end());
+		}
 
-        bool IsExtensionActivated(const std::string extensionName)
+        bool IsExtensionGranted(const std::string extensionName)
         {
-            return (bool)m_extensions.count(extensionName);
+            return (bool)m_grantedExtensions.count(extensionName);
         }
 
 		// Specially-handled by the auto-generated code.

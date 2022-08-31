@@ -93,8 +93,6 @@ namespace LAYER_NAMESPACE {
         }
         */
 
-        LAYER_NAMESPACE::GetInstance()->SetExtensions(implicitExtensions);
-
         // Only request implicit extensions that are supported.
         //
         // While the OpenXR standard states that xrEnumerateInstanceExtensionProperties() can be queried without an
