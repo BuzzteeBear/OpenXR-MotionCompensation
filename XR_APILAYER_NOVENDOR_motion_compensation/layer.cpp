@@ -461,7 +461,7 @@ namespace motion_compensation_layer
             {
                 ErrorLog("unable to retrieve tracker pose delta\n");
             }
-            // TODO: use either location or eye cache?
+
             // safe pose for use in xrEndFrame
             m_PoseCache.AddSample(time, trackerDelta);
 
@@ -506,7 +506,7 @@ namespace motion_compensation_layer
         {
             originalEyePoses.push_back(views[i].pose);
         }
-        m_EyeCache.AddSample(viewLocateInfo->displayTime, originalEyePoses);
+        //m_EyeCache.AddSample(viewLocateInfo->displayTime, originalEyePoses);
 
         if (m_EyeOffsets.empty())
         {
@@ -634,67 +634,37 @@ namespace motion_compensation_layer
                        projectionLayer->views,
                        projectionLayer->viewCount * sizeof(XrCompositionLayerProjectionView));
 
-                if (!m_EyeCache.empty())
-                {
-                    // use eye cache if available
-                    std::vector<XrPosef> cachedEyePoses = m_EyeCache.GetSample(frameEndInfo->displayTime);
-                    m_EyeCache.CleanUp(frameEndInfo->displayTime);
-                    m_PoseCache.CleanUp(frameEndInfo->displayTime);
-                    for (uint32_t j = 0; j < projectionLayer->viewCount; j++)
-                    {
-                        TraceLoggingWrite(
-                            g_traceProvider,
-                            "xrEndFrame_View",
-                            TLArg("View_Before", "Type"),
-                            TLArg(xr::ToString((*projectionViews)[j].pose).c_str(), "Pose"),
-                            TLArg(j, "Index"),
-                            TLPArg((*projectionViews)[j].subImage.swapchain, "Swapchain"),
-                            TLArg((*projectionViews)[j].subImage.imageArrayIndex, "ImageArrayIndex"),
-                            TLArg(xr::ToString((*projectionViews)[j].subImage.imageRect).c_str(), "ImageRect"),
-                            TLArg(xr::ToString((*projectionViews)[j].fov).c_str(), "Fov"));
+                // use pose cache for reverse calculation
+                XrPosef reversedManipulation = Pose::Invert(m_PoseCache.GetSample(frameEndInfo->displayTime));
+                m_PoseCache.CleanUp(frameEndInfo->displayTime);
 
-                        (*projectionViews)[j].pose = cachedEyePoses[j];
+                TraceLoggingWrite(g_traceProvider,
+                                  "xrEndFrame_View",
+                                  TLArg("Reversed_Manipulation", "Type"),
+                                  TLArg(xr::ToString(reversedManipulation).c_str(), "Pose"));
 
-                        TraceLoggingWrite(g_traceProvider,
-                                          "xrEndFrame_View",
-                                          TLArg("View_After", "Type"),
-                                          TLArg(xr::ToString(cachedEyePoses[j]).c_str(), "Pose"),
-                                          TLArg(j, "Index"));
-                    }
-                }
-                else
+                for (uint32_t j = 0; j < projectionLayer->viewCount; j++)
                 {
-                    // use pose cache for reverse calculation
-                    XrPosef reversedManipulation = Pose::Invert(m_PoseCache.GetSample(frameEndInfo->displayTime));
-                    m_PoseCache.CleanUp(frameEndInfo->displayTime);
+                    TraceLoggingWrite(
+                        g_traceProvider,
+                        "xrEndFrame_View",
+                        TLArg("View_Before", "Type"),
+                        TLArg(xr::ToString((*projectionViews)[j].pose).c_str(), "Pose"),
+                        TLArg(j, "Index"),
+                        TLPArg((*projectionViews)[j].subImage.swapchain, "Swapchain"),
+                        TLArg((*projectionViews)[j].subImage.imageArrayIndex, "ImageArrayIndex"),
+                        TLArg(xr::ToString((*projectionViews)[j].subImage.imageRect).c_str(), "ImageRect"),
+                        TLArg(xr::ToString((*projectionViews)[j].fov).c_str(), "Fov"));
+
+                    (*projectionViews)[j].pose = Pose::Multiply((*projectionViews)[j].pose, reversedManipulation);
 
                     TraceLoggingWrite(g_traceProvider,
                                       "xrEndFrame_View",
-                                      TLArg("Reversed_Manipulation", "Type"),
-                                      TLArg(xr::ToString(reversedManipulation).c_str(), "Pose"));
-
-                    for (uint32_t j = 0; j < projectionLayer->viewCount; j++)
-                    {
-                        TraceLoggingWrite(
-                            g_traceProvider,
-                            "xrEndFrame_View",
-                            TLArg("View_Before", "Type"),
-                            TLArg(xr::ToString((*projectionViews)[j].pose).c_str(), "Pose"),
-                            TLArg(j, "Index"),
-                            TLPArg((*projectionViews)[j].subImage.swapchain, "Swapchain"),
-                            TLArg((*projectionViews)[j].subImage.imageArrayIndex, "ImageArrayIndex"),
-                            TLArg(xr::ToString((*projectionViews)[j].subImage.imageRect).c_str(), "ImageRect"),
-                            TLArg(xr::ToString((*projectionViews)[j].fov).c_str(), "Fov"));
-
-                        (*projectionViews)[j].pose = Pose::Multiply((*projectionViews)[j].pose, reversedManipulation);
-
-                        TraceLoggingWrite(g_traceProvider,
-                                          "xrEndFrame_View",
-                                          TLArg("View_After", "Type"),
-                                          TLArg(xr::ToString((*projectionViews)[j].pose).c_str(), "Pose"),
-                                          TLArg(j, "Index"));
-                    }
+                                      TLArg("View_After", "Type"),
+                                      TLArg(xr::ToString((*projectionViews)[j].pose).c_str(), "Pose"),
+                                      TLArg(j, "Index"));
                 }
+            
                 // create layer with reset view poses
                 XrCompositionLayerProjection* const resetProjectionLayer =
                     new XrCompositionLayerProjection{projectionLayer->type,
