@@ -295,6 +295,25 @@ namespace Tracker
         return success;
     }
 
+    bool VirtualTracker::LazyInit(XrTime time)
+    {
+        bool success = true;
+        if (!m_SkipLazyInit)
+        {
+            m_Mmf.SetName(m_Filename);
+
+            if (!m_Mmf.Open())
+            {
+                ErrorLog("unable to open mmf '%s'. Check if motion software is running and motion compensation is "
+                         "activated!\n",
+                         m_Filename.c_str());
+                success = false;
+            }
+        }
+        m_SkipLazyInit = success;
+        return success;
+    }
+
     bool VirtualTracker::ResetReferencePose(XrSession session, XrTime time)
     {
         bool success = true;
@@ -547,7 +566,6 @@ namespace Tracker
         if (!m_DebugMode)
         {
             success = GetVirtualPose(trackerPose, session, time);
-
         }
         else
         {
@@ -565,41 +583,66 @@ namespace Tracker
         }
         return success;
     }
-
-    bool YawTracker::LazyInit(XrTime time)
+    
+    bool YawTracker::ResetReferencePose(XrSession session, XrTime time)
     {
-        bool success = true;
-        if (!m_SkipLazyInit)
+        bool useGameEngineValues;
+        if (GetConfig()->GetBool(Cfg::UseYawGeOffset, useGameEngineValues) && useGameEngineValues)
         {
-            m_Mmf.SetName("Local\\YawVRGEFile");
-            if (m_Mmf.Open())
+            // calculate difference between floor and headset and set offset according to file values
+            OpenXrLayer* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
+            if (layer)
             {
-                YawData data;
-                if (m_Mmf.Read(&data, sizeof(data)))
+                XrSpaceLocation hmdLocation{XR_TYPE_SPACE_LOCATION, nullptr};
+                if (XR_SUCCEEDED(layer->OpenXrApi::xrLocateSpace(layer->m_ViewSpace,
+                                                                 layer->m_ReferenceSpace,
+                                                                 time,
+                                                                 &hmdLocation)) &&
+                    Pose::IsPoseValid(hmdLocation.locationFlags))
                 {
-                    // TODO: calculate difference between floor and headset and set offset according to file values
+                    XrPosef stageToLocal{Pose::Identity()};
+                    if (layer->GetStageToLocalSpace(time, stageToLocal))
+                    {
+                        XrPosef hmdPosInStageSpace = Pose::Multiply(hmdLocation.pose, Pose::Invert(stageToLocal));
+                        YawData data{};
+                        if (m_Mmf.Read(&data, sizeof(data)))
+                        {
+                            Log("Yaw Geme Engine values: rotationHeight = %f, rotationForwardHead = %f",
+                                data.rotationHeight,
+                                data.rotationForwardHead);
+
+                            m_OffsetRight = 0.0;
+                            m_OffsetForward = data.rotationForwardHead / 100.0f;
+                            m_OffsetDown = hmdPosInStageSpace.position.y - data.rotationHeight / 100.0f;
+
+                            Log("offset down value based on Yaw Geme Engine value: %f", m_OffsetDown);
+                        }
+                        else
+                        {
+                            ErrorLog("%s: unable to use Yaw GE offset values: could not read mmf file\n", __FUNCTION__);
+                        }
+                    }
+                    else
+                    {
+                        ErrorLog("%s: unable to use Yaw GE offset values: could not determine local to stage pose\n", __FUNCTION__);
+                    }
                 }
                 else
                 {
-                    ErrorLog("%s: unable to read from mmf 'YawVRGEFile'\n", __FUNCTION__);
-                    success = false;
+                    ErrorLog("%s: unable to use Yaw GE offset values: xrLocateSpace(view) failed\n", __FUNCTION__);
                 }
             }
             else
             {
-                ErrorLog("%s: unable to open mmf 'YawVRGEFile'. Check if Game Engine is running and motion "
-                         "compensation is activated!\n",
-                         __FUNCTION__);
-                success = false;
+                ErrorLog("%s: unable to use Yaw GE offset values: cast of layer failed\n", __FUNCTION__);
             }
         }
-        m_SkipLazyInit = success;
-        return success;
+        return VirtualTracker::ResetReferencePose(session, time);
     }
 
     bool YawTracker::GetVirtualPose(XrPosef& trackerPose, XrSession session, XrTime time)
     {
-        YawData data;
+        YawData data{};
         XrPosef rotation{Pose::Identity()};
         if (!m_Mmf.Read(&data, sizeof(data)))
         {
@@ -633,36 +676,17 @@ namespace Tracker
                           TLArg(data.autoY, "AutoY"));
 
         StoreXrQuaternion(&rotation.orientation,
-                          DirectX::XMQuaternionRotationRollPitchYaw(-data.pitch * angleToRadian,
-                                                                    -data.yaw * angleToRadian,
-                                                                    data.roll * angleToRadian));
+                          DirectX::XMQuaternionRotationRollPitchYaw(data.pitch * angleToRadian,
+                                                                    data.yaw * angleToRadian,
+                                                                    -data.roll * angleToRadian));
 
         trackerPose = Pose::Multiply(rotation, m_ReferencePose);
         return true;
     }
 
-    bool SixDofTracker::LazyInit(XrTime time)
-    {
-        bool success = true;
-        if (!m_SkipLazyInit)
-        {
-            m_Mmf.SetName(m_Filename);
-
-            if (!m_Mmf.Open())
-            {
-                ErrorLog("unable to open mmf '%s'. Check if motion software is running and motion compensation is "
-                         "activated!\n",
-                         m_Filename.c_str());
-                success = false;
-            }
-        }
-        m_SkipLazyInit = success;
-        return success;
-    }
-
     bool SixDofTracker::GetVirtualPose(XrPosef& trackerPose, XrSession session, XrTime time)
     {
-        SixDofData data;
+        SixDofData data{};
         XrPosef rigPose{Pose::Identity()};
         if (!m_Mmf.Read(&data, sizeof(data)))
         {

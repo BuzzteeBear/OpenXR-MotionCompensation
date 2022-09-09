@@ -27,7 +27,7 @@ A proper Installer is planned for a future release. Until that is implemented, t
 
 ### Extract archive
 
-Copy the files contained in this archive to a subdirectory (name it as you like) in your **Program Files** location. The directory should not have any special write access restrictions since the binary creates a configuration file for each application it is loaded from (see [Configuration](#configuration) section below).
+Copy the files contained in this archive to a subdirectory (name it as you like) within the **Program Files** location of your Windows installation. The directory must not have any write access restrictions since the binary creates a configuration file for each application it is loaded from (see [Configuration](#configuration) section below). The easiest way to grant access is to open folder properties and setting 'full access' for 'Users' in the security tab. 
 
 ### Execute install script
 
@@ -116,6 +116,8 @@ To enable OXRMC to correlate translation and rotation of the rig to the virtual 
 4. put your headset on and face forward (~ direction surge). Potential rotation of the hmd on roll and pitch angle is ignored for the calculation
 5. issue the `center` command py activated the correspnding shortcut. You can also do this implicitly by activating motion compensation if you haven't (re)centered since last loading of the configuration.
 
+- If you're using YawVR Game Engine you can also use the parameters `Head Distance` and `Height` in its Motion Compensation tab to specify the offset of the cor. Head distance is basically equal to `offset_forward` in the configration file. But note that the height parameter is measured upwards from the bottom of your playspace, so you'll need to have that setup correctly in order to use that feature.
+
 ### Saving and the cor location (experimental)
 The current position and orientation of the cor is part of the configuration and can be saved to the (global or app-specific) config file. When your satisfied with the current setting you can set the config key `use_cor_pos` to `1`. This causes the cor position to be loaded from the config file when calibrating instead of being determined using the hmd position and the offset values.
 **Note that this functionality is still expermiental and may not work with all HMD vendors. Setting up the playspace in the VR runtime configuration of your hmd might help to get this orking correctly. Rumor has it that some HMDs need to be started/initialized at the exact same location for the playspace coordinates to be consistent in between uses.**
@@ -147,7 +149,7 @@ Feedback on success or failure of this functionality using different VR systems 
 - If the motion controller cannot be tracked for whatever reason (or if the memory mapped file containing the motion data for a virtual tracker cannot be found or accessed) when activating motion compensation or recalibrating the tracker pose, the API layer is unable to set the reference pose and motion compensation is (or stays) deactivated.
 
 ## Logging
-The motion compensation layers logs rudimentary information and errors in a text file located at **...\Users\<Your_Username>\AppData\XR_APILAYER_NOVENDOR_motion_compensation.log**. After unexpected behaviour or a crash you can check that file for abormalities or error reports.
+The motion compensation layers logs rudimentary information and errors in a text file located at **...\Users\<Your_Username>\AppData\Local\XR_APILAYER_NOVENDOR_motion_compensation.log**. After unexpected behaviour or a crash you can check that file for abormalities or error reports.
 
 If you encounter repeatable bugs or crashes you can use the Windows Performance Recorder Profile (WPRP) tracelogging in `scripts\Tracing.wprp` to create a more detailed protocol.
 
