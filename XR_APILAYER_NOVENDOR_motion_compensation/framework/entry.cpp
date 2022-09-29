@@ -32,6 +32,9 @@
 #endif
 
 namespace LAYER_NAMESPACE {
+    // The handle of the dll
+    HMODULE dllModule;
+
     // The path where the DLL is loaded from (eg: to load data files).
     std::filesystem::path dllHome;
 
@@ -58,12 +61,11 @@ XrResult __declspec(dllexport) XRAPI_CALL
 
     // Retrieve the path of the DLL.
     if (dllHome.empty()) {
-        HMODULE module;
         if (GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
                                (LPCSTR)&dllHome,
-                               &module)) {
+                               &dllModule)) {
             char path[_MAX_PATH];
-            GetModuleFileNameA(module, path, sizeof(path));
+            GetModuleFileNameA(dllModule, path, sizeof(path));
             dllHome = std::filesystem::path(path).parent_path();
         }
     }

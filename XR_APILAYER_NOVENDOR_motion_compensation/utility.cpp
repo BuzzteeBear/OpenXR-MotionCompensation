@@ -175,7 +175,7 @@ namespace utility
                 LPCSTR lpStr = (LPCSTR)buffer;
                 std::string result(lpStr, lpStr + bufLen);
                 LocalFree(buffer);
-                return result;
+                return std::to_string(error) + " - " + result;
             }
         }
         return std::string();

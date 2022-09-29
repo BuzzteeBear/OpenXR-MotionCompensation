@@ -27,6 +27,12 @@
 
 namespace motion_compensation_layer
 {
+    // The handle of the dll
+    extern HMODULE dllModule;
+
+    // The path where the DLL is loaded from (eg: to load data files).
+    extern std::filesystem::path dllHome;
+
     const std::string LayerName = "XR_APILAYER_NOVENDOR_motion_compensation";
     const std::string VersionString = "prototype alpha (0.1.6)";
 

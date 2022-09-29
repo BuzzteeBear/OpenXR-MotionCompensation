@@ -3,11 +3,13 @@
 #include "pch.h"
 
 #include "layer.h"
+#include "feedback.h"
 #include <log.h>
 #include <util.h>
 
 using namespace motion_compensation_layer;
 using namespace motion_compensation_layer::log;
+using namespace Feedback;
 using namespace xr::math;
 
 namespace Tracker
@@ -102,7 +104,9 @@ namespace Tracker
             GetConfig()->SetValue(Cfg::RotStrength, *currentValue);
             Log("rotational filter strength %screased to %f\n", increase ? "in" : "de", *currentValue);
         }
-        MessageBeep(*currentValue != prevValue ? MB_OK : MB_ICONERROR);
+        GetAudioOut()->Execute(*currentValue == prevValue ? increase ? Event::Max : Event::Min
+                               : increase                 ? Event::Plus
+                                                          : Event::Minus);
     }
 
     void TrackerBase::SetReferencePose(const XrPosef& pose)
@@ -541,6 +545,7 @@ namespace Tracker
                     m_ReferencePose.orientation = controllerPose.orientation;
                     SetReferencePose(m_ReferencePose);
                     m_DebugMode = true;
+                    GetAudioOut()->Execute(Event::DebugOn);
                     Log("debug cor mode activated\n");
                 }
                 else
@@ -554,6 +559,7 @@ namespace Tracker
         {
             SetReferencePose(m_OriginalRefPose);
             m_DebugMode = false;
+            GetAudioOut()->Execute(Event::DebugOff);
             Log("debug cor mode deactivated\n");
         }
         return success;

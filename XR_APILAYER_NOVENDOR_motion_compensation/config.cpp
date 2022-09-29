@@ -3,6 +3,7 @@
 #include "pch.h"
 
 #include "config.h"
+#include "feedback.h"
 #include "utility.h"
 #include <log.h>
 #include <util.h>
@@ -205,7 +206,6 @@ void ConfigManager::SetValue(Cfg key, const std::string& val)
     m_Values[key] = val;
 }
 
-
 void ConfigManager::WriteConfig(bool forApp)
 {
     bool error{false};
@@ -251,15 +251,15 @@ void ConfigManager::WriteConfig(bool forApp)
             ErrorLog("%s: key not found in key map: %d\n", __FUNCTION__, key);
         }
     }
-    Log("current configuration saved to %s\n", m_ApplicationIni.c_str());
-    MessageBeep(!error ? MB_OK : MB_ICONERROR);
+    Log("current configuration %ssaved to %s\n", error ? "could not be " : "", m_ApplicationIni.c_str());
+    GetAudioOut()->Execute(!error ? Feedback::Event::Save : Feedback::Event::Error);
 }
 
 bool ConfigManager::InitDirectory()
 {
+    // TODO use dllHome from layer.h instead
     char path[MAX_PATH];
     HMODULE hm = NULL;
-
     if (GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
                           (LPCSTR)&LastErrorMsg,
                           &hm) == 0)

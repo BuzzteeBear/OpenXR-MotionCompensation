@@ -1,7 +1,5 @@
 // Copyright(c) 2022 Sebastian Veith
 
-// Copyright(c) 2022 Sebastian Veith
-
 #include "pch.h"
 
 #include "filter.h"

@@ -12,6 +12,9 @@
     <Filter Include="Framework">
       <UniqueIdentifier>{F327583B-6783-44AB-A330-FC917E86A08C}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Sounds">
+      <UniqueIdentifier>{e13eb219-74c7-4c3c-88cb-294dc1c6b62e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h">
@@ -42,6 +45,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="filter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="feedback.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -76,6 +85,9 @@
     <ClCompile Include="filter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="feedback.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="XR_APILAYER_NOVENDOR_motion_compensation.json" />
@@ -86,5 +98,70 @@
       <Filter>Framework</Filter>
     </None>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Sounds.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Media Include="sounds\up.wav">
+      <Filter>Sounds</Filter>
+    </Media>
+    <Media Include="sounds\saved.wav">
+      <Filter>Sounds</Filter>
+    </Media>
+    <Media Include="sounds\plus.wav">
+      <Filter>Sounds</Filter>
+    </Media>
+    <Media Include="sounds\right.wav">
+      <Filter>Sounds</Filter>
+    </Media>
+    <Media Include="sounds\minus.wav">
+      <Filter>Sounds</Filter>
+    </Media>
+    <Media Include="sounds\max.wav">
+      <Filter>Sounds</Filter>
+    </Media>
+    <Media Include="sounds\min.wav">
+      <Filter>Sounds</Filter>
+    </Media>
+    <Media Include="sounds\activated.wav">
+      <Filter>Sounds</Filter>
+    </Media>
+    <Media Include="sounds\back.wav">
+      <Filter>Sounds</Filter>
+    </Media>
+    <Media Include="sounds\calibrated.wav">
+      <Filter>Sounds</Filter>
+    </Media>
+    <Media Include="sounds\deactivated.wav">
+      <Filter>Sounds</Filter>
+    </Media>
+    <Media Include="sounds\debug_off.wav">
+      <Filter>Sounds</Filter>
+    </Media>
+    <Media Include="sounds\debug_on.wav">
+      <Filter>Sounds</Filter>
+    </Media>
+    <Media Include="sounds\down.wav">
+      <Filter>Sounds</Filter>
+    </Media>
+    <Media Include="sounds\error.wav">
+      <Filter>Sounds</Filter>
+    </Media>
+    <Media Include="sounds\forward.wav">
+      <Filter>Sounds</Filter>
+    </Media>
+    <Media Include="sounds\left.wav">
+      <Filter>Sounds</Filter>
+    </Media>
+    <Media Include="sounds\loaded.wav">
+      <Filter>Sounds</Filter>
+    </Media>
+    <Media Include="sounds\rot_left.wav">
+      <Filter>Sounds</Filter>
+    </Media>
+    <Media Include="sounds\rot_right.wav">
+      <Filter>Sounds</Filter>
+    </Media>
   </ItemGroup>
 </Project>

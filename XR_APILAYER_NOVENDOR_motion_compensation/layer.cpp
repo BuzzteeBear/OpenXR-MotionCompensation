@@ -26,6 +26,7 @@
 
 #include "layer.h"
 #include "tracker.h"
+#include "feedback.h"
 #include "utility.h"
 #include "config.h"
 #include <log.h>
@@ -33,6 +34,7 @@
 
 
 using namespace motion_compensation_layer::log;
+using namespace Feedback;
 using namespace xr::math;
 namespace motion_compensation_layer
 {
@@ -94,11 +96,14 @@ namespace motion_compensation_layer
         // Initialize Configuration
         m_Initialized = GetConfig()->Init(m_Application);
 
-        // enable debug test rotation
         if (m_Initialized)
         {
+            // initialize audio feedback
+            GetAudioOut()->Init();
+
+            // enable debug test rotation
             GetConfig()->GetBool(Cfg::TestRotation, m_TestRotation);
-        }
+        }    
 
         // Create the resources for the tracker space.
         {
@@ -799,11 +804,11 @@ namespace motion_compensation_layer
                                     : "could not be activated");
         if (oldstate != m_Activated)
         {
-            MessageBeep(m_Activated ? MB_OK : MB_ICONWARNING);
+            GetAudioOut()->Execute(m_Activated ? Event::Activated : Event::Deactivated);
         }
         else if (!m_Activated)
         {
-            MessageBeep(MB_ICONERROR);
+            GetAudioOut()->Execute(Event::Error);
         }
         TraceLoggingWrite(g_traceProvider,
                           "ToggleActive",
@@ -822,7 +827,7 @@ namespace motion_compensation_layer
 
         if (m_Tracker->ResetReferencePose(m_Session, time))
         {
-            MessageBeep(MB_OK);
+            GetAudioOut()->Execute(Event::Calibrated);
             TraceLoggingWrite(g_traceProvider,
                               "HandleKeyboardInput",
                               TLArg("Reset", "Tracker_Reference"),
@@ -836,7 +841,7 @@ namespace motion_compensation_layer
                 ErrorLog("motion compensation deactivated because tracker reference pose cold not be reset\n");
             }
             m_Activated = false;
-            MessageBeep(MB_ICONERROR);
+            GetAudioOut()->Execute(Event::Error);
             TraceLoggingWrite(g_traceProvider,
                               "HandleKeyboardInput",
                               TLArg("Deactivated_Reset", "MotionCompensation"),
@@ -888,7 +893,15 @@ namespace motion_compensation_layer
         {
             success = false;
         }
-        MessageBeep(success ? MB_OK : MB_ICONERROR);
+        GetAudioOut()->Execute(!success                    ? Event::Error
+                               : Direction::Up == dir      ? Event::Up
+                               : Direction::Down == dir    ? Event::Down
+                               : Direction::Fwd == dir     ? Event::Forward
+                               : Direction::Back == dir    ? Event::Back
+                               : Direction::Left == dir    ? Event::Left
+                               : Direction::Right == dir   ? Event::Right
+                               : Direction::RotLeft == dir ? Event::RotLeft
+                                                           : Event::RotRight);
     }
 
     void OpenXrLayer::ReloadConfig()
@@ -905,7 +918,7 @@ namespace motion_compensation_layer
                 success = false;
             }
         }
-        MessageBeep(success ? MB_OK : MB_ICONERROR);
+        GetAudioOut()->Execute(!success ? Event::Error : Event::Load);
     }
 
     void OpenXrLayer::SaveConfig(XrTime time, bool forApp)
@@ -958,7 +971,10 @@ namespace motion_compensation_layer
         {
             success = false;
         }
-        MessageBeep(success ? MB_OK : MB_ICONERROR);
+        if (!success)
+        {
+            GetAudioOut()->Execute(Event::Error);
+        }
     }
 
     bool OpenXrLayer::LazyInit(XrTime time)

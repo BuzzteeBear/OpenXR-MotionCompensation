@@ -148,7 +148,9 @@ copy $(SolutionDir)\configuration\OpenXR-MotionCompensation.ini $(OutDir)</Comma
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="config.h" />
+    <ClInclude Include="feedback.h" />
     <ClInclude Include="filter.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="utility.h" />
     <ClInclude Include="framework\dispatch.gen.h" />
     <ClInclude Include="framework\dispatch.h" />
@@ -160,6 +162,7 @@ copy $(SolutionDir)\configuration\OpenXR-MotionCompensation.ini $(OutDir)</Comma
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="config.cpp" />
+    <ClCompile Include="feedback.cpp" />
     <ClCompile Include="filter.cpp" />
     <ClCompile Include="utility.cpp" />
     <ClCompile Include="framework\dispatch.cpp" />
@@ -181,6 +184,34 @@ copy $(SolutionDir)\configuration\OpenXR-MotionCompensation.ini $(OutDir)</Comma
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Sounds.rc">
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)\sounds;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)\sounds;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Media Include="sounds\activated.wav" />
+    <Media Include="sounds\back.wav" />
+    <Media Include="sounds\calibrated.wav" />
+    <Media Include="sounds\deactivated.wav" />
+    <Media Include="sounds\debug_off.wav" />
+    <Media Include="sounds\debug_on.wav" />
+    <Media Include="sounds\down.wav" />
+    <Media Include="sounds\error.wav" />
+    <Media Include="sounds\forward.wav" />
+    <Media Include="sounds\left.wav" />
+    <Media Include="sounds\loaded.wav" />
+    <Media Include="sounds\max.wav" />
+    <Media Include="sounds\min.wav" />
+    <Media Include="sounds\minus.wav" />
+    <Media Include="sounds\plus.wav" />
+    <Media Include="sounds\right.wav" />
+    <Media Include="sounds\rot_left.wav" />
+    <Media Include="sounds\rot_right.wav" />
+    <Media Include="sounds\saved.wav" />
+    <Media Include="sounds\up.wav" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
