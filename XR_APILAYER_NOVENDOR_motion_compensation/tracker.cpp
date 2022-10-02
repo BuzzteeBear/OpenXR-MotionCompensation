@@ -669,7 +669,7 @@ namespace Tracker
                  data.autoY);
 
         TraceLoggingWrite(g_traceProvider,
-                          "SixDofTracker::GetVirtualPose",
+                          "YawTracker::GetVirtualPose",
                           TLArg(data.yaw, "Yaw"),
                           TLArg(data.pitch, "Pitch"),
                           TLArg(data.roll, "Yaw"),
@@ -682,9 +682,9 @@ namespace Tracker
                           TLArg(data.autoY, "AutoY"));
 
         StoreXrQuaternion(&rotation.orientation,
-                          DirectX::XMQuaternionRotationRollPitchYaw(data.pitch * angleToRadian,
-                                                                    data.yaw * angleToRadian,
-                                                                    -data.roll * angleToRadian));
+                          DirectX::XMQuaternionRotationRollPitchYaw(-data.pitch * angleToRadian,
+                                                                    -data.yaw * angleToRadian,
+                                                                    data.roll * angleToRadian));
 
         trackerPose = Pose::Multiply(rotation, m_ReferencePose);
         return true;
