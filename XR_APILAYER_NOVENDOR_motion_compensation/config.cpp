@@ -3,6 +3,7 @@
 #include "pch.h"
 
 #include "config.h"
+#include "layer.h"
 #include "feedback.h"
 #include "utility.h"
 #include <log.h>
@@ -13,12 +14,8 @@ using namespace utility;
 
 bool ConfigManager::Init(const std::string& application)
 {
-    if (!InitDirectory())
-    {
-        return false;
-    }
     // create application config file if not existing
-    m_ApplicationIni = m_DllDirectory + application + ".ini";
+    m_ApplicationIni = motion_compensation_layer::dllHome.string() + "\\" + application + ".ini";
     if ((_access(m_ApplicationIni.c_str(), 0)) == -1)
     {
         if (!WritePrivateProfileString("placeholder", "created", "1", m_ApplicationIni.c_str()) && 2 != GetLastError())
@@ -31,7 +28,7 @@ bool ConfigManager::Init(const std::string& application)
                      LastErrorMsg(err).c_str());
         }
     }
-    const std::string coreIni(m_DllDirectory + "OpenXR-MotionCompensation.ini");
+    const std::string coreIni(motion_compensation_layer::dllHome.string() + "\\" + "OpenXR-MotionCompensation.ini");
     if ((_access(coreIni.c_str(), 0)) != -1)
     {
         std::string errors;
@@ -209,7 +206,9 @@ void ConfigManager::SetValue(Cfg key, const std::string& val)
 void ConfigManager::WriteConfig(bool forApp)
 {
     bool error{false};
-    const std::string configFile = forApp ? m_ApplicationIni : m_DllDirectory + "OpenXR-MotionCompensation.ini";
+    const std::string configFile =
+        forApp ? m_ApplicationIni
+               : motion_compensation_layer::dllHome.string() + "\\" + "OpenXR-MotionCompensation.ini";
     for (const auto key : m_KeysToSave)
     {
         const auto& keyEntry = m_Keys.find(key);
@@ -253,36 +252,6 @@ void ConfigManager::WriteConfig(bool forApp)
     }
     Log("current configuration %ssaved to %s\n", error ? "could not be " : "", m_ApplicationIni.c_str());
     GetAudioOut()->Execute(!error ? Feedback::Event::Save : Feedback::Event::Error);
-}
-
-bool ConfigManager::InitDirectory()
-{
-    // TODO use dllHome from layer.h instead
-    char path[MAX_PATH];
-    HMODULE hm = NULL;
-    if (GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-                          (LPCSTR)&LastErrorMsg,
-                          &hm) == 0)
-    {
-        DWORD err = GetLastError();
-        ErrorLog("%s: GetModuleHandle failed, error = %d : %s\n", __FUNCTION__, err, LastErrorMsg(err).c_str());
-        return false;
-    }
-    if (GetModuleFileName(hm, path, sizeof(path)) == 0)
-    {
-        DWORD err = GetLastError();
-        ErrorLog("%s: GetModuleFileName failed, error = %d : %s\n", __FUNCTION__, err, LastErrorMsg(err).c_str());
-        return false;
-    }
-    std::string dllName(path); 
-    size_t lastBackSlash = dllName.find_last_of("\\/");
-    if (std::string::npos == lastBackSlash)
-    {
-        ErrorLog("%s: DllName does not contain (back)slash: %s\n", __FUNCTION__, dllName.c_str());
-        return false;
-    }
-    m_DllDirectory = dllName.substr(0,lastBackSlash + 1);
-    return true;
 }
 
 std::unique_ptr<ConfigManager> g_config = nullptr;

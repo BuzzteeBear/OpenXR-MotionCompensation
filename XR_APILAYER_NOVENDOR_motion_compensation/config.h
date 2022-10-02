@@ -60,9 +60,7 @@ class ConfigManager
     void WriteConfig(bool forApp);
 
   private:
-    bool InitDirectory();
 
-    std::string m_DllDirectory;
     std::string m_ApplicationIni;
 
     // needs to include all values of enum ConfigKey
