@@ -31,11 +31,15 @@ namespace utility
 
         void AddSample(XrTime time, Sample sample)
         {
+            std::unique_lock lock(m_Mutex);
+
             m_Cache.insert({time, sample});
         }
 
         Sample GetSample(XrTime time) const
         {
+            std::unique_lock lock(m_Mutex);
+
             TraceLoggingWrite(LAYER_NAMESPACE::log::g_traceProvider, "GetSample", TLArg(time, "Time"));
 
             LAYER_NAMESPACE::log::DebugLog("GetSample(%s): %u\n", typeid(Sample).name(), time);
@@ -145,6 +149,8 @@ namespace utility
         // remove outdated entries
         void CleanUp(XrTime time)
         {
+            std::unique_lock lock(m_Mutex);
+
             auto it = m_Cache.lower_bound(time - m_Tolerance);
             if (m_Cache.end() != it && m_Cache.begin() != it)
             {
@@ -152,13 +158,9 @@ namespace utility
             }
         }
 
-        bool empty()
-        {
-            return m_Cache.empty();
-        }
-
       private:
         std::map<XrTime, Sample> m_Cache{};
+        mutable std::mutex m_Mutex;
         Sample m_Fallback;
         XrTime m_Tolerance;
     };

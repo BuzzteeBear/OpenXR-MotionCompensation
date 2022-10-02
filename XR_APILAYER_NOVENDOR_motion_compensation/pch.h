@@ -33,6 +33,7 @@
 #include <sstream>
 #include <string>
 #include <memory>
+#include <mutex>
 #include <vector>
 #include <set>
 #include <map>
