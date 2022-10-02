@@ -1,6 +1,6 @@
 # OpenXR Motion Compensation
 
-Version: 0.1.5
+Version: 0.1.7
 
 **Please open this file with a browser or another application able to display [markdown files](https://www.markdownguide.org/getting-started) correctly.**
 
@@ -13,27 +13,45 @@ Limitations:
 **DISCLAIMER: This software is distributed as-is, without any warranties or conditions of any kind. Use at your own risks!**
 
 ## Contact
-Feel free to join our Discord community at https://discord.gg/BVWugph5XF for feedback and assistance.
+Feel free to join our [Discord community](https://discord.gg/BVWugph5XF) for feedback and assistance.
 
-To actively support the project you can apply to become an **@Alpha Tester** on the Discord server to get access to early development builds of the software, provide feedback, and report bugs and crashes.
+You can find the [source code](https://github.com/BuzzteeBear/OpenXR-MotionCompensation) and the [latest release](https://github.com/BuzzteeBear/OpenXR-MotionCompensation/releases) or report issues at github.com.
 
-If you are (or know someone) willing and able to support the software development (mostly c++, maybe some GUI stuff later on) side of the project feel free to contact **@BuzzteeBear** on the Discord server about ways to contribute.
+If you are (or know someone) willing and able to support the software development (mostly C++, maybe some GUI stuff later on) side of the project feel free to contact **@BuzzteeBear** on the Discord server about ways to contribute.
 
-Donations to the project are very welcome and can be made at https://www.paypal.com/donate/?hosted_button_id=Q64DT2ADFCBU8 
+Donations to the project are very welcome and can be made via [Paypal](ttps://www.paypal.com/donate/?hosted_button_id=Q64DT2ADFCBU8). 
 
 ## Installation
 
-A proper Installer is planned for a future release. Until that is implemented, the following steps are necessary to deploy the API layer on your System:
+A proper Installer is planned for a future release. Until that is implemented, the following steps are necessary to deploy the API layer on your System:  
 
 ### Extract archive
 
-Copy the files contained in this archive to a subdirectory (name it as you like) within the **Program Files** location of your Windows installation. The directory must not have any write access restrictions since the binary creates a configuration file for each application it is loaded from (see [Configuration](#configuration) section below). The easiest way to grant access is to open folder properties and setting 'full access' for 'Users' in the security tab. 
+Copy the files contained in this archive to a subdirectory (name it as you like) within the **Program Files** location of your Windows installation. The **installation directory must not have** any write **access restrictions** since the binary creates a configuration file for each application it is loaded from (see [Configuration](#configuration) section below). The easiest way to grant access is to open folder properties and setting 'full access' for 'Users' in the security tab. 
 
 ### Execute install script
 
-- Right click on the file `Install-OpenXR-MotionCompensation.ps1` and select the option **Run with PowerShell**
-- Confirm the UAC dialog
-- The will create a registry entry making it possible for to load the api layer on OpenXR initialization
+0. Depending on your windows configuration you might need to allow execution of powershell scripts:
+   - Press the Windows Key to open the Start menu.
+   - Type `PowerShell`.
+   - Right-click on the PowerShell result and select **Run as administrator**.
+   - After opening the PowerShell window, execute `get-executionpolicy` to query the current execution policy.
+   - if it says "Restricted", proceed with the next instruction. Otherwise jump to 1.
+   - In the PowerShell window, execute the `set-executionpolicy remotesigned` command.
+   - Type `A` next to the confirmation message and press `Enter`.
+1. Right-click on the file `Install-OpenXR-MotionCompensation.ps1` and select the option **Run with PowerShell**
+2. Confirm the UAC dialog
+3. The will create a registry entry making it possible for to load the api layer on OpenXR initialization
+
+### Conflict with other OpenXR API layers
+There may be issues with other OpenXR API layers that are installed on your system. For the most part they can be solved by using the correct order of installation (because that implicitly determines the order in which the layers are loaded).  
+According to user feedback following constraints seem to be working:
+- **XRNeckSaver** needs to be installed before OXRMC.
+  - at some point in time the XRNeckSaver installer conatained a bug causing folllowing layers not to be loaded. If you encounter this issue check out this [XRNecksaver discord conversation](https://discord.com/channels/982356942821408788/982357046060007504/1023722065989218305). This bug will be fixed automatically once OXRMC has its own installer.
+- **OpenKneeBoard** needs to be installed before OXRMC. 
+  - but it is (or at least was) putting its registry key in `HKEY_CURRENT_USER/...` while OXRMC uses `HKEY_LOCAL_MACHINE/...` . So if you're having trouble changing the loading order, try moving the key for OpenKneeboard from `Computer\HKEY_CURRENT_USER\SOFTWARE\Khronos\OpenXR\1\ApiLayers\Implicit` to `Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\OpenXR\1\ApiLayers\Implicit`.
+- **Ultraleap OpenXR Hand Tracking API Layer** needs to be installed after OXRMC.
+- **OpenXR Toolkit** does it's own magic on installation and doesn't care if it's installed before or after OXRMC.
 
 ### Optional: Confirm correct installation
 
@@ -69,7 +87,8 @@ Upon starting an OpenXR application with the API layer active for the first time
 What you can modify in a configuration file:
 - the tracker to use for motion compensation
 - the strength and the number of filtering stages for both translational and rotational filters
-- keyboard inputs (e.g. to activate/deactivate or recalibrate motion compensation during runtime)
+- keyboard inputs (e.g. to activate/deactivate or recalibrate motion compensation during runtime)  
+**Note that all keys and text based values in the configuration file(s) are case sensitive. That means all [keyboard shortcuts](#appendix:-List-of-keyboard-bindings) must only contain capital letters, numbers and/or underscores**
 
 ### Sections in configuration file
 
@@ -80,8 +99,8 @@ What you can modify in a configuration file:
   - `yaw`: use the virtual tracker data provided by Yaw VR and Yaw 2. Either while using SRS or Game Engine.
   - the keys `offset_...`, `use_cor_pos` and `cor_...` are used to handle the configuration of the center of rotation (cor) for all available virtual trackers.
 - `translational_filter` and `rotational_filter`: set the filtering magnitude (key `strength` with valid options between **0.0** and **1.0**) number of filtering stages (key `order`with valid options: **1, 2, 3**).  
-- `shortcuts`: can be used to ocnfigure shortcuts for different commands (See [List of keyboard bindings](appendix:_list-of-keyboard-bindings) for valid values):
-  - `activate`- turn motion compensation on or off. Note that this implicitly triggers the `center` action if that hasn't been executed before.
+- `shortcuts`: can be used to ocnfigure shortcuts for different commands (See [List of keyboard bindings](appendix:-list-of-keyboard-bindings) for valid values):
+  - `activate`- turn motion compensation on or off. Note that this implicitly triggers the calibration action (`center`) if that hasn't been executed before.
   - `center` - recalibrate the neutral reference pose of the tracker
   - `translation_increase`, `translation_decrease` - modify the strength of the translational filter. Changes made during runtime can be saved by using a save command (see below).
   - `rotation_increase`, `rotation_decrease` = see above, but for rotational filter
@@ -114,7 +133,7 @@ To enable OXRMC to correlate translation and rotation of the rig to the virtual 
 3. Bring your motion rig in neutral position
 3. Sit in your rig 
 4. put your headset on and face forward (~ direction surge). Potential rotation of the hmd on roll and pitch angle is ignored for the calculation
-5. issue the `center` command py activated the correspnding shortcut. You can also do this implicitly by activating motion compensation if you haven't (re)centered since last loading of the configuration.
+5. issue the calibration command by activating the `center` shortcut. You can also do this implicitly by activating motion compensation if you haven't (re)calibrated since last loading of the configuration.
 
 - If you're using YawVR Game Engine you can also use the parameters `Head Distance` and `Height` in its Motion Compensation tab to specify the offset of the cor. Head distance is basically equal to `offset_forward` in the configration file. But note that the height parameter is measured upwards from the bottom of your playspace, so you'll need to have that setup correctly in order to use that feature.
 
@@ -138,20 +157,20 @@ Feedback on success or failure of this functionality using different VR systems 
 - after modifying the config file(s) manually you can use the `reload_config` shortcut (**CTRL** + **SHIFT** + **L** by default) to restart the OXRMC software with the new values. 
 
 ## Addtional Notes
-- Upon activating a shortcut you get audible feedback, using either the confirmation, warning or error sound configured in your windows system control, depending on wether the execution of the action was successful.
+- Upon activating any shortcut you get audible feedback, corresponding to the performed action (or an error, if something went wrong).
 
 - If you recenter the in-app view during a session the reference pose is reset by default. Therefore you should only do that while your motion rig is in neutral position. It is possible (depending on the application) that this automatic recalibration is not triggered, causing the view and reference pose to be out of sync and leading to erroneous motion compensation. You should do the following steps to get this corrected again:
   1. deactivate motion compensation by pressing the `activate` shortcut
   2. bring your motion rig to neutral position. Face forward if yout using a virtual tracker
-  3. press the `center` shortcut
+  3. recalibrate by pressing the `center` shortcut
   4. reactivate motion compensation by pressing the `activate` shortcut
 
 - If the motion controller cannot be tracked for whatever reason (or if the memory mapped file containing the motion data for a virtual tracker cannot be found or accessed) when activating motion compensation or recalibrating the tracker pose, the API layer is unable to set the reference pose and motion compensation is (or stays) deactivated.
 
 ## Logging
-The motion compensation layers logs rudimentary information and errors in a text file located at **...\Users\<Your_Username>\AppData\Local\XR_APILAYER_NOVENDOR_motion_compensation.log**. After unexpected behaviour or a crash you can check that file for abormalities or error reports.
+The motion compensation layers logs rudimentary information and errors in a text file located at **...\Users\<Your_Username>\AppData\Local\OXRMC\XR_APILAYER_NOVENDOR_motion_compensation.log**. After unexpected behaviour or a crash you can check that file for abormalities or error reports.
 
-If you encounter repeatable bugs or crashes you can use the Windows Performance Recorder Profile (WPRP) tracelogging in `scripts\Tracing.wprp` to create a more detailed protocol.
+If you encounter repeatable bugs or crashes you can use the Windows Performance Recorder Profile (WPRP) tracelogging in combination with the configuration contained within `scripts\Trace_OpenXR-MotionCompensation.wprp` to create a more detailed protocol.
 
 [Tracelogging](https://docs.microsoft.com/en-us/windows/win32/tracelogging/trace-logging-portal) can become very useful to investigate user issues.
 
@@ -159,7 +178,7 @@ To capture a trace for the API layer:
 
 - start the OpenXr application
 - Open a command line prompt or powershell in administrator mode and in a folder where you have write permissions
-- Begin recording a trace with the command: `wpr -start path\to\Tracing.wprp -filemode`
+- Begin recording a trace with the command: `wpr -start path\to\Trace_OpenXR-MotionCompensation.wprp -filemode`
 - Leave that command prompt open
 - Reproduce the crash/issue
 - Back to the command prompt, finish the recording with: `wpr -stop arbirtary_name_of_file.etl`
