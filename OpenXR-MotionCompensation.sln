@@ -16,9 +16,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Files", "Solution 
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Scripts", "Scripts", "{EB45E753-7121-4593-A978-8F31F3F3482B}"
 	ProjectSection(SolutionItems) = preProject
-		scripts\Install-Layer.ps1 = scripts\Install-Layer.ps1
-		scripts\Tracing.wprp = scripts\Tracing.wprp
-		scripts\Uninstall-Layer.ps1 = scripts\Uninstall-Layer.ps1
+		scripts\Install-OpenXR-MotionCompensation.ps1 = scripts\Install-OpenXR-MotionCompensation.ps1
+		scripts\Trace_OpenXR-MotionCompensation.wprp = scripts\Trace_OpenXR-MotionCompensation.wprp
+		scripts\Uninstall-OpenXR-MotionCompensation.ps1 = scripts\Uninstall-OpenXR-MotionCompensation.ps1
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Configuration", "Configuration", "{6897645B-6004-4C49-8128-12812DCD1603}"

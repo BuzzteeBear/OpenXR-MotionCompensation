@@ -542,6 +542,7 @@ namespace motion_compensation_layer
             TraceLoggingWrite(g_traceProvider, "xrLocateViews", TLArg(xr::ToString(views[i].fov).c_str(), "Fov"));
             TraceLoggingWrite(g_traceProvider,
                               "xrLocateViews",
+                              TLArg(i, "Index"),
                               TLArg(xr::ToString(views[i].pose).c_str(), "PoseBefore"));
 
             // apply manipulation
@@ -549,6 +550,7 @@ namespace motion_compensation_layer
 
             TraceLoggingWrite(g_traceProvider,
                               "xrLocateViews",
+                              TLArg(i, "Index"),
                               TLArg(xr::ToString(views[i].pose).c_str(), "PoseAfter"));
         }
 

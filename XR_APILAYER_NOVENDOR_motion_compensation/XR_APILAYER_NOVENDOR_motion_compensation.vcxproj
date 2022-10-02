@@ -41,9 +41,11 @@
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="PropertySheet.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="PropertySheet.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -55,12 +57,14 @@
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)\bin\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\obj\$(Platform)\$(Configuration)\</IntDir>
+    <CustomBuildAfterTargets>
+    </CustomBuildAfterTargets>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>LAYER_NAMESPACE=motion_compensation_layer;_DEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>LAYER_NAMESPACE=motion_compensation_layer;VERSION_NUMBER="$(VersionNumber)";VERSION_STRING="$(VersionString)";_DEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -77,8 +81,8 @@
     </Link>
     <PostBuildEvent>
       <Command>copy $(ProjectDir)\$(ProjectName).json $(OutDir)
-copy $(SolutionDir)\scripts\Install-Layer.ps1 $(OutDir)
-copy $(SolutionDir)\scripts\Uninstall-Layer.ps1 $(OutDir)
+copy $(SolutionDir)\scripts\Install-$(SolutionName).ps1 $(OutDir)
+copy $(SolutionDir)\scripts\Uninstall-$(SolutionName).ps1 $(OutDir)
 copy $(SolutionDir)\configuration\OpenXR-MotionCompensation.ini $(OutDir)</Command>
     </PostBuildEvent>
     <PostBuildEvent>
@@ -105,7 +109,7 @@ copy $(SolutionDir)\configuration\OpenXR-MotionCompensation.ini $(OutDir)</Comma
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>LAYER_NAMESPACE=motion_compensation_layer;NDEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>LAYER_NAMESPACE=motion_compensation_layer;VERSION_NUMBER="$(VersionNumber)";VERSION_STRING="$(VersionString)";DEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -123,13 +127,20 @@ copy $(SolutionDir)\configuration\OpenXR-MotionCompensation.ini $(OutDir)</Comma
       </AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>copy $(ProjectDir)\$(ProjectName).json $(OutDir)
-copy $(SolutionDir)\scripts\Install-Layer.ps1 $(OutDir)
-copy $(SolutionDir)\scripts\Uninstall-Layer.ps1 $(OutDir)
-copy $(SolutionDir)\configuration\OpenXR-MotionCompensation.ini $(OutDir)</Command>
+      <Command>echo     Copying dependencies to output folder...
+xcopy $(ProjectDir)\$(ProjectName).json $(OutDir) /y /q
+xcopy $(SolutionDir)\scripts\Install-$(SolutionName).ps1 $(OutDir) /y /q
+xcopy $(SolutionDir)\scripts\Uninstall-$(SolutionName).ps1 $(OutDir) /y /q
+xcopy $(SolutionDir)\configuration\OpenXR-MotionCompensation.ini $(OutDir) /y /q
+echo     Creating release directory at $(SolutionDir)..\OXRMC_Releases\$(SolutionName)_$(VersionNumber)\ ...
+xcopy $(OutDir)$(TargetName)$(TargetExt) $(SolutionDir)..\OXRMC_Releases\$(SolutionName)_$(VersionNumber)\ /y /q
+xcopy $(SolutionDir)configuration\*.* $(SolutionDir)..\OXRMC_Releases\$(SolutionName)_$(VersionNumber)\ /y /q
+xcopy $(ProjectDir)XR_APILAYER_NOVENDOR_motion_compensation.json $(SolutionDir)..\OXRMC_Releases\$(SolutionName)_$(VersionNumber)\ /y /q
+xcopy $(SolutionDir)scripts\*.* $(SolutionDir)..\OXRMC_Releases\$(SolutionName)_$(VersionNumber)\ /y /q
+xcopy $(SolutionDir)OpenXR-MotionCompensation_User_Guide.md $(SolutionDir)..\OXRMC_Releases\$(SolutionName)_$(VersionNumber)\ /y /q</Command>
     </PostBuildEvent>
     <PostBuildEvent>
-      <Message>Copy dependencies...</Message>
+      <Message>Copy dependencies and create release package...</Message>
     </PostBuildEvent>
     <PreLinkEvent>
       <Command>
@@ -145,6 +156,14 @@ copy $(SolutionDir)\configuration\OpenXR-MotionCompensation.ini $(OutDir)</Comma
     <PreBuildEvent>
       <Message>Generating layer dispatcher...</Message>
     </PreBuildEvent>
+    <CustomBuildStep>
+      <Command>
+      </Command>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Message>
+      </Message>
+    </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="config.h" />

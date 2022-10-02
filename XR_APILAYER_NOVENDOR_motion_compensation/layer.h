@@ -34,7 +34,7 @@ namespace motion_compensation_layer
     extern std::filesystem::path dllHome;
 
     const std::string LayerName = "XR_APILAYER_NOVENDOR_motion_compensation";
-    const std::string VersionString = "prototype alpha (0.1.6)";
+    const std::string VersionString = std::string(VERSION_STRING) + " (" + VERSION_NUMBER + ")";
 
     class OpenXrLayer : public motion_compensation_layer::OpenXrApi
     {
