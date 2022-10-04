@@ -137,7 +137,8 @@ xcopy $(OutDir)$(TargetName)$(TargetExt) $(SolutionDir)..\OXRMC_Releases\$(Solut
 xcopy $(SolutionDir)configuration\*.* $(SolutionDir)..\OXRMC_Releases\$(SolutionName)_$(VersionNumber)\ /y /q
 xcopy $(ProjectDir)XR_APILAYER_NOVENDOR_motion_compensation.json $(SolutionDir)..\OXRMC_Releases\$(SolutionName)_$(VersionNumber)\ /y /q
 xcopy $(SolutionDir)scripts\*.* $(SolutionDir)..\OXRMC_Releases\$(SolutionName)_$(VersionNumber)\ /y /q
-xcopy $(SolutionDir)OpenXR-MotionCompensation_User_Guide.md $(SolutionDir)..\OXRMC_Releases\$(SolutionName)_$(VersionNumber)\ /y /q</Command>
+xcopy $(SolutionDir)OpenXR-MotionCompensation_User_Guide.md $(SolutionDir)..\OXRMC_Releases\$(SolutionName)_$(VersionNumber)\ /y /q
+xcopy $(SolutionDir)OpenXR-MotionCompensation_Changelog.txt $(SolutionDir)..\OXRMC_Releases\$(SolutionName)_$(VersionNumber)\ /y /q</Command>
     </PostBuildEvent>
     <PostBuildEvent>
       <Message>Copy dependencies and create release package...</Message>

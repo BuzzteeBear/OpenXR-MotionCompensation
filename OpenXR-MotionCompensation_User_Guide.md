@@ -168,7 +168,7 @@ Feedback on success or failure of this functionality using different VR systems 
 - If the motion controller cannot be tracked for whatever reason (or if the memory mapped file containing the motion data for a virtual tracker cannot be found or accessed) when activating motion compensation or recalibrating the tracker pose, the API layer is unable to set the reference pose and motion compensation is (or stays) deactivated.
 
 ## Logging
-The motion compensation layers logs rudimentary information and errors in a text file located at **...\Users\<Your_Username>\AppData\Local\OXRMC\XR_APILAYER_NOVENDOR_motion_compensation.log**. After unexpected behaviour or a crash you can check that file for abormalities or error reports.
+The motion compensation layers logs rudimentary information and errors in a text file located at **...\Users\<Your_Username>\AppData\Local\OpenXR-MotionCompensation\OpenXR-MotionCompensation.log**. After unexpected behaviour or a crash you can check that file for abormalities or error reports.
 
 If you encounter repeatable bugs or crashes you can use the Windows Performance Recorder Profile (WPRP) tracelogging in combination with the configuration contained within `scripts\Trace_OpenXR-MotionCompensation.wprp` to create a more detailed protocol.
 
@@ -181,7 +181,7 @@ To capture a trace for the API layer:
 - Begin recording a trace with the command: `wpr -start path\to\Trace_OpenXR-MotionCompensation.wprp -filemode`
 - Leave that command prompt open
 - Reproduce the crash/issue
-- Back to the command prompt, finish the recording with: `wpr -stop arbirtary_name_of_file.etl`
+- Back to the command prompt, finish the recording with: `wpr -stop arbitrary_name_of_file.etl`
 - These files are highly compressible!
 
 You can send the trace file to the developer or use an application such as [Tabnalysis](https://apps.microsoft.com/store/detail/tabnalysis/9NQLK2M4RP4J?hl=en-id&gl=ID) to inspect the content yourself.

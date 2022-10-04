@@ -33,6 +33,7 @@ namespace motion_compensation_layer
     // The path where the DLL is loaded from (eg: to load data files).
     extern std::filesystem::path dllHome;
 
+    const std::string LayerPrettyName = "OpenXR-MotionCompensation";
     const std::string LayerName = "XR_APILAYER_NOVENDOR_motion_compensation";
     const std::string VersionString = std::string(VERSION_STRING) + " (" + VERSION_NUMBER + ")";
 
