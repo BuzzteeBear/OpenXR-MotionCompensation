@@ -37,7 +37,7 @@ Copy the files contained in this archive to a subdirectory (name it as you like)
    - Right-click on the PowerShell result and select **Run as administrator**.
    - After opening the PowerShell window, execute `get-executionpolicy` to query the current execution policy.
    - if it says "Restricted", proceed with the next instruction. Otherwise jump to 1.
-   - In the PowerShell window, execute the `set-executionpolicy remotesigned` command.
+   - In the PowerShell window, execute the `set-executionpolicy unrestricted` command.
    - Type `A` next to the confirmation message and press `Enter`.
 1. Right-click on the file `Install-OpenXR-MotionCompensation.ps1` and select the option **Run with PowerShell**
 2. Confirm the UAC dialog
