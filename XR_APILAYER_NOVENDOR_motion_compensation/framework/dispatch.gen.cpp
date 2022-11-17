@@ -87,6 +87,30 @@ namespace LAYER_NAMESPACE
 		return result;
 	}
 
+	XrResult xrDestroySession(XrSession session)
+	{
+		TraceLoggingWrite(g_traceProvider, "xrDestroySession");
+
+		XrResult result;
+		try
+		{
+			result = LAYER_NAMESPACE::GetInstance()->xrDestroySession(session);
+		}
+		catch (std::exception exc)
+		{
+			TraceLoggingWrite(g_traceProvider, "xrDestroySession_Error", TLArg(exc.what(), "Error"));
+			ErrorLog("xrDestroySession: %s\n", exc.what());
+			result = XR_ERROR_RUNTIME_FAILURE;
+		}
+
+		TraceLoggingWrite(g_traceProvider, "xrDestroySession_Result", TLArg(xr::ToCString(result), "Result"));
+		if (XR_FAILED(result)) {
+			ErrorLog("xrDestroySession failed with %s\n", xr::ToCString(result));
+		}
+
+		return result;
+	}
+
 	XrResult xrCreateReferenceSpace(XrSession session, const XrReferenceSpaceCreateInfo* createInfo, XrSpace* space)
 	{
 		TraceLoggingWrite(g_traceProvider, "xrCreateReferenceSpace");
@@ -325,6 +349,11 @@ namespace LAYER_NAMESPACE
 		{
 			m_xrCreateSession = reinterpret_cast<PFN_xrCreateSession>(*function);
 			*function = reinterpret_cast<PFN_xrVoidFunction>(LAYER_NAMESPACE::xrCreateSession);
+		}
+		else if (apiName == "xrDestroySession")
+		{
+			m_xrDestroySession = reinterpret_cast<PFN_xrDestroySession>(*function);
+			*function = reinterpret_cast<PFN_xrVoidFunction>(LAYER_NAMESPACE::xrDestroySession);
 		}
 		else if (apiName == "xrCreateReferenceSpace")
 		{

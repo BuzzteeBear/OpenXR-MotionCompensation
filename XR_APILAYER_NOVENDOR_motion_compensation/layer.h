@@ -51,6 +51,7 @@ namespace motion_compensation_layer
                                  XrSession* session) override;
         XrResult xrBeginSession(XrSession session, const XrSessionBeginInfo* beginInfo) override;
         XrResult xrEndSession(XrSession session) override;
+        XrResult xrDestroySession(XrSession session) override;
         XrResult xrAttachSessionActionSets(XrSession session, const XrSessionActionSetsAttachInfo* attachInfo) override;
         XrResult
         xrSuggestInteractionProfileBindings(XrInstance instance,

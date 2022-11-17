@@ -48,6 +48,7 @@ namespace motion_compensation_layer
 
     XrResult OpenXrLayer::xrCreateInstance(const XrInstanceCreateInfo* createInfo)
     {
+        DebugLog("xrCreateInstance\n");
         if (createInfo->type != XR_TYPE_INSTANCE_CREATE_INFO)
         {
             return XR_ERROR_VALIDATION_FAILURE;
@@ -103,7 +104,72 @@ namespace motion_compensation_layer
 
             // enable debug test rotation
             GetConfig()->GetBool(Cfg::TestRotation, m_TestRotation);
-        }    
+        }   
+
+        // initialize tracker
+        Tracker::GetTracker(&m_Tracker);
+        if (!m_Tracker->Init())
+        {
+            m_Initialized = false;
+        }
+
+        // initialize keyboard input handler
+        if (!m_Input.Init())
+        {
+            m_Initialized = false;
+        }
+
+        return XR_SUCCESS;
+    }
+
+    XrResult OpenXrLayer::xrGetSystem(XrInstance instance, const XrSystemGetInfo* getInfo, XrSystemId* systemId)
+    {
+        DebugLog("xrGetSystem\n");
+        if (getInfo->type != XR_TYPE_SYSTEM_GET_INFO)
+        {
+            return XR_ERROR_VALIDATION_FAILURE;
+        }
+
+        TraceLoggingWrite(g_traceProvider,
+                          "xrGetSystem",
+                          TLPArg(instance, "Instance"),
+                          TLArg(xr::ToCString(getInfo->formFactor), "FormFactor"));
+
+        const XrResult result = OpenXrApi::xrGetSystem(instance, getInfo, systemId);
+        if (XR_SUCCEEDED(result) && getInfo->formFactor == XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY)
+        {
+            if (*systemId != m_systemId)
+            {
+                XrSystemProperties systemProperties{XR_TYPE_SYSTEM_PROPERTIES};
+                CHECK_XRCMD(OpenXrApi::xrGetSystemProperties(instance, *systemId, &systemProperties));
+                TraceLoggingWrite(g_traceProvider, "xrGetSystem", TLArg(systemProperties.systemName, "SystemName"));
+                Log("Using OpenXR system: %s\n", systemProperties.systemName);
+            }
+
+            // Remember the XrSystemId to use.
+            m_systemId = *systemId;
+        }
+
+        TraceLoggingWrite(g_traceProvider, "xrGetSystem", TLArg((int)*systemId, "SystemId"));
+
+        return result;
+    }
+
+    XrResult OpenXrLayer::xrCreateSession(XrInstance instance,
+                                          const XrSessionCreateInfo* createInfo,
+                                          XrSession* session)
+    {
+        DebugLog("xrCreateSession\n");
+        if (createInfo->type != XR_TYPE_SESSION_CREATE_INFO)
+        {
+            return XR_ERROR_VALIDATION_FAILURE;
+        }
+
+        TraceLoggingWrite(g_traceProvider,
+                          "xrCreateSession",
+                          TLPArg(instance, "Instance"),
+                          TLArg((int)createInfo->systemId, "SystemId"),
+                          TLArg(createInfo->createFlags, "CreateFlags"));
 
         // Create the resources for the tracker space.
         {
@@ -166,69 +232,6 @@ namespace motion_compensation_layer
             }
         }
 
-        // initialize tracker
-        Tracker::GetTracker(&m_Tracker);
-        if (!m_Tracker->Init())
-        {
-            m_Initialized = false;
-        }
-
-        // initialize keyboard input handler
-        if (!m_Input.Init())
-        {
-            m_Initialized = false;
-        }
-
-        return XR_SUCCESS;
-    }
-
-    XrResult OpenXrLayer::xrGetSystem(XrInstance instance, const XrSystemGetInfo* getInfo, XrSystemId* systemId)
-    {
-        if (getInfo->type != XR_TYPE_SYSTEM_GET_INFO)
-        {
-            return XR_ERROR_VALIDATION_FAILURE;
-        }
-
-        TraceLoggingWrite(g_traceProvider,
-                          "xrGetSystem",
-                          TLPArg(instance, "Instance"),
-                          TLArg(xr::ToCString(getInfo->formFactor), "FormFactor"));
-
-        const XrResult result = OpenXrApi::xrGetSystem(instance, getInfo, systemId);
-        if (XR_SUCCEEDED(result) && getInfo->formFactor == XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY)
-        {
-            if (*systemId != m_systemId)
-            {
-                XrSystemProperties systemProperties{XR_TYPE_SYSTEM_PROPERTIES};
-                CHECK_XRCMD(OpenXrApi::xrGetSystemProperties(instance, *systemId, &systemProperties));
-                TraceLoggingWrite(g_traceProvider, "xrGetSystem", TLArg(systemProperties.systemName, "SystemName"));
-                Log("Using OpenXR system: %s\n", systemProperties.systemName);
-            }
-
-            // Remember the XrSystemId to use.
-            m_systemId = *systemId;
-        }
-
-        TraceLoggingWrite(g_traceProvider, "xrGetSystem", TLArg((int)*systemId, "SystemId"));
-
-        return result;
-    }
-
-    XrResult OpenXrLayer::xrCreateSession(XrInstance instance,
-                                          const XrSessionCreateInfo* createInfo,
-                                          XrSession* session)
-    {
-        if (createInfo->type != XR_TYPE_SESSION_CREATE_INFO)
-        {
-            return XR_ERROR_VALIDATION_FAILURE;
-        }
-
-        TraceLoggingWrite(g_traceProvider,
-                          "xrCreateSession",
-                          TLPArg(instance, "Instance"),
-                          TLArg((int)createInfo->systemId, "SystemId"),
-                          TLArg(createInfo->createFlags, "CreateFlags"));
-
         const XrResult result = OpenXrApi::xrCreateSession(instance, createInfo, session);
         if (XR_SUCCEEDED(result))
         {
@@ -283,6 +286,23 @@ namespace motion_compensation_layer
             m_TrackerSpace = XR_NULL_HANDLE;
         }
         return OpenXrApi::xrEndSession(session);
+    }
+
+    XrResult OpenXrLayer::xrDestroySession(XrSession session)
+    {
+        DebugLog("xrDestroySession\n");
+        TraceLoggingWrite(g_traceProvider, "xrDestroySession", TLPArg(session, "Session"));
+
+        if (XR_NULL_HANDLE != m_ActionSet)
+        {
+            GetInstance()->xrDestroyActionSet(m_ActionSet);
+        }
+        if (XR_NULL_HANDLE != m_TrackerPoseAction)
+        {
+            GetInstance()->xrDestroyAction(m_TrackerPoseAction);
+        }
+
+        return OpenXrApi::xrDestroySession(session);
     }
 
     XrResult

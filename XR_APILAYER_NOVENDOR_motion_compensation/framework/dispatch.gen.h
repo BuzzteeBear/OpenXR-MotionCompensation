@@ -124,6 +124,14 @@ namespace LAYER_NAMESPACE
 		PFN_xrCreateSession m_xrCreateSession{ nullptr };
 
 	public:
+		virtual XrResult xrDestroySession(XrSession session)
+		{
+			return m_xrDestroySession(session);
+		}
+	private:
+		PFN_xrDestroySession m_xrDestroySession{ nullptr };
+
+	public:
 		virtual XrResult xrCreateReferenceSpace(XrSession session, const XrReferenceSpaceCreateInfo* createInfo, XrSpace* space)
 		{
 			return m_xrCreateReferenceSpace(session, createInfo, space);
