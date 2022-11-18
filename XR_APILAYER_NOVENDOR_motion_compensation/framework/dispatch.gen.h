@@ -260,6 +260,14 @@ namespace LAYER_NAMESPACE
 		PFN_xrAttachSessionActionSets m_xrAttachSessionActionSets{ nullptr };
 
 	public:
+		virtual XrResult xrGetCurrentInteractionProfile(XrSession session, XrPath topLevelUserPath, XrInteractionProfileState* interactionProfile)
+		{
+			return m_xrGetCurrentInteractionProfile(session, topLevelUserPath, interactionProfile);
+		}
+	private:
+		PFN_xrGetCurrentInteractionProfile m_xrGetCurrentInteractionProfile{ nullptr };
+
+	public:
 		virtual XrResult xrGetActionStatePose(XrSession session, const XrActionStateGetInfo* getInfo, XrActionStatePose* state)
 		{
 			return m_xrGetActionStatePose(session, getInfo, state);

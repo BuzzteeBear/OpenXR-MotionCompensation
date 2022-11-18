@@ -5,6 +5,7 @@ override_functions = [
     "xrBeginSession",
     "xrEndSession",
     "xrDestroySession",
+    "xrGetCurrentInteractionProfile",
     "xrAttachSessionActionSets",
     "xrSuggestInteractionProfileBindings",
     "xrSyncActions",

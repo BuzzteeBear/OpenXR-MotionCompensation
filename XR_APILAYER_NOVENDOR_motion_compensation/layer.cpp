@@ -171,72 +171,70 @@ namespace motion_compensation_layer
                           TLArg((int)createInfo->systemId, "SystemId"),
                           TLArg(createInfo->createFlags, "CreateFlags"));
 
-        // Create the resources for the tracker space.
-        {
-            XrActionSetCreateInfo actionSetCreateInfo{XR_TYPE_ACTION_SET_CREATE_INFO, nullptr};
-            strcpy_s(actionSetCreateInfo.actionSetName, "general_tracker_set");
-            strcpy_s(actionSetCreateInfo.localizedActionSetName, "General Tracker Set");
-            actionSetCreateInfo.priority = 0;
-            if (!XR_SUCCEEDED(xrCreateActionSet(GetXrInstance(), &actionSetCreateInfo, &m_ActionSet)))
-            {
-                ErrorLog("%s: unable to create action set\n", __FUNCTION__);
-                m_Initialized = false;
-            }
-            TraceLoggingWrite(g_traceProvider, "OpenXrTracker::Init", TLPArg(m_ActionSet, "xrCreateActionSet"));
-        }
-        {
-            XrActionCreateInfo actionCreateInfo{XR_TYPE_ACTION_CREATE_INFO, nullptr};
-            strcpy_s(actionCreateInfo.actionName, "general_tracker");
-            strcpy_s(actionCreateInfo.localizedActionName, "General Tracker");
-            actionCreateInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
-            actionCreateInfo.countSubactionPaths = 0;
-            if (!XR_SUCCEEDED(xrCreateAction(m_ActionSet, &actionCreateInfo, &m_TrackerPoseAction)))
-            {
-                ErrorLog("%s: unable to create action\n", __FUNCTION__);
-                m_Initialized = false;
-            }
-            TraceLoggingWrite(g_traceProvider, "OpenXrTracker::Init", TLPArg(m_TrackerPoseAction, "xrCreateAction"));
-        }
-        {
-            // suggest simple controller
-            XrInteractionProfileSuggestedBinding suggestedBindings{XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING,
-                                                                   nullptr};
-            CHECK_XRCMD(xrStringToPath(GetXrInstance(),
-                                       "/interaction_profiles/khr/simple_controller",
-                                       &suggestedBindings.interactionProfile));
-            std::string side{"left"};
-            if (!GetConfig()->GetString(Cfg::TrackerSide, side))
-            {
-                ErrorLog("%s: unable to determine contoller side. Defaulting to %s\n", __FUNCTION__, side);
-            }
-            if ("right" != side && "left" != side)
-            {
-                ErrorLog("%s: invalid contoller side: %s. Defaulting to 'left'\n", __FUNCTION__, side);
-                side = "left";
-            }
-            else
-            {
-                const std::string path("/user/hand/" + side + "/input/grip/pose");
-                XrActionSuggestedBinding binding;
-                binding.action = m_TrackerPoseAction;
-                CHECK_XRCMD(xrStringToPath(GetXrInstance(), path.c_str(), &binding.binding));
-
-                suggestedBindings.suggestedBindings = &binding;
-                suggestedBindings.countSuggestedBindings = 1;
-                CHECK_XRCMD(xrSuggestInteractionProfileBindings(GetXrInstance(), &suggestedBindings));
-                TraceLoggingWrite(g_traceProvider,
-                                  "OpenXrTracker::Init",
-                                  TLArg("/interaction_profiles/khr/simple_controller", "Profile"),
-                                  TLPArg(binding.action, "Action"),
-                                  TLArg(path.c_str(), "Path"));
-            }
-        }
-
         const XrResult result = OpenXrApi::xrCreateSession(instance, createInfo, session);
         if (XR_SUCCEEDED(result))
         {
             if (isSystemHandled(createInfo->systemId))
             {
+                // initialize the resources for the motion controller
+                XrActionSetCreateInfo actionSetCreateInfo{XR_TYPE_ACTION_SET_CREATE_INFO, nullptr};
+                strcpy_s(actionSetCreateInfo.actionSetName, "general_tracker_set");
+                strcpy_s(actionSetCreateInfo.localizedActionSetName, "General Tracker Set");
+                actionSetCreateInfo.priority = 0;
+                if (!XR_SUCCEEDED(xrCreateActionSet(GetXrInstance(), &actionSetCreateInfo, &m_ActionSet)))
+                {
+                    ErrorLog("%s: unable to create action set\n", __FUNCTION__);
+                    m_Initialized = false;
+                }
+                TraceLoggingWrite(g_traceProvider, "OpenXrTracker::Init", TLPArg(m_ActionSet, "xrCreateActionSet"));
+
+                XrActionCreateInfo actionCreateInfo{XR_TYPE_ACTION_CREATE_INFO, nullptr};
+                strcpy_s(actionCreateInfo.actionName, "general_tracker");
+                strcpy_s(actionCreateInfo.localizedActionName, "General Tracker");
+                actionCreateInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
+                actionCreateInfo.countSubactionPaths = 0;
+                if (!XR_SUCCEEDED(xrCreateAction(m_ActionSet, &actionCreateInfo, &m_TrackerPoseAction)))
+                {
+                    ErrorLog("%s: unable to create action\n", __FUNCTION__);
+                    m_Initialized = false;
+                }
+                TraceLoggingWrite(g_traceProvider,
+                                  "OpenXrTracker::Init",
+                                  TLPArg(m_TrackerPoseAction, "xrCreateAction"));
+
+                // suggest simple controller (as fallback in case application does not suggest any bindings)
+                XrInteractionProfileSuggestedBinding suggestedBindings{XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING,
+                                                                       nullptr};
+                CHECK_XRCMD(xrStringToPath(GetXrInstance(),
+                                           "/interaction_profiles/khr/simple_controller",
+                                           &suggestedBindings.interactionProfile));
+                std::string side{"left"};
+                if (!GetConfig()->GetString(Cfg::TrackerSide, side))
+                {
+                    ErrorLog("%s: unable to determine contoller side. Defaulting to %s\n", __FUNCTION__, side);
+                }
+                if ("right" != side && "left" != side)
+                {
+                    ErrorLog("%s: invalid contoller side: %s. Defaulting to 'left'\n", __FUNCTION__, side);
+                    side = "left";
+                }
+                else
+                {
+                    const std::string path("/user/hand/" + side + "/input/grip/pose");
+                    XrActionSuggestedBinding binding;
+                    binding.action = m_TrackerPoseAction;
+                    CHECK_XRCMD(xrStringToPath(GetXrInstance(), path.c_str(), &binding.binding));
+
+                    suggestedBindings.suggestedBindings = &binding;
+                    suggestedBindings.countSuggestedBindings = 1;
+                    CHECK_XRCMD(xrSuggestInteractionProfileBindings(GetXrInstance(), &suggestedBindings));
+                    TraceLoggingWrite(g_traceProvider,
+                                      "OpenXrTracker::Init",
+                                      TLArg("/interaction_profiles/khr/simple_controller", "Profile"),
+                                      TLPArg(binding.action, "Action"),
+                                      TLArg(path.c_str(), "Path"));
+                }
+
                 XrReferenceSpaceCreateInfo referenceSpaceCreateInfo{XR_TYPE_REFERENCE_SPACE_CREATE_INFO,
                                                                     nullptr,
                                                                     XR_REFERENCE_SPACE_TYPE_VIEW,
@@ -296,13 +294,39 @@ namespace motion_compensation_layer
         if (XR_NULL_HANDLE != m_ActionSet)
         {
             GetInstance()->xrDestroyActionSet(m_ActionSet);
-        }
-        if (XR_NULL_HANDLE != m_TrackerPoseAction)
-        {
-            GetInstance()->xrDestroyAction(m_TrackerPoseAction);
+            m_ActionSetAttached = false;
         }
 
         return OpenXrApi::xrDestroySession(session);
+    }
+    XrResult OpenXrLayer::xrGetCurrentInteractionProfile(XrSession session,
+                                                         XrPath topLevelUserPath,
+                                                         XrInteractionProfileState* interactionProfile)
+    {
+        if (!m_ActionSetAttached)
+        {
+            // workaround for opencomposite yieling error XR_ERROR_ACTIONSET_NOT_ATTACHED (-46) after oxrmc layer
+            // suggesting binding in xrBeginSession
+
+            Log("action set attached during xrGetCurrentInteractionProfile\n");
+            std::vector<XrActionSet> actionSets;
+            XrSessionActionSetsAttachInfo actionSetAttachInfo{XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO,
+                                                              nullptr,
+                                                              0,
+                                                              actionSets.data()};
+            TraceLoggingWrite(g_traceProvider,
+                              "OpenXrLayer::LazyInit",
+                              TLPArg("Executed", "xrAttachSessionActionSets"));
+            if (XR_SUCCEEDED(GetInstance()->xrAttachSessionActionSets(m_Session, &actionSetAttachInfo)))
+            {
+                m_ActionSetAttached = true;
+            }
+            else
+            {
+                ErrorLog("%s: xrAttachSessionActionSets failed\n", __FUNCTION__);
+            }
+        }
+        return OpenXrApi::xrGetCurrentInteractionProfile(session, topLevelUserPath, interactionProfile);
     }
 
     XrResult

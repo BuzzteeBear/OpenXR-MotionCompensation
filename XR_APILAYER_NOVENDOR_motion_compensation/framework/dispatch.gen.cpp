@@ -303,6 +303,30 @@ namespace LAYER_NAMESPACE
 		return result;
 	}
 
+	XrResult xrGetCurrentInteractionProfile(XrSession session, XrPath topLevelUserPath, XrInteractionProfileState* interactionProfile)
+	{
+		TraceLoggingWrite(g_traceProvider, "xrGetCurrentInteractionProfile");
+
+		XrResult result;
+		try
+		{
+			result = LAYER_NAMESPACE::GetInstance()->xrGetCurrentInteractionProfile(session, topLevelUserPath, interactionProfile);
+		}
+		catch (std::exception exc)
+		{
+			TraceLoggingWrite(g_traceProvider, "xrGetCurrentInteractionProfile_Error", TLArg(exc.what(), "Error"));
+			ErrorLog("xrGetCurrentInteractionProfile: %s\n", exc.what());
+			result = XR_ERROR_RUNTIME_FAILURE;
+		}
+
+		TraceLoggingWrite(g_traceProvider, "xrGetCurrentInteractionProfile_Result", TLArg(xr::ToCString(result), "Result"));
+		if (XR_FAILED(result)) {
+			ErrorLog("xrGetCurrentInteractionProfile failed with %s\n", xr::ToCString(result));
+		}
+
+		return result;
+	}
+
 	XrResult xrSyncActions(XrSession session, const XrActionsSyncInfo* syncInfo)
 	{
 		TraceLoggingWrite(g_traceProvider, "xrSyncActions");
@@ -394,6 +418,11 @@ namespace LAYER_NAMESPACE
 		{
 			m_xrAttachSessionActionSets = reinterpret_cast<PFN_xrAttachSessionActionSets>(*function);
 			*function = reinterpret_cast<PFN_xrVoidFunction>(LAYER_NAMESPACE::xrAttachSessionActionSets);
+		}
+		else if (apiName == "xrGetCurrentInteractionProfile")
+		{
+			m_xrGetCurrentInteractionProfile = reinterpret_cast<PFN_xrGetCurrentInteractionProfile>(*function);
+			*function = reinterpret_cast<PFN_xrVoidFunction>(LAYER_NAMESPACE::xrGetCurrentInteractionProfile);
 		}
 		else if (apiName == "xrSyncActions")
 		{
