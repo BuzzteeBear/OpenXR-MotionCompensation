@@ -1,6 +1,6 @@
 # OpenXR Motion Compensation
 
-Version: 0.1.7
+Version: 0.2.0
 
 **Please open this file with a browser or another application able to display [markdown files](https://www.markdownguide.org/getting-started) correctly.**
 
@@ -23,25 +23,13 @@ Donations to the project are very welcome and can be made via [Paypal](ttps://ww
 
 ## Installation
 
-A proper Installer is planned for a future release. Until that is implemented, the following steps are necessary to deploy the API layer on your System:  
-
-### Extract archive
-
-Copy the files contained in this archive to a subdirectory (name it as you like) within the **Program Files** location of your Windows installation. The **installation directory must not have** any write **access restrictions** since the binary creates a configuration file for each application it is loaded from (see [Configuration](#configuration) section below). The easiest way to grant access is to open folder properties and setting 'full access' for 'Users' in the security tab. 
-
-### Execute install script
-
-0. Depending on your windows configuration you might need to allow execution of powershell scripts:
-   - Press the Windows Key to open the Start menu.
-   - Type `PowerShell`.
-   - Right-click on the PowerShell result and select **Run as administrator**.
-   - After opening the PowerShell window, execute `get-executionpolicy` to query the current execution policy.
-   - if it says "Restricted", proceed with the next instruction. Otherwise jump to 1.
-   - In the PowerShell window, execute the `set-executionpolicy unrestricted` command.
-   - Type `A` next to the confirmation message and press `Enter`.
-1. Right-click on the file `Install-OpenXR-MotionCompensation.ps1` and select the option **Run with PowerShell**
-2. Confirm the UAC dialog
-3. The will create a registry entry making it possible for to load the api layer on OpenXR initialization
+### Execute installer executable
+Just execute the installation executable called `Install OpenXR-MotionCompensation <current_version>.exe` and follow the instructions.
+A few hints concerning the installation process:
+- If you're upgrading from a version prior to 0.2.0, it is recommended to target the installation directory already existing. This will allow the installer to transfer your existing configuration files into the ''appdata/local/OpenXR-MotionCompensation'' directory that is used from version 0.2.0 onwards.
+- Using a subdirectory of `program files` as installation target is recommended, especially for compatibility with WMR based headsets.
+- Although the installation needs adminstrative privileges make sure to run the installation executable using the windows account you're using to launch your games/Open XR applications. This enables the installer to put the configuraton file(s) into the correct appdata directory.
+- If somethimng goes wrong on installation and you don't now what or why, you can check the log file `Setup Log <yyyy-mm-dd xxx>.txt` that is created in the `%TEMP%` folder.
 
 ### Conflict with other OpenXR API layers
 There may be issues with other OpenXR API layers that are installed on your system. For the most part they can be solved by using the correct order of installation (because that implicitly determines the order in which the layers are loaded).  
@@ -65,22 +53,17 @@ You can use the application [OpenXR Explorer](https://github.com/maluoi/openxr-e
 
 ### Update
 
-To use an updated version of OXRMC it is sufficient to replace the binary (OpenXR-MotionCompensation.dll) in the installation directory. Replacing the user guide with the latest version upon updating is highly recommended :). It is **not** necessary to execute uninstallation and installation script for each new release **unless** you want to use **another directory**.
+To use an updated version of OXRMC it is sufficient to download and run the latest installation executable. If you want to change the installation directory you will have to uninstall the previous version first.
 
 ### Uninstallation
 
-To remove the OpenXr Motion Compensation layer: 
-- execute the script `Uninstall-OpenXR-MotionCompensation.ps1` as described in the [Execute install script](#execute-install-script) section above.  
-**This only works correctly when executed from the same directory the installation script was executed from!**
-- optional: delete the files in the directory you chose for installation
-
-Note: You can check if your (un)installation is correct in the windows registry. The path `Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\OpenXR\1\ApiLayers\Implicit` should always only contain one entry ending on `XR_APILAYER_NOVENDOR_motion_compensation.json`. If there are more than one entry present, delete the ones pointing to the directories you're not using.
+To remove the OpenXR-MotionCompensation layer just use windows settings/control panel as you would do witgh any other application. During uninstallation you can choose to delete your configuration files in the appdata directory or to keep them for later use. 
 
 ## Configuration
 
-The archive contains the default configuration file `OpenXR-MotionCompensation.ini`. You can make changes to that file to configure options you want to be the same for all OpenXR applications.
-
-Upon starting an OpenXR application with the API layer active for the first time, a configuration file named after the application is created in the installation directory. You can use it to copy (partial) sections from the default configuration file whenever you want to make changes only for that application specifically.
+Configuration files can be found at `...\Users\*<Your_Username>*\AppData\Local\OpenXR-MotionCompensation\OpenXR-MotionCompensation.log`.
+After intial installtion this directory contains the default configuration file `OpenXR-MotionCompensation.ini`. You can make changes to that file to configure options you want to be the same for all OpenXR applications.
+Upon starting an OpenXR application with the API layer active for the first time, a configuration file named after the application is created in the same directory. You can use it to copy (partial) sections from the default configuration file whenever you want to make changes only for that application specifically.
 
 ### Use of the Configuration file
 
@@ -88,7 +71,7 @@ What you can modify in a configuration file:
 - the tracker to use for motion compensation
 - the strength and the number of filtering stages for both translational and rotational filters
 - keyboard inputs (e.g. to activate/deactivate or recalibrate motion compensation during runtime)  
-**Note that all keys and text based values in the configuration file(s) are case sensitive. That means all [keyboard shortcuts](#appendix:-List-of-keyboard-bindings) must only contain capital letters, numbers and/or underscores**
+**Note that all keys and values in the configuration file(s) are case sensitive. That means all [keyboard shortcuts](#list-of-keyboard-bindings) must only contain capital letters, numbers and/or underscores**
 
 ### Sections in configuration file
 
@@ -99,7 +82,7 @@ What you can modify in a configuration file:
   - `yaw`: use the virtual tracker data provided by Yaw VR and Yaw 2. Either while using SRS or Game Engine.
   - the keys `offset_...`, `use_cor_pos` and `cor_...` are used to handle the configuration of the center of rotation (cor) for all available virtual trackers.
 - `translational_filter` and `rotational_filter`: set the filtering magnitude (key `strength` with valid options between **0.0** and **1.0**) number of filtering stages (key `order`with valid options: **1, 2, 3**).  
-- `shortcuts`: can be used to ocnfigure shortcuts for different commands (See [List of keyboard bindings](appendix:-list-of-keyboard-bindings) for valid values):
+- `shortcuts`: can be used to ocnfigure shortcuts for different commands (See [List of keyboard bindings](#list-of-keyboard-bindings) for valid values):
   - `activate`- turn motion compensation on or off. Note that this implicitly triggers the calibration action (`center`) if that hasn't been executed before.
   - `center` - recalibrate the neutral reference pose of the tracker
   - `translation_increase`, `translation_decrease` - modify the strength of the translational filter. Changes made during runtime can be saved by using a save command (see below).
@@ -121,8 +104,6 @@ To use a virtual tracker set parameter `tracker_type` according to the motion so
 - `yaw`: Yaw Game Engine (or Sim Racing Studio when using rotational data provided by Yaw VR or Yaw 2)
 - `srs`: Sim Racing Studio (experimental)
 - `flypt`: FlyPT Mover (experimental)
-
-**Note that lacking a motion rig at the moment I was unable to verify that the signum of the positional and rotational values provided by SRS and FlyPT Mover is set correctly. Any feedback on this matter is highly appreciated!**
 
 ### Calibrate virtual tracker
 To enable OXRMC to correlate translation and rotation of the rig to the virtual space correctly when using a virtual tracker, you have to provide the information where the center of rotation (cor) of your motion rig is positioned and which way is forward. This is done with the following steps:
@@ -187,7 +168,7 @@ To capture a trace for the API layer:
 You can send the trace file to the developer or use an application such as [Tabnalysis](https://apps.microsoft.com/store/detail/tabnalysis/9NQLK2M4RP4J?hl=en-id&gl=ID) to inspect the content yourself.
 
 
-## Appendix: List of keyboard bindings
+## List of keyboard bindings
 To combine multiple keys for a single shortcut they need to be separated by '+' with no spaces in between the key descriptors.
 
 List of supported shortcut key names:
