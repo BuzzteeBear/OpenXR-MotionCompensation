@@ -15,7 +15,7 @@ using namespace utility;
 bool ConfigManager::Init(const std::string& application)
 {
     // create application config file if not existing
-    m_ApplicationIni = motion_compensation_layer::dllHome.string() + "\\" + application + ".ini";
+    m_ApplicationIni = motion_compensation_layer::localAppData.string() + "\\" + application + ".ini";
     if ((_access(m_ApplicationIni.c_str(), 0)) == -1)
     {
         if (!WritePrivateProfileString("placeholder", "created", "1", m_ApplicationIni.c_str()) && 2 != GetLastError())
@@ -28,7 +28,7 @@ bool ConfigManager::Init(const std::string& application)
                      LastErrorMsg(err).c_str());
         }
     }
-    const std::string coreIni(motion_compensation_layer::dllHome.string() + "\\" + "OpenXR-MotionCompensation.ini");
+    const std::string coreIni(motion_compensation_layer::localAppData.string() + "\\" + "OpenXR-MotionCompensation.ini");
     if ((_access(coreIni.c_str(), 0)) != -1)
     {
         std::string errors;
@@ -208,7 +208,7 @@ void ConfigManager::WriteConfig(bool forApp)
     bool error{false};
     const std::string configFile =
         forApp ? m_ApplicationIni
-               : motion_compensation_layer::dllHome.string() + "\\" + "OpenXR-MotionCompensation.ini";
+               : motion_compensation_layer::localAppData.string() + "\\" + "OpenXR-MotionCompensation.ini";
     for (const auto key : m_KeysToSave)
     {
         const auto& keyEntry = m_Keys.find(key);

@@ -131,14 +131,7 @@ copy $(SolutionDir)\configuration\OpenXR-MotionCompensation.ini $(OutDir)</Comma
 xcopy $(ProjectDir)\$(ProjectName).json $(OutDir) /y /q
 xcopy $(SolutionDir)\scripts\Install-$(SolutionName).ps1 $(OutDir) /y /q
 xcopy $(SolutionDir)\scripts\Uninstall-$(SolutionName).ps1 $(OutDir) /y /q
-xcopy $(SolutionDir)\configuration\OpenXR-MotionCompensation.ini $(OutDir) /y /q
-echo     Creating release directory at $(SolutionDir)..\OXRMC_Releases\$(SolutionName)_$(VersionNumber)\ ...
-xcopy $(OutDir)$(TargetName)$(TargetExt) $(SolutionDir)..\OXRMC_Releases\$(SolutionName)_$(VersionNumber)\ /y /q
-xcopy $(SolutionDir)configuration\*.* $(SolutionDir)..\OXRMC_Releases\$(SolutionName)_$(VersionNumber)\ /y /q
-xcopy $(ProjectDir)XR_APILAYER_NOVENDOR_motion_compensation.json $(SolutionDir)..\OXRMC_Releases\$(SolutionName)_$(VersionNumber)\ /y /q
-xcopy $(SolutionDir)scripts\*.* $(SolutionDir)..\OXRMC_Releases\$(SolutionName)_$(VersionNumber)\ /y /q
-xcopy $(SolutionDir)OpenXR-MotionCompensation_User_Guide.md $(SolutionDir)..\OXRMC_Releases\$(SolutionName)_$(VersionNumber)\ /y /q
-xcopy $(SolutionDir)OpenXR-MotionCompensation_Changelog.txt $(SolutionDir)..\OXRMC_Releases\$(SolutionName)_$(VersionNumber)\ /y /q</Command>
+xcopy $(SolutionDir)\configuration\OpenXR-MotionCompensation.ini $(OutDir) /y /q</Command>
     </PostBuildEvent>
     <PostBuildEvent>
       <Message>Copy dependencies and create release package...</Message>
