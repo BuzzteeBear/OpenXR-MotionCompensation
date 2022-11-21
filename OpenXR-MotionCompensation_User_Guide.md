@@ -29,16 +29,15 @@ A few hints concerning the installation process:
 - If you're upgrading from a version prior to 0.2.0, it is recommended to target the installation directory already existing. This will allow the installer to transfer your existing configuration files into the ''appdata/local/OpenXR-MotionCompensation'' directory that is used from version 0.2.0 onwards.
 - Using a subdirectory of `program files` as installation target is recommended, especially for compatibility with WMR based headsets.
 - Although the installation needs adminstrative privileges make sure to run the installation executable using the windows account you're using to launch your games/Open XR applications. This enables the installer to put the configuraton file(s) into the correct appdata directory.
-- If somethimng goes wrong on installation and you don't now what or why, you can check the log file `Setup Log <yyyy-mm-dd xxx>.txt` that is created in the `%TEMP%` folder.
+- If somethimng goes wrong on installation and you don't know what or why, you can check the log file `Setup Log <yyyy-mm-dd xxx>.txt` that is created in the `%TEMP%` folder.
 
 ### Conflict with other OpenXR API layers
 There may be issues with other OpenXR API layers that are installed on your system. For the most part they can be solved by using the correct order of installation (because that implicitly determines the order in which the layers are loaded).  
 According to user feedback following constraints seem to be working:
 - **XRNeckSaver** needs to be installed before OXRMC.
-  - at some point in time the XRNeckSaver installer conatained a bug causing folllowing layers not to be loaded. If you encounter this issue check out this [XRNecksaver discord conversation](https://discord.com/channels/982356942821408788/982357046060007504/1023722065989218305). This bug will be fixed automatically once OXRMC has its own installer.
+  - at some point in time the XRNeckSaver installer contained a bug causing folllowing layers not to be loaded. If you encounter this issue check out this [XRNecksaver discord conversation](https://discord.com/channels/982356942821408788/982357046060007504/1023722065989218305). This bug will be fixed automatically once OXRMC has its own installer.
 - **OpenKneeBoard** needs to be installed before OXRMC. 
-  - but it is (or at least was) putting its registry key in `HKEY_CURRENT_USER/...` while OXRMC uses `HKEY_LOCAL_MACHINE/...` . So if you're having trouble changing the loading order, try moving the key for OpenKneeboard from `Computer\HKEY_CURRENT_USER\SOFTWARE\Khronos\OpenXR\1\ApiLayers\Implicit` to `Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\OpenXR\1\ApiLayers\Implicit`.
-- **Ultraleap OpenXR Hand Tracking API Layer** needs to be installed after OXRMC.
+  - but it is (or at least was) putting its registry key in `...HKEY_CURRENT_USER/...` while OXRMC uses `...HKEY_LOCAL_MACHINE/...` . So if you're having trouble changing the loading order, try moving the key for OpenKneeboard from `Computer\HKEY_CURRENT_USER\SOFTWARE\Khronos\OpenXR\1\ApiLayers\Implicit` to `Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\OpenXR\1\ApiLayers\Implicit`.
 - **OpenXR Toolkit** does it's own magic on installation and doesn't care if it's installed before or after OXRMC.
 
 ### Optional: Confirm correct installation
@@ -57,7 +56,8 @@ To use an updated version of OXRMC it is sufficient to download and run the late
 
 ### Uninstallation
 
-To remove the OpenXR-MotionCompensation layer just use windows settings/control panel as you would do witgh any other application. During uninstallation you can choose to delete your configuration files in the appdata directory or to keep them for later use. 
+To remove the OpenXR-MotionCompensation layer just use windows settings/control panel as you would do witgh any other application. During uninstallation you can choose to delete your configuration and log files in the appdata directory or to keep them for later use. 
+- If somethimng goes wrong on installation and you don't know what or why, you can check the log file `Uninstall Log <yyyy-mm-dd xxx>.txt` that is created in the `%TEMP%` folder.
 
 ## Configuration
 

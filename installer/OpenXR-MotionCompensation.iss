@@ -9,11 +9,11 @@
 #define AppVersion "0.2.0"
 #define AppPublisher "BuzzteeBear"
 #define AppURL "https://github.com/BuzzteeBear/OpenXR-MotionCompensation"
+#define AppId "{A6E4E3AB-454E-4B79-BDCD-A11B4E1AAF4D}"
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
-; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
-AppId={{A6E4E3AB-454E-4B79-BDCD-A11B4E1AAF4D}
+AppId={{#AppId}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppVerName={#AppName}
@@ -139,7 +139,6 @@ begin
         begin
           MsgBox('Unable to delete old registry key: Computer\HKEY_LOCAL_MACHINE ' + Path + Name, mbError, MB_OK);
         end;
-
       end;
     end;
   end;
@@ -228,16 +227,44 @@ begin
         end
         else
         begin
-          MsgBox('Unable to read registry key: Computer\HKEY_LOCAL_MACHINE ' + Path + Name, mbError, MB_OK);
+          MsgBox('Unable to read registry key value: Computer\HKEY_LOCAL_MACHINE ' + Path + Name, mbError, MB_OK);
         end;
       end;
     end;
   end;
 end;
 
+procedure AppendStringToRegValue(const RootKey: integer; const SubKeyName, ValueName, StringToAppend: string);
+var
+  OldValue: string;  
+  NewValue: string;  
+  RootKeyString: string;
+begin
+  case RootKey of
+    HKLM: 
+      RootKeyString := 'Computer\HKEY_LOCAL_MACHINE';
+    HKCU: 
+      RootKeyString := 'Computer\HKEY_CURRENT_USER';
+  else 
+    RootKeyString := 'RootKey ' + IntToStr(RootKey);
+  end;
+
+  if RegQueryStringValue( RootKey, SubKeyName, ValueName, OldValue ) then
+  begin
+    NewValue := OldValue + StringToAppend
+    if RegWriteStringValue( RootKey, SubKeyName, ValueName, NewValue ) then
+      Log('Updated ' + RootKeyString + '\' + SubKeyName + '\' + ValueName + '. New Value = [' + NewValue + '].')
+    else
+      Log('Could not write to ' + RootKeyString + '\' + SubKeyName + '\' + ValueName + '. Value remains [' + OldValue + '].' )
+  end
+  else
+    Log('Could not read from ' + RootKeyString + '\' + SubKeyName + '\' + ValueName + '.' );
+end;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 var
-    ResultCode: Integer;
+  ResultCode: Integer;
+  UninstallSubKeyName:  string;
 begin
   if(CurStep = ssInstall) then 
   begin
@@ -250,12 +277,16 @@ begin
     // delete legacy power shell (un)install scripts
     DeleteFile(ExpandConstant('{app}\Install-OpenXR-MotionCompensation.ps1'));
     DeleteFile(ExpandConstant('{app}\Uninstall-OpenXR-MotionCompensation.ps1')); 
+		// Modify uninstall registry entries to add "/log" parameter to force creation of log
+    UninstallSubKeyName  := 'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{#AppId}_is1';
+    AppendStringToRegValue(HKLM, UninstallSubKeyName, 'UninstallString', ' /log');
+    AppendStringToRegValue(HKLM, UninstallSubKeyName, 'QuietUninstallString', ' /log');
   end;
   ResultCode:= 0;
 end;
 
 // Uninstall
-function DeleteConfigFiles() : boolean;
+function DeleteConfigAndLogFiles() : boolean;
 var
   FindRec: TFindRec;
   Path: string;
@@ -263,9 +294,9 @@ var
 begin
   Result := false;
   Path := ExpandConstant('{localappdata}\{#AppName}\');
-  if MsgBox(ExpandConstant('Do you want to keep your configuration files in ...\appdata\local\{#AppName}?'), mbConfirmation, MB_YESNO) = IDYES then
+  if MsgBox(ExpandConstant('Do you want to keep your configuration and log files in ...\appdata\local\{#AppName}?'), mbConfirmation, MB_YESNO) = IDYES then
   begin
-    Log(Format('Config files are kept in : %s', Path));
+    Log(Format('Config files are kept in : %s', [Path]));
   end
   else
   begin
@@ -273,19 +304,19 @@ begin
     begin
       try
         repeat
-          if EndsWith('.ini', Lowercase(FindRec.Name)) then
+          if EndsWith('.ini', Lowercase(FindRec.Name)) or EndsWith('.log', Lowercase(FindRec.Name)) then
           begin
             if FindRec.Attributes and FILE_ATTRIBUTE_DIRECTORY = 0 then
             begin
               File := Path + FindRec.Name;                
               if DeleteFile(File) then
               begin
-                Log(Format('Deleted config file: %s', [File]));
+                Log(Format('Deleted config/log file: %s', [File]));
                 Result := true;
               end
               else
               begin
-                MsgBox('Unable to delete config file ' + FindRec.Name + '. Please delete manually ',  mbError, MB_OK);
+                MsgBox('Unable to delete config/log file ' + FindRec.Name + '. Please delete manually ',  mbError, MB_OK);
               end;                          
             end;
           end;
@@ -294,7 +325,7 @@ begin
         FindClose(FindRec);
       end;
     end;
-    RemoveDir(ExpandConstant('{app}'));
+    RemoveDir(Path);
   end;
 end;
 
@@ -302,14 +333,10 @@ procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
     ResultCode: Integer;
 begin
-  if(CurUninstallStep = usUninstall) then 
-  begin
-    DeleteConfigFiles();
-    ResultCode:= 0; 
-  end; 
   if(CurUninstallStep = usPostUninstall) then 
   begin
-    // try to delete 
+    DeleteConfigAndLogFiles();
+    // try to delete installation directory
     RemoveDir(ExpandConstant('{app}'));
     ResultCode:= 0; 
   end;
