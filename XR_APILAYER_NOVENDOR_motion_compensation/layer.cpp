@@ -656,12 +656,17 @@ namespace motion_compensation_layer
 
         std::vector<const XrCompositionLayerBaseHeader*> resetLayers{};
         std::vector<XrCompositionLayerProjection*> resetProjectionLayers{};
+        std::vector<XrCompositionLayerQuad*> resetQuadLayers{};
         std::vector<std::vector<XrCompositionLayerProjectionView>*> resetViews{};
+
+        // use pose cache for reverse calculation
+        XrPosef reversedManipulation = Pose::Invert(m_PoseCache.GetSample(frameEndInfo->displayTime));
+        m_PoseCache.CleanUp(frameEndInfo->displayTime);
 
         for (uint32_t i = 0; i < frameEndInfo->layerCount; i++)
         {
             XrCompositionLayerBaseHeader baseHeader = *frameEndInfo->layers[i];
-            XrCompositionLayerBaseHeader* headerPtr{nullptr};
+            XrCompositionLayerBaseHeader* resetBaseHeader{nullptr};
             if (XR_TYPE_COMPOSITION_LAYER_PROJECTION == baseHeader.type)
             {
                 DebugLog("xrEndFrame: projection layer %u, space: %u\n", i, baseHeader.space);
@@ -682,10 +687,6 @@ namespace motion_compensation_layer
                 memcpy(projectionViews->data(),
                        projectionLayer->views,
                        projectionLayer->viewCount * sizeof(XrCompositionLayerProjectionView));
-
-                // use pose cache for reverse calculation
-                XrPosef reversedManipulation = Pose::Invert(m_PoseCache.GetSample(frameEndInfo->displayTime));
-                m_PoseCache.CleanUp(frameEndInfo->displayTime);
 
                 TraceLoggingWrite(g_traceProvider,
                                   "xrEndFrame_View",
@@ -722,18 +723,51 @@ namespace motion_compensation_layer
                                                      projectionLayer->space,
                                                      projectionLayer->viewCount,
                                                      projectionViews->data()};
-
                 resetProjectionLayers.push_back(resetProjectionLayer);
-                headerPtr = reinterpret_cast<XrCompositionLayerBaseHeader*>(resetProjectionLayer);
+                resetBaseHeader = reinterpret_cast<XrCompositionLayerBaseHeader*>(resetProjectionLayer);
             }
-            if (!headerPtr)
+            else if (XR_TYPE_COMPOSITION_LAYER_QUAD == baseHeader.type && !isViewSpace(baseHeader.space))
             {
-                resetLayers.push_back(frameEndInfo->layers[i]);
+                // compensate quad layers unless they are relative to view space
+                DebugLog("xrEndFrame: quad layer %u, space: %u\n", i, baseHeader.space);
+
+                const XrCompositionLayerQuad* quadLayer =
+                    reinterpret_cast<const XrCompositionLayerQuad*>(frameEndInfo->layers[i]);
+
+               TraceLoggingWrite(g_traceProvider,
+                                  "xrEndFrame_Layer",
+                                  TLArg("QuadLayer", "Type"),
+                                  TLArg(quadLayer->layerFlags, "Flags"),
+                                  TLPArg(quadLayer->space, "Space"),
+                                  TLArg(xr::ToString(quadLayer->pose).c_str(), "Pose"));
+
+                // apply reverse manipulation to quad layer pose
+                XrPosef resetPose = Pose::Multiply(quadLayer->pose, reversedManipulation);
+
+                TraceLoggingWrite(g_traceProvider,
+                                  "xrEndFrame_Layer",
+                                  TLArg("QuadLayer_After", "Type"),
+                                  TLArg(xr::ToString(resetPose).c_str(), "Pose"));
+
+                // create quad layer with reset pose
+                XrCompositionLayerQuad* const resetQuadLayer = new XrCompositionLayerQuad{quadLayer->type,
+                                                                                          quadLayer->next,
+                                                                                          quadLayer->layerFlags,
+                                                                                          quadLayer->space,
+                                                                                          quadLayer->eyeVisibility,
+                                                                                          quadLayer->subImage,
+                                                                                          resetPose,
+                                                                                          quadLayer->size};
+                resetQuadLayers.push_back(resetQuadLayer);
+                resetBaseHeader = reinterpret_cast<XrCompositionLayerBaseHeader*>(resetQuadLayer);
+            }
+            if (resetBaseHeader)
+            {
+                resetLayers.push_back(resetBaseHeader);
             }
             else
             {
-                const XrCompositionLayerBaseHeader* const baseHeaderPtr = headerPtr;
-                resetLayers.push_back(baseHeaderPtr);
+                resetLayers.push_back(frameEndInfo->layers[i]);
             }
         }
         HandleKeyboardInput(frameEndInfo->displayTime);
@@ -748,9 +782,13 @@ namespace motion_compensation_layer
         XrResult result = OpenXrApi::xrEndFrame(session, &resetFrameEndInfo);
 
         // clean up memory
-        for (auto layer : resetProjectionLayers)
+        for (auto projection : resetProjectionLayers)
         {
-            delete layer;
+            delete projection;
+        }
+        for (auto quad : resetQuadLayers)
+        {
+            delete quad;
         }
         for (auto views : resetViews)
         {

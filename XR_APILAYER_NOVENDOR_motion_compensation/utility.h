@@ -152,9 +152,13 @@ namespace utility
             std::unique_lock lock(m_Mutex);
 
             auto it = m_Cache.lower_bound(time - m_Tolerance);
-            if (m_Cache.end() != it && m_Cache.begin() != it)
+            if (m_Cache.begin() != it)
             {
-                m_Cache.erase(m_Cache.begin(), it);
+                it--;
+                if (m_Cache.end() != it && m_Cache.begin() != it)
+                {
+                    m_Cache.erase(m_Cache.begin(), it);
+                }
             }
         }
 
