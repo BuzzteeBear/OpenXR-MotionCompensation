@@ -113,6 +113,7 @@ namespace motion_compensation_layer
         XrSystemId m_systemId{XR_NULL_SYSTEM_ID};
         XrSession m_Session{XR_NULL_HANDLE};
         bool m_ActionSetAttached{false};
+        bool m_InteractionProfileSuggested{false};
         bool m_Initialized{true};
         bool m_Activated{false};
         std::string m_Application;

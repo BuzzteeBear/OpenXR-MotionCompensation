@@ -96,9 +96,9 @@ namespace utility
                     return lowerIt->second;
                 }
             }
-            LAYER_NAMESPACE::log::ErrorLog("GetSample(%s) unable to find sample %u+-%dms\n",
+            LAYER_NAMESPACE::log::ErrorLog("GetSample(%s) unable to find sample %u+-%.3fms\n",
                                            typeid(Sample).name(),
-                                           time,
+                                           time / 1000.0,
                                            m_Tolerance);
             if (!itIsEnd)
             {

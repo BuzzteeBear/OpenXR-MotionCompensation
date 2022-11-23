@@ -51,6 +51,7 @@ class ConfigManager
     bool GetFloat(Cfg key, float& val);
     bool GetString(Cfg key, std::string& val);
     bool GetShortcut(Cfg key, std::set<int>& val);
+    std::string GetControllerSide();
 
     void SetValue(Cfg key, bool val);
     void SetValue(Cfg key, int val);

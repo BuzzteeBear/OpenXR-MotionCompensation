@@ -286,7 +286,7 @@ namespace Tracker
         }
         if (GetConfig()->GetBool(Cfg::UseCorPos, m_LoadPoseFromFile))
         {
-            Log("center of rotation is %s read from config file\n", m_LoadPoseFromFile ? "" : "not ");
+            Log("center of rotation is %s read from config file\n", m_LoadPoseFromFile ? "" : "not");
         }
         else
         {

@@ -185,6 +185,21 @@ bool ConfigManager::GetShortcut(Cfg key, std::set<int>& val)
     }
     return true;
 }
+std::string ConfigManager::GetControllerSide()
+{
+    std::string side{"left"};
+    if (!GetConfig()->GetString(Cfg::TrackerSide, side))
+    {
+        ErrorLog("%s: unable to determine contoller side. Defaulting to %s\n", __FUNCTION__, side);
+    }
+    if ("right" != side && "left" != side)
+    {
+        ErrorLog("%s: invalid contoller side: %s. Defaulting to 'left'\n", side);
+        side = "left";
+    }
+    return side;
+}
+
 
 void ConfigManager::SetValue(Cfg key, bool val)
 {

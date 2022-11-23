@@ -76,7 +76,7 @@ What you can modify in a configuration file:
 ### Sections in configuration file
 
 - `tracker`: The following tracker `type` keys are available:
-  - `controller`: use either the left or the right motion controller as reference tracker. Valid options for the key `side` are `left` and `right` (this is also used for motion controller based debug mode)  
+  - `controller`: use either the left or the right motion controller as reference tracker. Valid options for the key `side` are `left` and `right` (**Note that changing side requires a restart of the vr session**)
   - `srs`: use the virtual tradcker data provided by SRS motion software when using a Witmotion (or similar?) sensor on the motion rig.
   - `flypt` use the virtual tracker data provided by FlyPT Mover.
   - `yaw`: use the virtual tracker data provided by Yaw VR and Yaw 2. Either while using SRS or Game Engine.
