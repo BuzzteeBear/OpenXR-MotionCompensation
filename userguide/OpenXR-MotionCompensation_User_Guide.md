@@ -1,32 +1,33 @@
 # OpenXR Motion Compensation
 
+**DISCLAIMER: This software is distributed as-is, without any warranties or conditions of any kind. Use at your own risks!**
+
 Version: 0.2.0
 
-**Please open this file with a browser or another application able to display [markdown files](https://www.markdownguide.org/getting-started) correctly.**
-
-This package contains the binary and scripts needed for OpenXR motion compensation [API layer](https://www.khronos.org/registry/OpenXR/specs/1.0/html/xrspec.html#api-layers). 
+**This document contains instructions on how to use OpenXR motion compensation [API layer](https://www.khronos.org/registry/OpenXR/specs/1.0/html/xrspec.html#api-layers).**
 
 Limitations:
 
 - The motion compensation API Layer is made for Windows 64-bit only.
+- The software (obviously) only works with VR/AR applications using an OpenXR runtime implementation.
 
-**DISCLAIMER: This software is distributed as-is, without any warranties or conditions of any kind. Use at your own risks!**
+
 
 ## Contact
 Feel free to join our [Discord community](https://discord.gg/BVWugph5XF) for feedback and assistance.
 
 You can find the [source code](https://github.com/BuzzteeBear/OpenXR-MotionCompensation) and the [latest release](https://github.com/BuzzteeBear/OpenXR-MotionCompensation/releases) or report issues at github.com.
 
-If you are (or know someone) willing and able to support the software development (mostly C++, maybe some GUI stuff later on) side of the project feel free to contact **@BuzzteeBear** on the Discord server about ways to contribute.
+If you are (or know someone) willing and able to support the software development (mostly C++, maybe some GUI stuff later on) side of the project, feel free to contact **@BuzzteeBear** on the Discord server to ask about ways to contribute.
 
-Donations to the project are very welcome and can be made via [Paypal](ttps://www.paypal.com/donate/?hosted_button_id=Q64DT2ADFCBU8). 
+Donations to the project are very welcome and can be made via [Paypal](https://www.paypal.com/donate/?hosted_button_id=Q64DT2ADFCBU8). 
 
 ## Installation
 
 ### Execute installer executable
 Just execute the installation executable called `Install OpenXR-MotionCompensation <current_version>.exe` and follow the instructions.
 A few hints concerning the installation process:
-- If you're upgrading from a version prior to 0.2.0, it is recommended to target the installation directory already existing. This will allow the installer to transfer your existing configuration files into the ''appdata/local/OpenXR-MotionCompensation'' directory that is used from version 0.2.0 onwards.
+- If you're upgrading from a version prior to 0.2.0, it is recommended to target the installation directory already existing. This will allow the installer to transfer your existing configuration files into the `appdata/local/OpenXR-MotionCompensation` directory that is used from version 0.2.0 onwards.
 - Using a subdirectory of `program files` as installation target is recommended, especially for compatibility with WMR based headsets.
 - Although the installation needs adminstrative privileges make sure to run the installation executable using the windows account you're using to launch your games/Open XR applications. This enables the installer to put the configuraton file(s) into the correct appdata directory.
 - If somethimng goes wrong on installation and you don't know what or why, you can check the log file `Setup Log <yyyy-mm-dd xxx>.txt` that is created in the `%TEMP%` folder.
@@ -35,9 +36,8 @@ A few hints concerning the installation process:
 There may be issues with other OpenXR API layers that are installed on your system. For the most part they can be solved by using the correct order of installation (because that implicitly determines the order in which the layers are loaded).  
 According to user feedback following constraints seem to be working:
 - **XRNeckSaver** needs to be installed before OXRMC.
-  - at some point in time the XRNeckSaver installer contained a bug causing folllowing layers not to be loaded. If you encounter this issue check out this [XRNecksaver discord conversation](https://discord.com/channels/982356942821408788/982357046060007504/1023722065989218305). This bug will be fixed automatically once OXRMC has its own installer.
 - **OpenKneeBoard** needs to be installed before OXRMC. 
-  - but it is (or at least was) putting its registry key in `...HKEY_CURRENT_USER/...` while OXRMC uses `...HKEY_LOCAL_MACHINE/...` . So if you're having trouble changing the loading order, try moving the key for OpenKneeboard from `Computer\HKEY_CURRENT_USER\SOFTWARE\Khronos\OpenXR\1\ApiLayers\Implicit` to `Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\OpenXR\1\ApiLayers\Implicit`.
+  - but it is (or at least was at some point) putting its registry key in `...HKEY_CURRENT_USER/...` while OXRMC uses `...HKEY_LOCAL_MACHINE/...` . So if you're having trouble changing the loading order, try moving the key for OpenKneeboard from `Computer\HKEY_CURRENT_USER\SOFTWARE\Khronos\OpenXR\1\ApiLayers\Implicit` to `Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\OpenXR\1\ApiLayers\Implicit`.
 - **OpenXR Toolkit** does it's own magic on installation and doesn't care if it's installed before or after OXRMC.
 
 ### Optional: Confirm correct installation
@@ -119,8 +119,8 @@ To enable OXRMC to correlate translation and rotation of the rig to the virtual 
 - If you're using YawVR Game Engine you can also use the parameters `Head Distance` and `Height` in its Motion Compensation tab to specify the offset of the cor. Head distance is basically equal to `offset_forward` in the configration file. But note that the height parameter is measured upwards from the bottom of your playspace, so you'll need to have that setup correctly in order to use that feature.
 
 ### Saving and the cor location (experimental)
-The current position and orientation of the cor is part of the configuration and can be saved to the (global or app-specific) config file. When your satisfied with the current setting you can set the config key `use_cor_pos` to `1`. This causes the cor position to be loaded from the config file when calibrating instead of being determined using the hmd position and the offset values.
-**Note that this functionality is still expermiental and may not work with all HMD vendors. Setting up the playspace in the VR runtime configuration of your hmd might help to get this orking correctly. Rumor has it that some HMDs need to be started/initialized at the exact same location for the playspace coordinates to be consistent in between uses.**
+The current position and orientation of the cor is part of the configuration and can be saved to the (global or app-specific) config file. When your satisfied with the current setting you can set the config key `use_cor_pos` to `1`. This causes the cor position to be loaded from the config file when calibrating instead of being determined using the hmd position and the offset values.  
+**Note that this functionality is still expermiental and may not work with all HMD vendors. Setting up the playspace in the VR runtime configuration of your hmd might help to get this orking correctly. Rumor has it that some HMDs need to be started/initialized at the exact same location for the playspace coordinates to be consistent in between uses.**  
 Feedback on success or failure of this functionality using different VR systems is expicitly welcome and can be left on the [discord server](#contact) of the project.
 
 ## Running your application
@@ -137,7 +137,7 @@ Feedback on success or failure of this functionality using different VR systems 
 - after modifying filter strength or cor offset for virtual tracker you can save your changes to the default configuration file 
 - after modifying the config file(s) manually you can use the `reload_config` shortcut (**CTRL** + **SHIFT** + **L** by default) to restart the OXRMC software with the new values. 
 
-## Addtional Notes
+## Additional Notes
 - Upon activating any shortcut you get audible feedback, corresponding to the performed action (or an error, if something went wrong).
 
 - If you recenter the in-app view during a session the reference pose is reset by default. Therefore you should only do that while your motion rig is in neutral position. It is possible (depending on the application) that this automatic recalibration is not triggered, causing the view and reference pose to be out of sync and leading to erroneous motion compensation. You should do the following steps to get this corrected again:
@@ -173,102 +173,104 @@ To combine multiple keys for a single shortcut they need to be separated by '+' 
 
 List of supported shortcut key names:
 
-- `SHIFT`: shift key
-- `CTRL`: ctrl key
-- `ALT`: alt key
-- `LSHIFT`: left shift key
-- `RSHIFT`: right shift key
-- `LCTRL`: left ctrl key
-- `RCTRL`: right ctrl key
-- `LALT`: left alt key
-- `RALT`: right alt key
-- `0`- `9`: numerical key
-- `A`- `Z`: alphbetical key
-- `BACKQUOTE`: `~ key (US)
-- `TAB`: tabulator key
-- `CAPS`: caps lock key
-- `PLUS`: + key (any country)
-- `MINUS`:- key (any country)
-- `OPENBRACKET`: [{ key (US)
-- `CLOSEBRACKET`: ]} key (US)
-- `SEMICOLON`: ;: key (US)
-- `QUOTE`: '" key (US)
-- `BACKSLASH`: \\| key (US)
-- `COMMA`: , key (any country
-- `PERIOD`: . key (any country)
-- `SLASH`: /? key (US)
-- `BACK`:  backspace key
-- `CLR`: clr key
-- `RETURN`: return key
-- `ESC`: esc key
-- `SPACE`: space key
-- `LEFT`: cursor left key
-- `UP`: cursor up key
-- `RIGHT`: cursor right key
-- `DOWN`: cursor down key
-- `INS`: ins key
-- `DEL`: del key
-- `HOME`: home key
-- `END`: end key
-- `PGUP`: page up key
-- `PGDN`: page down key
-- `NUM0`: 0 key on NUM
-- `NUM1`: 1 key on NUM 
-- `NUM2`: 2 key on NUM
-- `NUM3`: 3 key on NUM
-- `NUM4`: 4 key on NUM
-- `NUM5`: 5 key on NUM
-- `NUM6`: 6 key on NUM
-- `NUM7`: 7 key on NUM
-- `NUM8`: 8 key on NUM
-- `NUM9`: 9 key on NUM
-- `NUMLOCK`: numlock key
-- `NUMDIVIDE`: / key on NUM
-- `NUMMULTIPLY`: * key on NUM
-- `NUMSUBTRACT`:- key on NUM
-- `NUMADD`: + key on NUM
-- `NUMDECIMAL`: . key on NUM
-- `NUMSEPARATOR`: separator key on NUM
-- `F1`: F1 key
-- `F2`: F2 key
-- `F3`: F3 key
-- `F4`: F4 key
-- `F5`: F5 key
-- `F6`: F6 key
-- `F7`: F7 key
-- `F8`: F8 key
-- `F9`: F9 key
-- `F10`: F10 key
-- `F11`: F11 key
-- `F12`: F12 key
-- `PRTSC`: print screen key
-- `SCROLL`: scroll lock key
-- `PAUSE`: pause key
-- `SELECT`: select key
-- `PRINT`: print key
-- `HELP`: help key
-- `EXEC`: execute key
-- `GAMEPAD_A`: A button on gamepad
-- `GAMEPAD_B`: B button on gamepad
-- `GAMEPAD_X`: X button on gamepad
-- `GAMEPAD_Y`: Y button on gamepad
-- `GAMEPAD_RIGHT_SHOULDER`: right shoulder button on gamepad
-- `GAMEPAD_LEFT_SHOULDER`: left shoulder button on gamepad
-- `GAMEPAD_LEFT_TRIGGER`: left trigger button on gamepad
-- `GAMEPAD_RIGHT_TRIGGER`: right trigger button on gamepad
-- `GAMEPAD_DPAD_UP`: digital pad up on gamepad
-- `GAMEPAD_DPAD_DOWN`: digital pad down on gamepad
-- `GAMEPAD_DPAD_LEFT`: digital pad left on gamepad
-- `GAMEPAD_DPAD_RIGHT`: digital pad right on gamepad
-- `GAMEPAD_START`: start button on gamepad
-- `GAMEPAD_VIEW`: view button on gamepad
-- `GAMEPAD_LEFT_THUMBSTICK_BUTTON`: left thumbstick pressed on gamepad
-- `GAMEPAD_RIGHT_THUMBSTICK_BUTTON`: right thumbstick pressed on gamepad
-- `GAMEPAD_LEFT_THUMBSTICK_UP`: left thumbstick up on gamepad
-- `GAMEPAD_LEFT_THUMBSTICK_DOWN`: left thumbstick down on gamepad
-- `GAMEPAD_LEFT_THUMBSTICK_RIGHT`: left thumbstick left on gamepad
-- `GAMEPAD_LEFT_THUMBSTICK_LEFT`: left thumbstick right on gamepad
-- `GAMEPAD_RIGHT_THUMBSTICK_UP`: right thumbstick up on gamepad
-- `GAMEPAD_RIGHT_THUMBSTICK_DOWN`: right thumbstick down on gamepad
-- `GAMEPAD_RIGHT_THUMBSTICK_RIGHT`: right thumbstick left on gamepad
-- `GAMEPAD_RIGHT_THUMBSTICK_LEFT`: right thumbstick right on gamepad
+Name | Key 
+:---|:---
+`SHIFT` | shift key
+`CTRL` | ctrl key
+`ALT` | alt key
+`LSHIFT` | left shift key
+`RSHIFT` | right shift key
+`LCTRL` | left ctrl key
+`RCTRL` | right ctrl key
+`LALT` | left alt key
+`RALT` | right alt key
+`0`- `9` | numerical key
+`A`- `Z` | alphbetical key
+`BACKQUOTE` | \`~ key (US)|
+`TAB` | tabulator key
+`CAPS` | caps lock key
+`PLUS` | + key (any country)
+`MINUS` | - key (any country)
+`OPENBRACKET` | [{ key (US)
+`CLOSEBRACKET` | ]} key (US)
+`SEMICOLON` | ;: key (US)
+`QUOTE` | '" key (US)
+`BACKSLASH` | \\\| key (US)
+`COMMA` | , key (any country)
+`PERIOD` | . key (any country)
+`SLASH` | /? key (US)
+`BACK` |  backspace key
+`CLR` | clr key
+`RETURN` | return key
+`ESC` | esc key
+`SPACE` | space key
+`LEFT` | cursor left key
+`UP` | cursor up key
+`RIGHT` | cursor right key
+`DOWN` | cursor down key
+`INS` | ins key
+`DEL` | del key
+`HOME` | home key
+`END` | end key
+`PGUP` | page up key
+`PGDN` | page down key
+`NUM0` | 0 key on NUM
+`NUM1` | 1 key on NUM 
+`NUM2` | 2 key on NUM
+`NUM3` | 3 key on NUM
+`NUM4` | 4 key on NUM
+`NUM5` | 5 key on NUM
+`NUM6` | 6 key on NUM
+`NUM7` | 7 key on NUM
+`NUM8` | 8 key on NUM
+`NUM9` | 9 key on NUM
+`NUMLOCK` | numlock key
+`NUMDIVIDE` | / key on NUM
+`NUMMULTIPLY` | * key on NUM
+`NUMSUBTRACT` | - key on NUM
+`NUMADD` | + key on NUM
+`NUMDECIMAL` | . key on NUM
+`NUMSEPARATOR` | separator key on NUM
+`F1` | F1 key
+`F2` | F2 key
+`F3` | F3 key
+`F4` | F4 key
+`F5` | F5 key
+`F6` | F6 key
+`F7` | F7 key
+`F8` | F8 key
+`F9` | F9 key
+`F10` | F10 key
+`F11` | F11 key
+`F12` | F12 key
+`PRTSC` | print screen key
+`SCROLL` | scroll lock key
+`PAUSE` | pause key
+`SELECT` | select key
+`PRINT` | print key
+`HELP` | help key
+`EXEC` | execute key
+`GAMEPAD_A` | A button on gamepad
+`GAMEPAD_B` | B button on gamepad
+`GAMEPAD_X` | X button on gamepad
+`GAMEPAD_Y` | Y button on gamepad
+`GAMEPAD_RIGHT_SHOULDER` | right shoulder button on gamepad
+`GAMEPAD_LEFT_SHOULDER` | left shoulder button on gamepad
+`GAMEPAD_LEFT_TRIGGER` | left trigger button on gamepad
+`GAMEPAD_RIGHT_TRIGGER` | right trigger button on gamepad
+`GAMEPAD_DPAD_UP` | digital pad up on gamepad
+`GAMEPAD_DPAD_DOWN` | digital pad down on gamepad
+`GAMEPAD_DPAD_LEFT` | digital pad left on gamepad
+`GAMEPAD_DPAD_RIGHT` | digital pad right on gamepad
+`GAMEPAD_START` | start button on gamepad
+`GAMEPAD_VIEW` | view button on gamepad
+`GAMEPAD_LEFT_THUMBSTICK_BUTTON` | left thumbstick pressed on gamepad
+`GAMEPAD_RIGHT_THUMBSTICK_BUTTON` | right thumbstick pressed on gamepad
+`GAMEPAD_LEFT_THUMBSTICK_UP` | left thumbstick up on gamepad
+`GAMEPAD_LEFT_THUMBSTICK_DOWN` | left thumbstick down on gamepad
+`GAMEPAD_LEFT_THUMBSTICK_RIGHT` | left thumbstick left on gamepad
+`GAMEPAD_LEFT_THUMBSTICK_LEFT` | left thumbstick right on gamepad
+`GAMEPAD_RIGHT_THUMBSTICK_UP` | right thumbstick up on gamepad
+`GAMEPAD_RIGHT_THUMBSTICK_DOWN` | right thumbstick down on gamepad
+`GAMEPAD_RIGHT_THUMBSTICK_RIGHT` | right thumbstick left on gamepad
+`GAMEPAD_RIGHT_THUMBSTICK_LEFT` | right thumbstick right on gamepad
