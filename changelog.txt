@@ -1,5 +1,19 @@
 OpenXR-MotionCompensation Changelog
 
+Version 0.2.1
+	
+	Hotfixes
+	- Fixed motion controller initializaton for apps not using them natively
+	- Fixed conflict with other Open XR API Layers
+	
+	Installation executable
+	- preserve existing registry entry to maintain loading order
+	- deactivated loading order fix for ultraleap api layer
+	- fixed deletion of malformed registry key (XRNeckSafer)
+	
+	Miscellaneous
+	- added hint about dof inversion in user guide
+
 Version 0.2.0
 	
 	OpenComposite bugfixes

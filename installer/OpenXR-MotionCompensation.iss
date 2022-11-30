@@ -4,7 +4,7 @@
 ; make sure to adapt this path to your system before building the installer
 #define SolutionDir "P:\Development\OpenXR-MotionCompensation"
 #define AppName "OpenXR-MotionCompensation"
-#define AppVersion "0.2.0"
+#define AppVersion "0.2.1"
 #define AppPublisher "oxrmc@mailbox.org"
 #define AppURL "https://github.com/BuzzteeBear/OpenXR-MotionCompensation"
 #define AppId "{A6E4E3AB-454E-4B79-BDCD-A11B4E1AAF4D}"
@@ -45,7 +45,7 @@ Source: "{#SolutionDir}\bin\x64\Release\XR_APILAYER_NOVENDOR_motion_compensation
 Source: "{#SolutionDir}\XR_APILAYER_NOVENDOR_motion_compensation\XR_APILAYER_NOVENDOR_motion_compensation.json"; DestDir: "{app}"; Flags: ignoreversion
 
 [Registry]
-Root: HKLM; Subkey: "SOFTWARE\Khronos\OpenXR\1\ApiLayers\Implicit"; ValueName: "{app}\XR_APILAYER_NOVENDOR_motion_compensation.json"; ValueType: dword; ValueData: 0; Flags: uninsdeletevalue
+Root: HKLM; Subkey: "SOFTWARE\Khronos\OpenXR\1\ApiLayers\Implicit"; ValueName: "{app}\XR_APILAYER_NOVENDOR_motion_compensation.json"; ValueType: dword; ValueData: 0; Flags: createvalueifdoesntexist uninsdeletevalue 
 
 [INI]
 ; [tracker]
@@ -112,6 +112,11 @@ begin
   Result := SameStr(SubText, EndStr);
 end;
 
+function StartsWith(Prefix, Text: string) : boolean;
+begin
+  Result := pos(Prefix, Text) = 1
+end;
+
 // Wizard customization
 procedure InitializeWizard;
 begin
@@ -139,16 +144,17 @@ var
   I: Integer;
 begin 
   Path := 'SOFTWARE\Khronos\OpenXR\1\ApiLayers\Implicit'
-  if RegDeleteValue(HKLM, Path, 'Default') then
+  if RegDeleteValue(HKLM, Path, '') then
   begin
-    Log(Format('Deleted registry key: %s', ['Computer\HKEY_LOCAL_MACHINE' + Path + '\Default'] ));
+    Log(Format('Deleted registry key: %s', ['Computer\HKEY_LOCAL_MACHINE' + Path + '\(Default)'] ));
   end; 
   if RegGetValueNames(HKLM, Path, Names)then
   begin
     for I := 0 to GetArrayLength(Names) - 1 do
     begin
       Name := Names[I];
-      if EndsWith('XR_APILAYER_NOVENDOR_motion_compensation.json', Name) then
+      if EndsWith('XR_APILAYER_NOVENDOR_motion_compensation.json', Name)
+        AND NOT StartsWith(ExpandConstant('{app}'), Name) then
       begin
         if RegDeleteValue(HKLM, Path, Name) then
         begin
@@ -299,7 +305,6 @@ end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
 var
-  ResultCode: Integer;
   UninstallSubKeyName:  string;
 begin
   if(CurStep = ssInstall) then 
@@ -309,7 +314,7 @@ begin
   end;
   if(CurStep = ssPostInstall) then 
   begin
-    ReorderApiLayerRegEntries();
+    // ReorderApiLayerRegEntries();
     // delete legacy power shell (un)install scripts
     DeleteFile(ExpandConstant('{app}\Install-OpenXR-MotionCompensation.ps1'));
     DeleteFile(ExpandConstant('{app}\Uninstall-OpenXR-MotionCompensation.ps1')); 
@@ -317,12 +322,8 @@ begin
     UninstallSubKeyName  := 'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{#AppId}_is1';
     AppendStringToRegValue(HKLM, UninstallSubKeyName, 'UninstallString', ' /log');
     AppendStringToRegValue(HKLM, UninstallSubKeyName, 'QuietUninstallString', ' /log');
-  end;
-  if(CurStep = ssPostInstall) then 
-  begin
     OpenUserGuide();
   end;
-  ResultCode:= 0;
 end;
 
 // Uninstall
