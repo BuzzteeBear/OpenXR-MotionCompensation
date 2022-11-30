@@ -64,20 +64,6 @@ namespace LAYER_NAMESPACE {
             }
         }
 
-        // The list of extensions to remove or implicitly add.
-        PFN_xrEnumerateInstanceExtensionProperties xrEnumerateInstanceExtensionProperties = nullptr;
-        CHECK_XRCMD(apiLayerInfo->nextInfo->nextGetInstanceProcAddr(
-            XR_NULL_HANDLE,
-            "xrEnumerateInstanceExtensionProperties",
-            reinterpret_cast<PFN_xrVoidFunction*>(&xrEnumerateInstanceExtensionProperties)));
-
-        uint32_t extensionsCount = 0;
-        CHECK_XRCMD(xrEnumerateInstanceExtensionProperties(nullptr, 0, &extensionsCount, nullptr));
-        std::vector<XrExtensionProperties> extensions(extensionsCount, {XR_TYPE_EXTENSION_PROPERTIES});
-        CHECK_XRCMD(
-            xrEnumerateInstanceExtensionProperties(nullptr, extensionsCount, &extensionsCount, extensions.data()));
-
-
         std::vector<std::string> blockedExtensions;
         std::vector<std::string> implicitExtensions;
         

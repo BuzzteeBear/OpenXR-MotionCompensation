@@ -44,7 +44,7 @@
 <body>
 	<content><h1 id="openxr-motion-compensation">OpenXR Motion Compensation</h1>
 <p><strong>DISCLAIMER: This software is distributed as-is, without any warranties or conditions of any kind. Use at your own risks!</strong></p>
-<p>Version: 0.2.0</p>
+<p>Version: 0.2.1</p>
 <p><strong>This document contains instructions on how to use OpenXR motion compensation <a href="https://www.khronos.org/registry/OpenXR/specs/1.0/html/xrspec.html#api-layers">API layer</a>.</strong></p>
 <p>Limitations:</p>
 <ul>
@@ -158,11 +158,12 @@ Upon starting an OpenXR application with the API layer active for the first time
 <li>issue the calibration command by activating the <code>center</code> shortcut. You can also do this implicitly by activating motion compensation if you haven't (re)calibrated since last loading of the configuration.</li>
 </ol>
 <ul>
+<li>You may have to invert some of the rotations/translations on output side to get them compensated properly. <strong>For new users it's strongly recommended to use some artificial telemetry (joystriick input, sine wave generator, etc.) and testing one degree of freedom at at time</strong></li>
 <li>If you're using YawVR Game Engine you can also use the parameters <code>Head Distance</code> and <code>Height</code> in its Motion Compensation tab to specify the offset of the cor. Head distance is basically equal to <code>offset_forward</code> in the configration file. But note that the height parameter is measured upwards from the bottom of your playspace, so you'll need to have that setup correctly in order to use that feature.</li>
 </ul>
 <h3 id="saving-and-the-cor-location-experimental">Saving and the cor location (experimental)</h3>
 <p>The current position and orientation of the cor is part of the configuration and can be saved to the (global or app-specific) config file. When your satisfied with the current setting you can set the config key <code>use_cor_pos</code> to <code>1</code>. This causes the cor position to be loaded from the config file when calibrating instead of being determined using the hmd position and the offset values.<br />
-<strong>Note that this functionality is still expermiental and may not work with all HMD vendors. Setting up the playspace in the VR runtime configuration of your hmd might help to get this orking correctly. Rumor has it that some HMDs need to be started/initialized at the exact same location for the playspace coordinates to be consistent in between uses.</strong><br />
+<strong>Note that this functionality is still experimental and may not work with all HMD vendors. Setting up the playspace in the VR runtime configuration of your hmd might help to get this orking correctly. Rumor has it that some HMDs need to be started/initialized at the exact same location for the playspace coordinates to be consistent in between uses.</strong><br />
 Feedback on success or failure of this functionality using different VR systems is expicitly welcome and can be left on the <a href="#contact">discord server</a> of the project.</p>
 <h2 id="running-your-application">Running your application</h2>
 <ol>

@@ -359,7 +359,7 @@ namespace motion_compensation_layer
 
     XrResult OpenXrLayer::xrAttachSessionActionSets(XrSession session, const XrSessionActionSetsAttachInfo* attachInfo)
     {
-        if (m_InteractionProfileSuggested)
+        if (!m_InteractionProfileSuggested)
         {
             // suggest simple controller (as fallback in case application does not suggest any bindings)
             XrInteractionProfileSuggestedBinding suggestedBindings{XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING,
