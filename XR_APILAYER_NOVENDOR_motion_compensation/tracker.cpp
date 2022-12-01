@@ -765,7 +765,7 @@ namespace Tracker
             }
             if ("controller" == trackerType)
             {
-                Log("using motion cotroller as tracker\n");
+                Log("using motion controller as tracker\n");
                 if (previousTracker)
                 {
                     delete previousTracker;

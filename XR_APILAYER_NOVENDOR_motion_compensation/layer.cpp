@@ -280,11 +280,11 @@ namespace motion_compensation_layer
         XrResult result =  OpenXrApi::xrGetCurrentInteractionProfile(session, topLevelUserPath, interactionProfile);
         if (interactionProfile)
         {
-            Log("\tcurrent interaction profile for %s: %s\n",
+            Log("current interaction profile for %s: %s\n",
                 getXrPath(topLevelUserPath).c_str(),
                 XR_NULL_PATH != interactionProfile->interactionProfile
                     ? getXrPath(interactionProfile->interactionProfile).c_str()
-                    : "XR_MULL_PATH");
+                    : "XR_NULL_PATH");
         }
         return result;
     }
