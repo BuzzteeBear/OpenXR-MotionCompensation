@@ -46,9 +46,19 @@ namespace motion_compensation_layer
         }
     }
 
+    XrResult OpenXrLayer::xrDestroyInstance(XrInstance instance)
+    {
+        Log("xrDestroyInstance\n");
+        if (XR_NULL_HANDLE != m_ActionSet)
+        {
+            GetInstance()->xrDestroyActionSet(m_ActionSet);
+        }
+        return OpenXrApi::xrDestroyInstance(instance);
+    }
+
     XrResult OpenXrLayer::xrCreateInstance(const XrInstanceCreateInfo* createInfo)
     {
-        DebugLog("xrCreateInstance\n");
+        Log("xrCreateInstance\n");
         if (createInfo->type != XR_TYPE_INSTANCE_CREATE_INFO)
         {
             return XR_ERROR_VALIDATION_FAILURE;
@@ -77,7 +87,7 @@ namespace motion_compensation_layer
         }
 
         // Needed to resolve the requested function pointers.
-        OpenXrApi::xrCreateInstance(createInfo);
+        XrResult result = OpenXrApi::xrCreateInstance(createInfo);
 
         m_Application = GetApplicationName();
 
@@ -119,7 +129,9 @@ namespace motion_compensation_layer
             m_Initialized = false;
         }
 
-        return XR_SUCCESS;
+        CreateTrackerAction();
+
+        return result;
     }
 
     XrResult OpenXrLayer::xrGetSystem(XrInstance instance, const XrSystemGetInfo* getInfo, XrSystemId* systemId)
@@ -159,7 +171,7 @@ namespace motion_compensation_layer
                                           const XrSessionCreateInfo* createInfo,
                                           XrSession* session)
     {
-        DebugLog("xrCreateSession\n");
+        Log("xrCreateSession\n");
         if (createInfo->type != XR_TYPE_SESSION_CREATE_INFO)
         {
             return XR_ERROR_VALIDATION_FAILURE;
@@ -176,31 +188,9 @@ namespace motion_compensation_layer
         {
             if (isSystemHandled(createInfo->systemId))
             {
-                // initialize the resources for the motion controller
-                XrActionSetCreateInfo actionSetCreateInfo{XR_TYPE_ACTION_SET_CREATE_INFO, nullptr};
-                strcpy_s(actionSetCreateInfo.actionSetName, "general_tracker_set");
-                strcpy_s(actionSetCreateInfo.localizedActionSetName, "General Tracker Set");
-                actionSetCreateInfo.priority = 0;
-                if (!XR_SUCCEEDED(xrCreateActionSet(GetXrInstance(), &actionSetCreateInfo, &m_ActionSet)))
-                {
-                    ErrorLog("%s: unable to create action set\n", __FUNCTION__);
-                    m_Initialized = false;
-                }
-                TraceLoggingWrite(g_traceProvider, "OpenXrTracker::Init", TLPArg(m_ActionSet, "xrCreateActionSet"));
+                m_Session = *session;
 
-                XrActionCreateInfo actionCreateInfo{XR_TYPE_ACTION_CREATE_INFO, nullptr};
-                strcpy_s(actionCreateInfo.actionName, "general_tracker");
-                strcpy_s(actionCreateInfo.localizedActionName, "General Tracker");
-                actionCreateInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
-                actionCreateInfo.countSubactionPaths = 0;
-                if (!XR_SUCCEEDED(xrCreateAction(m_ActionSet, &actionCreateInfo, &m_TrackerPoseAction)))
-                {
-                    ErrorLog("%s: unable to create action\n", __FUNCTION__);
-                    m_Initialized = false;
-                }
-                TraceLoggingWrite(g_traceProvider,
-                                  "OpenXrTracker::Init",
-                                  TLPArg(m_TrackerPoseAction, "xrCreateAction"));
+                CreateTrackerActionSpace();
 
                 XrReferenceSpaceCreateInfo referenceSpaceCreateInfo{XR_TYPE_REFERENCE_SPACE_CREATE_INFO,
                                                                     nullptr,
@@ -217,7 +207,7 @@ namespace motion_compensation_layer
 
     XrResult OpenXrLayer::xrBeginSession(XrSession session, const XrSessionBeginInfo* beginInfo)
     {
-        DebugLog("xrBeginSession\n");
+        Log("xrBeginSession\n");
         TraceLoggingWrite(
             g_traceProvider,
             "xrBeginSession",
@@ -225,50 +215,28 @@ namespace motion_compensation_layer
             TLArg(xr::ToCString(beginInfo->primaryViewConfigurationType), "PrimaryViewConfigurationType"));
 
         XrResult result = OpenXrApi::xrBeginSession(session, beginInfo);
-        m_Session = session;
         m_ViewConfigType = beginInfo->primaryViewConfigurationType;
-
-        // create action space
-        XrActionSpaceCreateInfo actionSpaceCreateInfo{XR_TYPE_ACTION_SPACE_CREATE_INFO, nullptr};
-        actionSpaceCreateInfo.action = m_TrackerPoseAction;
-        actionSpaceCreateInfo.subactionPath = XR_NULL_PATH;
-        actionSpaceCreateInfo.poseInActionSpace = Pose::Identity();
-        CHECK_XRCMD(GetInstance()->xrCreateActionSpace(m_Session, &actionSpaceCreateInfo, &m_TrackerSpace));
-        TraceLoggingWrite(g_traceProvider,
-                          "OpenXrTracker::beginSession",
-                          TLPArg(m_TrackerSpace, "xrCreateActionSpace"));
 
         return result;
     }
 
     XrResult OpenXrLayer::xrEndSession(XrSession session)
     {
-        DebugLog("xrEndSession\n");
+        Log("xrEndSession\n");
         TraceLoggingWrite(g_traceProvider, "xrEndssion", TLPArg(session, "Session"));
-        if (XR_NULL_HANDLE != m_TrackerSpace)
-        {
-            GetInstance()->xrDestroySpace(m_TrackerSpace);
-            m_TrackerSpace = XR_NULL_HANDLE;
-        }
         return OpenXrApi::xrEndSession(session);
     }
 
     XrResult OpenXrLayer::xrDestroySession(XrSession session)
     {
-        DebugLog("xrDestroySession\n");
+        Log("xrDestroySession\n");
         TraceLoggingWrite(g_traceProvider, "xrDestroySession", TLPArg(session, "Session"));
 
-        if (XR_NULL_HANDLE != m_ActionSet)
-        {
-            GetInstance()->xrDestroyActionSet(m_ActionSet);    
-        }
         if (XR_NULL_HANDLE != m_TrackerSpace)
         {
             GetInstance()->xrDestroySpace(m_TrackerSpace);
             m_TrackerSpace = XR_NULL_HANDLE;
         }
-        m_ActionSetAttached = false;
-        m_InteractionProfileSuggested = false;
 
         return OpenXrApi::xrDestroySession(session);
     }
@@ -293,13 +261,32 @@ namespace motion_compensation_layer
     OpenXrLayer::xrSuggestInteractionProfileBindings(XrInstance instance,
                                                      const XrInteractionProfileSuggestedBinding* suggestedBindings)
     {
+        if (m_ActionSetAttached)
+        {
+            // detach and recreate actionset and trackerspace
+            if (XR_NULL_HANDLE != m_ActionSet)
+            {
+                GetInstance()->xrDestroyActionSet(m_ActionSet);
+            }
+            if (XR_NULL_HANDLE != m_TrackerSpace)
+            {
+                GetInstance()->xrDestroySpace(m_TrackerSpace);
+                m_TrackerSpace = XR_NULL_HANDLE;
+            }
+            CreateTrackerAction();
+            CreateTrackerActionSpace();
+            m_ActionSetAttached = false;
+            m_InteractionProfileSuggested = false;
+            Log("detached and recreated tracker action");
+        }
+
         const std::string profile = getXrPath(suggestedBindings->interactionProfile);
         TraceLoggingWrite(g_traceProvider,
                           "xrSuggestInteractionProfileBindings",
                           TLPArg(instance, "Instance"),
                           TLArg(profile.c_str(), "InteractionProfile"));
 
-        DebugLog("xrSuggestInteractionProfileBindings: %s\n", profile.c_str());
+        Log("xrSuggestInteractionProfileBindings: %s\n", profile.c_str());
         for (uint32_t i = 0; i < suggestedBindings->countSuggestedBindings; i++)
         {
             TraceLoggingWrite(g_traceProvider,
@@ -384,7 +371,7 @@ namespace motion_compensation_layer
                               TLArg(path.c_str(), "Path"));
         }
 
-        DebugLog("xrAttachSessionActionSets\n");
+        Log("xrAttachSessionActionSets\n");
         TraceLoggingWrite(g_traceProvider, "xrAttachSessionActionSets", TLPArg(session, "Session"));
         for (uint32_t i = 0; i < attachInfo->countActionSets; i++)
         {
@@ -856,6 +843,44 @@ namespace motion_compensation_layer
                                                                                                           : 0;
     }
 
+    void OpenXrLayer::CreateTrackerAction()
+    {
+        XrActionSetCreateInfo actionSetCreateInfo{XR_TYPE_ACTION_SET_CREATE_INFO, nullptr};
+        strcpy_s(actionSetCreateInfo.actionSetName, "general_tracker_set");
+        strcpy_s(actionSetCreateInfo.localizedActionSetName, "General Tracker Set");
+        actionSetCreateInfo.priority = 0;
+        if (!XR_SUCCEEDED(xrCreateActionSet(GetXrInstance(), &actionSetCreateInfo, &m_ActionSet)))
+        {
+            ErrorLog("%s: unable to create action set\n", __FUNCTION__);
+        }
+        TraceLoggingWrite(g_traceProvider, "OpenXrLayer::CreateTrackerAction", TLPArg(m_ActionSet, "xrCreateActionSet"));
+
+        XrActionCreateInfo actionCreateInfo{XR_TYPE_ACTION_CREATE_INFO, nullptr};
+        strcpy_s(actionCreateInfo.actionName, "general_tracker");
+        strcpy_s(actionCreateInfo.localizedActionName, "General Tracker");
+        actionCreateInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
+        actionCreateInfo.countSubactionPaths = 0;
+        if (!XR_SUCCEEDED(xrCreateAction(m_ActionSet, &actionCreateInfo, &m_TrackerPoseAction)))
+        {
+            ErrorLog("%s: unable to create action\n", __FUNCTION__);
+        }
+        TraceLoggingWrite(g_traceProvider, "OpenXrLayer::CreateTrackerAction", TLPArg(m_TrackerPoseAction, "xrCreateAction"));
+    }
+
+    void OpenXrLayer::CreateTrackerActionSpace()
+    {
+        XrActionSpaceCreateInfo actionSpaceCreateInfo{XR_TYPE_ACTION_SPACE_CREATE_INFO, nullptr};
+        actionSpaceCreateInfo.action = m_TrackerPoseAction;
+        actionSpaceCreateInfo.subactionPath = XR_NULL_PATH;
+        actionSpaceCreateInfo.poseInActionSpace = Pose::Identity();
+        if (!XR_SUCCEEDED(GetInstance()->xrCreateActionSpace(m_Session, &actionSpaceCreateInfo, &m_TrackerSpace)))
+        {
+            ErrorLog("%s: unable to create action space\n", __FUNCTION__);
+        }
+        TraceLoggingWrite(g_traceProvider,
+                          "OpenXrLayer::CreateTrackerActionSpace",
+                          TLPArg(m_TrackerSpace, "xrCreateActionSpace"));
+    }
     void OpenXrLayer::ToggleActive(XrTime time)
     {
         // handle debug test rotation

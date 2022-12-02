@@ -44,6 +44,7 @@ namespace motion_compensation_layer
         OpenXrLayer() = default;
 
         virtual ~OpenXrLayer();
+        XrResult xrDestroyInstance(XrInstance instance) override;
 
         XrResult xrCreateInstance(const XrInstanceCreateInfo* createInfo) override;
         XrResult xrGetSystem(XrInstance instance, const XrSystemGetInfo* getInfo, XrSystemId* systemId) override;
@@ -97,6 +98,8 @@ namespace motion_compensation_layer
         bool isSystemHandled(XrSystemId systemId) const;
         bool isViewSpace(XrSpace space) const;
         uint32_t GetNumViews();
+        void CreateTrackerAction();
+        void CreateTrackerActionSpace();
         void ToggleActive(XrTime time);
         void Recalibrate(XrTime time);
         void ChangeOffset(Direction dir);
