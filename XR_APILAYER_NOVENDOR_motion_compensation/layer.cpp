@@ -118,7 +118,7 @@ namespace motion_compensation_layer
 
         // initialize tracker
         Tracker::GetTracker(&m_Tracker);
-        if (!m_Tracker->Init())
+        if (!m_Tracker->Init() || !m_ViveTracker.Init())
         {
             m_Initialized = false;
         }
@@ -300,24 +300,25 @@ namespace motion_compensation_layer
         XrInteractionProfileSuggestedBinding bindingProfiles = *suggestedBindings;
         std::vector<XrActionSuggestedBinding> bindings{};
 
-        const std::string side = GetConfig()->GetControllerSide();
-        const std::string handInput("/user/hand/" + side + "/input");
-        const std::string path("/user/hand/" + side + "/input/grip/pose");
-        bool isHandInput = false;
-        bool bindingOverriden = false;
-
         bindings.resize((uint32_t)bindingProfiles.countSuggestedBindings);
         memcpy(bindings.data(),
                bindingProfiles.suggestedBindings,
                bindingProfiles.countSuggestedBindings * sizeof(XrActionSuggestedBinding));
+
+        const std::string trackerInput(m_ViveTracker.active
+                                           ? m_ViveTracker.role + "input"
+                                           : "/user/hand/" + GetConfig()->GetControllerSide() + "/input");
+        const std::string path(trackerInput + "/grip/pose");
+        bool isTrackerInput = false;
+        bool bindingOverriden = false;
         for (XrActionSuggestedBinding& curBinding : bindings)
         {
-            // find and override hand pose action 
+            // find and override tracker pose action
             const std::string bindingPath = getXrPath(curBinding.binding);
-            if (!bindingPath.compare(0, handInput.size(), handInput))
+            if (!bindingPath.compare(0, trackerInput.size(), trackerInput))
             {
                 // path starts with user/hand/<side>/input
-                isHandInput = true;
+                isTrackerInput = true;
 
                 if (getXrPath(curBinding.binding) == path)
                 {
@@ -329,10 +330,10 @@ namespace motion_compensation_layer
                 }
             }
         }
-        if (isHandInput && !bindingOverriden)
+        if (isTrackerInput && !bindingOverriden)
         {
-            // suggestion is for hand input but doesn't include pose -> add it
-            XrActionSuggestedBinding newBinding {m_TrackerPoseAction};
+            // suggestion is for tracker input but doesn't include pose -> add it
+            XrActionSuggestedBinding newBinding{m_TrackerPoseAction};
             CHECK_XRCMD(xrStringToPath(GetXrInstance(), path.c_str(), &newBinding.binding));
             bindings.push_back(newBinding);
             m_InteractionProfileSuggested = true;
@@ -348,25 +349,28 @@ namespace motion_compensation_layer
     {
         if (!m_InteractionProfileSuggested)
         {
-            // suggest simple controller (as fallback in case application does not suggest any bindings)
+            // suggest fallback in case application does not suggest any bindings
             XrInteractionProfileSuggestedBinding suggestedBindings{XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING,
                                                                    nullptr};
-            CHECK_XRCMD(xrStringToPath(GetXrInstance(),
-                                       "/interaction_profiles/khr/simple_controller",
-                                       &suggestedBindings.interactionProfile));
-            const std::string side = GetConfig()->GetControllerSide();
-            const std::string path("/user/hand/" + side + "/input/grip/pose");
-            
             XrActionSuggestedBinding binding{m_TrackerPoseAction};
+
+            const std::string profile{m_ViveTracker.active ? m_ViveTracker.profile
+                                                           : "/interaction_profiles/khr/simple_controller"};
+            CHECK_XRCMD(xrStringToPath(GetXrInstance(), profile.c_str(), &suggestedBindings.interactionProfile));
+
+            const std::string path{
+                (m_ViveTracker.active ? m_ViveTracker.role : "/user/hand/" + GetConfig()->GetControllerSide()) +
+                "/input/grip/pose"};
             CHECK_XRCMD(xrStringToPath(GetXrInstance(), path.c_str(), &binding.binding));
 
             suggestedBindings.suggestedBindings = &binding;
             suggestedBindings.countSuggestedBindings = 1;
             CHECK_XRCMD(OpenXrApi::xrSuggestInteractionProfileBindings(GetXrInstance(), &suggestedBindings));
-            Log("suggested simple controller as fallback\n");
+            m_InteractionProfileSuggested = true;
+            Log("suggested %s before action set attachment\n", profile.c_str());
             TraceLoggingWrite(g_traceProvider,
                               "OpenXrTracker::xrAttachSessionActionSets",
-                              TLArg("/interaction_profiles/khr/simple_controller", "Profile"),
+                              TLArg(profile.c_str(), "Profile"),
                               TLPArg(binding.action, "Action"),
                               TLArg(path.c_str(), "Path"));
         }
@@ -859,7 +863,17 @@ namespace motion_compensation_layer
         strcpy_s(actionCreateInfo.actionName, "general_tracker");
         strcpy_s(actionCreateInfo.localizedActionName, "General Tracker");
         actionCreateInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
-        actionCreateInfo.countSubactionPaths = 0;
+        XrPath viveRolePath;
+        if (m_ViveTracker.active)
+        {
+            CHECK_XRCMD(xrStringToPath(GetXrInstance(), m_ViveTracker.role.c_str(), &viveRolePath));
+            actionCreateInfo.countSubactionPaths = 1;
+            actionCreateInfo.subactionPaths = &viveRolePath;
+        }
+        else
+        {
+            actionCreateInfo.countSubactionPaths = 0;
+        }
         if (!XR_SUCCEEDED(xrCreateAction(m_ActionSet, &actionCreateInfo, &m_TrackerPoseAction)))
         {
             ErrorLog("%s: unable to create action\n", __FUNCTION__);
@@ -871,7 +885,10 @@ namespace motion_compensation_layer
     {
         XrActionSpaceCreateInfo actionSpaceCreateInfo{XR_TYPE_ACTION_SPACE_CREATE_INFO, nullptr};
         actionSpaceCreateInfo.action = m_TrackerPoseAction;
-        actionSpaceCreateInfo.subactionPath = XR_NULL_PATH;
+        m_ViveTracker.active
+            ? CHECK_XRCMD(
+                  xrStringToPath(GetXrInstance(), m_ViveTracker.role.c_str(), &actionSpaceCreateInfo.subactionPath))
+            : actionSpaceCreateInfo.subactionPath = XR_NULL_PATH;
         actionSpaceCreateInfo.poseInActionSpace = Pose::Identity();
         if (!XR_SUCCEEDED(GetInstance()->xrCreateActionSpace(m_Session, &actionSpaceCreateInfo, &m_TrackerSpace)))
         {

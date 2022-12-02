@@ -138,6 +138,14 @@ namespace Tracker
             m_IsSrs = true;
         }
     };
+    
+    struct ViveTrackerInfo
+    {
+        bool Init();
+        bool active{false};
+        std::string role;
+        const std::string profile{"/interaction_profiles/htc/vive_tracker_htcx"};
+    };
 
     constexpr float angleToRadian{(float)M_PI / 180.0f};
 

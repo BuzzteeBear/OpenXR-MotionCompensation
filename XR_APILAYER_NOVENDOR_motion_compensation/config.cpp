@@ -190,11 +190,11 @@ std::string ConfigManager::GetControllerSide()
     std::string side{"left"};
     if (!GetConfig()->GetString(Cfg::TrackerSide, side))
     {
-        ErrorLog("%s: unable to determine contoller side. Defaulting to %s\n", __FUNCTION__, side);
+        ErrorLog("%s: unable to determine contoller side. Defaulting to %s\n", __FUNCTION__, side.c_str());
     }
     if ("right" != side && "left" != side)
     {
-        ErrorLog("%s: invalid contoller side: %s. Defaulting to 'left'\n", side);
+        ErrorLog("%s: invalid contoller side: %s. Defaulting to 'left'\n", __FUNCTION__, side.c_str());
         side = "left";
     }
     return side;

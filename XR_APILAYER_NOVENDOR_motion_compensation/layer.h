@@ -124,6 +124,7 @@ namespace motion_compensation_layer
         std::vector<XrView> m_EyeOffsets{};
         XrViewConfigurationType m_ViewConfigType{XR_VIEW_CONFIGURATION_TYPE_MAX_ENUM};
         Tracker::TrackerBase* m_Tracker{nullptr};
+        Tracker::ViveTrackerInfo m_ViveTracker;
         utility::Cache<XrPosef> m_PoseCache{2000, xr::math::Pose::Identity()};
         utility::KeyboardInput m_Input;
        

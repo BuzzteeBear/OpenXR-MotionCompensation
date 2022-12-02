@@ -227,7 +227,7 @@ namespace Tracker
         }
         else
         {
-            ErrorLog("unable to cast instance to OpenXrLayer\n");
+            ErrorLog("%s: unable to cast instance to OpenXrLayer\n", __FUNCTION__);
             return false;
         }
     }
@@ -773,6 +773,16 @@ namespace Tracker
                 *tracker = new OpenXrTracker();
                 return;
             }
+            if ("vive" == trackerType)
+            {
+                Log("using vive tracker as tracker\n");
+                if (previousTracker)
+                {
+                    delete previousTracker;
+                }
+                *tracker = new OpenXrTracker();
+                return;
+            }
             else
             {
                 ErrorLog("unknown tracker type: %s\n", trackerType.c_str());
@@ -780,7 +790,7 @@ namespace Tracker
         }
         else
         {
-            ErrorLog("unable to determine tracker type, defaulting to 'controller'\n");
+            ErrorLog("unable to determine tracker type\n");
         }
         if (previousTracker)
         {
@@ -789,5 +799,32 @@ namespace Tracker
         }
         ErrorLog("defaulting to 'controller'\n");
         *tracker = new OpenXrTracker();
+    }
+    bool ViveTrackerInfo::Init()
+    {
+        std::string trackerType;
+        if (!GetConfig()->GetString(Cfg::TrackerType, trackerType))
+        {
+            return false;
+        }
+        if ("vive" == trackerType)
+        {
+            if (!GetInstance()->IsExtensionGranted(XR_HTCX_VIVE_TRACKER_INTERACTION_EXTENSION_NAME))
+            {
+                ErrorLog("%s: runtime does not support Vive tracker OpenXR extension: %s\n",
+                         __FUNCTION__,
+                         XR_HTCX_VIVE_TRACKER_INTERACTION_EXTENSION_NAME);
+                return false;
+            }
+            std::string side;
+            if (!GetConfig()->GetString(Cfg::TrackerSide, side))
+            {
+                return false;
+            }
+            role = "/user/vive_tracker_htcx/role/" + side;
+            Log("vive tracker is using role %s\n", role.c_str());
+            active = true;
+        }
+        return true;
     }
 } // namespace Tracker

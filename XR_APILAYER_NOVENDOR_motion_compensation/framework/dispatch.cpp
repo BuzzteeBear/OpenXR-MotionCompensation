@@ -66,19 +66,10 @@ namespace LAYER_NAMESPACE {
 
         std::vector<std::string> blockedExtensions;
         std::vector<std::string> implicitExtensions;
-        
-        /* not neccessary
-        for (const auto& extension : extensions)
-        {
-           
-            if (!strcmp(XR_EXT_HP_MIXED_REALITY_CONTROLLER_EXTENSION_NAME, extension.extensionName) 
-                || !strcmp(XR_MSFT_CONTROLLER_MODEL_EXTENSION_NAME, extension.extensionName))
-            {
-                implicitExtensions.push_back(extension.extensionName); 
-            }
-        }
-        */
 
+        // request extension for usage of vive trackers
+        implicitExtensions.push_back(XR_HTCX_VIVE_TRACKER_INTERACTION_EXTENSION_NAME);
+ 
         // Only request implicit extensions that are supported.
         //
         // While the OpenXR standard states that xrEnumerateInstanceExtensionProperties() can be queried without an
