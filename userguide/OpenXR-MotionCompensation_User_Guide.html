@@ -44,7 +44,7 @@
 <body>
 	<content><h1 id="openxr-motion-compensation">OpenXR Motion Compensation</h1>
 <p><strong>DISCLAIMER: This software is distributed as-is, without any warranties or conditions of any kind. Use at your own risks!</strong></p>
-<p>Version: 0.2.1</p>
+<p>Version: 0.2.2</p>
 <p><strong>This document contains instructions on how to use OpenXR motion compensation <a href="https://www.khronos.org/registry/OpenXR/specs/1.0/html/xrspec.html#api-layers">API layer</a>.</strong></p>
 <p>Limitations:</p>
 <ul>
@@ -53,7 +53,7 @@
 </ul>
 <h2 id="contact">Contact</h2>
 <p>Feel free to join our <a href="https://discord.gg/BVWugph5XF">Discord community</a> for feedback and assistance.</p>
-<p>You can find the <a href="https://github.com/BuzzteeBear/OpenXR-MotionCompensation">source code</a> and the <a href="https://github.com/BuzzteeBear/OpenXR-MotionCompensation/releases">latest release</a> or report issues at github.com.</p>
+<p>You can find the <a href="https://github.com/BuzzteeBear/OpenXR-MotionCompensation">source code</a> and the <a href="https://github.com/BuzzteeBear/OpenXR-MotionCompensation/releases">latest release</a> or report issues on github.</p>
 <p>If you are (or know someone) willing and able to support the software development (mostly C++, maybe some GUI stuff later on) side of the project, feel free to contact <strong>@BuzzteeBear</strong> on the Discord server to ask about ways to contribute.</p>
 <p>Donations to the project are very welcome and can be made via <a href="https://www.paypal.com/donate/?hosted_button_id=Q64DT2ADFCBU8">Paypal</a>.</p>
 <h2 id="installation">Installation</h2>
@@ -111,7 +111,24 @@ Upon starting an OpenXR application with the API layer active for the first time
 <ul>
 <li><p><code>tracker</code>: The following tracker <code>type</code> keys are available:</p>
 <ul>
-<li><code>controller</code>: use either the left or the right motion controller as reference tracker. Valid options for the key <code>side</code> are <code>left</code> and <code>right</code> (<strong>Note that changing side requires a restart of the vr session</strong>)</li>
+<li><code>controller</code>: use either the left or the right motion controller as reference tracker. Valid options for the key <code>side</code> are <code>left</code> and <code>right</code> (<strong>Note that changing the side or switching between motion controller and vive tracker requires a restart of the vr session</strong>)</li>
+<li><code>vive</code>: use a vive tracker as reference for motion compensation. The key <code>side</code> has to match the role assigned to the tracker. Valid options for that are:
+<ul>
+<li><code>handheld_object</code> which hand (left, right, any) doesn't matter. Having more than one active vive tracker assigned to that role may lead to conflicts, though.</li>
+<li><code>left_foot</code></li>
+<li><code>right_foot</code></li>
+<li><code>left_shoulder</code></li>
+<li><code>right_shoulder</code></li>
+<li><code>left_elbow</code></li>
+<li><code>right_elbow</code></li>
+<li><code>left_knee</code></li>
+<li><code>right_knee</code></li>
+<li><code>waist</code></li>
+<li><code>chest</code></li>
+<li><code>camera</code></li>
+<li><code>keyboard</code></li>
+</ul>
+</li>
 <li><code>srs</code>: use the virtual tradcker data provided by SRS motion software when using a Witmotion (or similar?) sensor on the motion rig.</li>
 <li><code>flypt</code> use the virtual tracker data provided by FlyPT Mover.</li>
 <li><code>yaw</code>: use the virtual tracker data provided by Yaw VR and Yaw 2. Either while using SRS or Game Engine.</li>
@@ -161,10 +178,10 @@ Upon starting an OpenXR application with the API layer active for the first time
 <li>You may have to invert some of the rotations/translations on output side to get them compensated properly. <strong>For new users it's strongly recommended to use some artificial telemetry (joystriick input, sine wave generator, etc.) and testing one degree of freedom at at time</strong></li>
 <li>If you're using YawVR Game Engine you can also use the parameters <code>Head Distance</code> and <code>Height</code> in its Motion Compensation tab to specify the offset of the cor. Head distance is basically equal to <code>offset_forward</code> in the configration file. But note that the height parameter is measured upwards from the bottom of your playspace, so you'll need to have that setup correctly in order to use that feature.</li>
 </ul>
-<h3 id="saving-and-the-cor-location-experimental">Saving and the cor location (experimental)</h3>
+<h3 id="saving-and-the-cor-location">Saving and the cor location</h3>
 <p>The current position and orientation of the cor is part of the configuration and can be saved to the (global or app-specific) config file. When your satisfied with the current setting you can set the config key <code>use_cor_pos</code> to <code>1</code>. This causes the cor position to be loaded from the config file when calibrating instead of being determined using the hmd position and the offset values.<br />
-<strong>Note that this functionality is still experimental and may not work with all HMD vendors. Setting up the playspace in the VR runtime configuration of your hmd might help to get this orking correctly. Rumor has it that some HMDs need to be started/initialized at the exact same location for the playspace coordinates to be consistent in between uses.</strong><br />
-Feedback on success or failure of this functionality using different VR systems is expicitly welcome and can be left on the <a href="#contact">discord server</a> of the project.</p>
+<strong>Note that this functionality may not work with all HMD vendors. Setting up the playspace in the VR runtime configuration of your hmd might help to get this orking correctly. Rumor has it that some HMDs need to be started/initialized at the exact same location for the playspace coordinates to be consistent in between uses.</strong><br />
+Feedback on success or failure of this functionality using different VR systems is very welcome and can be made via <a href="#contact">discord server</a> of the project.</p>
 <h2 id="running-your-application">Running your application</h2>
 <ol>
 <li>make sure your using OpenXR as runtime in the application you wish to use motion compensation in</li>

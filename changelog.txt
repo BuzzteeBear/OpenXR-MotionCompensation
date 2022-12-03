@@ -1,9 +1,20 @@
 OpenXR-MotionCompensation Changelog
 
+Version 0.2.2
+
+	Vive Tracker
+	- added support for Vive tracker
+	
+	Bufixes
+	- fixed crash to desktop on physical tracker initialization (Assetto Corsa Competizione with OpenComposite)
+
+	Miscellaneous
+	- minor logging improvements (millisseconds in timestamp, added entries for initialization API calls)
+	
 Version 0.2.1
 	
 	Hotfixes
-	- Fixed motion controller initializaton for apps not using them natively
+	- Fixed motion controller initialization for apps not using them natively
 	- Fixed conflict with other Open XR API Layers
 	
 	Installation executable

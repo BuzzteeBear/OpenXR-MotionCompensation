@@ -2,7 +2,7 @@
 
 **DISCLAIMER: This software is distributed as-is, without any warranties or conditions of any kind. Use at your own risks!**
 
-Version: 0.2.1
+Version: 0.2.2
 
 **This document contains instructions on how to use OpenXR motion compensation [API layer](https://www.khronos.org/registry/OpenXR/specs/1.0/html/xrspec.html#api-layers).**
 
@@ -12,11 +12,10 @@ Limitations:
 - The software (obviously) only works with VR/AR applications using an OpenXR runtime implementation.
 
 
-
 ## Contact
 Feel free to join our [Discord community](https://discord.gg/BVWugph5XF) for feedback and assistance.
 
-You can find the [source code](https://github.com/BuzzteeBear/OpenXR-MotionCompensation) and the [latest release](https://github.com/BuzzteeBear/OpenXR-MotionCompensation/releases) or report issues at github.com.
+You can find the [source code](https://github.com/BuzzteeBear/OpenXR-MotionCompensation) and the [latest release](https://github.com/BuzzteeBear/OpenXR-MotionCompensation/releases) or report issues on github.
 
 If you are (or know someone) willing and able to support the software development (mostly C++, maybe some GUI stuff later on) side of the project, feel free to contact **@BuzzteeBear** on the Discord server to ask about ways to contribute.
 
@@ -76,7 +75,21 @@ What you can modify in a configuration file:
 ### Sections in configuration file
 
 - `tracker`: The following tracker `type` keys are available:
-  - `controller`: use either the left or the right motion controller as reference tracker. Valid options for the key `side` are `left` and `right` (**Note that changing side requires a restart of the vr session**)
+  - `controller`: use either the left or the right motion controller as reference tracker. Valid options for the key `side` are `left` and `right` (**Note that changing the side or switching between motion controller and vive tracker requires a restart of the vr session**)
+  - `vive`: use a vive tracker as reference for motion compensation. The key `side` has to match the role assigned to the tracker. Valid options for that are:
+    - `handheld_object` which hand (left, right, any) doesn't matter. Having more than one active vive tracker assigned to that role may lead to conflicts, though.
+    - `left_foot`
+    - `right_foot`
+    - `left_shoulder`
+    - `right_shoulder`
+    - `left_elbow`
+    - `right_elbow`
+    - `left_knee`
+    - `right_knee`
+    - `waist`
+    - `chest`
+    - `camera`
+    - `keyboard`
   - `srs`: use the virtual tradcker data provided by SRS motion software when using a Witmotion (or similar?) sensor on the motion rig.
   - `flypt` use the virtual tracker data provided by FlyPT Mover.
   - `yaw`: use the virtual tracker data provided by Yaw VR and Yaw 2. Either while using SRS or Game Engine.
@@ -119,10 +132,10 @@ To enable OXRMC to correlate translation and rotation of the rig to the virtual 
 - You may have to invert some of the rotations/translations on output side to get them compensated properly. **For new users it's strongly recommended to use some artificial telemetry (joystriick input, sine wave generator, etc.) and testing one degree of freedom at at time**
 - If you're using YawVR Game Engine you can also use the parameters `Head Distance` and `Height` in its Motion Compensation tab to specify the offset of the cor. Head distance is basically equal to `offset_forward` in the configration file. But note that the height parameter is measured upwards from the bottom of your playspace, so you'll need to have that setup correctly in order to use that feature.
 
-### Saving and the cor location (experimental)
+### Saving and the cor location
 The current position and orientation of the cor is part of the configuration and can be saved to the (global or app-specific) config file. When your satisfied with the current setting you can set the config key `use_cor_pos` to `1`. This causes the cor position to be loaded from the config file when calibrating instead of being determined using the hmd position and the offset values.  
-**Note that this functionality is still experimental and may not work with all HMD vendors. Setting up the playspace in the VR runtime configuration of your hmd might help to get this orking correctly. Rumor has it that some HMDs need to be started/initialized at the exact same location for the playspace coordinates to be consistent in between uses.**  
-Feedback on success or failure of this functionality using different VR systems is expicitly welcome and can be left on the [discord server](#contact) of the project.
+**Note that this functionality may not work with all HMD vendors. Setting up the playspace in the VR runtime configuration of your hmd might help to get this orking correctly. Rumor has it that some HMDs need to be started/initialized at the exact same location for the playspace coordinates to be consistent in between uses.**  
+Feedback on success or failure of this functionality using different VR systems is very welcome and can be made via [discord server](#contact) of the project.
 
 ## Running your application
 1. make sure your using OpenXR as runtime in the application you wish to use motion compensation in
