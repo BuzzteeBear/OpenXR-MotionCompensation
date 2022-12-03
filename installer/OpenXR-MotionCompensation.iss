@@ -4,7 +4,7 @@
 ; make sure to adapt this path to your system before building the installer
 #define SolutionDir "P:\Development\OpenXR-MotionCompensation"
 #define AppName "OpenXR-MotionCompensation"
-#define AppVersion "0.2.1"
+#define AppVersion "0.2.2"
 #define AppPublisher "oxrmc@mailbox.org"
 #define AppURL "https://github.com/BuzzteeBear/OpenXR-MotionCompensation"
 #define AppId "{A6E4E3AB-454E-4B79-BDCD-A11B4E1AAF4D}"
@@ -25,7 +25,7 @@ DisableProgramGroupPage=yes
 DisableDirPage=auto
 LicenseFile={#SolutionDir}\installer\Disclaimer.txt
 OutputDir={#SolutionDir}\bin\Installer
-OutputBaseFilename=Install {#AppName} {#AppVersion}
+OutputBaseFilename=Install_{#AppName}_{#AppVersion}
 SetupIconFile={#SolutionDir}\installer\{#AppName}.ico
 UninstallDisplayIcon={#SolutionDir}\installer\{#AppName}.ico 
 ArchitecturesAllowed=x64
