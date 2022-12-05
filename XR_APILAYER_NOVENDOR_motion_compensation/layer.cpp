@@ -277,7 +277,7 @@ namespace motion_compensation_layer
             CreateTrackerActionSpace();
             m_ActionSetAttached = false;
             m_InteractionProfileSuggested = false;
-            Log("detached and recreated tracker action");
+            Log("detached and recreated tracker action\n");
         }
 
         const std::string profile = getXrPath(suggestedBindings->interactionProfile);

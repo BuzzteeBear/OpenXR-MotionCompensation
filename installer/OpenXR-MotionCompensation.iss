@@ -139,8 +139,7 @@ end;
 procedure RemoveRegEntries();
 var
   Names: TArrayOfString;
-  Name: string;
-  Path: string;
+  Name,Path: string;
   I: Integer;
 begin 
   Path := 'SOFTWARE\Khronos\OpenXR\1\ApiLayers\Implicit'
@@ -172,10 +171,7 @@ end;
 procedure MoveLegacyConfigFiles();
 var
   FindRec: TFindRec;
-  SrcPath: string;
-  DstPath: string;
-  SrcFile: string;
-  DstFile: string;
+  SrcPath, DstPath, SrcFile, DstFile: string;
   Moved: boolean;
 begin
   Moved := false;
@@ -224,34 +220,61 @@ end;
 procedure ReorderApiLayerRegEntries;
 var
   Names: TArrayOfString;
-  Name: string;
-  Path : string;
+  Name, Path, ToolkitKey, LeapMotionKey: string;
   I: Integer;
   Value: Cardinal;
 begin
+  ToolkitKey := '';
+  LeapMotionKey := '';
   Path := 'SOFTWARE\Khronos\OpenXR\1\ApiLayers\Implicit' 
   if RegGetValueNames(HKLM, Path, Names)then
   begin
     for I := 0 to GetArrayLength(Names) - 1 do
     begin
       Name := Names[I];
+      if EndsWith('XR_APILAYER_NOVENDOR_toolkit.json', Name) then
+      begin
+        ToolkitKey := Name;
+      end;
       if EndsWith('UltraleapHandTracking.json', Name) then
       begin
-        if RegQueryDWordValue(HKLM, Path, Name, Value) then
+        LeapMotionKey := Name;
+      end;
+    end;
+    if ToolkitKey <> '' then
+    begin
+      if RegQueryDWordValue(HKLM, Path, ToolkitKey, Value) then
+      begin
+        if RegDeleteValue(HKLM, Path, ToolkitKey) and RegWriteDWordValue(HKLM, Path, ToolkitKey, Value) then
         begin
-          if RegDeleteValue(HKLM, Path, Name) and RegWriteDWordValue(HKLM, Path, Name, Value) then
+          Log(Format('Recreated registry key: %s = %d', ['Computer\HKEY_LOCAL_MACHINE' + Path + ToolkitKey, Value]));
+          if LeapMotionKey <> '' then
           begin
-            Log(Format('Recreated registry key: %s = %d', ['Computer\HKEY_LOCAL_MACHINE' + Path + Name, Value]));
-          end
-          else
-          begin
-            MsgBox('Unable to move registry key: Computer\HKEY_LOCAL_MACHINE ' + Path + Name, mbError, MB_OK);
+            if RegQueryDWordValue(HKLM, Path, LeapMotionKey, Value) then
+            begin
+              if RegDeleteValue(HKLM, Path, LeapMotionKey) and RegWriteDWordValue(HKLM, Path, LeapMotionKey, Value) then
+              begin
+                Log(Format('Recreated registry key: %s = %d', ['Computer\HKEY_LOCAL_MACHINE' + Path + LeapMotionKey, Value]));
+              end
+              else
+              begin
+                MsgBox('Unable to recreate registry key: Computer\HKEY_LOCAL_MACHINE ' + Path + LeapMotionKey, mbError, MB_OK);
+              end;
+            end
+            else
+            begin
+              MsgBox('Unable to read registry key value: Computer\HKEY_LOCAL_MACHINE ' + Path +  LeapMotionKey, mbError, MB_OK);
+            end;
           end;
         end
         else
         begin
-          MsgBox('Unable to read registry key value: Computer\HKEY_LOCAL_MACHINE ' + Path + Name, mbError, MB_OK);
+          MsgBox('Unable to recreate registry key: Computer\HKEY_LOCAL_MACHINE ' + Path + ToolkitKey, mbError, MB_OK);
         end;
+      end
+      else
+      begin
+        MsgBox('Unable to read registry key value: Computer\HKEY_LOCAL_MACHINE ' + Path + ToolkitKey, mbError, MB_OK);
       end;
     end;
   end;
@@ -259,8 +282,7 @@ end;
 
 procedure AppendStringToRegValue(const RootKey: integer; const SubKeyName, ValueName, StringToAppend: string);
 var
-  OldValue: string;  
-  NewValue: string;  
+  OldValue, NewValue: string;  
   RootKeyString: string;
 begin
   case RootKey of
@@ -314,7 +336,7 @@ begin
   end;
   if(CurStep = ssPostInstall) then 
   begin
-    // ReorderApiLayerRegEntries();
+    ReorderApiLayerRegEntries();
     // delete legacy power shell (un)install scripts
     DeleteFile(ExpandConstant('{app}\Install-OpenXR-MotionCompensation.ps1'));
     DeleteFile(ExpandConstant('{app}\Uninstall-OpenXR-MotionCompensation.ps1')); 
@@ -330,8 +352,7 @@ end;
 function DeleteConfigAndLogFiles() : boolean;
 var
   FindRec: TFindRec;
-  Path: string;
-  File: string;
+  Path, File: string;
 begin
   Result := false;
   Path := ExpandConstant('{localappdata}\{#AppName}\');
