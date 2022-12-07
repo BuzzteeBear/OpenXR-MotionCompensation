@@ -1,0 +1,39 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationIcon>OpenXR-MotionCompensation.ico</ApplicationIcon>
+    <StartupObject>MmfReader.Program</StartupObject>
+    <Authors>Sebastian Veith</Authors>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageProjectUrl>https://github.com/BuzzteeBear/OpenXR-MotionCompensation</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/BuzzteeBear/OpenXR-MotionCompensation</RepositoryUrl>
+    <RepositoryType>Github</RepositoryType>
+    <Copyright>(c) 2022 Sebastian Veith</Copyright>
+    <Description>App to display content of memory mappeed files used for motion compensation in OpenXR-MotionCompensation prroject</Description>
+    <SignAssembly>false</SignAssembly>
+    <Platforms>x64</Platforms>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutputPath>..\bin\x64\Release\MmfReader\</OutputPath>
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <OutputPath>..\bin\x64\Debug\MmfReader\</OutputPath>
+    <PlatformTarget>x64</PlatformTarget>
+    <Optimize>false</Optimize>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="P:\Development\OpenXR-MotionCompensation\LICENSE">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
+  </ItemGroup>
+
+</Project>
