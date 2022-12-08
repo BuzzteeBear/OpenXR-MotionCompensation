@@ -35,6 +35,7 @@ namespace Feedback
         m_SoundResources[Event::RotRight] = ROT_RIGHT_WAV;
         m_SoundResources[Event::DebugOn] = DEBUG_ON_WAV;
         m_SoundResources[Event::DebugOff] = DEBUG_OFF_WAV;
+        m_SoundResources[Event::ConnectionLost] = CONNECTION_LOST_WAV;
 
         return true;
     }
@@ -54,7 +55,7 @@ namespace Feedback
                          __FUNCTION__,
                          soundResource->first,
                          soundResource->second,
-                         utility::LastErrorMsg(GetLastError()).c_str());
+                         utility::LastErrorMsg().c_str());
             }
         }
         else

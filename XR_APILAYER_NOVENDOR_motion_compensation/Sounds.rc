@@ -90,6 +90,8 @@ SAVED_WAV               WAVE                    "sounds\\saved.wav"
 
 UP_WAV                  WAVE                    "sounds\\up.wav"
 
+CONNECTION_LOST_WAV     WAVE                    "sounds\\connection_lost.wav"
+
 #endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////
 

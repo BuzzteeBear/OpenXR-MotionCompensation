@@ -82,6 +82,19 @@ namespace utility
         }
         return isPressed && (!prevState.first || isRepeat);
     }
+    Mmf::Mmf()
+    {
+        float check;
+        if (GetConfig()->GetFloat(Cfg::TrackerCheck, check))
+        {
+            m_Check = (XrTime)(check * 1000000000.0);
+            Log("mmf connection refresh interval is set to %.3f ms\n", m_Check / 1000000.0);
+        }
+        else
+        {
+            ErrorLog("%s: defaulting to mmf connection refresh interval of %.3f ms\n",__FUNCTION__, m_Check / 1000000.0);
+        }
+    }
 
     Mmf::~Mmf()
     {
@@ -93,37 +106,46 @@ namespace utility
         m_Name = name;
     }
 
-    bool Mmf::Open()
+    bool Mmf::Open(XrTime time)
     {
         m_FileHandle = OpenFileMapping(FILE_MAP_READ, FALSE, m_Name.c_str());
 
         if (m_FileHandle)
         {
             m_View = MapViewOfFile(m_FileHandle, FILE_MAP_READ, 0, 0, 0);
-            if (m_View == NULL)
+            if (m_View != NULL)
+            {
+                m_LastRefresh = time;
+                m_ConnectionLost = false;
+            }
+            else
             {
                 DWORD err = GetLastError();
-                ErrorLog("unable to map view of mmf %s: %d - %s\n", m_Name.c_str(), err, LastErrorMsg(err).c_str());
+                ErrorLog("unable to map view of mmf %s: %s\n", m_Name.c_str(), LastErrorMsg().c_str());
                 Close();
                 return false;
             }
         }
         else
         {
-            DWORD err = GetLastError();
-            ErrorLog("could not open file mapping object %s: %d - %s\n",
-                     m_Name.c_str(),
-                     err,
-                     LastErrorMsg(err).c_str());
+            if (!m_ConnectionLost)
+            {
+                ErrorLog("could not open file mapping object %s: %s", m_Name.c_str(), LastErrorMsg().c_str());
+                m_ConnectionLost = true;
+            }
             return false;
         }
         return true;
     }
-    bool Mmf::Read(void* buffer, size_t size)
+    bool Mmf::Read(void* buffer, size_t size, XrTime time)
     {
+        if (time - m_LastRefresh > m_Check)
+        {
+            Close();
+        }
         if (!m_View)
         {
-           Open();
+           Open(time);
         }
         if (m_View)
         {
@@ -157,8 +179,9 @@ namespace utility
         m_FileHandle = nullptr;
     }
 
-    std::string LastErrorMsg(DWORD error)
+    std::string LastErrorMsg()
     {
+        DWORD error = GetLastError();
         if (error)
         {
             LPVOID buffer;
@@ -178,6 +201,6 @@ namespace utility
                 return std::to_string(error) + " - " + result;
             }
         }
-        return std::string();
+        return "0";
     }
 } // namespace utilities

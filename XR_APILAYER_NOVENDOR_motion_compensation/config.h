@@ -5,6 +5,8 @@ enum class Cfg
 {
     TrackerType = 0,
     TrackerSide,
+    TrackerTimeout,
+    TrackerCheck,
     TrackerOffsetForward,
     TrackerOffsetDown,
     TrackerOffsetRight,
@@ -68,6 +70,9 @@ class ConfigManager
     std::map<Cfg, std::pair<std::string, std::string>> m_Keys{
         {Cfg::TrackerType, {"tracker", "type"}},
         {Cfg::TrackerSide, {"tracker", "side"}},
+        
+        {Cfg::TrackerTimeout, {"tracker", "connection_timeout"}},
+        {Cfg::TrackerCheck, {"tracker", "connection_check"}},
         
         {Cfg::TrackerOffsetForward, {"tracker", "offset_forward"}},
         {Cfg::TrackerOffsetDown, {"tracker", "offset_down"}},

@@ -20,12 +20,10 @@ bool ConfigManager::Init(const std::string& application)
     {
         if (!WritePrivateProfileString("placeholder", "created", "1", m_ApplicationIni.c_str()) && 2 != GetLastError())
         {
-            DWORD err = GetLastError();
-            ErrorLog("%s: unable to create %s, error = %d : %s\n",
+            ErrorLog("%s: unable to create %s, error: %s\n",
                      __FUNCTION__,
                      m_ApplicationIni.c_str(),
-                     err,
-                     LastErrorMsg(err).c_str());
+                     LastErrorMsg().c_str());
         }
     }
     const std::string coreIni(motion_compensation_layer::localAppData.string() + "\\" + "OpenXR-MotionCompensation.ini");
@@ -56,9 +54,8 @@ bool ConfigManager::Init(const std::string& application)
             }
             else
             {
-                int err = GetLastError();
                 errors += "unable to read key: " + entry.second.second + " in section " + entry.second.first +
-                          (err ? " error: " + std::to_string(err) + ":" + LastErrorMsg(err) : "");    
+                          ", error: " + LastErrorMsg();  
             }      
         }
         if (!errors.empty())
@@ -240,14 +237,13 @@ void ConfigManager::WriteConfig(bool forApp)
                 {
                     error = true;
                     DWORD err = GetLastError();
-                    ErrorLog("%s: unable to write value %s into key %s to section %s in %s, error = %d : %s\n",
+                    ErrorLog("%s: unable to write value %s into key %s to section %s in %s, error: %s\n",
                              __FUNCTION__,
                              valueEntry->second.c_str(),
                              keyEntry->second.second.c_str(),
                              keyEntry->second.first.c_str(),
                              configFile.c_str(),
-                             err,
-                             LastErrorMsg(err).c_str());
+                             LastErrorMsg().c_str());
                 }
             }
             else

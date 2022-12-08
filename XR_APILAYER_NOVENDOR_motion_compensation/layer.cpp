@@ -114,6 +114,17 @@ namespace motion_compensation_layer
 
             // enable debug test rotation
             GetConfig()->GetBool(Cfg::TestRotation, m_TestRotation);
+
+            float timeout;
+            if (GetConfig()->GetFloat(Cfg::TrackerTimeout, timeout))
+            {
+                m_RecoveryWait = (XrTime)(timeout * 1000000000.0);
+                Log("tracker timeout is set to %.3f ms\n", m_RecoveryWait / 1000000.0);
+            }
+            else
+            {
+                ErrorLog("%s: defaulting to tracker timeout of %.3f ms\n", __FUNCTION__,  m_RecoveryWait / 1000000.0);
+            }
         }   
 
         // initialize tracker
@@ -485,6 +496,7 @@ namespace motion_compensation_layer
                                            : TestRotation(&trackerDelta, time, false);
             if (success)
             {
+                m_RecoveryStart = 0;
                 if (spaceIsViewSpace && !baseSpaceIsViewSpace)
                 {
                     location->pose = Pose::Multiply(location->pose, trackerDelta);
@@ -497,7 +509,18 @@ namespace motion_compensation_layer
             }
             else
             {
-                ErrorLog("unable to retrieve tracker pose delta\n");
+                if (0 == m_RecoveryStart)
+                {
+                    ErrorLog("unable to retrieve tracker pose delta\n");
+                    m_RecoveryStart = time;
+                }
+                else if (time - m_RecoveryStart > m_RecoveryWait)
+                {
+                    ErrorLog("tracker connection lost\n");
+                    GetAudioOut()->Execute(Event::ConnectionLost);
+                    m_Activated = false;  
+                    m_RecoveryStart = -1;
+                }
             }
 
             // safe pose for use in xrEndFrame
@@ -953,7 +976,7 @@ namespace motion_compensation_layer
         {
             GetAudioOut()->Execute(Event::Calibrated);
             TraceLoggingWrite(g_traceProvider,
-                              "HandleKeyboardInput",
+                              "Recalibrate",
                               TLArg("Reset", "Tracker_Reference"),
                               TLArg(time, "Time"));
         }
@@ -967,7 +990,7 @@ namespace motion_compensation_layer
             m_Activated = false;
             GetAudioOut()->Execute(Event::Error);
             TraceLoggingWrite(g_traceProvider,
-                              "HandleKeyboardInput",
+                              "Recalibrate",
                               TLArg("Deactivated_Reset", "MotionCompensation"),
                               TLArg(time, "Time"));
         }

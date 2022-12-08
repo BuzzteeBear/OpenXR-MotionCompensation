@@ -205,7 +205,11 @@ namespace Tracker
 
                 if (!actionStatePose.isActive)
                 {
-                    ErrorLog("%s: unable to determine tracker pose - XrActionStatePose not active\n", __FUNCTION__);
+                    if (!m_ConnectionLost)
+                    {
+                        ErrorLog("%s: unable to determine tracker pose - XrActionStatePose not active\n", __FUNCTION__);
+                        m_ConnectionLost = true;
+                    }
                     return false;
                 }
             }
@@ -214,14 +218,18 @@ namespace Tracker
 
             if (!Pose::IsPoseValid(location.locationFlags))
             {
-                ErrorLog("%s: unable to determine tracker pose - XrSpaceLocation not valid\n", __FUNCTION__);
+                if (!m_ConnectionLost)
+                {
+                    ErrorLog("%s: unable to determine tracker pose - XrSpaceLocation not valid\n", __FUNCTION__);
+                    m_ConnectionLost = true;
+                }
                 return false;
             }
             TraceLoggingWrite(g_traceProvider,
                               "GetControllerPose",
                               TLArg(xr::ToString(location.pose).c_str(), "Location"),
                               TLArg(time, "Time"));
-
+            m_ConnectionLost = false;
             trackerPose = location.pose;
             return true;
         }
@@ -306,7 +314,7 @@ namespace Tracker
         {
             m_Mmf.SetName(m_Filename);
 
-            if (!m_Mmf.Open())
+            if (!m_Mmf.Open(time))
             {
                 ErrorLog("unable to open mmf '%s'. Check if motion software is running and motion compensation is "
                          "activated!\n",
@@ -611,7 +619,7 @@ namespace Tracker
                     {
                         XrPosef hmdPosInStageSpace = Pose::Multiply(hmdLocation.pose, Pose::Invert(stageToLocal));
                         YawData data{};
-                        if (m_Mmf.Read(&data, sizeof(data)))
+                        if (m_Mmf.Read(&data, sizeof(data), time))
                         {
                             Log("Yaw Geme Engine values: rotationHeight = %f, rotationForwardHead = %f",
                                 data.rotationHeight,
@@ -650,7 +658,7 @@ namespace Tracker
     {
         YawData data{};
         XrPosef rotation{Pose::Identity()};
-        if (!m_Mmf.Read(&data, sizeof(data)))
+        if (!m_Mmf.Read(&data, sizeof(data), time))
         {
             return false;
         }
@@ -694,7 +702,7 @@ namespace Tracker
     {
         SixDofData data{};
         XrPosef rigPose{Pose::Identity()};
-        if (!m_Mmf.Read(&data, sizeof(data)))
+        if (!m_Mmf.Read(&data, sizeof(data), time))
         {
             return false;
         }

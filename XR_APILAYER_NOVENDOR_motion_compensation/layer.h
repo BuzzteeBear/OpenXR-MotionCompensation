@@ -125,15 +125,19 @@ namespace motion_compensation_layer
         XrViewConfigurationType m_ViewConfigType{XR_VIEW_CONFIGURATION_TYPE_MAX_ENUM};
         Tracker::TrackerBase* m_Tracker{nullptr};
         Tracker::ViveTrackerInfo m_ViveTracker;
-        utility::Cache<XrPosef> m_PoseCache{2000, xr::math::Pose::Identity()};
+        utility::Cache<XrPosef> m_PoseCache{2000000, xr::math::Pose::Identity()};
         utility::KeyboardInput m_Input;
-       
+
+        // connection recovery
+        XrTime m_RecoveryWait{3000000000}; // 3 sec default timeout
+        XrTime m_RecoveryStart{0};
+
         // recentering of in-game view
         XrTime m_LastFrameTime{0};
         bool m_LocalRefSpaceCreated{false};
         bool m_RecenterInProgress{false};
        
-            // debugging
+        // debugging
         bool m_TestRotation{false};
         XrTime m_TestRotStart{0};
     };

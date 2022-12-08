@@ -35,6 +35,7 @@ namespace Tracker
       private:
         bool LoadFilters();
 
+        bool m_ConnectionLost{false};
         XrTime m_LastPoseTime{0};
         float m_TransStrength{0.0f};
         float m_RotStrength{0.0f};

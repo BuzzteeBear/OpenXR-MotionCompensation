@@ -163,5 +163,8 @@
     <Media Include="sounds\rot_right.wav">
       <Filter>Sounds</Filter>
     </Media>
+    <Media Include="sounds\connection_lost.wav">
+      <Filter>Sounds</Filter>
+    </Media>
   </ItemGroup>
 </Project>

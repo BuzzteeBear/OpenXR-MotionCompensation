@@ -98,7 +98,7 @@ namespace utility
             }
             LAYER_NAMESPACE::log::ErrorLog("GetSample(%s) unable to find sample %u+-%.3fms\n",
                                            typeid(Sample).name(),
-                                           time / 1000.0,
+                                           time / 1000000.0,
                                            m_Tolerance);
             if (!itIsEnd)
             {
@@ -172,19 +172,23 @@ namespace utility
     class Mmf
     {
       public:
+        Mmf();
         ~Mmf();
         void SetName(const std::string& name);
-        bool Open();
-        bool Read(void* buffer, size_t size);
+        bool Open(XrTime time);
+        bool Read(void* buffer, size_t size, XrTime time);
         void Close();
 
 
       private: 
+        XrTime m_Check{1000000000}; // reopen mmf once a second by default
+        XrTime m_LastRefresh{0};
         std::string m_Name;
         HANDLE m_FileHandle{nullptr};
         void* m_View{nullptr};
+        bool m_ConnectionLost{false};
     };
 
-    std::string LastErrorMsg(DWORD error);
+    std::string LastErrorMsg();
 
 } // namespace utility
