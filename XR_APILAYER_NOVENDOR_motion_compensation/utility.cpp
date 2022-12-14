@@ -85,7 +85,7 @@ namespace utility
     Mmf::Mmf()
     {
         float check;
-        if (GetConfig()->GetFloat(Cfg::TrackerCheck, check))
+        if (GetConfig()->GetFloat(Cfg::TrackerCheck, check) && check >= 0)
         {
             m_Check = (XrTime)(check * 1000000000.0);
             Log("mmf connection refresh interval is set to %.3f ms\n", m_Check / 1000000.0);
@@ -139,7 +139,7 @@ namespace utility
     }
     bool Mmf::Read(void* buffer, size_t size, XrTime time)
     {
-        if (time - m_LastRefresh > m_Check)
+        if (m_Check > 0 && time - m_LastRefresh > m_Check)
         {
             Close();
         }

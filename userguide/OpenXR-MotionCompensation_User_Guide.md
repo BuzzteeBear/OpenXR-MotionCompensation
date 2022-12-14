@@ -2,9 +2,17 @@
 
 **DISCLAIMER: This software is distributed as-is, without any warranties or conditions of any kind. Use at your own risks!**
 
-Version: 0.2.2
+Version: 0.2.3
 
 **This document contains instructions on how to use OpenXR motion compensation [API layer](https://www.khronos.org/registry/OpenXR/specs/1.0/html/xrspec.html#api-layers).**
+
+## Purpose of OpenXR Motion Compensation 
+
+When using a motion rig in combination with a VR headset (hmd) he movement of the rig causes the in-game camera to change along with your position in the real world. In simulations for example you're basically feel being pushed around inside the cockpit when the motion rig moves.  
+Motion compensation reduces or ideally removes that effect by locking the in-game world to the pose of the motion rig.
+This software aims to provide an API layer for motion compensation to be used with applications and hmds supporting the OpenXR standard.  
+To be able to do that, the software needs to be informed on the motion rig movement / position. This can be achieved using a tracker, which is either a physical object attached to the motion rig and tracked by the VR runtime (e.g. a motion controller or a vive puck) or a virtual tracker using data from the motion software driving the motion rig. 
+ 
 
 Limitations:
 
@@ -13,7 +21,8 @@ Limitations:
 
 
 ## Contact
-Feel free to join our [Discord community](https://discord.gg/BVWugph5XF) for feedback and assistance.
+Feel free to join our [Discord community](https://discord.gg/BVWugph5XF) or to send an e-mail to [**oxrmc@mailbox.org**](mailto:oxrmc@mailbox.org) for feedback and assistance.
+
 
 You can find the [source code](https://github.com/BuzzteeBear/OpenXR-MotionCompensation) and the [latest release](https://github.com/BuzzteeBear/OpenXR-MotionCompensation/releases) or report issues on github.
 
@@ -89,8 +98,10 @@ What you can modify in a configuration file:
     - `waist`
     - `chest`
     - `camera`
-    - `keyboard`
-  - `srs`: use the virtual tradcker data provided by SRS motion software when using a Witmotion (or similar?) sensor on the motion rig.
+    - `keyboard`.
+  - `connection_timeout` sets the time (in seconds) the tracker needs to be unresponsive before motion compensation is automatically deactivated. Setting a negative value disables automatic deactivation.
+  - `connection_check` is only relevant for virtual trackers and determines the period (in seconds) for checking wether the memory mapped file used for data input is actually still actively used. Setting a negative value disables the check
+  - `srs`: use the virtual tracker data provided by SRS motion software when using a Witmotion (or similar?) sensor on the motion rig.
   - `flypt` use the virtual tracker data provided by FlyPT Mover.
   - `yaw`: use the virtual tracker data provided by Yaw VR and Yaw 2. Either while using SRS or Game Engine.
   - the keys `offset_...`, `use_cor_pos` and `cor_...` are used to handle the configuration of the center of rotation (cor) for all available virtual trackers.
@@ -151,6 +162,17 @@ Feedback on success or failure of this functionality using different VR systems 
 - after modifying filter strength or cor offset for virtual tracker you can save your changes to the default configuration file 
 - after modifying the config file(s) manually you can use the `reload_config` shortcut (**CTRL** + **SHIFT** + **L** by default) to restart the OXRMC software with the new values. 
 
+### Connection Loss
+OXRMC can detect if a reference tracker isn't available anymore, if: 
+- for a physical tracker: the runtime lost tracking of a motion controller / vive tracker 
+- for a virtual tracker: the memory mapped file providing data for a virtual tracker is removed by windows due to inactivity of the sender  
+
+After detecting a loss of connection a configurable timeout period is used (`connection_timeout`), allopwing two possible outcomes:
+- the connection is reastablished within the timeout period: motion compensation is continued (and the next potential connection loss resets the timeout period)
+- the connection stays lost and motion compensation is automatically deactivated. At that point you get an audible warning about connection loss. 
+  - If you try to reactivate and the tracker is available again, motion compensation is resumed (without the need for tracker recalibration) 
+  - Otherwise, the error feedback is repeated and motion compensation stays deactivated. When using a virtual tracker and having connection problems, you can use the MMF Reader app (see below) to cross check existence and current output values of the memory mapped file used for data exchange.
+
 ## Additional Notes
 - Upon activating any shortcut you get audible feedback, corresponding to the performed action (or an error, if something went wrong).
 
@@ -162,7 +184,14 @@ Feedback on success or failure of this functionality using different VR systems 
 
 - If the motion controller cannot be tracked for whatever reason (or if the memory mapped file containing the motion data for a virtual tracker cannot be found or accessed) when activating motion compensation or recalibrating the tracker pose, the API layer is unable to set the reference pose and motion compensation is (or stays) deactivated.
 
-## Logging
+## Debugging
+
+### MMF Reader
+The software package includes a small app called MMF Reader which allows you to display the content of the memory mapped file used for virtual trackers. Just execute it from windows start menu or use the executable in the installation directory and select the kind of tracker you're using from the dropdown menu. 
+- If the memory mapped file does not exist and therefore no values can be read, all the values are displaying an `X`. 
+- Otherwise the current values are displayed using arc degree as unit for rotations and meter for translations.
+
+### Logging
 The motion compensation layers logs rudimentary information and errors in a text file located at **...\Users\<Your_Username>\AppData\Local\OpenXR-MotionCompensation\OpenXR-MotionCompensation.log**. After unexpected behaviour or a crash you can check that file for abormalities or error reports.
 
 If you encounter repeatable bugs or crashes you can use the Windows Performance Recorder Profile (WPRP) tracelogging in combination with the configuration contained within `scripts\Trace_OpenXR-MotionCompensation.wprp` to create a more detailed protocol.

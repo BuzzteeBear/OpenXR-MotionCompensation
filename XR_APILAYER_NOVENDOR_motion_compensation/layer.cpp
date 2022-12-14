@@ -514,7 +514,7 @@ namespace motion_compensation_layer
                     ErrorLog("unable to retrieve tracker pose delta\n");
                     m_RecoveryStart = time;
                 }
-                else if (time - m_RecoveryStart > m_RecoveryWait)
+                else if (m_RecoveryWait >= 0 && time - m_RecoveryStart > m_RecoveryWait)
                 {
                     ErrorLog("tracker connection lost\n");
                     GetAudioOut()->Execute(Event::ConnectionLost);

@@ -98,8 +98,8 @@ namespace utility
             }
             LAYER_NAMESPACE::log::ErrorLog("GetSample(%s) unable to find sample %u+-%.3fms\n",
                                            typeid(Sample).name(),
-                                           time / 1000000.0,
-                                           m_Tolerance);
+                                           time,
+                                           m_Tolerance / 1000000.0);
             if (!itIsEnd)
             {
                 if (!itIsBegin)

@@ -1,5 +1,17 @@
 OpenXR-MotionCompensation Changelog
 
+Version 0.2.3
+
+	Tracker connection loss detection
+	- unresponsive tracker is detected
+	- motion compensation is deactivated after timeout
+
+	MMF Reader
+	- added application to display input values from memory mapped file(s) used for virtual trackers
+	
+	Installation Executable
+	- Reorder loading of OpenXR Tookit to enable eye tracking / dynamic foveated rendering
+
 Version 0.2.2
 
 	Vive Tracker

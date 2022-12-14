@@ -4,11 +4,21 @@ This repository contains the source project for a basic [OpenXR API layer](https
 It is based on the [OpenXR API layer template](https://github.com/mbucchia/OpenXR-Layer-Template) by Matthieu Bucchianeri. 
 More about [OpenXR](https://www.khronos.org/registry/OpenXR/specs/1.0/html/xrspec.html) and the [OpenXR Loader](https://www.khronos.org/registry/OpenXR/specs/1.0/loader.html).
 
+## Purpose of this project
+
+When using a motion rig in combination with a VR headset (hmd) he movement of the rig causes the in-game camera to change along with your position in the real world. In simulations for example you're basically feel being pushed around inside the cockpit when the motion rig moves.  
+Motion compensation reduces or ideally removes that effect by locking the in-game world to the pose of the motion rig.
+This software aims to provide an API layer for motion compensation to be used with applications and hmds supporting the OpenXR standard.  
+To be able to do that, the software needs to be informed on the motion rig movement / position. This can be achieved using a tracker, which is either a physical object attached to the motion rig and tracked by the VR runtime (e.g. a motion controller or a vive puck) or a virtual tracker using data from the motion software driving the motion rig. 
+ 
+## Building this project
+
 Prerequisites:
 
 - Visual Studio 2019 or above;
 - NuGet package manager (installed via Visual Studio Installer);
 - Python 3 interpreter (installed via Visual Studio Installer or externally available in your PATH).
+- Inno Setup Compiler for creating an installation executable
 
 Limitations:
 
