@@ -59,16 +59,17 @@ namespace MmfReader
             // comboBox1
             // 
             this.comboBox1.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.comboBox1.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.comboBox1.Font = new System.Drawing.Font("Segoe UI", 12F);
             this.comboBox1.FormattingEnabled = true;
             this.comboBox1.Items.AddRange(new object[] {
             "-",
             "Sim Racing Studio",
             "FlyPT Mover",
             "Yaw VR / Yaw2"});
-            this.comboBox1.Location = new System.Drawing.Point(398, 37);
+            this.comboBox1.Location = new System.Drawing.Point(365, 30);
+            this.comboBox1.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.comboBox1.Name = "comboBox1";
-            this.comboBox1.Size = new System.Drawing.Size(336, 46);
+            this.comboBox1.Size = new System.Drawing.Size(308, 46);
             this.comboBox1.TabIndex = 0;
             this.comboBox1.SelectedIndexChanged += new System.EventHandler(this.comboBox1_SelectedIndexChanged);
             // 
@@ -80,8 +81,8 @@ namespace MmfReader
             // labelSelect
             // 
             this.labelSelect.AutoSize = true;
-            this.labelSelect.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.labelSelect.Location = new System.Drawing.Point(68, 40);
+            this.labelSelect.Font = new System.Drawing.Font("Segoe UI", 12F);
+            this.labelSelect.Location = new System.Drawing.Point(62, 32);
             this.labelSelect.Name = "labelSelect";
             this.labelSelect.Size = new System.Drawing.Size(274, 38);
             this.labelSelect.TabIndex = 1;
@@ -90,8 +91,8 @@ namespace MmfReader
             // labelPitch
             // 
             this.labelPitch.AutoSize = true;
-            this.labelPitch.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.labelPitch.Location = new System.Drawing.Point(72, 159);
+            this.labelPitch.Font = new System.Drawing.Font("Segoe UI", 12F);
+            this.labelPitch.Location = new System.Drawing.Point(66, 123);
             this.labelPitch.Name = "labelPitch";
             this.labelPitch.Size = new System.Drawing.Size(84, 38);
             this.labelPitch.TabIndex = 2;
@@ -100,8 +101,8 @@ namespace MmfReader
             // labelRoll
             // 
             this.labelRoll.AutoSize = true;
-            this.labelRoll.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.labelRoll.Location = new System.Drawing.Point(72, 280);
+            this.labelRoll.Font = new System.Drawing.Font("Segoe UI", 12F);
+            this.labelRoll.Location = new System.Drawing.Point(66, 220);
             this.labelRoll.Name = "labelRoll";
             this.labelRoll.Size = new System.Drawing.Size(69, 38);
             this.labelRoll.TabIndex = 3;
@@ -110,8 +111,8 @@ namespace MmfReader
             // labelYaw
             // 
             this.labelYaw.AutoSize = true;
-            this.labelYaw.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.labelYaw.Location = new System.Drawing.Point(72, 412);
+            this.labelYaw.Font = new System.Drawing.Font("Segoe UI", 12F);
+            this.labelYaw.Location = new System.Drawing.Point(66, 326);
             this.labelYaw.Name = "labelYaw";
             this.labelYaw.Size = new System.Drawing.Size(70, 38);
             this.labelYaw.TabIndex = 4;
@@ -120,8 +121,8 @@ namespace MmfReader
             // labelHeave
             // 
             this.labelHeave.AutoSize = true;
-            this.labelHeave.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.labelHeave.Location = new System.Drawing.Point(471, 412);
+            this.labelHeave.Font = new System.Drawing.Font("Segoe UI", 12F);
+            this.labelHeave.Location = new System.Drawing.Point(432, 326);
             this.labelHeave.Name = "labelHeave";
             this.labelHeave.Size = new System.Drawing.Size(100, 38);
             this.labelHeave.TabIndex = 7;
@@ -130,8 +131,8 @@ namespace MmfReader
             // labelSway
             // 
             this.labelSway.AutoSize = true;
-            this.labelSway.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.labelSway.Location = new System.Drawing.Point(471, 280);
+            this.labelSway.Font = new System.Drawing.Font("Segoe UI", 12F);
+            this.labelSway.Location = new System.Drawing.Point(432, 220);
             this.labelSway.Name = "labelSway";
             this.labelSway.Size = new System.Drawing.Size(86, 38);
             this.labelSway.TabIndex = 6;
@@ -140,8 +141,8 @@ namespace MmfReader
             // labelSurge
             // 
             this.labelSurge.AutoSize = true;
-            this.labelSurge.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.labelSurge.Location = new System.Drawing.Point(471, 159);
+            this.labelSurge.Font = new System.Drawing.Font("Segoe UI", 12F);
+            this.labelSurge.Location = new System.Drawing.Point(432, 123);
             this.labelSurge.Name = "labelSurge";
             this.labelSurge.Size = new System.Drawing.Size(95, 38);
             this.labelSurge.TabIndex = 5;
@@ -151,12 +152,12 @@ namespace MmfReader
             // 
             this.labelHeaveVal.AutoSize = true;
             this.labelHeaveVal.Dock = System.Windows.Forms.DockStyle.Right;
-            this.labelHeaveVal.Font = new System.Drawing.Font("Courier New", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.labelHeaveVal.Font = new System.Drawing.Font("Courier New", 12F);
             this.labelHeaveVal.ImageAlign = System.Drawing.ContentAlignment.TopLeft;
-            this.labelHeaveVal.Location = new System.Drawing.Point(137, 242);
+            this.labelHeaveVal.Location = new System.Drawing.Point(137, 194);
             this.labelHeaveVal.Name = "labelHeaveVal";
             this.labelHeaveVal.RightToLeft = System.Windows.Forms.RightToLeft.No;
-            this.labelHeaveVal.Size = new System.Drawing.Size(31, 142);
+            this.labelHeaveVal.Size = new System.Drawing.Size(31, 113);
             this.labelHeaveVal.TabIndex = 13;
             this.labelHeaveVal.Text = "X";
             this.labelHeaveVal.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
@@ -165,12 +166,12 @@ namespace MmfReader
             // 
             this.labelSwayVal.AutoSize = true;
             this.labelSwayVal.Dock = System.Windows.Forms.DockStyle.Right;
-            this.labelSwayVal.Font = new System.Drawing.Font("Courier New", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.labelSwayVal.Font = new System.Drawing.Font("Courier New", 12F);
             this.labelSwayVal.ImageAlign = System.Drawing.ContentAlignment.TopLeft;
-            this.labelSwayVal.Location = new System.Drawing.Point(137, 121);
+            this.labelSwayVal.Location = new System.Drawing.Point(137, 97);
             this.labelSwayVal.Name = "labelSwayVal";
             this.labelSwayVal.RightToLeft = System.Windows.Forms.RightToLeft.No;
-            this.labelSwayVal.Size = new System.Drawing.Size(31, 121);
+            this.labelSwayVal.Size = new System.Drawing.Size(31, 97);
             this.labelSwayVal.TabIndex = 12;
             this.labelSwayVal.Text = "X";
             this.labelSwayVal.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
@@ -179,12 +180,12 @@ namespace MmfReader
             // 
             this.labelSurgeVal.AutoSize = true;
             this.labelSurgeVal.Dock = System.Windows.Forms.DockStyle.Right;
-            this.labelSurgeVal.Font = new System.Drawing.Font("Courier New", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.labelSurgeVal.Font = new System.Drawing.Font("Courier New", 12F);
             this.labelSurgeVal.ImageAlign = System.Drawing.ContentAlignment.TopLeft;
             this.labelSurgeVal.Location = new System.Drawing.Point(137, 0);
             this.labelSurgeVal.Name = "labelSurgeVal";
             this.labelSurgeVal.RightToLeft = System.Windows.Forms.RightToLeft.No;
-            this.labelSurgeVal.Size = new System.Drawing.Size(31, 121);
+            this.labelSurgeVal.Size = new System.Drawing.Size(31, 97);
             this.labelSurgeVal.TabIndex = 11;
             this.labelSurgeVal.Text = "X";
             this.labelSurgeVal.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
@@ -193,12 +194,12 @@ namespace MmfReader
             // 
             this.labelYawVal.AutoSize = true;
             this.labelYawVal.Dock = System.Windows.Forms.DockStyle.Right;
-            this.labelYawVal.Font = new System.Drawing.Font("Courier New", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.labelYawVal.Font = new System.Drawing.Font("Courier New", 12F);
             this.labelYawVal.ImageAlign = System.Drawing.ContentAlignment.TopLeft;
-            this.labelYawVal.Location = new System.Drawing.Point(133, 242);
+            this.labelYawVal.Location = new System.Drawing.Point(146, 194);
             this.labelYawVal.Name = "labelYawVal";
             this.labelYawVal.RightToLeft = System.Windows.Forms.RightToLeft.No;
-            this.labelYawVal.Size = new System.Drawing.Size(31, 142);
+            this.labelYawVal.Size = new System.Drawing.Size(31, 113);
             this.labelYawVal.TabIndex = 10;
             this.labelYawVal.Text = "X";
             this.labelYawVal.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
@@ -207,12 +208,12 @@ namespace MmfReader
             // 
             this.labelRollVal.AutoSize = true;
             this.labelRollVal.Dock = System.Windows.Forms.DockStyle.Right;
-            this.labelRollVal.Font = new System.Drawing.Font("Courier New", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.labelRollVal.Font = new System.Drawing.Font("Courier New", 12F);
             this.labelRollVal.ImageAlign = System.Drawing.ContentAlignment.TopLeft;
-            this.labelRollVal.Location = new System.Drawing.Point(133, 121);
+            this.labelRollVal.Location = new System.Drawing.Point(146, 97);
             this.labelRollVal.Name = "labelRollVal";
             this.labelRollVal.RightToLeft = System.Windows.Forms.RightToLeft.No;
-            this.labelRollVal.Size = new System.Drawing.Size(31, 121);
+            this.labelRollVal.Size = new System.Drawing.Size(31, 97);
             this.labelRollVal.TabIndex = 9;
             this.labelRollVal.Text = "X";
             this.labelRollVal.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
@@ -221,12 +222,12 @@ namespace MmfReader
             // 
             this.labelPitchVal.AutoSize = true;
             this.labelPitchVal.Dock = System.Windows.Forms.DockStyle.Right;
-            this.labelPitchVal.Font = new System.Drawing.Font("Courier New", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.labelPitchVal.Font = new System.Drawing.Font("Courier New", 12F);
             this.labelPitchVal.ImageAlign = System.Drawing.ContentAlignment.TopLeft;
-            this.labelPitchVal.Location = new System.Drawing.Point(133, 0);
+            this.labelPitchVal.Location = new System.Drawing.Point(146, 0);
             this.labelPitchVal.Name = "labelPitchVal";
             this.labelPitchVal.RightToLeft = System.Windows.Forms.RightToLeft.No;
-            this.labelPitchVal.Size = new System.Drawing.Size(31, 121);
+            this.labelPitchVal.Size = new System.Drawing.Size(31, 97);
             this.labelPitchVal.TabIndex = 8;
             this.labelPitchVal.Text = "X";
             this.labelPitchVal.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
@@ -234,8 +235,8 @@ namespace MmfReader
             // labelHeaveUnit
             // 
             this.labelHeaveUnit.AutoSize = true;
-            this.labelHeaveUnit.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.labelHeaveUnit.Location = new System.Drawing.Point(740, 412);
+            this.labelHeaveUnit.Font = new System.Drawing.Font("Segoe UI", 12F);
+            this.labelHeaveUnit.Location = new System.Drawing.Point(710, 326);
             this.labelHeaveUnit.Name = "labelHeaveUnit";
             this.labelHeaveUnit.Size = new System.Drawing.Size(41, 38);
             this.labelHeaveUnit.TabIndex = 19;
@@ -245,8 +246,8 @@ namespace MmfReader
             // labelSwayUnit
             // 
             this.labelSwayUnit.AutoSize = true;
-            this.labelSwayUnit.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.labelSwayUnit.Location = new System.Drawing.Point(740, 280);
+            this.labelSwayUnit.Font = new System.Drawing.Font("Segoe UI", 12F);
+            this.labelSwayUnit.Location = new System.Drawing.Point(710, 220);
             this.labelSwayUnit.Name = "labelSwayUnit";
             this.labelSwayUnit.Size = new System.Drawing.Size(41, 38);
             this.labelSwayUnit.TabIndex = 18;
@@ -256,8 +257,8 @@ namespace MmfReader
             // labelSurgeUnit
             // 
             this.labelSurgeUnit.AutoSize = true;
-            this.labelSurgeUnit.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.labelSurgeUnit.Location = new System.Drawing.Point(740, 159);
+            this.labelSurgeUnit.Font = new System.Drawing.Font("Segoe UI", 12F);
+            this.labelSurgeUnit.Location = new System.Drawing.Point(710, 123);
             this.labelSurgeUnit.Name = "labelSurgeUnit";
             this.labelSurgeUnit.Size = new System.Drawing.Size(41, 38);
             this.labelSurgeUnit.TabIndex = 17;
@@ -267,8 +268,8 @@ namespace MmfReader
             // labelYawUnit
             // 
             this.labelYawUnit.AutoSize = true;
-            this.labelYawUnit.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.labelYawUnit.Location = new System.Drawing.Point(318, 412);
+            this.labelYawUnit.Font = new System.Drawing.Font("Segoe UI", 12F);
+            this.labelYawUnit.Location = new System.Drawing.Point(342, 326);
             this.labelYawUnit.Name = "labelYawUnit";
             this.labelYawUnit.Size = new System.Drawing.Size(28, 38);
             this.labelYawUnit.TabIndex = 16;
@@ -278,8 +279,8 @@ namespace MmfReader
             // labelRollUnit
             // 
             this.labelRollUnit.AutoSize = true;
-            this.labelRollUnit.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.labelRollUnit.Location = new System.Drawing.Point(318, 280);
+            this.labelRollUnit.Font = new System.Drawing.Font("Segoe UI", 12F);
+            this.labelRollUnit.Location = new System.Drawing.Point(342, 220);
             this.labelRollUnit.Name = "labelRollUnit";
             this.labelRollUnit.Size = new System.Drawing.Size(28, 38);
             this.labelRollUnit.TabIndex = 15;
@@ -289,8 +290,8 @@ namespace MmfReader
             // labelPitchUnit
             // 
             this.labelPitchUnit.AutoSize = true;
-            this.labelPitchUnit.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.labelPitchUnit.Location = new System.Drawing.Point(318, 159);
+            this.labelPitchUnit.Font = new System.Drawing.Font("Segoe UI", 12F);
+            this.labelPitchUnit.Location = new System.Drawing.Point(342, 123);
             this.labelPitchUnit.Name = "labelPitchUnit";
             this.labelPitchUnit.Size = new System.Drawing.Size(28, 38);
             this.labelPitchUnit.TabIndex = 14;
@@ -304,13 +305,14 @@ namespace MmfReader
             this.tableLayoutPanel1.Controls.Add(this.labelPitchVal, 0, 0);
             this.tableLayoutPanel1.Controls.Add(this.labelRollVal, 0, 1);
             this.tableLayoutPanel1.Controls.Add(this.labelYawVal, 0, 2);
-            this.tableLayoutPanel1.Location = new System.Drawing.Point(148, 122);
+            this.tableLayoutPanel1.Location = new System.Drawing.Point(156, 98);
+            this.tableLayoutPanel1.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.tableLayoutPanel1.Name = "tableLayoutPanel1";
             this.tableLayoutPanel1.RowCount = 3;
             this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 50F));
             this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 50F));
-            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 141F));
-            this.tableLayoutPanel1.Size = new System.Drawing.Size(167, 384);
+            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 113F));
+            this.tableLayoutPanel1.Size = new System.Drawing.Size(180, 307);
             this.tableLayoutPanel1.TabIndex = 20;
             // 
             // tableLayoutPanel2
@@ -320,21 +322,22 @@ namespace MmfReader
             this.tableLayoutPanel2.Controls.Add(this.labelSurgeVal, 0, 0);
             this.tableLayoutPanel2.Controls.Add(this.labelSwayVal, 0, 1);
             this.tableLayoutPanel2.Controls.Add(this.labelHeaveVal, 0, 2);
-            this.tableLayoutPanel2.Location = new System.Drawing.Point(563, 122);
+            this.tableLayoutPanel2.Location = new System.Drawing.Point(533, 98);
+            this.tableLayoutPanel2.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.tableLayoutPanel2.Name = "tableLayoutPanel2";
             this.tableLayoutPanel2.RowCount = 3;
             this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 50F));
             this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 50F));
-            this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 141F));
-            this.tableLayoutPanel2.Size = new System.Drawing.Size(171, 384);
+            this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 113F));
+            this.tableLayoutPanel2.Size = new System.Drawing.Size(171, 307);
             this.tableLayoutPanel2.TabIndex = 20;
             // 
             // Form1
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(12F, 30F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(11F, 24F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.SystemColors.Desktop;
-            this.ClientSize = new System.Drawing.Size(876, 536);
+            this.ClientSize = new System.Drawing.Size(803, 429);
             this.Controls.Add(this.tableLayoutPanel2);
             this.Controls.Add(this.tableLayoutPanel1);
             this.Controls.Add(this.labelHeaveUnit);
@@ -352,6 +355,7 @@ namespace MmfReader
             this.Controls.Add(this.labelSelect);
             this.Controls.Add(this.comboBox1);
             this.ForeColor = System.Drawing.SystemColors.ButtonHighlight;
+            this.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.Name = "Form1";
             this.Text = "OpenXR-MotionCompensation MMF Reader";
             this.Load += new System.EventHandler(this.Form1_Load);

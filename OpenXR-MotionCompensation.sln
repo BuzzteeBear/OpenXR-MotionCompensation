@@ -27,7 +27,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Configuration", "Configurat
 		configuration\OpenXR-MotionCompensation.ini = configuration\OpenXR-MotionCompensation.ini
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MmfReader", "MmfReader\MmfReader.csproj", "{BC2C4C24-0F2B-4CED-AAE4-F24040FFEEFB}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MmfReader", "MmfReader\MmfReader.csproj", "{54A184FF-D0F6-44E8-90C9-4097561C5EB9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,10 +39,10 @@ Global
 		{A772D93D-0E95-4A88-8FE8-A67AB6C57E2B}.Debug|x64.Build.0 = Debug|x64
 		{A772D93D-0E95-4A88-8FE8-A67AB6C57E2B}.Release|x64.ActiveCfg = Release|x64
 		{A772D93D-0E95-4A88-8FE8-A67AB6C57E2B}.Release|x64.Build.0 = Release|x64
-		{BC2C4C24-0F2B-4CED-AAE4-F24040FFEEFB}.Debug|x64.ActiveCfg = Debug|x64
-		{BC2C4C24-0F2B-4CED-AAE4-F24040FFEEFB}.Debug|x64.Build.0 = Debug|x64
-		{BC2C4C24-0F2B-4CED-AAE4-F24040FFEEFB}.Release|x64.ActiveCfg = Release|x64
-		{BC2C4C24-0F2B-4CED-AAE4-F24040FFEEFB}.Release|x64.Build.0 = Release|x64
+		{54A184FF-D0F6-44E8-90C9-4097561C5EB9}.Debug|x64.ActiveCfg = Debug|x64
+		{54A184FF-D0F6-44E8-90C9-4097561C5EB9}.Debug|x64.Build.0 = Debug|x64
+		{54A184FF-D0F6-44E8-90C9-4097561C5EB9}.Release|x64.ActiveCfg = Release|x64
+		{54A184FF-D0F6-44E8-90C9-4097561C5EB9}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

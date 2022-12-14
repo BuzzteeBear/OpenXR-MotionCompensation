@@ -43,7 +43,7 @@ Source: "{#SolutionDir}\userguide\{#AppName}_User_Guide.html"; DestDir: "{app}";
 Source: "{#SolutionDir}\scripts\Trace_{#AppName}.wprp"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SolutionDir}\bin\x64\Release\XR_APILAYER_NOVENDOR_motion_compensation.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SolutionDir}\XR_APILAYER_NOVENDOR_motion_compensation\XR_APILAYER_NOVENDOR_motion_compensation.json"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#SolutionDir}\bin\x64\Release\MmfReader\netcoreapp3.1\publish\MmfReader.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SolutionDir}\bin\x64\Release\MmfReader\app.publish\MmfReader.exe"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\OXRMC MMF Reader"; Filename: "{app}\MmfReader.exe"; WorkingDir: "{app}"
