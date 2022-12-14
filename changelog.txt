@@ -12,6 +12,9 @@ Version 0.2.3
 	Installation Executable
 	- Reorder loading of OpenXR Tookit to enable eye tracking / dynamic foveated rendering
 
+	Bugfixes:
+	- fixed loading order of OpenXR Toolkit to enable dynamic foveated rendering
+	
 Version 0.2.2
 
 	Vive Tracker
