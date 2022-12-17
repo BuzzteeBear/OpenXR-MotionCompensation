@@ -109,7 +109,7 @@ bool ConfigManager::GetInt(Cfg key, int& val)
             ErrorLog("%s: unable to convert value (%s) for key (%s) to integer: %s\n",
                      __FUNCTION__,
                      strVal.c_str(),
-                     m_Keys[key].first,
+                     m_Keys[key].first.c_str(),
                      e.what());
         } 
     }
@@ -130,7 +130,7 @@ bool ConfigManager::GetFloat(Cfg key, float& val)
             ErrorLog("%s: unable to convert value (%s) for key (%s) to double: %s\n",
                      __FUNCTION__,
                      strVal.c_str(),
-                     m_Keys[key].first,
+                     m_Keys[key].first.c_str(),
                      e.what());
             return false;
         } 
@@ -142,7 +142,7 @@ bool ConfigManager::GetString(Cfg key, std::string& val)
     const auto it = m_Values.find(key);
     if (m_Values.end() == it)
     {
-        ErrorLog("%s: unable to find value for key: %s\n", __FUNCTION__, m_Keys[key].first);
+        ErrorLog("%s: unable to find value for key: %s\n", __FUNCTION__, m_Keys[key].first.c_str());
         return false;
     }
     val = it->second;
@@ -176,7 +176,7 @@ bool ConfigManager::GetShortcut(Cfg key, std::set<int>& val)
         ErrorLog("%s: unable to convert value (%s) for key (%s) to shortcut:\n%s",
                  __FUNCTION__,
                  strVal.c_str(),
-                 m_Keys[key].first,
+                 m_Keys[key].first.c_str(),
                  errors.c_str());
         return false;
     }
