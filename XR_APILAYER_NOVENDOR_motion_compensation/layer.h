@@ -24,6 +24,7 @@
 
 #include "framework/dispatch.gen.h"
 #include "tracker.h"
+#include "overlay.h"
 
 namespace motion_compensation_layer
 {
@@ -54,6 +55,17 @@ namespace motion_compensation_layer
         XrResult xrBeginSession(XrSession session, const XrSessionBeginInfo* beginInfo) override;
         XrResult xrEndSession(XrSession session) override;
         XrResult xrDestroySession(XrSession session) override;
+        XrResult xrCreateSwapchain(XrSession session,
+                                   const XrSwapchainCreateInfo* createInfo,
+                                   XrSwapchain* swapchain) override;
+        XrResult xrDestroySwapchain(XrSwapchain swapchain) override;
+        XrResult xrWaitSwapchainImage(XrSwapchain swapchain,
+                                                   const XrSwapchainImageWaitInfo* waitInfo) override;
+        XrResult xrAcquireSwapchainImage(XrSwapchain swapchain,
+                                         const XrSwapchainImageAcquireInfo* acquireInfo,
+                                         uint32_t* index) override;
+        XrResult xrReleaseSwapchainImage(XrSwapchain swapchain,
+                                         const XrSwapchainImageReleaseInfo* releaseInfo) override;
         XrResult xrGetCurrentInteractionProfile(XrSession session,
                                                 XrPath topLevelUserPath,
                                                 XrInteractionProfileState* interactionProfile);
@@ -96,12 +108,14 @@ namespace motion_compensation_layer
         };
 
         bool isSystemHandled(XrSystemId systemId) const;
+        bool isSessionHandled(XrSession session) const;
         bool isViewSpace(XrSpace space) const;
         uint32_t GetNumViews();
         void CreateTrackerAction();
         void CreateTrackerActionSpace();
         void ToggleActive(XrTime time);
         void Recalibrate(XrTime time);
+        void ToggleOverlay();
         void ChangeOffset(Direction dir);
         void ReloadConfig();
         void SaveConfig(XrTime time, bool forApp);
@@ -115,6 +129,7 @@ namespace motion_compensation_layer
 
         XrSystemId m_systemId{XR_NULL_SYSTEM_ID};
         XrSession m_Session{XR_NULL_HANDLE};
+        std::string m_RuntimeName;
         bool m_ActionSetAttached{false};
         bool m_InteractionProfileSuggested{false};
         bool m_Initialized{true};
@@ -127,6 +142,17 @@ namespace motion_compensation_layer
         Tracker::ViveTrackerInfo m_ViveTracker;
         utility::Cache<XrPosef> m_PoseCache{2000000, xr::math::Pose::Identity()};
         utility::KeyboardInput m_Input;
+
+        /*
+        // Overlay
+        bool m_OverlayActive{false};
+        std::shared_ptr<graphics::IDevice> m_GraphicsDevice;
+        std::map<XrSwapchain, graphics::SwapchainState> m_Swapchains;
+        XrSwapchain m_MenuSwapchain{XR_NULL_HANDLE};
+        std::vector<std::shared_ptr<graphics::ITexture>> m_MenuSwapchainImages;
+        std::shared_ptr<graphics::ISimpleMesh> m_MeshRGB, m_MeshCMY;
+        */
+        std::unique_ptr<graphics::Overlay> m_Overlay;
 
         // connection recovery
         XrTime m_RecoveryWait{3000000000}; // 3 sec default timeout

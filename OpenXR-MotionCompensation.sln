@@ -4,6 +4,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 16.0.31911.196
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "XR_APILAYER_NOVENDOR_motion_compensation", "XR_APILAYER_NOVENDOR_motion_compensation\XR_APILAYER_NOVENDOR_motion_compensation.vcxproj", "{A772D93D-0E95-4A88-8FE8-A67AB6C57E2B}"
+	ProjectSection(ProjectDependencies) = postProject
+		{9F62DB07-EA42-4388-82AB-E6FAA371F353} = {9F62DB07-EA42-4388-82AB-E6FAA371F353}
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Files", "Solution Files", "{2AD2DAC5-BF72-45E6-8B54-B014646049AB}"
 	ProjectSection(SolutionItems) = preProject
@@ -29,6 +32,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Configuration", "Configurat
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MmfReader", "MmfReader\MmfReader.csproj", "{54A184FF-D0F6-44E8-90C9-4097561C5EB9}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FW1FontWrapper", "external\FW1FontWrapper\FW1FontWrapper\FW1FontWrapper.vcxproj", "{9F62DB07-EA42-4388-82AB-E6FAA371F353}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -43,6 +48,10 @@ Global
 		{54A184FF-D0F6-44E8-90C9-4097561C5EB9}.Debug|x64.Build.0 = Debug|x64
 		{54A184FF-D0F6-44E8-90C9-4097561C5EB9}.Release|x64.ActiveCfg = Release|x64
 		{54A184FF-D0F6-44E8-90C9-4097561C5EB9}.Release|x64.Build.0 = Release|x64
+		{9F62DB07-EA42-4388-82AB-E6FAA371F353}.Debug|x64.ActiveCfg = Debug|x64
+		{9F62DB07-EA42-4388-82AB-E6FAA371F353}.Debug|x64.Build.0 = Debug|x64
+		{9F62DB07-EA42-4388-82AB-E6FAA371F353}.Release|x64.ActiveCfg = Release|x64
+		{9F62DB07-EA42-4388-82AB-E6FAA371F353}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

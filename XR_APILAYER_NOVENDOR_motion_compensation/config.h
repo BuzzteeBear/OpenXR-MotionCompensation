@@ -37,6 +37,7 @@ enum class Cfg
     KeyOffLeft,
     KeyRotRight,
     KeyRotLeft,
+    KeyOverlay,
     KeySaveConfig,
     KeySaveConfigApp,
     KeyReloadConfig,
@@ -111,6 +112,7 @@ class ConfigManager
 
         {Cfg::KeyRotRight, {"shortcuts", "rotate_right"}},
         {Cfg::KeyRotLeft, {"shortcuts", "rotate_left"}},
+        {Cfg::KeyOverlay, {"shortcuts", "toggle_overlay"}},
 
         {Cfg::KeyDebugCor, {"shortcuts", "cor_debug_mode"}},
 

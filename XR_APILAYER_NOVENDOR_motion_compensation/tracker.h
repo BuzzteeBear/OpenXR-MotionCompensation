@@ -17,6 +17,7 @@ namespace Tracker
         void ModifyFilterStrength(bool trans, bool increase);
         virtual bool ResetReferencePose(XrSession session, XrTime time) = 0;
         void AdjustReferencePose(const XrPosef& pose);
+        XrPosef GetReferencePose(XrSession session, XrTime time);
         bool GetPoseDelta(XrPosef& poseDelta, XrSession session, XrTime time);
         bool m_SkipLazyInit{false};
         bool m_Calibrated{false};

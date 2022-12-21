@@ -14,7 +14,6 @@ namespace Feedback
 {
     bool AudioOut::Init()
     {
-         // TODO: preload sounds to avoid file system access
         m_SoundResources[Event::Error] = ERROR_WAV;
         m_SoundResources[Event::Load] = LOADED_WAV;
         m_SoundResources[Event::Save] = SAVED_WAV;

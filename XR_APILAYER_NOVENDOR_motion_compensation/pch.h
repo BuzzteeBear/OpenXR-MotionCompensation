@@ -24,6 +24,7 @@
 
 // Standard library.
 #include <algorithm>
+#include <array>
 #include <cstdarg>
 #include <ctime>
 #include <iomanip>
@@ -58,9 +59,19 @@ using Microsoft::WRL::ComPtr;
 
 #pragma comment(lib, "winmm.lib")
 
+// Direct3D.
+#include <dxgi1_4.h>
+#include <d3d11_4.h>
+#include <d3d12.h>
+#include <d3dx12.h>
+#include <d3d11on12.h>
+#include <d3dcompiler.h>
+
 // OpenXR + Windows-specific definitions.
 #define XR_NO_PROTOTYPES
 #define XR_USE_PLATFORM_WIN32
+#define XR_USE_GRAPHICS_API_D3D11
+#define XR_USE_GRAPHICS_API_D3D12
 #include <openxr/openxr.h>
 #include <openxr/openxr_platform.h>
 
@@ -76,3 +87,43 @@ using Microsoft::WRL::ComPtr;
 
 // FMT formatter.
 #include <fmt/format.h>
+
+// FW1FontWrapper.
+#include <FW1FontWrapper.h>
+
+// Detours
+#include <detours.h>
+#include "detours_helpers.h"
+
+// Helpers for ComPtr manipulation.
+
+template <typename T>
+inline T* get(const ComPtr<T>& object)
+{
+    return object.Get();
+}
+
+template <typename T>
+inline T** set(ComPtr<T>& object)
+{
+    return object.ReleaseAndGetAddressOf();
+}
+
+template <typename T>
+void attach(ComPtr<T>& object, T* value)
+{
+    object.Attach(value);
+}
+
+template <typename T>
+T* detach(ComPtr<T>& object)
+{
+    return object.Detach();
+}
+
+template <typename T>
+constexpr inline T alignTo(T value, uint32_t pad) noexcept
+{
+    // assert(pad && !(pad & (pad - 1)));
+    return (value + (pad - 1)) & ~static_cast<T>(pad - 1);
+}

@@ -159,6 +159,126 @@ namespace LAYER_NAMESPACE
 		return result;
 	}
 
+	XrResult xrCreateSwapchain(XrSession session, const XrSwapchainCreateInfo* createInfo, XrSwapchain* swapchain)
+	{
+		TraceLoggingWrite(g_traceProvider, "xrCreateSwapchain");
+
+		XrResult result;
+		try
+		{
+			result = LAYER_NAMESPACE::GetInstance()->xrCreateSwapchain(session, createInfo, swapchain);
+		}
+		catch (std::exception exc)
+		{
+			TraceLoggingWrite(g_traceProvider, "xrCreateSwapchain_Error", TLArg(exc.what(), "Error"));
+			ErrorLog("xrCreateSwapchain: %s\n", exc.what());
+			result = XR_ERROR_RUNTIME_FAILURE;
+		}
+
+		TraceLoggingWrite(g_traceProvider, "xrCreateSwapchain_Result", TLArg(xr::ToCString(result), "Result"));
+		if (XR_FAILED(result)) {
+			ErrorLog("xrCreateSwapchain failed with %s\n", xr::ToCString(result));
+		}
+
+		return result;
+	}
+
+	XrResult xrDestroySwapchain(XrSwapchain swapchain)
+	{
+		TraceLoggingWrite(g_traceProvider, "xrDestroySwapchain");
+
+		XrResult result;
+		try
+		{
+			result = LAYER_NAMESPACE::GetInstance()->xrDestroySwapchain(swapchain);
+		}
+		catch (std::exception exc)
+		{
+			TraceLoggingWrite(g_traceProvider, "xrDestroySwapchain_Error", TLArg(exc.what(), "Error"));
+			ErrorLog("xrDestroySwapchain: %s\n", exc.what());
+			result = XR_ERROR_RUNTIME_FAILURE;
+		}
+
+		TraceLoggingWrite(g_traceProvider, "xrDestroySwapchain_Result", TLArg(xr::ToCString(result), "Result"));
+		if (XR_FAILED(result)) {
+			ErrorLog("xrDestroySwapchain failed with %s\n", xr::ToCString(result));
+		}
+
+		return result;
+	}
+
+	XrResult xrAcquireSwapchainImage(XrSwapchain swapchain, const XrSwapchainImageAcquireInfo* acquireInfo, uint32_t* index)
+	{
+		TraceLoggingWrite(g_traceProvider, "xrAcquireSwapchainImage");
+
+		XrResult result;
+		try
+		{
+			result = LAYER_NAMESPACE::GetInstance()->xrAcquireSwapchainImage(swapchain, acquireInfo, index);
+		}
+		catch (std::exception exc)
+		{
+			TraceLoggingWrite(g_traceProvider, "xrAcquireSwapchainImage_Error", TLArg(exc.what(), "Error"));
+			ErrorLog("xrAcquireSwapchainImage: %s\n", exc.what());
+			result = XR_ERROR_RUNTIME_FAILURE;
+		}
+
+		TraceLoggingWrite(g_traceProvider, "xrAcquireSwapchainImage_Result", TLArg(xr::ToCString(result), "Result"));
+		if (XR_FAILED(result)) {
+			ErrorLog("xrAcquireSwapchainImage failed with %s\n", xr::ToCString(result));
+		}
+
+		return result;
+	}
+
+	XrResult xrWaitSwapchainImage(XrSwapchain swapchain, const XrSwapchainImageWaitInfo* waitInfo)
+	{
+		TraceLoggingWrite(g_traceProvider, "xrWaitSwapchainImage");
+
+		XrResult result;
+		try
+		{
+			result = LAYER_NAMESPACE::GetInstance()->xrWaitSwapchainImage(swapchain, waitInfo);
+		}
+		catch (std::exception exc)
+		{
+			TraceLoggingWrite(g_traceProvider, "xrWaitSwapchainImage_Error", TLArg(exc.what(), "Error"));
+			ErrorLog("xrWaitSwapchainImage: %s\n", exc.what());
+			result = XR_ERROR_RUNTIME_FAILURE;
+		}
+
+		TraceLoggingWrite(g_traceProvider, "xrWaitSwapchainImage_Result", TLArg(xr::ToCString(result), "Result"));
+		if (XR_FAILED(result)) {
+			ErrorLog("xrWaitSwapchainImage failed with %s\n", xr::ToCString(result));
+		}
+
+		return result;
+	}
+
+	XrResult xrReleaseSwapchainImage(XrSwapchain swapchain, const XrSwapchainImageReleaseInfo* releaseInfo)
+	{
+		TraceLoggingWrite(g_traceProvider, "xrReleaseSwapchainImage");
+
+		XrResult result;
+		try
+		{
+			result = LAYER_NAMESPACE::GetInstance()->xrReleaseSwapchainImage(swapchain, releaseInfo);
+		}
+		catch (std::exception exc)
+		{
+			TraceLoggingWrite(g_traceProvider, "xrReleaseSwapchainImage_Error", TLArg(exc.what(), "Error"));
+			ErrorLog("xrReleaseSwapchainImage: %s\n", exc.what());
+			result = XR_ERROR_RUNTIME_FAILURE;
+		}
+
+		TraceLoggingWrite(g_traceProvider, "xrReleaseSwapchainImage_Result", TLArg(xr::ToCString(result), "Result"));
+		if (XR_FAILED(result)) {
+			ErrorLog("xrReleaseSwapchainImage failed with %s\n", xr::ToCString(result));
+		}
+
+		return result;
+	}
+
 	XrResult xrBeginSession(XrSession session, const XrSessionBeginInfo* beginInfo)
 	{
 		TraceLoggingWrite(g_traceProvider, "xrBeginSession");
@@ -389,6 +509,31 @@ namespace LAYER_NAMESPACE
 			m_xrLocateSpace = reinterpret_cast<PFN_xrLocateSpace>(*function);
 			*function = reinterpret_cast<PFN_xrVoidFunction>(LAYER_NAMESPACE::xrLocateSpace);
 		}
+		else if (apiName == "xrCreateSwapchain")
+		{
+			m_xrCreateSwapchain = reinterpret_cast<PFN_xrCreateSwapchain>(*function);
+			*function = reinterpret_cast<PFN_xrVoidFunction>(LAYER_NAMESPACE::xrCreateSwapchain);
+		}
+		else if (apiName == "xrDestroySwapchain")
+		{
+			m_xrDestroySwapchain = reinterpret_cast<PFN_xrDestroySwapchain>(*function);
+			*function = reinterpret_cast<PFN_xrVoidFunction>(LAYER_NAMESPACE::xrDestroySwapchain);
+		}
+		else if (apiName == "xrAcquireSwapchainImage")
+		{
+			m_xrAcquireSwapchainImage = reinterpret_cast<PFN_xrAcquireSwapchainImage>(*function);
+			*function = reinterpret_cast<PFN_xrVoidFunction>(LAYER_NAMESPACE::xrAcquireSwapchainImage);
+		}
+		else if (apiName == "xrWaitSwapchainImage")
+		{
+			m_xrWaitSwapchainImage = reinterpret_cast<PFN_xrWaitSwapchainImage>(*function);
+			*function = reinterpret_cast<PFN_xrVoidFunction>(LAYER_NAMESPACE::xrWaitSwapchainImage);
+		}
+		else if (apiName == "xrReleaseSwapchainImage")
+		{
+			m_xrReleaseSwapchainImage = reinterpret_cast<PFN_xrReleaseSwapchainImage>(*function);
+			*function = reinterpret_cast<PFN_xrVoidFunction>(LAYER_NAMESPACE::xrReleaseSwapchainImage);
+		}
 		else if (apiName == "xrBeginSession")
 		{
 			m_xrBeginSession = reinterpret_cast<PFN_xrBeginSession>(*function);
@@ -452,6 +597,14 @@ namespace LAYER_NAMESPACE
 		if (XR_FAILED(m_xrGetInstanceProcAddr(m_instance, "xrDestroySpace", reinterpret_cast<PFN_xrVoidFunction*>(&m_xrDestroySpace))))
 		{
 			throw new std::runtime_error("Failed to resolve xrDestroySpace");
+		}
+		if (XR_FAILED(m_xrGetInstanceProcAddr(m_instance, "xrEnumerateSwapchainFormats", reinterpret_cast<PFN_xrVoidFunction*>(&m_xrEnumerateSwapchainFormats))))
+		{
+			throw new std::runtime_error("Failed to resolve xrEnumerateSwapchainFormats");
+		}
+		if (XR_FAILED(m_xrGetInstanceProcAddr(m_instance, "xrEnumerateSwapchainImages", reinterpret_cast<PFN_xrVoidFunction*>(&m_xrEnumerateSwapchainImages))))
+		{
+			throw new std::runtime_error("Failed to resolve xrEnumerateSwapchainImages");
 		}
 		if (XR_FAILED(m_xrGetInstanceProcAddr(m_instance, "xrStringToPath", reinterpret_cast<PFN_xrVoidFunction*>(&m_xrStringToPath))))
 		{

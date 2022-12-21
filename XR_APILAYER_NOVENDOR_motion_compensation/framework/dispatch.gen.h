@@ -164,6 +164,62 @@ namespace LAYER_NAMESPACE
 		PFN_xrDestroySpace m_xrDestroySpace{ nullptr };
 
 	public:
+		virtual XrResult xrEnumerateSwapchainFormats(XrSession session, uint32_t formatCapacityInput, uint32_t* formatCountOutput, int64_t* formats)
+		{
+			return m_xrEnumerateSwapchainFormats(session, formatCapacityInput, formatCountOutput, formats);
+		}
+	private:
+		PFN_xrEnumerateSwapchainFormats m_xrEnumerateSwapchainFormats{ nullptr };
+
+	public:
+		virtual XrResult xrCreateSwapchain(XrSession session, const XrSwapchainCreateInfo* createInfo, XrSwapchain* swapchain)
+		{
+			return m_xrCreateSwapchain(session, createInfo, swapchain);
+		}
+	private:
+		PFN_xrCreateSwapchain m_xrCreateSwapchain{ nullptr };
+
+	public:
+		virtual XrResult xrDestroySwapchain(XrSwapchain swapchain)
+		{
+			return m_xrDestroySwapchain(swapchain);
+		}
+	private:
+		PFN_xrDestroySwapchain m_xrDestroySwapchain{ nullptr };
+
+	public:
+		virtual XrResult xrEnumerateSwapchainImages(XrSwapchain swapchain, uint32_t imageCapacityInput, uint32_t* imageCountOutput, XrSwapchainImageBaseHeader* images)
+		{
+			return m_xrEnumerateSwapchainImages(swapchain, imageCapacityInput, imageCountOutput, images);
+		}
+	private:
+		PFN_xrEnumerateSwapchainImages m_xrEnumerateSwapchainImages{ nullptr };
+
+	public:
+		virtual XrResult xrAcquireSwapchainImage(XrSwapchain swapchain, const XrSwapchainImageAcquireInfo* acquireInfo, uint32_t* index)
+		{
+			return m_xrAcquireSwapchainImage(swapchain, acquireInfo, index);
+		}
+	private:
+		PFN_xrAcquireSwapchainImage m_xrAcquireSwapchainImage{ nullptr };
+
+	public:
+		virtual XrResult xrWaitSwapchainImage(XrSwapchain swapchain, const XrSwapchainImageWaitInfo* waitInfo)
+		{
+			return m_xrWaitSwapchainImage(swapchain, waitInfo);
+		}
+	private:
+		PFN_xrWaitSwapchainImage m_xrWaitSwapchainImage{ nullptr };
+
+	public:
+		virtual XrResult xrReleaseSwapchainImage(XrSwapchain swapchain, const XrSwapchainImageReleaseInfo* releaseInfo)
+		{
+			return m_xrReleaseSwapchainImage(swapchain, releaseInfo);
+		}
+	private:
+		PFN_xrReleaseSwapchainImage m_xrReleaseSwapchainImage{ nullptr };
+
+	public:
 		virtual XrResult xrBeginSession(XrSession session, const XrSessionBeginInfo* beginInfo)
 		{
 			return m_xrBeginSession(session, beginInfo);

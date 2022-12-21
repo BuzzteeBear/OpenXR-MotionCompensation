@@ -29,6 +29,7 @@
 #include "feedback.h"
 #include "utility.h"
 #include "config.h"
+#include "d3dcommon.h"
 #include <log.h>
 #include <util.h>
 
@@ -94,15 +95,15 @@ namespace motion_compensation_layer
         // Dump the application name and OpenXR runtime information to help debugging issues.
         XrInstanceProperties instanceProperties = {XR_TYPE_INSTANCE_PROPERTIES};
         CHECK_XRCMD(OpenXrApi::xrGetInstanceProperties(GetXrInstance(), &instanceProperties));
-        const auto runtimeName = fmt::format("{} {}.{}.{}",
+        m_RuntimeName = fmt::format("{} {}.{}.{}",
                                              instanceProperties.runtimeName,
                                              XR_VERSION_MAJOR(instanceProperties.runtimeVersion),
                                              XR_VERSION_MINOR(instanceProperties.runtimeVersion),
                                              XR_VERSION_PATCH(instanceProperties.runtimeVersion));
-        TraceLoggingWrite(g_traceProvider, "xrCreateInstance", TLArg(runtimeName.c_str(), "RuntimeName"));
+        TraceLoggingWrite(g_traceProvider, "xrCreateInstance", TLArg(m_RuntimeName.c_str(), "RuntimeName"));
         TraceLoggingWrite(g_traceProvider, "xrCreateInstance", TLArg(m_Application.c_str(), "ApplicationName"));
         Log("Application: %s\n", m_Application.c_str());
-        Log("Using OpenXR runtime: %s\n", runtimeName.c_str());
+        Log("Using OpenXR runtime: %s\n", m_RuntimeName.c_str());
 
         // Initialize Configuration
         m_Initialized = GetConfig()->Init(m_Application);
@@ -194,11 +195,15 @@ namespace motion_compensation_layer
                           TLArg((int)createInfo->systemId, "SystemId"),
                           TLArg(createInfo->createFlags, "CreateFlags"));
 
+        m_Overlay = std::make_unique<graphics::Overlay>(graphics::Overlay());
+
         const XrResult result = OpenXrApi::xrCreateSession(instance, createInfo, session);
         if (XR_SUCCEEDED(result))
         {
             if (isSystemHandled(createInfo->systemId))
             {
+                m_Overlay->CreateSession(createInfo, session, m_RuntimeName);
+                
                 m_Session = *session;
 
                 CreateTrackerActionSpace();
@@ -250,6 +255,134 @@ namespace motion_compensation_layer
         }
 
         return OpenXrApi::xrDestroySession(session);
+    }
+
+    XrResult OpenXrLayer::xrCreateSwapchain(XrSession session,
+                               const XrSwapchainCreateInfo* createInfo,
+                               XrSwapchain* swapchain)
+    {
+        if (createInfo->type != XR_TYPE_SWAPCHAIN_CREATE_INFO)
+        {
+            return XR_ERROR_VALIDATION_FAILURE;
+        }
+
+        TraceLoggingWrite(g_traceProvider,
+                          "xrCreateSwapchain",
+                          TLPArg(session, "Session"),
+                          TLArg(createInfo->arraySize, "ArraySize"),
+                          TLArg(createInfo->width, "Width"),
+                          TLArg(createInfo->height, "Height"),
+                          TLArg(createInfo->createFlags, "CreateFlags"),
+                          TLArg(createInfo->format, "Format"),
+                          TLArg(createInfo->faceCount, "FaceCount"),
+                          TLArg(createInfo->mipCount, "MipCount"),
+                          TLArg(createInfo->sampleCount, "SampleCount"),
+                          TLArg(createInfo->usageFlags, "UsageFlags"));
+
+        if (!isSessionHandled(session) || !m_Overlay->m_Initialized)
+        {
+            return OpenXrApi::xrCreateSwapchain(session, createInfo, swapchain);
+        }
+
+        // Identify the swapchains of interest for our processing chain.
+        const bool useSwapchain =
+            createInfo->usageFlags &
+            (XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT | XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT |
+             XR_SWAPCHAIN_USAGE_TRANSFER_DST_BIT | XR_SWAPCHAIN_USAGE_UNORDERED_ACCESS_BIT);
+
+        // We do no do any processing to depth buffer, but we like to have them for other things like occlusion when
+        // drawing.
+        const bool isDepth = createInfo->usageFlags & XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+
+        Log("Creating swapchain with dimensions=%ux%u, arraySize=%u, mipCount=%u, sampleCount=%u, format=%d, "
+            "usage=0x%x\n",
+            createInfo->width,
+            createInfo->height,
+            createInfo->arraySize,
+            createInfo->mipCount,
+            createInfo->sampleCount,
+            createInfo->format,
+            createInfo->usageFlags);
+
+        XrSwapchainCreateInfo chainCreateInfo = *createInfo;
+        if (useSwapchain && !isDepth)
+        {
+            // The post processor will draw a full-screen quad onto the final swapchain.
+            chainCreateInfo.usageFlags |= XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
+        }
+
+        const XrResult result = OpenXrApi::xrCreateSwapchain(session, &chainCreateInfo,  swapchain);
+        if (XR_SUCCEEDED(result) && useSwapchain)
+        {
+            m_Overlay->CreateSwapchain(session, &chainCreateInfo, createInfo, swapchain, isDepth);
+        }
+        return result;
+    }
+
+    XrResult OpenXrLayer::xrDestroySwapchain(XrSwapchain swapchain)
+    {
+        TraceLoggingWrite(g_traceProvider, "xrDestroySwapchain", TLPArg(swapchain, "Swapchain"));
+
+        const XrResult result = OpenXrApi::xrDestroySwapchain(swapchain);
+        if (XR_SUCCEEDED(result))
+        {
+            m_Overlay->DestroySwapchain(swapchain);
+        }
+
+        return result;
+    }
+
+    XrResult OpenXrLayer::xrWaitSwapchainImage(XrSwapchain swapchain, const XrSwapchainImageWaitInfo* waitInfo)
+    {
+        if (waitInfo->type != XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO)
+        {
+            return XR_ERROR_VALIDATION_FAILURE;
+        }
+
+        TraceLoggingWrite(g_traceProvider,
+                          "xrWaitSwapchainImage",
+                          TLPArg(swapchain, "Swapchain"),
+                          TLArg(waitInfo->timeout));
+
+        // We remove the timeout causing issues with OpenComposite.
+        XrSwapchainImageWaitInfo chainWaitInfo = *waitInfo;
+        chainWaitInfo.timeout = XR_INFINITE_DURATION;
+        return OpenXrApi::xrWaitSwapchainImage(swapchain, &chainWaitInfo);
+    }
+
+    XrResult OpenXrLayer::xrAcquireSwapchainImage(XrSwapchain swapchain,
+                                     const XrSwapchainImageAcquireInfo* acquireInfo,
+                                     uint32_t* index)
+    {
+        if (acquireInfo && acquireInfo->type != XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO)
+        {
+            return XR_ERROR_VALIDATION_FAILURE;
+        }
+
+        TraceLoggingWrite(g_traceProvider, "xrAcquireSwapchainImage", TLPArg(swapchain, "Swapchain"));
+
+        if (!m_Overlay->m_Initialized)
+        {
+            return OpenXrApi::xrAcquireSwapchainImage(swapchain, acquireInfo, index);
+        }
+
+        return m_Overlay->AcquireSwapchainImage(swapchain, acquireInfo, index);
+    }
+
+    XrResult OpenXrLayer::xrReleaseSwapchainImage(XrSwapchain swapchain, const XrSwapchainImageReleaseInfo* releaseInfo)
+    {
+        if (releaseInfo && releaseInfo->type != XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO)
+        {
+            return XR_ERROR_VALIDATION_FAILURE;
+        }
+
+        TraceLoggingWrite(g_traceProvider, "xrReleaseSwapchainImage", TLPArg(swapchain, "Swapchain"));
+
+        if (!m_Overlay->m_Initialized)
+        {
+            return OpenXrApi::xrReleaseSwapchainImage(swapchain, releaseInfo);
+        }
+        return m_Overlay->ReleaseSwapchainImage(swapchain, releaseInfo);
     }
 
     XrResult OpenXrLayer::xrGetCurrentInteractionProfile(XrSession session,
@@ -654,18 +787,36 @@ namespace motion_compensation_layer
                           TLPArg(session, "Session"),
                           TLArg(frameEndInfo->displayTime, "DisplayTime"),
                           TLArg(xr::ToCString(frameEndInfo->environmentBlendMode), "EnvironmentBlendMode"));
+
+        if (!isSessionHandled(session))
+        {
+            return OpenXrApi::xrEndFrame(session, frameEndInfo);
+        }
        
         m_LastFrameTime = frameEndInfo->displayTime;
         if (m_RecenterInProgress && !m_LocalRefSpaceCreated)
         {
             m_RecenterInProgress = false;
         }
-        m_LocalRefSpaceCreated = false;
+        m_LocalRefSpaceCreated = false; 
+
+        XrFrameEndInfo chainFrameEndInfo = *frameEndInfo;
+       
+        XrPosef referenceTrackerPose = m_Tracker->GetReferencePose(m_Session, chainFrameEndInfo.displayTime);
+
+        XrPosef reversedManipulation = Pose::Identity();
+        if (m_Activated)
+        {
+            reversedManipulation = Pose::Invert(m_PoseCache.GetSample(chainFrameEndInfo.displayTime));
+            m_PoseCache.CleanUp(chainFrameEndInfo.displayTime);
+        }
+
+        m_Overlay->DrawOverlay(&chainFrameEndInfo, referenceTrackerPose, reversedManipulation, m_Activated);
 
         if (!m_Activated)
         {
-            HandleKeyboardInput(frameEndInfo->displayTime);
-            return OpenXrApi::xrEndFrame(session, frameEndInfo);
+            HandleKeyboardInput(chainFrameEndInfo.displayTime);
+            return OpenXrApi::xrEndFrame(session, &chainFrameEndInfo);
         }
 
         std::vector<const XrCompositionLayerBaseHeader*> resetLayers{};
@@ -673,20 +824,17 @@ namespace motion_compensation_layer
         std::vector<XrCompositionLayerQuad*> resetQuadLayers{};
         std::vector<std::vector<XrCompositionLayerProjectionView>*> resetViews{};
 
-        // use pose cache for reverse calculation
-        XrPosef reversedManipulation = Pose::Invert(m_PoseCache.GetSample(frameEndInfo->displayTime));
-        m_PoseCache.CleanUp(frameEndInfo->displayTime);
-
-        for (uint32_t i = 0; i < frameEndInfo->layerCount; i++)
+        // use pose cache for reverse calculation 
+        for (uint32_t i = 0; i < chainFrameEndInfo.layerCount; i++)
         {
-            XrCompositionLayerBaseHeader baseHeader = *frameEndInfo->layers[i];
+            XrCompositionLayerBaseHeader baseHeader = *chainFrameEndInfo.layers[i];
             XrCompositionLayerBaseHeader* resetBaseHeader{nullptr};
             if (XR_TYPE_COMPOSITION_LAYER_PROJECTION == baseHeader.type)
             {
                 DebugLog("xrEndFrame: projection layer %u, space: %u\n", i, baseHeader.space);
 
                 const XrCompositionLayerProjection* projectionLayer =
-                    reinterpret_cast<const XrCompositionLayerProjection*>(frameEndInfo->layers[i]);
+                    reinterpret_cast<const XrCompositionLayerProjection*>(chainFrameEndInfo.layers[i]);
 
                 TraceLoggingWrite(g_traceProvider,
                                   "xrEndFrame_Layer",
@@ -746,7 +894,7 @@ namespace motion_compensation_layer
                 DebugLog("xrEndFrame: quad layer %u, space: %u\n", i, baseHeader.space);
 
                 const XrCompositionLayerQuad* quadLayer =
-                    reinterpret_cast<const XrCompositionLayerQuad*>(frameEndInfo->layers[i]);
+                    reinterpret_cast<const XrCompositionLayerQuad*>(chainFrameEndInfo.layers[i]);
 
                TraceLoggingWrite(g_traceProvider,
                                   "xrEndFrame_Layer",
@@ -781,16 +929,16 @@ namespace motion_compensation_layer
             }
             else
             {
-                resetLayers.push_back(frameEndInfo->layers[i]);
+                resetLayers.push_back(chainFrameEndInfo.layers[i]);
             }
         }
-        HandleKeyboardInput(frameEndInfo->displayTime);
+        HandleKeyboardInput(chainFrameEndInfo.displayTime);
 
-        XrFrameEndInfo resetFrameEndInfo{frameEndInfo->type,
-                                         frameEndInfo->next,
-                                         frameEndInfo->displayTime,
-                                         frameEndInfo->environmentBlendMode,
-                                         frameEndInfo->layerCount,
+        XrFrameEndInfo resetFrameEndInfo{chainFrameEndInfo.type,
+                                         chainFrameEndInfo.next,
+                                         chainFrameEndInfo.displayTime,
+                                         chainFrameEndInfo.environmentBlendMode,
+                                         chainFrameEndInfo.layerCount,
                                          resetLayers.data()};
 
         XrResult result = OpenXrApi::xrEndFrame(session, &resetFrameEndInfo);
@@ -854,6 +1002,11 @@ namespace motion_compensation_layer
     bool OpenXrLayer::isSystemHandled(XrSystemId systemId) const
     {
         return systemId == m_systemId;
+    }
+
+    bool OpenXrLayer::isSessionHandled(XrSession session) const
+    {
+        return session == m_Session;
     }
 
     bool OpenXrLayer::isViewSpace(XrSpace space) const
@@ -995,6 +1148,15 @@ namespace motion_compensation_layer
                               TLArg(time, "Time"));
         }
     }
+
+    void OpenXrLayer::ToggleOverlay()
+    {
+        if (!m_Overlay->ToggleOverlay())
+        {
+            GetAudioOut()->Execute(Event::Error); 
+        }
+    }
+
     void OpenXrLayer::ChangeOffset(Direction dir)
     {
         bool success = true;
@@ -1245,6 +1407,10 @@ namespace motion_compensation_layer
         if (m_Input.GetKeyState(Cfg::KeyRotLeft, isRepeat))
         {
             ChangeOffset(Direction::RotLeft);
+        }
+        if (m_Input.GetKeyState(Cfg::KeyOverlay, isRepeat) && !isRepeat)
+        {
+            ToggleOverlay();
         }
         if (m_Input.GetKeyState(Cfg::KeySaveConfig, isRepeat) && !isRepeat)
         {

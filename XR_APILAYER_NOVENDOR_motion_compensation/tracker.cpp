@@ -124,6 +124,11 @@ namespace Tracker
         SetReferencePose(Pose::Multiply(m_ReferencePose, pose));
     }
 
+    XrPosef TrackerBase::GetReferencePose(XrSession session, XrTime time)
+    {
+        return m_ReferencePose;
+    }
+
     bool TrackerBase::GetPoseDelta(XrPosef& poseDelta, XrSession session, XrTime time)
     {
         // pose already calulated for requested time or unable to calculate

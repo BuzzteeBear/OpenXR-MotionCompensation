@@ -29,6 +29,7 @@ namespace utility
                                  Cfg::KeyOffLeft,
                                  Cfg::KeyRotRight,
                                  Cfg::KeyRotLeft,
+                                 Cfg::KeyOverlay,
                                  Cfg::KeySaveConfig,
                                  Cfg::KeySaveConfigApp,
                                  Cfg::KeyReloadConfig,
@@ -92,7 +93,9 @@ namespace utility
         }
         else
         {
-            ErrorLog("%s: defaulting to mmf connection refresh interval of %.3f ms\n",__FUNCTION__, m_Check / 1000000.0);
+            ErrorLog("%s: defaulting to mmf connection refresh interval of %.3f ms\n",
+                     __FUNCTION__,
+                     m_Check / 1000000.0);
         }
     }
 
@@ -145,7 +148,7 @@ namespace utility
         }
         if (!m_View)
         {
-           Open(time);
+            Open(time);
         }
         if (m_View)
         {
@@ -164,7 +167,7 @@ namespace utility
         }
         return false;
     }
-    
+
     void Mmf::Close()
     {
         if (m_View)
@@ -203,4 +206,4 @@ namespace utility
         }
         return "0";
     }
-} // namespace utilities
+} // namespace utility
