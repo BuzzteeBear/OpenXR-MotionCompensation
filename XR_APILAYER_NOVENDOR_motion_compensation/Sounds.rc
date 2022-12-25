@@ -92,6 +92,10 @@ UP_WAV                  WAVE                    "sounds\\up.wav"
 
 CONNECTION_LOST_WAV     WAVE                    "sounds\\connection_lost.wav"
 
+EYE_CALCULATION_WAV     WAVE                    "sounds\\eye_calculation.wav"
+
+EYE_CACHED_WAV          WAVE                    "sounds\\eye_cached.wav"
+
 #endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////
 

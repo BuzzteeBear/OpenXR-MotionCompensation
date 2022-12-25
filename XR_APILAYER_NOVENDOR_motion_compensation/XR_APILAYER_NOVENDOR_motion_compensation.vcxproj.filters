@@ -190,5 +190,11 @@
     <Media Include="sounds\connection_lost.wav">
       <Filter>Sounds</Filter>
     </Media>
+    <Media Include="sounds\eye_cached.wav">
+      <Filter>Sounds</Filter>
+    </Media>
+    <Media Include="sounds\eye_calculation.wav">
+      <Filter>Sounds</Filter>
+    </Media>
   </ItemGroup>
 </Project>

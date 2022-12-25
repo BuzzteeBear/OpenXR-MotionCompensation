@@ -116,6 +116,9 @@ namespace motion_compensation_layer
             // enable debug test rotation
             GetConfig()->GetBool(Cfg::TestRotation, m_TestRotation);
 
+            // choose cache for reverting pose in xrEndFrame
+            GetConfig()->GetBool(Cfg::CacheUseEye, m_UseEyeCache);
+
             float timeout;
             if (GetConfig()->GetFloat(Cfg::TrackerTimeout, timeout))
             {
@@ -700,7 +703,7 @@ namespace motion_compensation_layer
         {
             originalEyePoses.push_back(views[i].pose);
         }
-        //m_EyeCache.AddSample(viewLocateInfo->displayTime, originalEyePoses);
+        m_EyeCache.AddSample(viewLocateInfo->displayTime, originalEyePoses);
 
         if (m_EyeOffsets.empty())
         {
@@ -804,11 +807,15 @@ namespace motion_compensation_layer
        
         XrPosef referenceTrackerPose = m_Tracker->GetReferencePose(m_Session, chainFrameEndInfo.displayTime);
 
-        XrPosef reversedManipulation = Pose::Identity();
+        XrPosef reversedManipulation;
+        std::vector<XrPosef> cachedEyePoses;
         if (m_Activated)
         {
             reversedManipulation = Pose::Invert(m_PoseCache.GetSample(chainFrameEndInfo.displayTime));
             m_PoseCache.CleanUp(chainFrameEndInfo.displayTime);
+            cachedEyePoses =
+                m_UseEyeCache ? m_EyeCache.GetSample(chainFrameEndInfo.displayTime) : std::vector<XrPosef>();
+            m_EyeCache.CleanUp(chainFrameEndInfo.displayTime);
         }
 
         m_Overlay->DrawOverlay(&chainFrameEndInfo, referenceTrackerPose, reversedManipulation, m_Activated);
@@ -868,7 +875,10 @@ namespace motion_compensation_layer
                         TLArg(xr::ToString((*projectionViews)[j].subImage.imageRect).c_str(), "ImageRect"),
                         TLArg(xr::ToString((*projectionViews)[j].fov).c_str(), "Fov"));
 
-                    (*projectionViews)[j].pose = Pose::Multiply((*projectionViews)[j].pose, reversedManipulation);
+                    XrPosef reversedEyePose = m_UseEyeCache
+                                                  ? cachedEyePoses[j]
+                                                  : Pose::Multiply((*projectionViews)[j].pose, reversedManipulation);
+                    (*projectionViews)[j].pose = reversedEyePose;
 
                     TraceLoggingWrite(g_traceProvider,
                                       "xrEndFrame_View",
@@ -1157,6 +1167,13 @@ namespace motion_compensation_layer
         }
     }
 
+    void OpenXrLayer::ToggleCache()
+    {
+        m_UseEyeCache = !m_UseEyeCache;
+        GetConfig()->SetValue(Cfg::CacheUseEye, m_UseEyeCache);
+        GetAudioOut()->Execute(m_UseEyeCache ? Event::EyeCached : Event::EyeCalculated); 
+    }
+
     void OpenXrLayer::ChangeOffset(Direction dir)
     {
         bool success = true;
@@ -1221,6 +1238,7 @@ namespace motion_compensation_layer
         if (success)
         {
             GetConfig()->GetBool(Cfg::TestRotation, m_TestRotation);
+            GetConfig()->GetBool(Cfg::CacheUseEye, m_UseEyeCache);
             Tracker::GetTracker(&m_Tracker);
             if (!m_Tracker->Init())
             {
@@ -1411,6 +1429,10 @@ namespace motion_compensation_layer
         if (m_Input.GetKeyState(Cfg::KeyOverlay, isRepeat) && !isRepeat)
         {
             ToggleOverlay();
+        }
+        if (m_Input.GetKeyState(Cfg::KeyCache, isRepeat) && !isRepeat)
+        {
+            ToggleCache();
         }
         if (m_Input.GetKeyState(Cfg::KeySaveConfig, isRepeat) && !isRepeat)
         {

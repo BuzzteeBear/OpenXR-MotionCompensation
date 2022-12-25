@@ -116,6 +116,7 @@ namespace motion_compensation_layer
         void ToggleActive(XrTime time);
         void Recalibrate(XrTime time);
         void ToggleOverlay();
+        void ToggleCache();
         void ChangeOffset(Direction dir);
         void ReloadConfig();
         void SaveConfig(XrTime time, bool forApp);
@@ -134,6 +135,7 @@ namespace motion_compensation_layer
         bool m_InteractionProfileSuggested{false};
         bool m_Initialized{true};
         bool m_Activated{false};
+        bool m_UseEyeCache{false};
         std::string m_Application;
         std::set<XrSpace> m_ViewSpaces{};
         std::vector<XrView> m_EyeOffsets{};
@@ -141,6 +143,11 @@ namespace motion_compensation_layer
         Tracker::TrackerBase* m_Tracker{nullptr};
         Tracker::ViveTrackerInfo m_ViveTracker;
         utility::Cache<XrPosef> m_PoseCache{2000000, xr::math::Pose::Identity()};
+        utility::Cache<std::vector<XrPosef>> m_EyeCache{2,
+                                                        std::vector<XrPosef>{xr::math::Pose::Identity(),
+                                                                             xr::math::Pose::Identity(),
+                                                                             xr::math::Pose::Identity(),
+                                                                             xr::math::Pose::Identity()}};
         utility::KeyboardInput m_Input;
 
         /*

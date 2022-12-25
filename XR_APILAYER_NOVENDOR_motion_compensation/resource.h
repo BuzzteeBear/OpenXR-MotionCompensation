@@ -23,12 +23,14 @@
 #define SAVED_WAV                       119
 #define UP_WAV                          120
 #define CONNECTION_LOST_WAV             121
+#define EYE_CALCULATION_WAV             122
+#define EYE_CACHED_WAV                  123
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        122
+#define _APS_NEXT_RESOURCE_VALUE        124
 #define _APS_NEXT_COMMAND_VALUE         40001
 #define _APS_NEXT_CONTROL_VALUE         1001
 #define _APS_NEXT_SYMED_VALUE           101

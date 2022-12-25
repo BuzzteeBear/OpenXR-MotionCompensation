@@ -222,6 +222,8 @@ xcopy $(SolutionDir)\configuration\OpenXR-MotionCompensation.ini $(OutDir) /y /q
     <Media Include="sounds\debug_on.wav" />
     <Media Include="sounds\down.wav" />
     <Media Include="sounds\error.wav" />
+    <Media Include="sounds\eye_cached.wav" />
+    <Media Include="sounds\eye_calculation.wav" />
     <Media Include="sounds\forward.wav" />
     <Media Include="sounds\left.wav" />
     <Media Include="sounds\loaded.wav" />

@@ -15,25 +15,11 @@ namespace utility
     bool KeyboardInput::Init()
     {
         bool success = true;
-        std::set<Cfg> activities{Cfg::KeyActivate,
-                                 Cfg::KeyCenter,
-                                 Cfg::KeyTransInc,
-                                 Cfg::KeyTransDec,
-                                 Cfg::KeyRotInc,
-                                 Cfg::KeyRotDec,
-                                 Cfg::KeyOffForward,
-                                 Cfg::KeyOffBack,
-                                 Cfg::KeyOffUp,
-                                 Cfg::KeyOffDown,
-                                 Cfg::KeyOffRight,
-                                 Cfg::KeyOffLeft,
-                                 Cfg::KeyRotRight,
-                                 Cfg::KeyRotLeft,
-                                 Cfg::KeyOverlay,
-                                 Cfg::KeySaveConfig,
-                                 Cfg::KeySaveConfigApp,
-                                 Cfg::KeyReloadConfig,
-                                 Cfg::KeyDebugCor};
+        std::set<Cfg> activities{Cfg::KeyActivate,   Cfg::KeyCenter,        Cfg::KeyTransInc,     Cfg::KeyTransDec,
+                                 Cfg::KeyRotInc,     Cfg::KeyRotDec,        Cfg::KeyOffForward,   Cfg::KeyOffBack,
+                                 Cfg::KeyOffUp,      Cfg::KeyOffDown,       Cfg::KeyOffRight,     Cfg::KeyOffLeft,
+                                 Cfg::KeyRotRight,   Cfg::KeyRotLeft,       Cfg::KeyOverlay,      Cfg::KeyCache,
+                                 Cfg::KeySaveConfig, Cfg::KeySaveConfigApp, Cfg::KeyReloadConfig, Cfg::KeyDebugCor};
         std::string errors;
         for (const Cfg& activity : activities)
         {

@@ -25,7 +25,9 @@ namespace Feedback
         RotRight,
         DebugOn,
         DebugOff,
-        ConnectionLost
+        ConnectionLost,
+        EyeCached,
+        EyeCalculated
     };
 
     class AudioOut

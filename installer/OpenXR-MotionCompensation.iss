@@ -78,6 +78,9 @@ Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "translation_filt
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "rotation_filter"; Key: "strength"; String: "0.50"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "rotation_filter"; Key: "order"; String: "2"; Flags: createkeyifdoesntexist
 
+; [cache]
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "cache"; Key: "use_eye_cache"; String: "0"; Flags: createkeyifdoesntexist
+
 ; [shortcuts]
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "activate"; String: "CTRL+INS"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "center"; String: "CTRL+DEL"; Flags: createkeyifdoesntexist
@@ -93,6 +96,7 @@ Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key:
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "offset_left"; String: "CTRL+LEFT"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "rotate_right"; String: "CTRL+PERIOD"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "rotate_left"; String: "CTRL+COMMA"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "toggle_cache"; String: "CTRL+E"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "cor_debug_mode"; String: "CTRL+SHIFT+M"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "save_config"; String: "CTRL+SHIFT+S"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "save_config_app"; String: "CTRL+SHIFT+A"; Flags: createkeyifdoesntexist

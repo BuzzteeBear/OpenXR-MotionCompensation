@@ -23,6 +23,7 @@ enum class Cfg
     TransOrder,
     RotStrength,
     RotOrder,
+    CacheUseEye,
     KeyActivate,
     KeyCenter,
     KeyTransInc,
@@ -38,6 +39,7 @@ enum class Cfg
     KeyRotRight,
     KeyRotLeft,
     KeyOverlay,
+    KeyCache,
     KeySaveConfig,
     KeySaveConfigApp,
     KeyReloadConfig,
@@ -95,6 +97,8 @@ class ConfigManager
         {Cfg::RotStrength, {"rotation_filter", "strength"}},
         {Cfg::RotOrder, {"rotation_filter", "order"}},
 
+        {Cfg::CacheUseEye, {"cache", "use_eye_cache"}},
+
         {Cfg::KeyActivate, {"shortcuts", "activate"}},
         {Cfg::KeyCenter, {"shortcuts", "center"}},
 
@@ -112,7 +116,10 @@ class ConfigManager
 
         {Cfg::KeyRotRight, {"shortcuts", "rotate_right"}},
         {Cfg::KeyRotLeft, {"shortcuts", "rotate_left"}},
+
         {Cfg::KeyOverlay, {"shortcuts", "toggle_overlay"}},
+
+        {Cfg::KeyCache, {"shortcuts", "toggle_cache"}},
 
         {Cfg::KeyDebugCor, {"shortcuts", "cor_debug_mode"}},
 
@@ -127,6 +134,7 @@ class ConfigManager
                                Cfg::TrackerOffsetForward,
                                Cfg::TrackerOffsetDown,
                                Cfg::TrackerOffsetRight,
+                               Cfg::CacheUseEye,
                                Cfg::CorX,
                                Cfg::CorY,
                                Cfg::CorZ,
