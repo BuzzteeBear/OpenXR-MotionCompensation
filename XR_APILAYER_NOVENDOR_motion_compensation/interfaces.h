@@ -448,27 +448,6 @@ namespace graphics
                           const XrPosef& pose,
                           XrVector3f scaling = {1.0f, 1.0f, 1.0f}) = 0;
 
-        virtual float drawString(std::wstring_view string,
-                                 TextStyle style,
-                                 float size,
-                                 float x,
-                                 float y,
-                                 uint32_t color,
-                                 bool measure = false,
-                                 int alignment = FW1_LEFT) = 0;
-        virtual float drawString(std::string_view string,
-                                 TextStyle style,
-                                 float size,
-                                 float x,
-                                 float y,
-                                 uint32_t color,
-                                 bool measure = false,
-                                 int alignment = FW1_LEFT) = 0;
-        virtual float measureString(std::wstring_view string, TextStyle style, float size) const = 0;
-        virtual float measureString(std::string_view string, TextStyle style, float size) const = 0;
-        virtual void beginText(bool mustKeepOldContent = false) = 0;
-        virtual void flushText() = 0;
-
         virtual void resolveQueries() = 0;
 
         virtual void blockCallbacks() = 0;

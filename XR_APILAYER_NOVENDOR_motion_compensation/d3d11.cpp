@@ -766,14 +766,12 @@ void main(uint3 id : SV_DispatchThreadID)
         const ComPtr<ID3D11DeviceContext> m_context;
     };
 
-    class D3D11Device : public IDevice, public std::enable_shared_from_this<D3D11Device> {
+    class D3D11Device : public IDevice, public std::enable_shared_from_this<D3D11Device>
+    {
       public:
-        D3D11Device(ID3D11Device* device,
-                    bool textOnly = false,
-                    bool enableOculusQuirk = false)
-            : m_device(device), 
-            m_allowInterceptor(true),
-              m_lateInitCountdown(enableOculusQuirk ? 10 : 0) {
+        D3D11Device(ID3D11Device* device, bool enableOculusQuirk = false)
+            : m_device(device), m_allowInterceptor(true), m_lateInitCountdown(enableOculusQuirk ? 10 : 0)
+        {
             m_device->GetImmediateContext(set(m_context));
             {
                 ComPtr<IDXGIDevice> dxgiDevice;
@@ -789,39 +787,36 @@ void main(uint3 id : SV_DispatchThreadID)
                                std::back_inserter(m_deviceName),
                                [](wchar_t c) { return (char)c; });
 
-                if (!textOnly)
-                {
-                    // Log the adapter name to help debugging customer issues.
-                    Log("Using Direct3D 11 on adapter: %s\n", m_deviceName.c_str());
-                }
+                // Log the adapter name to help debugging customer issues.
+                Log("Using Direct3D 11 on adapter: %s\n", m_deviceName.c_str());
             }
 
 #ifdef _DEBUG
             // Initialize Debug layer logging.
-            if (!textOnly) {
-                if (SUCCEEDED(m_device->QueryInterface(set(m_infoQueue)))) {
-                    Log("D3D11 Debug layer is enabled\n");
-                } else {
-                    Log("Failed to enable debug layer - please check that the 'Graphics Tools' feature of Windows "
-                        "is "
-                        "installed\n");
-                }
+
+            if (SUCCEEDED(m_device->QueryInterface(set(m_infoQueue))))
+            {
+                Log("D3D11 Debug layer is enabled\n");
+            }
+            else
+            {
+                Log("Failed to enable debug layer - please check that the 'Graphics Tools' feature of Windows "
+                    "is "
+                    "installed\n");
             }
 #endif
             // Create common resources.
-            if (!textOnly) {
-                // Workaround: the Oculus OpenXR Runtime for DX11 seems to intercept some of the D3D calls as well.
-                // It breaks our use of Detours. Delay the call to initializeInterceptor() by a few frames (see
-                // flushContext()).
-                if (!m_lateInitCountdown) {
-                    Log("Early initializeInterceptor() call\n");
-                    initializeInterceptor();
-                }
-                initializeShadingResources();
-                initializeMeshResources();
-                initializeDebugResources();
+            // Workaround: the Oculus OpenXR Runtime for DX11 seems to intercept some of the D3D calls as well.
+            // It breaks our use of Detours. Delay the call to initializeInterceptor() by a few frames (see
+            // flushContext()).
+            if (!m_lateInitCountdown)
+            {
+                Log("Early initializeInterceptor() call\n");
+                initializeInterceptor();
             }
-            initializeTextResources();
+            initializeShadingResources();
+            initializeMeshResources();
+            initializeDebugResources();
         }
 
         ~D3D11Device() override {
@@ -1355,77 +1350,6 @@ void main(uint3 id : SV_DispatchThreadID)
             }
         }
 
-        float drawString(std::wstring_view string,
-                         TextStyle style,
-                         float size,
-                         float x,
-                         float y,
-                         uint32_t color,
-                         bool measure,
-                         int alignment) override
-        {
-            auto& font = style == TextStyle::Bold ? m_fontBold : m_fontNormal;
-
-            font->DrawString(get(m_context), string.data(), size, x, y, color, alignment | FW1_NOFLUSH);
-            return measure ? measureString(string, style, size) : 0.0f;
-        }
-
-        float drawString(std::string_view string,
-                         TextStyle style,
-                         float size,
-                         float x,
-                         float y,
-                         uint32_t color,
-                         bool measure,
-                         int alignment) override
-        {
-            // fast path, use the stack for most of our strings
-            auto src = reinterpret_cast<const uint8_t*>(string.data());
-            if (string.size() < size_t(64))
-            {
-                wchar_t buf[64];
-                std::copy_n(src, string.size(), buf)[0] = '\0';
-                return drawString(std::wstring_view(buf, string.size()), style, size, x, y, color, measure, alignment);
-            }
-            return drawString(std::wstring(src, src + string.size()), style, size, x, y, color, measure, alignment);
-        }
-
-        float measureString(std::wstring_view string, TextStyle style, float size) const override
-        {
-            auto& font = style == TextStyle::Bold ? m_fontBold : m_fontNormal;
-
-            // XXX: This API is not very well documented - here is my guess on how to use the rect values...
-            FW1_RECTF inRect;
-            ZeroMemory(&inRect, sizeof(inRect));
-            inRect.Right = inRect.Bottom = 1000.0f;
-            const auto rect =
-                font->MeasureString(string.data(), m_fontFamily.c_str(), size, &inRect, FW1_LEFT | FW1_TOP);
-            return 1000.0f + rect.Right;
-        }
-
-        float measureString(std::string_view string, TextStyle style, float size) const override
-        {
-            // fast path, use the stack for most of our strings
-            auto src = reinterpret_cast<const uint8_t*>(string.data());
-            if (string.size() < size_t(64))
-            {
-                wchar_t buf[64];
-                std::copy_n(src, string.size(), buf)[0] = '\0';
-                return measureString(std::wstring_view(buf, string.size()), style, size);
-            }
-            return measureString(std::wstring(src, src + string.size()), style, size);
-        }
-
-        void beginText(bool mustKeepOldContent) override
-        {}
-
-        void flushText() override
-        {
-            m_fontNormal->Flush(get(m_context));
-            m_fontBold->Flush(get(m_context));
-            m_context->Flush();
-        }
-
         void resolveQueries() override {
         }
 
@@ -1704,32 +1628,6 @@ void main(uint3 id : SV_DispatchThreadID)
             SetDebugName(get(m_debugWorkloadShader), "DebugWorkload CS");
         }
 
-        // Initialize resources for drawString() and related calls.
-        void initializeTextResources()
-        {
-            CHECK_HRCMD(FW1CreateFactory(FW1_VERSION, set(m_fontWrapperFactory)));
-
-            if (FAILED(m_fontWrapperFactory->CreateFontWrapper(get(m_device), m_fontFamily.c_str(), set(m_fontNormal))))
-            {
-                // Fallback to Arial - won't have symbols but will have text.
-                m_fontFamily = L"Arial";
-                CHECK_HRCMD(
-                    m_fontWrapperFactory->CreateFontWrapper(get(m_device), m_fontFamily.c_str(), set(m_fontNormal)));
-            }
-
-            IDWriteFactory* dwriteFactory = nullptr;
-            CHECK_HRCMD(m_fontNormal->GetDWriteFactory(&dwriteFactory));
-            FW1_FONTWRAPPERCREATEPARAMS params;
-            ZeroMemory(&params, sizeof(params));
-            params.DefaultFontParams.pszFontFamily = m_fontFamily.c_str();
-            params.DefaultFontParams.FontWeight = DWRITE_FONT_WEIGHT_BOLD;
-            params.DefaultFontParams.FontStretch = DWRITE_FONT_STRETCH_NORMAL;
-            params.DefaultFontParams.FontStyle = DWRITE_FONT_STYLE_NORMAL;
-            CHECK_HRCMD(
-                m_fontWrapperFactory->CreateFontWrapper(get(m_device), dwriteFactory, &params, set(m_fontBold)));
-        }
-
-
 #define INVOKE_EVENT(event, ...)                                                                                       \
     do {                                                                                                               \
         if (!m_blockEvents && m_##event) {                                                                             \
@@ -1853,10 +1751,6 @@ void main(uint3 id : SV_DispatchThreadID)
         ComPtr<ID3D11InputLayout> m_meshInputLayout;
         std::shared_ptr<IShaderBuffer> m_meshViewProjectionBuffer;
         std::shared_ptr<IShaderBuffer> m_meshModelBuffer;
-        ComPtr<IFW1Factory> m_fontWrapperFactory;
-        ComPtr<IFW1FontWrapper> m_fontNormal;
-        ComPtr<IFW1FontWrapper> m_fontBold;
-        std::wstring m_fontFamily{FontFamily};
 
         std::shared_ptr<ITexture> m_currentDrawRenderTarget;
         int32_t m_currentDrawRenderTargetSlice;
@@ -2199,7 +2093,7 @@ namespace graphics
 
     std::shared_ptr<IDevice> WrapD3D11Device(ID3D11Device* device, bool enableOculusQuirk)
     {
-        return std::make_shared<D3D11Device>(device, false /* textOnly */, enableOculusQuirk);
+        return std::make_shared<D3D11Device>(device, enableOculusQuirk);
     }
 
     std::shared_ptr<IDevice> WrapD3D11TextDevice(ID3D11Device* device)

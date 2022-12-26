@@ -88,9 +88,6 @@ using Microsoft::WRL::ComPtr;
 // FMT formatter.
 #include <fmt/format.h>
 
-// FW1FontWrapper.
-#include <FW1FontWrapper.h>
-
 // Detours
 #include <detours.h>
 #include "detours_helpers.h"
