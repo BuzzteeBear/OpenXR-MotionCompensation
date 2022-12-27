@@ -38,13 +38,14 @@ namespace graphics
     Overlay::~Overlay()
     {
         m_Swapchains.clear();
-        m_MenuSwapchainImages.clear();
     }
     void Overlay::CreateSession(const XrSessionCreateInfo* createInfo,
                                 XrSession* session,
                                 const std::string& runtimeName)
     {
         m_Initialized = true;
+        m_OwnDepthBuffers.clear();
+
         OpenXrLayer* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
         if (layer)
         {
@@ -86,76 +87,13 @@ namespace graphics
                     std::vector<uint16_t> indices;
                     graphics::copyFromArray(indices, graphics::c_cubeIndices);
                     std::vector<graphics::SimpleMeshVertex> vertices;
-                    // graphics::copyFromArray(vertices, graphics::c_cubeBrightVertices);
                     graphics::copyFromArray(vertices, graphics::c_MarkerRGB);
                     m_MeshRGB = m_GraphicsDevice->createSimpleMesh(vertices, indices, "RGB Mesh");
-
                     graphics::copyFromArray(vertices, graphics::c_MarkerCMY);
                     m_MeshCMY = m_GraphicsDevice->createSimpleMesh(vertices, indices, "CMY Mesh");
 
-                    uint32_t formatCount = 0;
-                    CHECK_XRCMD(layer->xrEnumerateSwapchainFormats(*session, 0, &formatCount, nullptr));
-                    std::vector<int64_t> formats(formatCount);
-                    CHECK_XRCMD(
-                        layer->xrEnumerateSwapchainFormats(*session, formatCount, &formatCount, formats.data()));
-
-                    XrSwapchainCreateInfo swapchainInfo{XR_TYPE_SWAPCHAIN_CREATE_INFO};
-                    swapchainInfo.width = swapchainInfo.height =
-                        2048; // Let's hope the menu doesn't get bigger than that.
-                    swapchainInfo.arraySize = 1;
-                    swapchainInfo.usageFlags = XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
-                    swapchainInfo.format = formats[0];
-                    swapchainInfo.sampleCount = 1;
-                    swapchainInfo.faceCount = 1;
-                    swapchainInfo.mipCount = 1;
-                    CHECK_XRCMD(layer->OpenXrApi::xrCreateSwapchain(*session, &swapchainInfo, &m_MenuSwapchain));
-                    TraceLoggingWrite(g_traceProvider, "MenuSwapchain", TLPArg(m_MenuSwapchain, "Swapchain"));
-
-                    uint32_t imageCount;
-                    CHECK_XRCMD(layer->OpenXrApi::xrEnumerateSwapchainImages(m_MenuSwapchain, 0, &imageCount, nullptr));
-
-                    graphics::SwapchainState swapchainState;
-                    int64_t overrideFormat = 0;
-                    if (m_GraphicsDevice->getApi() == graphics::Api::D3D11)
-                    {
-                        std::vector<XrSwapchainImageD3D11KHR> d3dImages(imageCount,
-                                                                        {XR_TYPE_SWAPCHAIN_IMAGE_D3D11_KHR});
-                        CHECK_XRCMD(layer->OpenXrApi::xrEnumerateSwapchainImages(
-                            m_MenuSwapchain,
-                            imageCount,
-                            &imageCount,
-                            reinterpret_cast<XrSwapchainImageBaseHeader*>(d3dImages.data())));
-
-                        for (uint32_t i = 0; i < imageCount; i++)
-                        {
-                            m_MenuSwapchainImages.push_back(
-                                graphics::WrapD3D11Texture(m_GraphicsDevice,
-                                                           swapchainInfo,
-                                                           d3dImages[i].texture,
-                                                           fmt::format("Menu swapchain {} TEX2D", i)));
-                        }
-                    }
-                    else if (m_GraphicsDevice->getApi() == graphics::Api::D3D12)
-                    {
-                        std::vector<XrSwapchainImageD3D12KHR> d3dImages(imageCount,
-                                                                        {XR_TYPE_SWAPCHAIN_IMAGE_D3D12_KHR});
-                        CHECK_XRCMD(layer->OpenXrApi::xrEnumerateSwapchainImages(
-                            m_MenuSwapchain,
-                            imageCount,
-                            &imageCount,
-                            reinterpret_cast<XrSwapchainImageBaseHeader*>(d3dImages.data())));
-
-                        for (uint32_t i = 0; i < imageCount; i++)
-                        {
-                            m_MenuSwapchainImages.push_back(
-                                graphics::WrapD3D12Texture(m_GraphicsDevice,
-                                                           swapchainInfo,
-                                                           d3dImages[i].texture,
-                                                           D3D12_RESOURCE_STATE_RENDER_TARGET,
-                                                           fmt::format("Menu swapchain {} TEX2D", i)));
-                        }
-                    }
-                    else
+                    if (m_GraphicsDevice->getApi() != graphics::Api::D3D11 &&
+                        m_GraphicsDevice->getApi() != graphics::Api::D3D12)
                     {
                         throw std::runtime_error("Unsupported graphics runtime");
                     }
@@ -300,13 +238,7 @@ namespace graphics
 
                     if (!isDepth)
                     {
-                        // Create an app texture with the exact specification requested
-                        XrSwapchainCreateInfo inputCreateInfo = *createInfo;
-
-                        // Both post-processor and upscalers need to do sampling.
-                        inputCreateInfo.usageFlags |= XR_SWAPCHAIN_USAGE_SAMPLED_BIT;
-
-                        images.appTexture = m_GraphicsDevice->createTexture(inputCreateInfo,
+                        images.appTexture = m_GraphicsDevice->createTexture(*createInfo,
                                                                             fmt::format("App swapchain {} TEX2D", i),
                                                                             overrideFormat);
                     }
@@ -314,6 +246,16 @@ namespace graphics
                     {
                         images.appTexture = images.runtimeTexture;
                     }
+                }
+
+                if (m_OwnDepthBuffers.find(*swapchain) == m_OwnDepthBuffers.cend())
+                {
+                    XrSwapchainCreateInfo depthInfo = *createInfo;
+                    depthInfo.usageFlags = XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+                         
+                    std::shared_ptr<ITexture> texture =
+                        m_GraphicsDevice->createTexture(depthInfo, "depth buffer", DXGI_FORMAT_D32_FLOAT);
+                    m_OwnDepthBuffers.insert_or_assign(*swapchain, texture);
                 }
 
                 m_Swapchains.insert_or_assign(*swapchain, swapchainState);
@@ -431,9 +373,9 @@ namespace graphics
                 m_GraphicsDevice->unsetRenderTargets();
 
                 std::shared_ptr<graphics::ITexture> textureForOverlay[graphics::ViewCount]{};
-                uint32_t sliceForOverlay[graphics::ViewCount];
+                uint32_t sliceForOverlay[graphics::ViewCount]{};
                 std::shared_ptr<graphics::ITexture> depthForOverlay[graphics::ViewCount]{};
-                xr::math::ViewProjection viewForOverlay[graphics::ViewCount];
+                xr::math::ViewProjection viewForOverlay[graphics::ViewCount]{};
                 XrRect2Di viewportForOverlay[graphics::ViewCount];
 
                 std::vector<XrCompositionLayerProjection> layerProjectionAllocator;
@@ -504,8 +446,11 @@ namespace graphics
 
                             textureForOverlay[eye] = swapchainImages.runtimeTexture;
                             sliceForOverlay[eye] = view.subImage.imageArrayIndex;
-                            depthForOverlay[eye] = depthBuffer;
-
+                            auto ownDepthBufferIt = m_OwnDepthBuffers.find(swapchainIt->first);
+                            depthForOverlay[eye] = depthBuffer ? depthBuffer
+                                                   : ownDepthBufferIt != m_OwnDepthBuffers.cend()
+                                                       ? ownDepthBufferIt->second
+                                                       : nullptr;
                             viewForOverlay[eye].Pose = view.pose;
                             viewForOverlay[eye].Fov = view.fov;
                             viewForOverlay[eye].NearFar = nearFar;
@@ -529,8 +474,8 @@ namespace graphics
                             &viewportForOverlay[eye],
                             depthForOverlay[eye] ,
                             useTextureArrays ? eye : -1);
-
                         m_GraphicsDevice->setViewProjection(viewForOverlay[eye]);
+                        m_GraphicsDevice->clearDepth(1.f);
 
                         XrVector3f scaling{0.01f, 0.01f, 0.01f};
                         if (mcActivated)

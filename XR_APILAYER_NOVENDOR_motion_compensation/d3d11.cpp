@@ -635,7 +635,7 @@ void main(uint3 id : SV_DispatchThreadID)
             if (auto device = m_device->getAs<D3D11>()) {
                 D3D11_DEPTH_STENCIL_VIEW_DESC desc;
                 ZeroMemory(&desc, sizeof(desc));
-                desc.Format = (DXGI_FORMAT)m_info.format;
+                desc.Format = m_textureDesc.Format; 
                 desc.ViewDimension =
                     m_info.arraySize == 1 ? D3D11_DSV_DIMENSION_TEXTURE2D : D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
                 desc.Texture2DArray.ArraySize = 1;
@@ -1312,8 +1312,7 @@ void main(uint3 id : SV_DispatchThreadID)
             }
             m_meshViewProjectionBuffer->uploadData(&staging, sizeof(staging));
 
-            m_context->OMSetDepthStencilState(
-                (view.NearFar.Near > view.NearFar.Far) ? get(m_reversedZDepthNoStencilTest) : nullptr, 0);
+            m_context->OMSetDepthStencilState(get(m_DepthNoStencilTest), 0);
         }
 
         void draw(std::shared_ptr<ISimpleMesh> mesh, const XrPosef& pose, XrVector3f scaling) override {
@@ -1612,8 +1611,8 @@ void main(uint3 id : SV_DispatchThreadID)
                 ZeroMemory(&desc, sizeof(desc));
                 desc.DepthEnable = true;
                 desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-                desc.DepthFunc = D3D11_COMPARISON_GREATER;
-                CHECK_HRCMD(m_device->CreateDepthStencilState(&desc, set(m_reversedZDepthNoStencilTest)));
+                desc.DepthFunc = D3D11_COMPARISON_LESS;
+                CHECK_HRCMD(m_device->CreateDepthStencilState(&desc, set(m_DepthNoStencilTest)));
             }
         }
 
@@ -1745,7 +1744,7 @@ void main(uint3 id : SV_DispatchThreadID)
         ComPtr<ID3D11RasterizerState> m_quadRasterizer;
         ComPtr<ID3D11RasterizerState> m_quadRasterizerMSAA;
         ComPtr<ID3D11VertexShader> m_quadVertexShader;
-        ComPtr<ID3D11DepthStencilState> m_reversedZDepthNoStencilTest;
+        ComPtr<ID3D11DepthStencilState> m_DepthNoStencilTest;
         ComPtr<ID3D11VertexShader> m_meshVertexShader;
         ComPtr<ID3D11PixelShader> m_meshPixelShader;
         ComPtr<ID3D11InputLayout> m_meshInputLayout;

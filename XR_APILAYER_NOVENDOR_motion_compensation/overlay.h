@@ -26,6 +26,7 @@
 
 namespace graphics
 {
+    // Colors
     constexpr XrVector3f Red{1.f, 0.f, 0.f};
     constexpr XrVector3f LightRed{1.f, 0.25f, 0.25f};
     constexpr XrVector3f Green{0.f, 1.f, 0.f};
@@ -50,8 +51,9 @@ namespace graphics
     constexpr XrVector3f RTF{0.5f, 0.5f, 0.5f};
     constexpr XrVector3f LEFT{-4.f, 0.f, 0.f};
     constexpr XrVector3f RIGHT{4.f, 0.f, 0.f};
+    
+    // Vertices for pyramid top
     constexpr XrVector3f TOP{0.f, 4.f, 0.f};
-    constexpr XrVector3f BOTTOM{0.f, -4.f, 0.f};
     constexpr XrVector3f FRONT{0.f, 0.f, 4.f};
     constexpr XrVector3f BACK{0.f, 0.f, -4.f};
 
@@ -133,8 +135,7 @@ namespace graphics
         bool m_OverlayActive{false};
         std::shared_ptr<graphics::IDevice> m_GraphicsDevice;
         std::map<XrSwapchain, graphics::SwapchainState> m_Swapchains;
-        XrSwapchain m_MenuSwapchain{XR_NULL_HANDLE};
-        std::vector<std::shared_ptr<graphics::ITexture>> m_MenuSwapchainImages;
+        std::unordered_map<XrSwapchain, std::shared_ptr<ITexture>> m_OwnDepthBuffers;
         std::shared_ptr<graphics::ISimpleMesh> m_MeshRGB, m_MeshCMY;
     };
 } // namespace graphics
