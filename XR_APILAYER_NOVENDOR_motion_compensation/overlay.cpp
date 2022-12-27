@@ -84,14 +84,12 @@ namespace graphics
 
                 if (m_GraphicsDevice)
                 {
-                    std::vector<uint16_t> indices;
-                    graphics::copyFromArray(indices, graphics::c_cubeIndices);
-                    std::vector<graphics::SimpleMeshVertex> vertices;
-                    graphics::copyFromArray(vertices, graphics::c_MarkerRGB);
+                    std::vector<graphics::SimpleMeshVertex> vertices = CreateMarker(true);
+                    std::vector<uint16_t> indices = CreateIndices(vertices.size());
                     m_MeshRGB = m_GraphicsDevice->createSimpleMesh(vertices, indices, "RGB Mesh");
-                    graphics::copyFromArray(vertices, graphics::c_MarkerCMY);
+                    vertices = CreateMarker(false);
                     m_MeshCMY = m_GraphicsDevice->createSimpleMesh(vertices, indices, "CMY Mesh");
-
+                    
                     if (m_GraphicsDevice->getApi() != graphics::Api::D3D11 &&
                         m_GraphicsDevice->getApi() != graphics::Api::D3D12)
                     {
@@ -477,17 +475,17 @@ namespace graphics
                         m_GraphicsDevice->setViewProjection(viewForOverlay[eye]);
                         m_GraphicsDevice->clearDepth(1.f);
 
-                        XrVector3f scaling{0.01f, 0.01f, 0.01f};
+                        XrVector3f scaling{0.02f, 0.02f, 0.02f};
                         if (mcActivated)
                         {
                             m_GraphicsDevice->draw(
-                                m_MeshCMY,
+                                m_MeshRGB,
                                 xr::math::Pose::Multiply(referenceTrackerPose,
                                                          xr::math::Pose::Invert(reversedManipulation)),
                                 scaling);
                         }
 
-                        m_GraphicsDevice->draw(m_MeshRGB, referenceTrackerPose, scaling);
+                        m_GraphicsDevice->draw(mcActivated ? m_MeshCMY : m_MeshRGB, referenceTrackerPose, scaling);
                     }
 
                     m_GraphicsDevice->unsetRenderTargets();
@@ -513,6 +511,79 @@ namespace graphics
         {
             ErrorLog("%s: unable to cast instance to OpenXrLayer\n", __FUNCTION__);
         }
+    }
+
+    std::vector<SimpleMeshVertex> Overlay::CreateMarker(bool rgb)
+    {
+        std::vector<SimpleMeshVertex> vertices;
+        vertices = CreateConeMesh({-4.f, 0.f, 0.f},
+                                  {-1.5f, 0.5f, 0.f},
+                                  {0.f, 0.f, 0.f},
+                                  rgb ? LightRed : LightMagenta,
+                                  rgb ? Red : Magenta,
+                                  rgb ? DarkRed : DarkMagenta);
+        std::vector<SimpleMeshVertex> top = CreateConeMesh({0.f, 4.f, 0.f},
+                                                            {0.f, 1.5f, 0.5f},
+                                                            {0.f, 0.f, 0.f},
+                                                            rgb ? LightBlue : LightYellow,
+                                                            rgb ? Blue : Yellow,
+                                                            rgb ? DarkBlue : DarkYellow);
+        vertices.insert(vertices.end(), top.begin(), top.end());
+        std::vector<SimpleMeshVertex> front = CreateConeMesh({0.f, 0.f, 4.f},
+                                                           {0.5f, 0.f, 1.5f},
+                                                           {0.f, 0.f, 0.f},
+                                                           rgb ? LightGreen : LightCyan,
+                                                           rgb ? Green : Cyan,
+                                                             rgb ? DarkGreen : DarkCyan);
+        vertices.insert(vertices.end(), front.begin(), front.end());
+        return vertices;
+    }
+
+    std::vector<SimpleMeshVertex> Overlay::CreateConeMesh(XrVector3f top,
+                                                          XrVector3f side,
+                                                          XrVector3f offset,
+                                                          XrVector3f topColor,
+                                                          XrVector3f sideColor,
+                                                          XrVector3f bottomColor)
+    {
+        std::vector<SimpleMeshVertex> vertices;
+        const DirectX::XMVECTOR dxTop = xr::math::LoadXrVector3(top);
+        const DirectX::XMVECTOR dxOffset = xr::math::LoadXrVector3(offset);
+        XrVector3f xrTop;;
+        xr::math::StoreXrVector3(&xrTop, DirectX::XMVectorAdd(dxTop, dxOffset));float angleIncrement = DirectX::XM_2PI / 32.f;
+        xr::math::StoreXrVector3(&xrTop, DirectX::XMVectorAdd(dxTop, dxOffset));angleIncrement = DirectX::XM_2PI / 32.f;
+        DirectX::XMVECTOR rotation = DirectX::XMQuaternionRotationAxis(dxTop, angleIncrement);
+        DirectX::XMVECTOR side1 = xr::math::LoadXrVector3(side);
+        XrVector3f xrSide0, xrSide1;
+        for (int i = 0; i < 32; i++)
+        {
+            DirectX::XMVECTOR side0 = side1;
+            side1 = DirectX::XMVector3Rotate(side0, rotation);
+            xr::math::StoreXrVector3(&xrSide0, DirectX::XMVectorAdd(side0, dxOffset));
+            xr::math::StoreXrVector3(&xrSide1, DirectX::XMVectorAdd(side1, dxOffset));
+            //xr::math::Pose::Multiply DirectX::XMVECTOR side1 = base;
+  
+            // bottom
+            vertices.push_back({offset, bottomColor});
+            vertices.push_back({xrSide0, sideColor});
+            vertices.push_back({xrSide1, sideColor});
+
+            // top 
+            vertices.push_back({xrTop, topColor});
+            vertices.push_back({xrSide1, sideColor});
+            vertices.push_back({xrSide0, sideColor});
+        }
+        return vertices;
+    }
+
+    std::vector<unsigned short> Overlay::CreateIndices(size_t amount)
+    {
+        std::vector<unsigned short> indices;
+        for (unsigned short i = 0; i < amount; i++)
+        {
+            indices.push_back(i);
+        }
+        return indices;
     }
 
     namespace shader

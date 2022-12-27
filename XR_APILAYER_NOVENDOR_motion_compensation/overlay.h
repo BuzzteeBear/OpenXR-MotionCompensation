@@ -28,72 +28,23 @@ namespace graphics
 {
     // Colors
     constexpr XrVector3f Red{1.f, 0.f, 0.f};
-    constexpr XrVector3f LightRed{1.f, 0.25f, 0.25f};
+    constexpr XrVector3f DarkRed{0.1f, 0.f, 0.f};
+    constexpr XrVector3f LightRed{1.f, 0.5f, 0.5f};
     constexpr XrVector3f Green{0.f, 1.f, 0.f};
-    constexpr XrVector3f LightGreen{0.25f, 1.f, 0.25f};
+    constexpr XrVector3f DarkGreen{0.f, 0.1f, 0.f};
+    constexpr XrVector3f LightGreen{0.5f, 1.f, 0.5f};
     constexpr XrVector3f Blue{0.f, 0.f, 1.f};
-    constexpr XrVector3f LightBlue{0.25f, 0.25f, 1.f};
+    constexpr XrVector3f DarkBlue{0.f, 0.f, 0.1f};
+    constexpr XrVector3f LightBlue{0.5f, 0.5f, 1.f};
     constexpr XrVector3f Yellow{1.f, 1.f, 0.f};
-    constexpr XrVector3f LightYellow{1.f, 1.f, 0.25f};
+    constexpr XrVector3f DarkYellow{0.1f, 0.1f, 0.f};
+    constexpr XrVector3f LightYellow{1.f, 1.f, 0.5f};
     constexpr XrVector3f Cyan{0.f, 1.f, 1.f};
-    constexpr XrVector3f LightCyan{0.25f, 1.f, 1.f};
+    constexpr XrVector3f DarkCyan{0.f, 0.1f, 0.1f};
+    constexpr XrVector3f LightCyan{0.5f, 1.f, 1.f};
     constexpr XrVector3f Magenta{1.f, 0.f, 1.f};
-    constexpr XrVector3f LightMagenta{1.f, 0.25f, 1.f};
-
-    // Vertices for a 1x1x1 meter cube. (Left/Right, Top/Bottom, Front/Back)
-    constexpr XrVector3f LBB{-0.5f, -0.5f, -0.5f};
-    constexpr XrVector3f LBF{-0.5f, -0.5f, 0.5f};
-    constexpr XrVector3f LTB{-0.5f, 0.5f, -0.5f};
-    constexpr XrVector3f LTF{-0.5f, 0.5f, 0.5f};
-    constexpr XrVector3f RBB{0.5f, -0.5f, -0.5f};
-    constexpr XrVector3f RBF{0.5f, -0.5f, 0.5f};
-    constexpr XrVector3f RTB{0.5f, 0.5f, -0.5f};
-    constexpr XrVector3f RTF{0.5f, 0.5f, 0.5f};
-    constexpr XrVector3f LEFT{-4.f, 0.f, 0.f};
-    constexpr XrVector3f RIGHT{4.f, 0.f, 0.f};
-    
-    // Vertices for pyramid top
-    constexpr XrVector3f TOP{0.f, 4.f, 0.f};
-    constexpr XrVector3f FRONT{0.f, 0.f, 4.f};
-    constexpr XrVector3f BACK{0.f, 0.f, -4.f};
-
-#define PYRAMID_BASE(V1, V2, V3, V4, COLOR) \
-    {V1, COLOR}, {V2, COLOR}, {V3, COLOR}, {V4, COLOR}, {V1, COLOR}, {V3, COLOR},
-
-#define PYRAMID_SIDE(B1, B2, TOP, COLOR_BASE, COLOR_TOP) \
-    {B1, COLOR_BASE}, {B2, COLOR_BASE}, {TOP, COLOR_TOP},
-
-#define PYRAMID(B1, B2, B3, B4, TOP, COLOR_BASE, COLOR_TOP)  \
-    PYRAMID_BASE(B3, B2, B1, B4, COLOR_BASE)                 \
-    PYRAMID_SIDE(B1, B2, TOP, COLOR_BASE, COLOR_TOP)         \
-    PYRAMID_SIDE(B2, B3, TOP, COLOR_BASE, COLOR_TOP)         \
-    PYRAMID_SIDE(B3, B4, TOP, COLOR_BASE, COLOR_TOP)         \
-    PYRAMID_SIDE(B4, B1, TOP, COLOR_BASE, COLOR_TOP)     
-
-    constexpr SimpleMeshVertex c_MarkerRGB[]{PYRAMID(LTF, RTF, RBF, LBF, FRONT, Green, LightGreen)
-                                                 PYRAMID(LTB, LTF, LBF, LBB, LEFT, Red, LightRed)
-                                                     PYRAMID(LTB, RTB, RTF, LTF, TOP, Blue, LightBlue)};
-    constexpr SimpleMeshVertex c_MarkerCMY[]{PYRAMID(LTF, RTF, RBF, LBF, FRONT, Yellow, LightYellow)
-                                                 PYRAMID(LTB, LTF, LBF, LBB, LEFT, Magenta, LightMagenta)
-                                                     PYRAMID(LTB, RTB, RTF, LTF, TOP, Cyan, LightCyan)};
-
-#undef PYRAMID_BASE
-#undef PYRAMID_SIDE
-#undef PYRAMID
-
-    constexpr SimpleMeshVertex forwardAxis[]{{{0.f, 0.f, 0.f}, {0.f, 0.f, 0.f}}};
-
-    constexpr unsigned short c_cubeIndices[] = {
-        0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17, // Front
-        18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, // Right
-        36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53
-    };
-
-    template <typename T, size_t N>
-    void copyFromArray(std::vector<T>& targetVector, const T (&sourceArray)[N])
-    {
-        targetVector.assign(sourceArray, sourceArray + N);
-    }
+    constexpr XrVector3f DarkMagenta{0.1f, 0.f, 0.1f};
+    constexpr XrVector3f LightMagenta{1.f, 0.5f, 1.f};
 
     struct SwapchainImages
     {
@@ -132,6 +83,15 @@ namespace graphics
         bool m_Initialized{false};
 
       private:
+        std::vector<SimpleMeshVertex> CreateMarker(bool rgb);
+        std::vector<SimpleMeshVertex> CreateConeMesh(XrVector3f top,
+                                                     XrVector3f side,
+                                                     XrVector3f offset,
+                                                     XrVector3f topColor,
+                                                     XrVector3f sideColor,
+                                                     XrVector3f bottomColor);
+        std::vector<unsigned short> CreateIndices(size_t amount);
+
         bool m_OverlayActive{false};
         std::shared_ptr<graphics::IDevice> m_GraphicsDevice;
         std::map<XrSwapchain, graphics::SwapchainState> m_Swapchains;
