@@ -629,7 +629,7 @@ namespace {
             if (auto device = m_device->getAs<D3D12>()) {
                 D3D12_DEPTH_STENCIL_VIEW_DESC desc;
                 ZeroMemory(&desc, sizeof(desc));
-                desc.Format = (DXGI_FORMAT)m_info.format;
+                desc.Format = m_textureDesc.Format;
                 desc.ViewDimension =
                     m_info.arraySize == 1 ? D3D12_DSV_DIMENSION_TEXTURE2D : D3D12_DSV_DIMENSION_TEXTURE2DARRAY;
                 desc.Texture2DArray.ArraySize = 1;
