@@ -96,6 +96,10 @@ EYE_CALCULATION_WAV     WAVE                    "sounds\\eye_calculation.wav"
 
 EYE_CACHED_WAV          WAVE                    "sounds\\eye_cached.wav"
 
+OVERLAY_ON_WAV          WAVE                    "sounds\\overlay_on.wav"
+
+OVERLAY_OFF_WAV         WAVE                    "sounds\\overlay_off.wav"
+
 #endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////
 

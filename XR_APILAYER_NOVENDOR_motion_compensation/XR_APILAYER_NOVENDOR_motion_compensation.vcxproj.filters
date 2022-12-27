@@ -196,5 +196,11 @@
     <Media Include="sounds\eye_calculation.wav">
       <Filter>Sounds</Filter>
     </Media>
+    <Media Include="sounds\overlay_off.wav">
+      <Filter>Sounds</Filter>
+    </Media>
+    <Media Include="sounds\overlay_on.wav">
+      <Filter>Sounds</Filter>
+    </Media>
   </ItemGroup>
 </Project>

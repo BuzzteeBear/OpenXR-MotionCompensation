@@ -37,6 +37,8 @@ namespace Feedback
         m_SoundResources[Event::ConnectionLost] = CONNECTION_LOST_WAV;
         m_SoundResources[Event::EyeCached] = EYE_CACHED_WAV;
         m_SoundResources[Event::EyeCalculated] = EYE_CALCULATION_WAV;
+        m_SoundResources[Event::OverlayOn] = OVERLAY_ON_WAV;
+        m_SoundResources[Event::OverlayOff] = OVERLAY_OFF_WAV;
 
         return true;
     }

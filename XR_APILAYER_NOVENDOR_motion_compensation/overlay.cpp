@@ -25,6 +25,7 @@
 
 #include "overlay.h"
 #include "layer.h"
+#include "feedback.h"
 #include "shader_utilities.h"
 #include "d3dcommon.h"
 #include <util.h>
@@ -348,9 +349,11 @@ namespace graphics
         if (!m_Initialized)
         {
             m_OverlayActive = false;
+            GetAudioOut()->Execute(Feedback::Event::Error);
             return false;
         }
         m_OverlayActive = !m_OverlayActive;
+        GetAudioOut()->Execute(m_OverlayActive ? Feedback::Event::OverlayOn : Feedback::Event::OverlayOff);
         return true;
     }
 

@@ -27,7 +27,9 @@ namespace Feedback
         DebugOff,
         ConnectionLost,
         EyeCached,
-        EyeCalculated
+        EyeCalculated,
+        OverlayOn,
+        OverlayOff
     };
 
     class AudioOut

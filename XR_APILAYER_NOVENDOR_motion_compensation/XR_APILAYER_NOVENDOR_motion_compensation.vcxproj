@@ -232,6 +232,8 @@ xcopy $(SolutionDir)\configuration\OpenXR-MotionCompensation.ini $(OutDir) /y /q
     <Media Include="sounds\max.wav" />
     <Media Include="sounds\min.wav" />
     <Media Include="sounds\minus.wav" />
+    <Media Include="sounds\overlay_off.wav" />
+    <Media Include="sounds\overlay_on.wav" />
     <Media Include="sounds\plus.wav" />
     <Media Include="sounds\right.wav" />
     <Media Include="sounds\rot_left.wav" />
