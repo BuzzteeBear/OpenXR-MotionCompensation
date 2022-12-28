@@ -132,6 +132,7 @@ namespace motion_compensation_layer
         XrSession m_Session{XR_NULL_HANDLE};
         std::string m_RuntimeName;
         bool m_Enabled{false};
+        bool m_PhysicalEnabled{false};
         bool m_ActionSetAttached{false};
         bool m_InteractionProfileSuggested{false};
         bool m_Initialized{true};

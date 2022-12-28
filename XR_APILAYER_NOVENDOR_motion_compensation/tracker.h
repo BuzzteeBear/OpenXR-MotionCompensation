@@ -37,6 +37,7 @@ namespace Tracker
         bool LoadFilters();
 
         bool m_ConnectionLost{false};
+        bool m_PhysicalEnabled{false};
         XrTime m_LastPoseTime{0};
         float m_TransStrength{0.0f};
         float m_RotStrength{0.0f};

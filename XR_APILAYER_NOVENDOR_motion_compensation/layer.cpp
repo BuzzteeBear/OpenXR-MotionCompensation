@@ -115,6 +115,10 @@ namespace motion_compensation_layer
                 Log("motion compensation disabled in config file\n");
                 return result;
             }
+
+            // enable / disable physical tracker initialization
+            GetConfig()->GetBool(Cfg::PhysicalEnabled, m_PhysicalEnabled);
+
             // initialize audio feedback
             GetAudioOut()->Init();
 
@@ -455,7 +459,7 @@ namespace motion_compensation_layer
                                                          XrInteractionProfileState* interactionProfile)
     {
         XrResult result =  OpenXrApi::xrGetCurrentInteractionProfile(session, topLevelUserPath, interactionProfile);
-        if (XR_SUCCEEDED(result) && interactionProfile)
+        if (m_Enabled && XR_SUCCEEDED(result) && interactionProfile)
         {
             Log("current interaction profile for %s: %s\n",
                 getXrPath(topLevelUserPath).c_str(),
@@ -470,7 +474,7 @@ namespace motion_compensation_layer
     OpenXrLayer::xrSuggestInteractionProfileBindings(XrInstance instance,
                                                      const XrInteractionProfileSuggestedBinding* suggestedBindings)
     {
-        if (!m_Enabled)
+        if (!m_Enabled || !m_PhysicalEnabled)
         {
             return OpenXrApi::xrSuggestInteractionProfileBindings(instance, suggestedBindings);
         }
@@ -566,7 +570,7 @@ namespace motion_compensation_layer
 
     XrResult OpenXrLayer::xrAttachSessionActionSets(XrSession session, const XrSessionActionSetsAttachInfo* attachInfo)
     {
-        if (!m_Enabled)
+        if (!m_Enabled || !m_PhysicalEnabled)
         {
             return OpenXrApi::xrAttachSessionActionSets(session, attachInfo);
         }
@@ -867,7 +871,7 @@ namespace motion_compensation_layer
 
     XrResult OpenXrLayer::xrSyncActions(XrSession session, const XrActionsSyncInfo* syncInfo)
     {
-        if (!m_Enabled)
+        if (!m_Enabled || !m_PhysicalEnabled)
         {
             return OpenXrApi::xrSyncActions(session, syncInfo);
         }
@@ -1166,54 +1170,64 @@ namespace motion_compensation_layer
 
     void OpenXrLayer::CreateTrackerAction()
     {
-        XrActionSetCreateInfo actionSetCreateInfo{XR_TYPE_ACTION_SET_CREATE_INFO, nullptr};
-        strcpy_s(actionSetCreateInfo.actionSetName, "general_tracker_set");
-        strcpy_s(actionSetCreateInfo.localizedActionSetName, "General Tracker Set");
-        actionSetCreateInfo.priority = 0;
-        if (!XR_SUCCEEDED(xrCreateActionSet(GetXrInstance(), &actionSetCreateInfo, &m_ActionSet)))
+        if (m_PhysicalEnabled)
         {
-            ErrorLog("%s: unable to create action set\n", __FUNCTION__);
-        }
-        TraceLoggingWrite(g_traceProvider, "OpenXrLayer::CreateTrackerAction", TLPArg(m_ActionSet, "xrCreateActionSet"));
+            XrActionSetCreateInfo actionSetCreateInfo{XR_TYPE_ACTION_SET_CREATE_INFO, nullptr};
+            strcpy_s(actionSetCreateInfo.actionSetName, "general_tracker_set");
+            strcpy_s(actionSetCreateInfo.localizedActionSetName, "General Tracker Set");
+            actionSetCreateInfo.priority = 0;
+            if (!XR_SUCCEEDED(xrCreateActionSet(GetXrInstance(), &actionSetCreateInfo, &m_ActionSet)))
+            {
+                ErrorLog("%s: unable to create action set\n", __FUNCTION__);
+            }
+            TraceLoggingWrite(g_traceProvider,
+                              "OpenXrLayer::CreateTrackerAction",
+                              TLPArg(m_ActionSet, "xrCreateActionSet"));
 
-        XrActionCreateInfo actionCreateInfo{XR_TYPE_ACTION_CREATE_INFO, nullptr};
-        strcpy_s(actionCreateInfo.actionName, "general_tracker");
-        strcpy_s(actionCreateInfo.localizedActionName, "General Tracker");
-        actionCreateInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
-        XrPath viveRolePath;
-        if (m_ViveTracker.active)
-        {
-            CHECK_XRCMD(xrStringToPath(GetXrInstance(), m_ViveTracker.role.c_str(), &viveRolePath));
-            actionCreateInfo.countSubactionPaths = 1;
-            actionCreateInfo.subactionPaths = &viveRolePath;
+            XrActionCreateInfo actionCreateInfo{XR_TYPE_ACTION_CREATE_INFO, nullptr};
+            strcpy_s(actionCreateInfo.actionName, "general_tracker");
+            strcpy_s(actionCreateInfo.localizedActionName, "General Tracker");
+            actionCreateInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
+            XrPath viveRolePath;
+            if (m_ViveTracker.active)
+            {
+                CHECK_XRCMD(xrStringToPath(GetXrInstance(), m_ViveTracker.role.c_str(), &viveRolePath));
+                actionCreateInfo.countSubactionPaths = 1;
+                actionCreateInfo.subactionPaths = &viveRolePath;
+            }
+            else
+            {
+                actionCreateInfo.countSubactionPaths = 0;
+            }
+            if (!XR_SUCCEEDED(xrCreateAction(m_ActionSet, &actionCreateInfo, &m_TrackerPoseAction)))
+            {
+                ErrorLog("%s: unable to create action\n", __FUNCTION__);
+            }
+            TraceLoggingWrite(g_traceProvider,
+                              "OpenXrLayer::CreateTrackerAction",
+                              TLPArg(m_TrackerPoseAction, "xrCreateAction"));
         }
-        else
-        {
-            actionCreateInfo.countSubactionPaths = 0;
-        }
-        if (!XR_SUCCEEDED(xrCreateAction(m_ActionSet, &actionCreateInfo, &m_TrackerPoseAction)))
-        {
-            ErrorLog("%s: unable to create action\n", __FUNCTION__);
-        }
-        TraceLoggingWrite(g_traceProvider, "OpenXrLayer::CreateTrackerAction", TLPArg(m_TrackerPoseAction, "xrCreateAction"));
     }
 
     void OpenXrLayer::CreateTrackerActionSpace()
     {
-        XrActionSpaceCreateInfo actionSpaceCreateInfo{XR_TYPE_ACTION_SPACE_CREATE_INFO, nullptr};
-        actionSpaceCreateInfo.action = m_TrackerPoseAction;
-        m_ViveTracker.active
-            ? CHECK_XRCMD(
-                  xrStringToPath(GetXrInstance(), m_ViveTracker.role.c_str(), &actionSpaceCreateInfo.subactionPath))
-            : actionSpaceCreateInfo.subactionPath = XR_NULL_PATH;
-        actionSpaceCreateInfo.poseInActionSpace = Pose::Identity();
-        if (!XR_SUCCEEDED(GetInstance()->xrCreateActionSpace(m_Session, &actionSpaceCreateInfo, &m_TrackerSpace)))
+        if (m_PhysicalEnabled)
         {
-            ErrorLog("%s: unable to create action space\n", __FUNCTION__);
+            XrActionSpaceCreateInfo actionSpaceCreateInfo{XR_TYPE_ACTION_SPACE_CREATE_INFO, nullptr};
+            actionSpaceCreateInfo.action = m_TrackerPoseAction;
+            m_ViveTracker.active
+                ? CHECK_XRCMD(
+                      xrStringToPath(GetXrInstance(), m_ViveTracker.role.c_str(), &actionSpaceCreateInfo.subactionPath))
+                : actionSpaceCreateInfo.subactionPath = XR_NULL_PATH;
+            actionSpaceCreateInfo.poseInActionSpace = Pose::Identity();
+            if (!XR_SUCCEEDED(GetInstance()->xrCreateActionSpace(m_Session, &actionSpaceCreateInfo, &m_TrackerSpace)))
+            {
+                ErrorLog("%s: unable to create action space\n", __FUNCTION__);
+            }
+            TraceLoggingWrite(g_traceProvider,
+                              "OpenXrLayer::CreateTrackerActionSpace",
+                              TLPArg(m_TrackerSpace, "xrCreateActionSpace"));
         }
-        TraceLoggingWrite(g_traceProvider,
-                          "OpenXrLayer::CreateTrackerActionSpace",
-                          TLPArg(m_TrackerSpace, "xrCreateActionSpace"));
     }
     void OpenXrLayer::ToggleActive(XrTime time)
     {
@@ -1470,7 +1484,7 @@ namespace motion_compensation_layer
             }
         }
         
-        if (!m_ActionSetAttached)
+        if (m_PhysicalEnabled && !m_ActionSetAttached)
         {
             Log("action set attached during lazy init\n");
             std::vector<XrActionSet> actionSets;

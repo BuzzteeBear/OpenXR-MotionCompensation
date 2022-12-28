@@ -794,7 +794,7 @@ void main(uint3 id : SV_DispatchThreadID)
 #ifdef _DEBUG
             // Initialize Debug layer logging.
 
-            if (SUCCEEDED(m_device->QueryInterface(set(m_infoQueue))))
+            if (SUCCEEDED(m_device->QueryInterface(__uuidof(ID3D11InfoQueue), (void**)set(m_infoQueue))))
             {
                 Log("D3D11 Debug layer is enabled\n");
             }

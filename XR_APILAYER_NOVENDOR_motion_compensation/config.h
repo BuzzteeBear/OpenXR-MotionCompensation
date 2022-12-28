@@ -4,6 +4,7 @@
 enum class Cfg
 {
     Enabled = 0,
+    PhysicalEnabled,
     TrackerType,
     TrackerSide,
     TrackerTimeout,
@@ -73,7 +74,8 @@ class ConfigManager
     // needs to include all values of enum ConfigKey
     std::map<Cfg, std::pair<std::string, std::string>> m_Keys{
         {Cfg::Enabled, {"startup", "enabled"}},
-        
+        {Cfg::PhysicalEnabled, {"startup", "physical_enabled"}},
+
         {Cfg::TrackerType, {"tracker", "type"}},
         {Cfg::TrackerSide, {"tracker", "side"}},
         

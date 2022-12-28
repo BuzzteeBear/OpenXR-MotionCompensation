@@ -28,6 +28,7 @@ namespace Tracker
 
     bool TrackerBase::Init()
     {
+        GetConfig()->GetBool(Cfg::PhysicalEnabled, m_PhysicalEnabled);
         return LoadFilters();
     }
 
@@ -176,6 +177,11 @@ namespace Tracker
 
     bool TrackerBase::GetControllerPose(XrPosef& trackerPose, XrSession session, XrTime time)
     {
+        if (!m_PhysicalEnabled)
+        {
+            ErrorLog("physical tracker disabled in config file\n");
+            return false;
+        }
         OpenXrLayer* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
         if (layer)
         {
