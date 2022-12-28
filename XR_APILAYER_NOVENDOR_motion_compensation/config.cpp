@@ -15,10 +15,20 @@ using namespace utility;
 bool ConfigManager::Init(const std::string& application)
 {
     // create application config file if not existing
+    const auto& enabledKey = m_Keys.find(Cfg::Enabled);
+    if (enabledKey == m_Keys.cend())
+    {
+        ErrorLog("unable to find internal enable entry\n");
+    }
     m_ApplicationIni = motion_compensation_layer::localAppData.string() + "\\" + application + ".ini";
     if ((_access(m_ApplicationIni.c_str(), 0)) == -1)
     {
-        if (!WritePrivateProfileString("placeholder", "created", "1", m_ApplicationIni.c_str()) && 2 != GetLastError())
+
+        if (!WritePrivateProfileString(enabledKey->second.first.c_str(),
+                                       enabledKey->second.second.c_str(),
+                                       "1",
+                                       m_ApplicationIni.c_str()) &&
+            2 != GetLastError())
         {
             ErrorLog("%s: unable to create %s, error: %s\n",
                      __FUNCTION__,
@@ -29,11 +39,25 @@ bool ConfigManager::Init(const std::string& application)
     const std::string coreIni(motion_compensation_layer::localAppData.string() + "\\" + "OpenXR-MotionCompensation.ini");
     if ((_access(coreIni.c_str(), 0)) != -1)
     {
+        // check global deactivation flag
+        char buffer[2048];
+        if (0 < GetPrivateProfileString(enabledKey->second.first.c_str(),
+                                        enabledKey->second.second.c_str(),
+                                        NULL,
+                                        buffer,
+                                        2047,
+                                        coreIni.c_str()) &&
+            std::string(buffer) != "1")
+        {
+            m_Values[Cfg::Enabled] = buffer;
+            Log("motion compensation disabled globally\n");
+            return true;
+        }
+
         std::string errors;
         for (const auto& entry : m_Keys)
         {
-            char buffer[2048];
-            int read{0};
+            
             if (0 < GetPrivateProfileString(entry.second.first.c_str(),
                                             entry.second.second.c_str(),
                                             NULL,
@@ -142,7 +166,9 @@ bool ConfigManager::GetString(Cfg key, std::string& val)
     const auto it = m_Values.find(key);
     if (m_Values.end() == it)
     {
-        ErrorLog("%s: unable to find value for key: %s\n", __FUNCTION__, m_Keys[key].first.c_str());
+        ErrorLog("%s: unable to find value for key: [%s] %s \n",
+                 __FUNCTION__,
+                 m_Keys[key].first.c_str(), m_Keys[key].second.c_str());
         return false;
     }
     val = it->second;
@@ -196,7 +222,6 @@ std::string ConfigManager::GetControllerSide()
     }
     return side;
 }
-
 
 void ConfigManager::SetValue(Cfg key, bool val)
 {

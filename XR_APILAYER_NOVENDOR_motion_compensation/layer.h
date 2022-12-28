@@ -131,6 +131,7 @@ namespace motion_compensation_layer
         XrSystemId m_systemId{XR_NULL_SYSTEM_ID};
         XrSession m_Session{XR_NULL_HANDLE};
         std::string m_RuntimeName;
+        bool m_Enabled{false};
         bool m_ActionSetAttached{false};
         bool m_InteractionProfileSuggested{false};
         bool m_Initialized{true};
@@ -149,16 +150,6 @@ namespace motion_compensation_layer
                                                                              xr::math::Pose::Identity(),
                                                                              xr::math::Pose::Identity()}};
         utility::KeyboardInput m_Input;
-
-        /*
-        // Overlay
-        bool m_OverlayActive{false};
-        std::shared_ptr<graphics::IDevice> m_GraphicsDevice;
-        std::map<XrSwapchain, graphics::SwapchainState> m_Swapchains;
-        XrSwapchain m_MenuSwapchain{XR_NULL_HANDLE};
-        std::vector<std::shared_ptr<graphics::ITexture>> m_MenuSwapchainImages;
-        std::shared_ptr<graphics::ISimpleMesh> m_MeshRGB, m_MeshCMY;
-        */
         std::unique_ptr<graphics::Overlay> m_Overlay;
 
         // connection recovery

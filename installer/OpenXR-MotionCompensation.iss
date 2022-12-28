@@ -52,6 +52,9 @@ Name: "{group}\OXRMC MMF Reader"; Filename: "{app}\MmfReader.exe"; WorkingDir: "
 Root: HKLM; Subkey: "SOFTWARE\Khronos\OpenXR\1\ApiLayers\Implicit"; ValueName: "{app}\XR_APILAYER_NOVENDOR_motion_compensation.json"; ValueType: dword; ValueData: 0; Flags: createvalueifdoesntexist uninsdeletevalue 
 
 [INI]
+; [startup]
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "startup"; Key: "enabled"; String: "1"; Flags: createkeyifdoesntexist
+
 ; [tracker]
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "tracker"; Key: "type"; String: "controller"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "tracker"; Key: "side"; String: "left"; Flags: createkeyifdoesntexist

@@ -49,10 +49,9 @@ namespace motion_compensation_layer
 
     XrResult OpenXrLayer::xrDestroyInstance(XrInstance instance)
     {
-        Log("xrDestroyInstance\n");
-        if (XR_NULL_HANDLE != m_ActionSet)
+        if (m_Enabled)
         {
-            GetInstance()->xrDestroyActionSet(m_ActionSet);
+            Log("xrDestroyInstance\n");
         }
         return OpenXrApi::xrDestroyInstance(instance);
     }
@@ -110,6 +109,12 @@ namespace motion_compensation_layer
 
         if (m_Initialized)
         {
+            GetConfig()->GetBool(Cfg::Enabled, m_Enabled);
+            if (!m_Enabled)
+            {
+                Log("motion compensation disabled in config file\n");
+                return result;
+            }
             // initialize audio feedback
             GetAudioOut()->Init();
 
@@ -129,7 +134,7 @@ namespace motion_compensation_layer
             {
                 ErrorLog("%s: defaulting to tracker timeout of %.3f ms\n", __FUNCTION__,  m_RecoveryWait / 1000000.0);
             }
-        }   
+        }
 
         // initialize tracker
         Tracker::GetTracker(&m_Tracker);
@@ -151,6 +156,11 @@ namespace motion_compensation_layer
 
     XrResult OpenXrLayer::xrGetSystem(XrInstance instance, const XrSystemGetInfo* getInfo, XrSystemId* systemId)
     {
+        if (!m_Enabled)
+        {
+            return OpenXrApi::xrGetSystem(instance, getInfo, systemId);
+        }
+
         DebugLog("xrGetSystem\n");
         if (getInfo->type != XR_TYPE_SYSTEM_GET_INFO)
         {
@@ -186,6 +196,11 @@ namespace motion_compensation_layer
                                           const XrSessionCreateInfo* createInfo,
                                           XrSession* session)
     {
+        if (!m_Enabled)
+        {
+            return OpenXrApi::xrCreateSession(instance, createInfo, session);
+        }
+
         Log("xrCreateSession\n");
         if (createInfo->type != XR_TYPE_SESSION_CREATE_INFO)
         {
@@ -226,7 +241,17 @@ namespace motion_compensation_layer
 
     XrResult OpenXrLayer::xrBeginSession(XrSession session, const XrSessionBeginInfo* beginInfo)
     {
+        if (!m_Enabled)
+        {
+            return OpenXrApi::xrBeginSession(session, beginInfo);
+        }
+
         Log("xrBeginSession\n");
+        if (beginInfo->type != XR_TYPE_SESSION_BEGIN_INFO)
+        {
+            return XR_ERROR_VALIDATION_FAILURE;
+        }
+        
         TraceLoggingWrite(
             g_traceProvider,
             "xrBeginSession",
@@ -241,22 +266,26 @@ namespace motion_compensation_layer
 
     XrResult OpenXrLayer::xrEndSession(XrSession session)
     {
-        Log("xrEndSession\n");
-        TraceLoggingWrite(g_traceProvider, "xrEndssion", TLPArg(session, "Session"));
+        if (m_Enabled)
+        {
+            Log("xrEndSession\n");
+            TraceLoggingWrite(g_traceProvider, "xrEndssion", TLPArg(session, "Session"));
+        }
         return OpenXrApi::xrEndSession(session);
     }
 
     XrResult OpenXrLayer::xrDestroySession(XrSession session)
     {
-        Log("xrDestroySession\n");
-        TraceLoggingWrite(g_traceProvider, "xrDestroySession", TLPArg(session, "Session"));
-
-        if (XR_NULL_HANDLE != m_TrackerSpace)
+        if (m_Enabled)
         {
-            GetInstance()->xrDestroySpace(m_TrackerSpace);
-            m_TrackerSpace = XR_NULL_HANDLE;
+            if (XR_NULL_HANDLE != m_TrackerSpace)
+            {
+                GetInstance()->xrDestroySpace(m_TrackerSpace);
+                m_TrackerSpace = XR_NULL_HANDLE;
+            }
+            Log("xrDestroySession\n");
+            TraceLoggingWrite(g_traceProvider, "xrDestroySession", TLPArg(session, "Session"));
         }
-
         return OpenXrApi::xrDestroySession(session);
     }
 
@@ -264,6 +293,12 @@ namespace motion_compensation_layer
                                const XrSwapchainCreateInfo* createInfo,
                                XrSwapchain* swapchain)
     {
+        if (!m_Enabled)
+        {
+            return OpenXrApi::xrCreateSwapchain(session, createInfo, swapchain);
+        }
+
+        DebugLog("xrCreateSwapchain\n");
         if (createInfo->type != XR_TYPE_SWAPCHAIN_CREATE_INFO)
         {
             return XR_ERROR_VALIDATION_FAILURE;
@@ -324,6 +359,12 @@ namespace motion_compensation_layer
 
     XrResult OpenXrLayer::xrDestroySwapchain(XrSwapchain swapchain)
     {
+        if (!m_Enabled)
+        {
+            return OpenXrApi::xrDestroySwapchain(swapchain);
+        }
+
+        DebugLog("xrDestroySwapchain\n");
         TraceLoggingWrite(g_traceProvider, "xrDestroySwapchain", TLPArg(swapchain, "Swapchain"));
 
         const XrResult result = OpenXrApi::xrDestroySwapchain(swapchain);
@@ -337,6 +378,12 @@ namespace motion_compensation_layer
 
     XrResult OpenXrLayer::xrWaitSwapchainImage(XrSwapchain swapchain, const XrSwapchainImageWaitInfo* waitInfo)
     {
+        if (!m_Enabled)
+        {
+            return OpenXrApi::xrWaitSwapchainImage(swapchain, waitInfo);
+        }
+
+        DebugLog("xrWaitSwapchainImage\n");
         if (waitInfo->type != XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO)
         {
             return XR_ERROR_VALIDATION_FAILURE;
@@ -349,7 +396,10 @@ namespace motion_compensation_layer
 
         // We remove the timeout causing issues with OpenComposite.
         XrSwapchainImageWaitInfo chainWaitInfo = *waitInfo;
-        chainWaitInfo.timeout = XR_INFINITE_DURATION;
+        if (m_Enabled)
+        {
+            chainWaitInfo.timeout = XR_INFINITE_DURATION;
+        }
         return OpenXrApi::xrWaitSwapchainImage(swapchain, &chainWaitInfo);
     }
 
@@ -357,6 +407,12 @@ namespace motion_compensation_layer
                                      const XrSwapchainImageAcquireInfo* acquireInfo,
                                      uint32_t* index)
     {
+        if (!m_Enabled)
+        {
+            return OpenXrApi::xrAcquireSwapchainImage(swapchain, acquireInfo, index);
+        }
+
+        DebugLog("xrAcquireSwapchainImage\n");
         if (acquireInfo && acquireInfo->type != XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO)
         {
             return XR_ERROR_VALIDATION_FAILURE;
@@ -374,6 +430,12 @@ namespace motion_compensation_layer
 
     XrResult OpenXrLayer::xrReleaseSwapchainImage(XrSwapchain swapchain, const XrSwapchainImageReleaseInfo* releaseInfo)
     {
+        if (!m_Enabled)
+        {
+            return OpenXrApi::xrReleaseSwapchainImage(swapchain, releaseInfo);
+        }
+
+        DebugLog("xrReleaseSwapchainImage\n");
         if (releaseInfo && releaseInfo->type != XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO)
         {
             return XR_ERROR_VALIDATION_FAILURE;
@@ -393,7 +455,7 @@ namespace motion_compensation_layer
                                                          XrInteractionProfileState* interactionProfile)
     {
         XrResult result =  OpenXrApi::xrGetCurrentInteractionProfile(session, topLevelUserPath, interactionProfile);
-        if (interactionProfile)
+        if (XR_SUCCEEDED(result) && interactionProfile)
         {
             Log("current interaction profile for %s: %s\n",
                 getXrPath(topLevelUserPath).c_str(),
@@ -408,6 +470,33 @@ namespace motion_compensation_layer
     OpenXrLayer::xrSuggestInteractionProfileBindings(XrInstance instance,
                                                      const XrInteractionProfileSuggestedBinding* suggestedBindings)
     {
+        if (!m_Enabled)
+        {
+            return OpenXrApi::xrSuggestInteractionProfileBindings(instance, suggestedBindings);
+        }
+
+        if (suggestedBindings->type != XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING)
+        {
+            return XR_ERROR_VALIDATION_FAILURE;
+        }
+
+        const std::string profile = getXrPath(suggestedBindings->interactionProfile);
+        Log("xrSuggestInteractionProfileBindings: %s\n", profile.c_str());
+        TraceLoggingWrite(g_traceProvider,
+                          "xrSuggestInteractionProfileBindings",
+                          TLPArg(instance, "Instance"),
+                          TLArg(profile.c_str(), "InteractionProfile"));
+
+        for (uint32_t i = 0; i < suggestedBindings->countSuggestedBindings; i++)
+        {
+            TraceLoggingWrite(g_traceProvider,
+                              "xrSuggestInteractionProfileBindings",
+                              TLPArg(suggestedBindings->suggestedBindings[i].action, "Action"),
+                              TLArg(getXrPath(suggestedBindings->suggestedBindings[i].binding).c_str(), "Path"));
+
+            DebugLog("binding: %s\n", getXrPath(suggestedBindings->suggestedBindings[i].binding).c_str());
+        }
+
         if (m_ActionSetAttached)
         {
             // detach and recreate actionset and trackerspace
@@ -425,23 +514,6 @@ namespace motion_compensation_layer
             m_ActionSetAttached = false;
             m_InteractionProfileSuggested = false;
             Log("detached and recreated tracker action\n");
-        }
-
-        const std::string profile = getXrPath(suggestedBindings->interactionProfile);
-        TraceLoggingWrite(g_traceProvider,
-                          "xrSuggestInteractionProfileBindings",
-                          TLPArg(instance, "Instance"),
-                          TLArg(profile.c_str(), "InteractionProfile"));
-
-        Log("xrSuggestInteractionProfileBindings: %s\n", profile.c_str());
-        for (uint32_t i = 0; i < suggestedBindings->countSuggestedBindings; i++)
-        {
-            TraceLoggingWrite(g_traceProvider,
-                              "xrSuggestInteractionProfileBindings",
-                              TLPArg(suggestedBindings->suggestedBindings[i].action, "Action"),
-                              TLArg(getXrPath(suggestedBindings->suggestedBindings[i].binding).c_str(), "Path"));
-
-            DebugLog("binding: %s\n", getXrPath(suggestedBindings->suggestedBindings[i].binding).c_str());
         }
 
         XrInteractionProfileSuggestedBinding bindingProfiles = *suggestedBindings;
@@ -494,6 +566,25 @@ namespace motion_compensation_layer
 
     XrResult OpenXrLayer::xrAttachSessionActionSets(XrSession session, const XrSessionActionSetsAttachInfo* attachInfo)
     {
+        if (!m_Enabled)
+        {
+            return OpenXrApi::xrAttachSessionActionSets(session, attachInfo);
+        }
+
+        Log("xrAttachSessionActionSets\n");
+        if (attachInfo->type != XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO)
+        {
+            return XR_ERROR_VALIDATION_FAILURE;
+        }
+
+        TraceLoggingWrite(g_traceProvider, "xrAttachSessionActionSets", TLPArg(session, "Session"));
+        for (uint32_t i = 0; i < attachInfo->countActionSets; i++)
+        {
+            TraceLoggingWrite(g_traceProvider,
+                              "xrAttachSessionActionSets",
+                              TLPArg(attachInfo->actionSets[i], "ActionSet"));
+        }
+
         if (!m_InteractionProfileSuggested)
         {
             // suggest fallback in case application does not suggest any bindings
@@ -522,15 +613,6 @@ namespace motion_compensation_layer
                               TLArg(path.c_str(), "Path"));
         }
 
-        Log("xrAttachSessionActionSets\n");
-        TraceLoggingWrite(g_traceProvider, "xrAttachSessionActionSets", TLPArg(session, "Session"));
-        for (uint32_t i = 0; i < attachInfo->countActionSets; i++)
-        {
-            TraceLoggingWrite(g_traceProvider,
-                              "xrAttachSessionActionSets",
-                              TLPArg(attachInfo->actionSets[i], "ActionSet"));
-        }
-
         XrSessionActionSetsAttachInfo chainAttachInfo = *attachInfo;
         std::vector<XrActionSet> newActionSets;
 
@@ -554,6 +636,16 @@ namespace motion_compensation_layer
                                                  const XrReferenceSpaceCreateInfo* createInfo,
                                                  XrSpace* space)
     {
+        if (!m_Enabled)
+        {
+            return OpenXrApi::xrCreateReferenceSpace(session, createInfo, space);
+        }
+
+        if (createInfo->type != XR_TYPE_REFERENCE_SPACE_CREATE_INFO)
+        {
+            return XR_ERROR_VALIDATION_FAILURE;
+        }
+
         DebugLog("xrCreateReferenceSpace: %u type: %d \n", *space, createInfo->referenceSpaceType);
         TraceLoggingWrite(g_traceProvider,
                           "xrCreateReferenceSpace",
@@ -606,12 +698,22 @@ namespace motion_compensation_layer
 
     XrResult OpenXrLayer::xrLocateSpace(XrSpace space, XrSpace baseSpace, XrTime time, XrSpaceLocation* location)
     {
+        if (!m_Enabled)
+        {
+            return OpenXrApi::xrLocateSpace(space, baseSpace, time, location);
+        }
+
+        if (location->type != XR_TYPE_SPACE_LOCATION)
+        {
+            return XR_ERROR_VALIDATION_FAILURE;
+        }
+
+        DebugLog("xrLocateSpace(%u): %u %u\n", time, space, baseSpace);
         TraceLoggingWrite(g_traceProvider,
                           "xrLocateSpace",
                           TLPArg(space, "Space"),
                           TLPArg(baseSpace, "BaseSpace"),
                           TLArg(time, "Time"));
-        DebugLog("xrLocateSpace(%u): %u %u\n", time, space, baseSpace);
 
         // determine original location
         CHECK_XRCMD(OpenXrApi::xrLocateSpace(space, baseSpace, time, location));
@@ -677,6 +779,22 @@ namespace motion_compensation_layer
                                         uint32_t* viewCountOutput,
                                         XrView* views)
     {
+        if (!m_Enabled)
+        {
+            return OpenXrApi::xrLocateViews(session,
+                                            viewLocateInfo,
+                                            viewState,
+                                            viewCapacityInput,
+                                            viewCountOutput,
+                                            views);
+        }
+
+        if (viewLocateInfo->type != XR_TYPE_VIEW_LOCATE_INFO)
+        {
+            return XR_ERROR_VALIDATION_FAILURE;
+        }
+
+        DebugLog("xrLocateViews(%u): %u\n", viewLocateInfo->displayTime, viewLocateInfo->space);
         TraceLoggingWrite(g_traceProvider,
                           "xrLocateViews",
                           TLPArg(session, "Session"),
@@ -684,8 +802,6 @@ namespace motion_compensation_layer
                           TLArg(viewLocateInfo->displayTime, "DisplayTime"),
                           TLPArg(viewLocateInfo->space, "Space"),
                           TLArg(viewCapacityInput, "ViewCapacityInput"));
-
-        DebugLog("xrLocateViews(%u): %u\n", viewLocateInfo->displayTime, viewLocateInfo->space);
 
         CHECK_XRCMD(
             OpenXrApi::xrLocateViews(session, viewLocateInfo, viewState, viewCapacityInput, viewCountOutput, views));
@@ -751,7 +867,17 @@ namespace motion_compensation_layer
 
     XrResult OpenXrLayer::xrSyncActions(XrSession session, const XrActionsSyncInfo* syncInfo)
     {
+        if (!m_Enabled)
+        {
+            return OpenXrApi::xrSyncActions(session, syncInfo);
+        }
+
         DebugLog("xrSyncActions\n");
+        if (syncInfo->type != XR_TYPE_ACTIONS_SYNC_INFO)
+        {
+            return XR_ERROR_VALIDATION_FAILURE;
+        }
+        
         TraceLoggingWrite(g_traceProvider, "xrSyncActions", TLPArg(session, "Session"));
         for (uint32_t i = 0; i < syncInfo->countActiveActionSets; i++)
         {
@@ -784,6 +910,16 @@ namespace motion_compensation_layer
 
     XrResult OpenXrLayer::xrEndFrame(XrSession session, const XrFrameEndInfo* frameEndInfo)
     {
+        if (!m_Enabled || !isSessionHandled(session))
+        {
+            return OpenXrApi::xrEndFrame(session, frameEndInfo);
+        }
+
+        if (frameEndInfo->type != XR_TYPE_FRAME_END_INFO)
+        {
+            return XR_ERROR_VALIDATION_FAILURE;
+        }
+
         DebugLog("xrEndframe(%u)\n", frameEndInfo->displayTime);
         TraceLoggingWrite(g_traceProvider,
                           "xrEndFrame",
@@ -791,11 +927,6 @@ namespace motion_compensation_layer
                           TLArg(frameEndInfo->displayTime, "DisplayTime"),
                           TLArg(xr::ToCString(frameEndInfo->environmentBlendMode), "EnvironmentBlendMode"));
 
-        if (!isSessionHandled(session))
-        {
-            return OpenXrApi::xrEndFrame(session, frameEndInfo);
-        }
-       
         m_LastFrameTime = frameEndInfo->displayTime;
         if (m_RecenterInProgress && !m_LocalRefSpaceCreated)
         {
