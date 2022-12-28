@@ -522,22 +522,22 @@ namespace graphics
         vertices = CreateConeMesh({-4.f, 0.f, 0.f},
                                   {-1.5f, 0.5f, 0.f},
                                   {0.f, 0.f, 0.f},
-                                  rgb ? LightRed : LightMagenta,
+                                  rgb ? DarkRed : DarkMagenta,
                                   rgb ? Red : Magenta,
-                                  rgb ? DarkRed : DarkMagenta);
+                                  rgb ? LightRed : LightMagenta);
         std::vector<SimpleMeshVertex> top = CreateConeMesh({0.f, 4.f, 0.f},
                                                             {0.f, 1.5f, 0.5f},
                                                             {0.f, 0.f, 0.f},
-                                                            rgb ? LightBlue : LightYellow,
-                                                            rgb ? Blue : Yellow,
-                                                            rgb ? DarkBlue : DarkYellow);
+                                                            rgb ? DarkBlue : DarkCyan,
+                                                            rgb ? Blue : Cyan,
+                                                            rgb ? LightBlue : LightCyan);
         vertices.insert(vertices.end(), top.begin(), top.end());
         std::vector<SimpleMeshVertex> front = CreateConeMesh({0.f, 0.f, 4.f},
                                                            {0.5f, 0.f, 1.5f},
                                                            {0.f, 0.f, 0.f},
-                                                           rgb ? LightGreen : LightCyan,
-                                                           rgb ? Green : Cyan,
-                                                             rgb ? DarkGreen : DarkCyan);
+                                                           rgb ? DarkGreen : DarkYellow,
+                                                           rgb ? Green : Yellow,
+                                                             rgb ? LightGreen : LightYellow);
         vertices.insert(vertices.end(), front.begin(), front.end());
         return vertices;
     }
