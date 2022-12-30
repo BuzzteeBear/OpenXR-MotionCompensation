@@ -125,7 +125,7 @@ Upon starting an OpenXR application with the API layer active for the first time
 <li><code>controller</code>: use either the left or the right motion controller as reference tracker. Valid options for the key <code>side</code> are <code>left</code> and <code>right</code> (<strong>Note that changing the side or switching between motion controller and vive tracker requires a restart of the vr session</strong>)</li>
 <li><code>vive</code>: use a vive tracker as reference for motion compensation. The key <code>side</code> has to match the role assigned to the tracker. Valid options for that are:
 <ul>
-<li><code>handheld_object</code> which hand (left, right, any) doesn't matter. Having more than one active vive tracker assigned to that role may lead to conflicts, though.</li>
+<li><code>handheld_object</code> - which hand (left, right, any) doesn't matter. Having more than one active vive tracker assigned to that role may lead to conflicts, though.</li>
 <li><code>left_foot</code></li>
 <li><code>right_foot</code></li>
 <li><code>left_shoulder</code></li>
@@ -150,9 +150,13 @@ Upon starting an OpenXR application with the API layer active for the first time
 </li>
 <li><p><code>translational_filter</code> and <code>rotational_filter</code>: set the filtering magnitude (key <code>strength</code> with valid options between <strong>0.0</strong> and <strong>1.0</strong>) number of filtering stages (key <code>order</code>with valid options: <strong>1, 2, 3</strong>).</p>
 </li>
-<li><p><code>cache</code>: you can choose between calcuating eye poses (<code>use_eye_cache</code> = 0, default) or use cached eye poses (<code>use_eye_cache</code> = 1, was defult up until version 0.1.4). One or the other might work better with some games or hmds. You can also modify this setting during runtime with the corresponding shortcut below</p>
+<li><p><code>cache</code>: you can modify th cache used for reverting the motion corrected pose on frame submission:</p>
+<ul>
+<li><code>use_eye_cache</code> - choose between calcuating eye poses (0 = default) or use cached eye poses (1, was default up until version 0.1.4). Either one might work better with some games or hmds if you encounter jitter with mc activated. You can also modify this setting (and subsequently save it to config file) during runtime with the corresponding shortcut below.</li>
+<li><code>tolerance</code> - modify the time values are kept in cache for before deletion. This may affect eye calculation as well as cached eye positions.</li>
+</ul>
 </li>
-<li><p><code>shortcuts</code>: can be used to ocnfigure shortcuts for different commands (See <a href="#list-of-keyboard-bindings">List of keyboard bindings</a> for valid values):</p>
+<li><p><code>shortcuts</code>: can be used to configure shortcuts for different commands (See <a href="#list-of-keyboard-bindings">List of keyboard bindings</a> for valid values):</p>
 <ul>
 <li><code>activate</code>- turn motion compensation on or off. Note that this implicitly triggers the calibration action (<code>center</code>) if that hasn't been executed before.</li>
 <li><code>center</code> - recalibrate the neutral reference pose of the tracker</li>

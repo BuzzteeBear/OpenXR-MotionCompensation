@@ -84,6 +84,7 @@ Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "rotation_filter"
 
 ; [cache]
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "cache"; Key: "use_eye_cache"; String: "0"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "cache"; Key: "tolerance"; String: "2.0"; Flags: createkeyifdoesntexist
 
 ; [shortcuts]
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "activate"; String: "CTRL+INS"; Flags: createkeyifdoesntexist

@@ -26,6 +26,7 @@ enum class Cfg
     RotStrength,
     RotOrder,
     CacheUseEye,
+    CacheTolerance,
     KeyActivate,
     KeyCenter,
     KeyTransInc,
@@ -103,6 +104,7 @@ class ConfigManager
         {Cfg::RotOrder, {"rotation_filter", "order"}},
 
         {Cfg::CacheUseEye, {"cache", "use_eye_cache"}},
+        {Cfg::CacheTolerance, {"cache", "tolerance"}},
 
         {Cfg::KeyActivate, {"shortcuts", "activate"}},
         {Cfg::KeyCenter, {"shortcuts", "center"}},

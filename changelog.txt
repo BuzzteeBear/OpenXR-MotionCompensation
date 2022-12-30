@@ -1,5 +1,19 @@
 OpenXR-MotionCompensation Changelog
 
+Version 0.2.4
+
+	Graphical overlay
+	- toggle on / off
+	- support for DirectX 11 and 12
+	
+	Disable flags
+	- all layer functionality
+	- physical tracker initialization
+	
+	Configure pose reversion on frame submission
+	- added (optional) eye position cache (pre 0.1.4 method)
+	- configurable cache tolerance 
+
 Version 0.2.3
 
 	Tracker connection loss detection

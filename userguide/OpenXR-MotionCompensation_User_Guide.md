@@ -87,7 +87,7 @@ What you can modify in a configuration file:
 - `tracker`: The following tracker `type` keys are available:
   - `controller`: use either the left or the right motion controller as reference tracker. Valid options for the key `side` are `left` and `right` (**Note that changing the side or switching between motion controller and vive tracker requires a restart of the vr session**)
   - `vive`: use a vive tracker as reference for motion compensation. The key `side` has to match the role assigned to the tracker. Valid options for that are:
-    - `handheld_object` which hand (left, right, any) doesn't matter. Having more than one active vive tracker assigned to that role may lead to conflicts, though.
+    - `handheld_object` - which hand (left, right, any) doesn't matter. Having more than one active vive tracker assigned to that role may lead to conflicts, though.
     - `left_foot`
     - `right_foot`
     - `left_shoulder`
@@ -107,8 +107,10 @@ What you can modify in a configuration file:
   - `yaw`: use the virtual tracker data provided by Yaw VR and Yaw 2. Either while using SRS or Game Engine.
   - the keys `offset_...`, `use_cor_pos` and `cor_...` are used to handle the configuration of the center of rotation (cor) for all available virtual trackers.
 - `translational_filter` and `rotational_filter`: set the filtering magnitude (key `strength` with valid options between **0.0** and **1.0**) number of filtering stages (key `order`with valid options: **1, 2, 3**).  
-- `cache`: you can choose between calcuating eye poses (`use_eye_cache` = 0, default) or use cached eye poses (`use_eye_cache` = 1, was defult up until version 0.1.4). One or the other might work better with some games or hmds. You can also modify this setting during runtime with the corresponding shortcut below
-- `shortcuts`: can be used to ocnfigure shortcuts for different commands (See [List of keyboard bindings](#list-of-keyboard-bindings) for valid values):
+- `cache`: you can modify th cache used for reverting the motion corrected pose on frame submission:
+  - `use_eye_cache` - choose between calcuating eye poses (0 = default) or use cached eye poses (1, was default up until version 0.1.4). Either one might work better with some games or hmds if you encounter jitter with mc activated. You can also modify this setting (and subsequently save it to config file) during runtime with the corresponding shortcut below.
+  - `tolerance` - modify the time values are kept in cache for before deletion. This may affect eye calculation as well as cached eye positions.
+- `shortcuts`: can be used to configure shortcuts for different commands (See [List of keyboard bindings](#list-of-keyboard-bindings) for valid values):
   - `activate`- turn motion compensation on or off. Note that this implicitly triggers the calibration action (`center`) if that hasn't been executed before.
   - `center` - recalibrate the neutral reference pose of the tracker
   - `translation_increase`, `translation_decrease` - modify the strength of the translational filter. Changes made during runtime can be saved by using a save command (see below).

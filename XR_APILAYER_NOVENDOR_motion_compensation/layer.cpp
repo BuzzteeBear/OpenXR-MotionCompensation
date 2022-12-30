@@ -138,6 +138,13 @@ namespace motion_compensation_layer
             {
                 ErrorLog("%s: defaulting to tracker timeout of %.3f ms\n", __FUNCTION__,  m_RecoveryWait / 1000000.0);
             }
+
+            float cacheTolerance{2.0};
+            GetConfig()->GetFloat(Cfg::CacheTolerance, cacheTolerance);
+            Log("cache tolerance is set to %.3f ms", cacheTolerance);
+            XrTime toleranceTime = (XrTime)(cacheTolerance * 1000000.0);
+            m_PoseCache.SetTolerance(toleranceTime);
+            m_EyeCache.SetTolerance(toleranceTime);
         }
 
         // initialize tracker

@@ -27,7 +27,12 @@ namespace utility
     class Cache
     {
       public:
-        Cache(XrTime tolerance, Sample fallback) : m_Tolerance(tolerance), m_Fallback(fallback){};
+        Cache(Sample fallback) : m_Fallback(fallback){};
+
+        void SetTolerance(XrTime tolerance)
+        {
+            m_Tolerance = tolerance;
+        }
 
         void AddSample(XrTime time, Sample sample)
         {
@@ -166,7 +171,7 @@ namespace utility
         std::map<XrTime, Sample> m_Cache{};
         mutable std::mutex m_Mutex;
         Sample m_Fallback;
-        XrTime m_Tolerance;
+        XrTime m_Tolerance{2000000};
     };
 
     class Mmf

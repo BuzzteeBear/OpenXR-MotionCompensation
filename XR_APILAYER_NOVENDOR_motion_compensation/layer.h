@@ -144,9 +144,8 @@ namespace motion_compensation_layer
         XrViewConfigurationType m_ViewConfigType{XR_VIEW_CONFIGURATION_TYPE_MAX_ENUM};
         Tracker::TrackerBase* m_Tracker{nullptr};
         Tracker::ViveTrackerInfo m_ViveTracker;
-        utility::Cache<XrPosef> m_PoseCache{2000000, xr::math::Pose::Identity()};
-        utility::Cache<std::vector<XrPosef>> m_EyeCache{2,
-                                                        std::vector<XrPosef>{xr::math::Pose::Identity(),
+        utility::Cache<XrPosef> m_PoseCache{xr::math::Pose::Identity()};
+        utility::Cache<std::vector<XrPosef>> m_EyeCache{std::vector<XrPosef>{xr::math::Pose::Identity(),
                                                                              xr::math::Pose::Identity(),
                                                                              xr::math::Pose::Identity(),
                                                                              xr::math::Pose::Identity()}};
