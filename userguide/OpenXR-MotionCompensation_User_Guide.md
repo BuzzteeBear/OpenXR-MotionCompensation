@@ -23,7 +23,6 @@ Limitations:
 ## Contact
 Feel free to join our [Discord community](https://discord.gg/BVWugph5XF) or to send an e-mail to [**oxrmc@mailbox.org**](mailto:oxrmc@mailbox.org) for feedback and assistance.
 
-
 You can find the [source code](https://github.com/BuzzteeBear/OpenXR-MotionCompensation) and the [latest release](https://github.com/BuzzteeBear/OpenXR-MotionCompensation/releases) or report issues on github.
 
 If you are (or know someone) willing and able to support the software development (mostly C++, maybe some GUI stuff later on) side of the project, feel free to contact **@BuzzteeBear** on the Discord server to ask about ways to contribute.
@@ -32,9 +31,9 @@ Donations to the project are very welcome and can be made via [Paypal](https://w
 
 ## Installation
 
-### Execute installer executable
-Just execute the installation executable called `Install OpenXR-MotionCompensation <current_version>.exe` and follow the instructions.
-A few hints concerning the installation process:
+### Run installer executable
+Just double click the installation executable called `Install OpenXR-MotionCompensation <current_version>.exe` and follow the instructions.
+A few hints regarding the installation process:
 - If you're upgrading from a version prior to 0.2.0, it is recommended to target the installation directory already existing. This will allow the installer to transfer your existing configuration files into the `appdata/local/OpenXR-MotionCompensation` directory that is used from version 0.2.0 onwards.
 - Using a subdirectory of `program files` as installation target is recommended, especially for compatibility with WMR based headsets.
 - Although the installation needs adminstrative privileges make sure to run the installation executable using the windows account you're using to launch your games/Open XR applications. This enables the installer to put the configuraton file(s) into the correct appdata directory.
@@ -46,7 +45,7 @@ According to user feedback following constraints seem to be working:
 - **XRNeckSaver** needs to be installed before OXRMC.
 - **OpenKneeBoard** needs to be installed before OXRMC. 
   - but it is (or at least was at some point) putting its registry key in `...HKEY_CURRENT_USER/...` while OXRMC uses `...HKEY_LOCAL_MACHINE/...` . So if you're having trouble changing the loading order, try moving the key for OpenKneeboard from `Computer\HKEY_CURRENT_USER\SOFTWARE\Khronos\OpenXR\1\ApiLayers\Implicit` to `Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\OpenXR\1\ApiLayers\Implicit`.
-- **OpenXR Toolkit** does it's own magic on installation and doesn't care if it's installed before or after OXRMC.
+- if you install one of the above with after OXRMC, you can just run the OXRMC installer afterwards to modify loading order.
 
 ### Optional: Confirm correct installation
 
@@ -60,7 +59,7 @@ You can use the application [OpenXR Explorer](https://github.com/maluoi/openxr-e
 
 ### Update
 
-To use an updated version of OXRMC it is sufficient to download and run the latest installation executable. If you want to change the installation directory you will have to uninstall the previous version first.
+To get OXRMC udpated, download and run the latest installation executable from [Github](https://github.com/BuzzteeBear/OpenXR-MotionCompensation/releases). If you want to change the installation directory you have to uninstall the previous version first.
 
 ### Uninstallation
 
@@ -82,7 +81,9 @@ What you can modify in a configuration file:
 **Note that all keys and values in the configuration file(s) are case sensitive. That means all [keyboard shortcuts](#list-of-keyboard-bindings) must only contain capital letters, numbers and/or underscores**
 
 ### Sections in configuration file
-
+- `startup`: You can disable OXRMC features by setting the corresponding key to 0:
+  - `enabled`: you can disable all functionality for a single application or globally by modifying default or application specific config file respectively. Note that you cannot enable a single application if oxrmc is disabled globally in the default config file.
+  - `physical_enabled`: initialization of physical tracker (motion controller or vive tracker) on startup can be skipped (e.g. if you're using a virtual tracker).
 - `tracker`: The following tracker `type` keys are available:
   - `controller`: use either the left or the right motion controller as reference tracker. Valid options for the key `side` are `left` and `right` (**Note that changing the side or switching between motion controller and vive tracker requires a restart of the vr session**)
   - `vive`: use a vive tracker as reference for motion compensation. The key `side` has to match the role assigned to the tracker. Valid options for that are:
@@ -106,15 +107,16 @@ What you can modify in a configuration file:
   - `yaw`: use the virtual tracker data provided by Yaw VR and Yaw 2. Either while using SRS or Game Engine.
   - the keys `offset_...`, `use_cor_pos` and `cor_...` are used to handle the configuration of the center of rotation (cor) for all available virtual trackers.
 - `translational_filter` and `rotational_filter`: set the filtering magnitude (key `strength` with valid options between **0.0** and **1.0**) number of filtering stages (key `order`with valid options: **1, 2, 3**).  
+- `cache`: you can choose between calcuating eye poses (`use_eye_cache` = 0, default) or use cached eye poses (`use_eye_cache` = 1, was defult up until version 0.1.4). One or the other might work better with some games or hmds. You can also modify this setting during runtime with the corresponding shortcut below
 - `shortcuts`: can be used to ocnfigure shortcuts for different commands (See [List of keyboard bindings](#list-of-keyboard-bindings) for valid values):
   - `activate`- turn motion compensation on or off. Note that this implicitly triggers the calibration action (`center`) if that hasn't been executed before.
   - `center` - recalibrate the neutral reference pose of the tracker
   - `translation_increase`, `translation_decrease` - modify the strength of the translational filter. Changes made during runtime can be saved by using a save command (see below).
   - `rotation_increase`, `rotation_decrease` = see above, but for rotational filter
-  - `offset_forward`, `offset_back`, `offset_up`, `offset_down`, `offset_right`, `offset_left` - move the center of rotation (cor) for a virtual tracker. The directions are aligned with the forward vector set with the `center` command. Changes made during runtime can be saved by using a save command (see below)
-  - `rotate_right`, `rotate_left` - rotate the aforementioned forward vector aroung the gravitational (yaw-)axis. Note that these changes cannot be saved. Therefore changing the offset position AFTER rotating manually and saving the offset values will result in the cor being a different offset position after relaoding those saved values
-  - `cor_debug_mode` - since OXRMC is lacking a visual feedback of the positon of the cor, you can activate this mode to be able to rotate the virtual world around the cor. Translations of the motion tracker are ignored in this mode.  
-  **Beware that this can be a nauseating experience because your eyes suggest that your moving inside the virtual world, while your inner ear tells your brain otherwise. You can stop motion compensation at any time by pressing the activation shortcut again!** 
+  - `offset_forward`, `offset_back`, `offset_up`, `offset_down`, `offset_right`, `offset_left` - move the center of rotation (cor) for a virtual tracker. The directions are aligned with the forward vector set with the `center` command. Changes made during runtime can be saved by using a save command (see below).
+  - `rotate_right`, `rotate_left` - rotate the aforementioned forward vector aroung the gravitational (yaw-)axis. Note that these changes cannot be saved. Therefore changing the offset position AFTER rotating manually and saving the offset values will result in the cor being a different offset position after relaoding those saved values.
+  - `toggle_overlay` - (de)activate graphical overlay displaying the reference tracker position(s) (See [Graphical overlay](#graphical-overlay) for details).
+  - `toggle_cache` - change between calculated and cached eye positions.
   - `save_config` -  write current filter strength and cor offsets to global config file 
   - `save_config_app` -  write current filter strength and cor offsets to application specific config file. Note that values in this file will precedent values in the global config file. 
   - `reload_config` - read in and apply configuration for current app from config files. For technical reasons motion compensation is automatically deactivated and the reference tracker pose is invalidated upon configuration reload.
@@ -162,6 +164,19 @@ Feedback on success or failure of this functionality using different VR systems 
 - after modifying filter strength or cor offset for virtual tracker you can save your changes to the default configuration file 
 - after modifying the config file(s) manually you can use the `reload_config` shortcut (**CTRL** + **SHIFT** + **L** by default) to restart the OXRMC software with the new values. 
 
+### Graphical overlay
+You can enable/disable the overlay using the `toggle_overlay` shortcut. It displays a marker in your headset view for:
+- the current neutral position of the reference tracker. 
+  - for a virtual tracker the neutral position corresponds to the center of rotation currently configured. The marker uses the following color coding:
+    - blue points upwards
+    - green points forward
+    - red points to the right
+  - for a physical tracker the orientation of the marker is depending on the runtime implementation
+- the current tracker position, if mc is currently active. This marker uses:
+  - cyan instead of blue
+  - yellow instead of green
+  - magenta istead of red
+ 
 ### Connection Loss
 OXRMC can detect if a reference tracker isn't available anymore, if: 
 - for a physical tracker: the runtime lost tracking of a motion controller / vive tracker 

@@ -62,9 +62,9 @@ To be able to do that, the software needs to be informed on the motion rig movem
 <p>If you are (or know someone) willing and able to support the software development (mostly C++, maybe some GUI stuff later on) side of the project, feel free to contact <strong>@BuzzteeBear</strong> on the Discord server to ask about ways to contribute.</p>
 <p>Donations to the project are very welcome and can be made via <a href="https://www.paypal.com/donate/?hosted_button_id=Q64DT2ADFCBU8">Paypal</a>.</p>
 <h2 id="installation">Installation</h2>
-<h3 id="execute-installer-executable">Execute installer executable</h3>
-<p>Just execute the installation executable called <code>Install OpenXR-MotionCompensation &lt;current_version&gt;.exe</code> and follow the instructions.
-A few hints concerning the installation process:</p>
+<h3 id="run-installer-executable">Run installer executable</h3>
+<p>Just double click the installation executable called <code>Install OpenXR-MotionCompensation &lt;current_version&gt;.exe</code> and follow the instructions.
+A few hints regarding the installation process:</p>
 <ul>
 <li>If you're upgrading from a version prior to 0.2.0, it is recommended to target the installation directory already existing. This will allow the installer to transfer your existing configuration files into the <code>appdata/local/OpenXR-MotionCompensation</code> directory that is used from version 0.2.0 onwards.</li>
 <li>Using a subdirectory of <code>program files</code> as installation target is recommended, especially for compatibility with WMR based headsets.</li>
@@ -81,7 +81,7 @@ According to user feedback following constraints seem to be working:</p>
 <li>but it is (or at least was at some point) putting its registry key in <code>...HKEY_CURRENT_USER/...</code> while OXRMC uses <code>...HKEY_LOCAL_MACHINE/...</code> . So if you're having trouble changing the loading order, try moving the key for OpenKneeboard from <code>Computer\HKEY_CURRENT_USER\SOFTWARE\Khronos\OpenXR\1\ApiLayers\Implicit</code> to <code>Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\OpenXR\1\ApiLayers\Implicit</code>.</li>
 </ul>
 </li>
-<li><strong>OpenXR Toolkit</strong> does it's own magic on installation and doesn't care if it's installed before or after OXRMC.</li>
+<li>if you install one of the above with after OXRMC, you can just run the OXRMC installer afterwards to modify loading order.</li>
 </ul>
 <h3 id="optional-confirm-correct-installation">Optional: Confirm correct installation</h3>
 <p>You can use the application <a href="https://github.com/maluoi/openxr-explorer/releases">OpenXR Explorer</a> to verify the correct installation:</p>
@@ -94,7 +94,7 @@ According to user feedback following constraints seem to be working:</p>
 <li>Check if the entry <code>XR_APILAYER_NOVENDOR_motion_compensation</code> with version <code>v1</code> exists</li>
 </ul>
 <h3 id="update">Update</h3>
-<p>To use an updated version of OXRMC it is sufficient to download and run the latest installation executable. If you want to change the installation directory you will have to uninstall the previous version first.</p>
+<p>To get OXRMC udpated, download and run the latest installation executable from <a href="https://github.com/BuzzteeBear/OpenXR-MotionCompensation/releases">Github</a>. If you want to change the installation directory you have to uninstall the previous version first.</p>
 <h3 id="uninstallation">Uninstallation</h3>
 <p>To remove the OpenXR-MotionCompensation layer just use windows settings/control panel as you would do witgh any other application. During uninstallation you can choose to delete your configuration and log files in the appdata directory or to keep them for later use.</p>
 <ul>
@@ -114,6 +114,12 @@ Upon starting an OpenXR application with the API layer active for the first time
 </ul>
 <h3 id="sections-in-configuration-file">Sections in configuration file</h3>
 <ul>
+<li><p><code>startup</code>: You can disable OXRMC features by setting the corresponding key to 0:</p>
+<ul>
+<li><code>enabled</code>: you can disable all functionality for a single application or globally by modifying default or application specific config file respectively. Note that you cannot enable a single application if oxrmc is disabled globally in the default config file.</li>
+<li><code>physical_enabled</code>: initialization of physical tracker (motion controller or vive tracker) on startup can be skipped (e.g. if you're using a virtual tracker).</li>
+</ul>
+</li>
 <li><p><code>tracker</code>: The following tracker <code>type</code> keys are available:</p>
 <ul>
 <li><code>controller</code>: use either the left or the right motion controller as reference tracker. Valid options for the key <code>side</code> are <code>left</code> and <code>right</code> (<strong>Note that changing the side or switching between motion controller and vive tracker requires a restart of the vr session</strong>)</li>
@@ -144,16 +150,18 @@ Upon starting an OpenXR application with the API layer active for the first time
 </li>
 <li><p><code>translational_filter</code> and <code>rotational_filter</code>: set the filtering magnitude (key <code>strength</code> with valid options between <strong>0.0</strong> and <strong>1.0</strong>) number of filtering stages (key <code>order</code>with valid options: <strong>1, 2, 3</strong>).</p>
 </li>
+<li><p><code>cache</code>: you can choose between calcuating eye poses (<code>use_eye_cache</code> = 0, default) or use cached eye poses (<code>use_eye_cache</code> = 1, was defult up until version 0.1.4). One or the other might work better with some games or hmds. You can also modify this setting during runtime with the corresponding shortcut below</p>
+</li>
 <li><p><code>shortcuts</code>: can be used to ocnfigure shortcuts for different commands (See <a href="#list-of-keyboard-bindings">List of keyboard bindings</a> for valid values):</p>
 <ul>
 <li><code>activate</code>- turn motion compensation on or off. Note that this implicitly triggers the calibration action (<code>center</code>) if that hasn't been executed before.</li>
 <li><code>center</code> - recalibrate the neutral reference pose of the tracker</li>
 <li><code>translation_increase</code>, <code>translation_decrease</code> - modify the strength of the translational filter. Changes made during runtime can be saved by using a save command (see below).</li>
 <li><code>rotation_increase</code>, <code>rotation_decrease</code> = see above, but for rotational filter</li>
-<li><code>offset_forward</code>, <code>offset_back</code>, <code>offset_up</code>, <code>offset_down</code>, <code>offset_right</code>, <code>offset_left</code> - move the center of rotation (cor) for a virtual tracker. The directions are aligned with the forward vector set with the <code>center</code> command. Changes made during runtime can be saved by using a save command (see below)</li>
-<li><code>rotate_right</code>, <code>rotate_left</code> - rotate the aforementioned forward vector aroung the gravitational (yaw-)axis. Note that these changes cannot be saved. Therefore changing the offset position AFTER rotating manually and saving the offset values will result in the cor being a different offset position after relaoding those saved values</li>
-<li><code>cor_debug_mode</code> - since OXRMC is lacking a visual feedback of the positon of the cor, you can activate this mode to be able to rotate the virtual world around the cor. Translations of the motion tracker are ignored in this mode.<br />
-<strong>Beware that this can be a nauseating experience because your eyes suggest that your moving inside the virtual world, while your inner ear tells your brain otherwise. You can stop motion compensation at any time by pressing the activation shortcut again!</strong></li>
+<li><code>offset_forward</code>, <code>offset_back</code>, <code>offset_up</code>, <code>offset_down</code>, <code>offset_right</code>, <code>offset_left</code> - move the center of rotation (cor) for a virtual tracker. The directions are aligned with the forward vector set with the <code>center</code> command. Changes made during runtime can be saved by using a save command (see below).</li>
+<li><code>rotate_right</code>, <code>rotate_left</code> - rotate the aforementioned forward vector aroung the gravitational (yaw-)axis. Note that these changes cannot be saved. Therefore changing the offset position AFTER rotating manually and saving the offset values will result in the cor being a different offset position after relaoding those saved values.</li>
+<li><code>toggle_overlay</code> - (de)activate graphical overlay displaying the reference tracker position(s) (See <a href="#graphical-overlay">Graphical overlay</a> for details).</li>
+<li><code>toggle_cache</code> - change between calculated and cached eye positions.</li>
 <li><code>save_config</code> -  write current filter strength and cor offsets to global config file</li>
 <li><code>save_config_app</code> -  write current filter strength and cor offsets to application specific config file. Note that values in this file will precedent values in the global config file.</li>
 <li><code>reload_config</code> - read in and apply configuration for current app from config files. For technical reasons motion compensation is automatically deactivated and the reference tracker pose is invalidated upon configuration reload.</li>
@@ -205,6 +213,29 @@ Feedback on success or failure of this functionality using different VR systems 
 <li>you can modify the cor offset when currently using a virtual tracker</li>
 <li>after modifying filter strength or cor offset for virtual tracker you can save your changes to the default configuration file</li>
 <li>after modifying the config file(s) manually you can use the <code>reload_config</code> shortcut (<strong>CTRL</strong> + <strong>SHIFT</strong> + <strong>L</strong> by default) to restart the OXRMC software with the new values.</li>
+</ul>
+<h3 id="graphical-overlay">Graphical overlay</h3>
+<p>You can enable/disable the overlay using the <code>toggle_overlay</code> shortcut. It displays a marker in your headset view for:</p>
+<ul>
+<li>the current neutral position of the reference tracker.
+<ul>
+<li>for a virtual tracker the neutral position corresponds to the center of rotation currently configured. The marker uses the following color coding:
+<ul>
+<li>blue points upwards</li>
+<li>green points forward</li>
+<li>red points to the right</li>
+</ul>
+</li>
+<li>for a physical tracker the orientation of the marker is depending on the runtime implementation</li>
+</ul>
+</li>
+<li>the current tracker position, if mc is currently active. This marker uses:
+<ul>
+<li>cyan instead of blue</li>
+<li>yellow instead of green</li>
+<li>magenta istead of red</li>
+</ul>
+</li>
 </ul>
 <h3 id="connection-loss">Connection Loss</h3>
 <p>OXRMC can detect if a reference tracker isn't available anymore, if:</p>
