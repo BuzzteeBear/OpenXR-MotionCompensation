@@ -32,7 +32,7 @@ Donations to the project are very welcome and can be made via [Paypal](https://w
 ## Installation
 
 ### Run installer executable
-Just double click the installation executable called `Install OpenXR-MotionCompensation <current_version>.exe` and follow the instructions.
+Just double click the installation executable called `Install_OpenXR-MotionCompensation_<current_version>.exe` and follow the instructions.
 A few hints regarding the installation process:
 - If you're upgrading from a version prior to 0.2.0, it is recommended to target the installation directory already existing. This will allow the installer to transfer your existing configuration files into the `appdata/local/OpenXR-MotionCompensation` directory that is used from version 0.2.0 onwards.
 - Using a subdirectory of `program files` as installation target is recommended, especially for compatibility with WMR based headsets.
