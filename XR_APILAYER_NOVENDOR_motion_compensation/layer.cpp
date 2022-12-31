@@ -118,6 +118,10 @@ namespace motion_compensation_layer
 
             // enable / disable physical tracker initialization
             GetConfig()->GetBool(Cfg::PhysicalEnabled, m_PhysicalEnabled);
+            if (!m_PhysicalEnabled)
+            {
+                Log("initialization of physical tracker disabled in config file\n");
+            }
 
             // initialize audio feedback
             GetAudioOut()->Init();
