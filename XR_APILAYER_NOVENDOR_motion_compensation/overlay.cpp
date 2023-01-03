@@ -73,10 +73,8 @@ namespace graphics
 
                         const XrGraphicsBindingD3D12KHR* d3dBindings =
                             reinterpret_cast<const XrGraphicsBindingD3D12KHR*>(entry);
-                        // Workaround: On Varjo, we must use intermediate textures with D3D11on12.
-                        const bool enableVarjoQuirk = runtimeName.find("Varjo") != std::string::npos;
                         m_GraphicsDevice =
-                            graphics::WrapD3D12Device(d3dBindings->device, d3dBindings->queue, enableVarjoQuirk);
+                            graphics::WrapD3D12Device(d3dBindings->device, d3dBindings->queue);
                         break;
                     }
 
@@ -220,7 +218,6 @@ namespace graphics
                             graphics::WrapD3D12Texture(m_GraphicsDevice,
                                                        *chainCreateInfo,
                                                        d3dImages[i].texture,
-                                                       initialState,
                                                        fmt::format("Runtime swapchain {} TEX2D", i));
 
                         swapchainState.images.push_back(std::move(images));
@@ -377,7 +374,6 @@ namespace graphics
                 uint32_t sliceForOverlay[graphics::ViewCount]{};
                 std::shared_ptr<graphics::ITexture> depthForOverlay[graphics::ViewCount]{};
                 xr::math::ViewProjection viewForOverlay[graphics::ViewCount]{};
-                XrRect2Di viewportForOverlay[graphics::ViewCount];
 
                 std::vector<XrCompositionLayerProjection> layerProjectionAllocator;
                 std::vector<std::array<XrCompositionLayerProjectionView, 2>> layerProjectionViewsAllocator;
@@ -455,26 +451,23 @@ namespace graphics
                             viewForOverlay[eye].Pose = view.pose;
                             viewForOverlay[eye].Fov = view.fov;
                             viewForOverlay[eye].NearFar = nearFar;
-                            viewportForOverlay[eye] = view.subImage.imageRect;
                         }
                     }
                 }
 
                 if (textureForOverlay[0])
                 {
-                    const bool useTextureArrays =
-                        textureForOverlay[1] == textureForOverlay[0] && sliceForOverlay[0] != sliceForOverlay[1];
+                    const bool useVPRT = textureForOverlay[1] == textureForOverlay[0];
 
                     // render the tracker pose(s)
                     for (uint32_t eye = 0; eye < graphics::ViewCount; eye++)
                     {
-                        m_GraphicsDevice->setRenderTargets(
-                            1,
-                            &textureForOverlay[eye],
-                            useTextureArrays ? reinterpret_cast<int32_t*>(&sliceForOverlay[eye]) : nullptr,
-                            &viewportForOverlay[eye],
-                            depthForOverlay[eye] ,
-                            useTextureArrays ? eye : -1);
+                        m_GraphicsDevice->setRenderTargets(1,
+                                                           &textureForOverlay[eye],
+                                                           useVPRT ? reinterpret_cast<int32_t*>(&sliceForOverlay[eye])
+                                                                   : nullptr,
+                                                           depthForOverlay[eye],
+                                                           useVPRT ? eye : -1);
                         m_GraphicsDevice->setViewProjection(viewForOverlay[eye]);
                         m_GraphicsDevice->clearDepth(1.f);
 

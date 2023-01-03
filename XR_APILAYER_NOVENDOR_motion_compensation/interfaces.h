@@ -22,20 +22,9 @@
 // SOFTWARE.
 
 #pragma once
-  
+
 namespace
 {
-    // A generic timer.
-    struct ITimer
-    {
-        virtual ~ITimer() = default;
-
-        virtual void start() = 0;
-        virtual void stop() = 0;
-
-        virtual uint64_t query(bool reset = true) const = 0;
-    };
-
     // Quick and dirty API helper
     template <class T, class... Types>
     inline constexpr bool is_any_of_v = std::disjunction_v<std::is_same<T, Types>...>;
@@ -145,29 +134,6 @@ namespace graphics
     {
         NearestClamp,
         LinearClamp
-    };
-
-    // A list of supported GPU Architectures.
-    enum class GpuArchitecture
-    {
-        Unknown,
-        AMD,
-        Intel,
-        NVidia
-    };
-
-    enum class TextStyle
-    {
-        Normal,
-        Bold
-    };
-
-    enum class FrameAnalyzerHeuristic
-    {
-        Unknown,
-        ForwardRender,
-        DeferredCopy,
-        Fallback
     };
 
     struct IDevice;
@@ -294,13 +260,6 @@ namespace graphics
         virtual std::shared_ptr<IDepthStencilView> getDepthStencilView(int32_t slice = -1) const = 0;
 
         virtual void uploadData(const void* buffer, uint32_t rowPitch, int32_t slice = -1) = 0;
-        virtual void copyTo(std::shared_ptr<ITexture> destination) = 0;
-        virtual void copyTo(uint32_t srcX, uint32_t srcY, int32_t srcSlice, std::shared_ptr<ITexture> destination) = 0;
-        virtual void copyTo(std::shared_ptr<ITexture> destination, uint32_t dstX, uint32_t dstY, int32_t dstSlice) = 0;
-
-        virtual void setState(D3D12_RESOURCE_STATES newState) = 0;
-        virtual void pushState(D3D12_RESOURCE_STATES newState) = 0;
-        virtual void popState() = 0;
 
         virtual void* getNativePtr() const = 0;
 
@@ -320,9 +279,6 @@ namespace graphics
         virtual std::shared_ptr<IDevice> getDevice() const = 0;
 
         virtual void uploadData(const void* buffer, size_t count) = 0;
-
-        virtual void pushState(D3D12_RESOURCE_STATES newState) = 0;
-        virtual void popState() = 0;
 
         virtual void* getNativePtr() const = 0;
 
@@ -433,12 +389,9 @@ namespace graphics
         virtual void setRenderTargets(size_t numRenderTargets,
                                       std::shared_ptr<ITexture>* renderTargets,
                                       int32_t* renderSlices = nullptr,
-                                      const XrRect2Di* viewport0 = nullptr,
                                       std::shared_ptr<ITexture> depthBuffer = nullptr,
                                       int32_t depthSlice = -1) = 0;
         virtual void unsetRenderTargets() = 0;
-
-        virtual XrExtent2Di getViewportSize() const = 0;
 
         virtual void clearColor(float top, float left, float bottom, float right, const XrColor4f& color) const = 0;
         virtual void clearDepth(float value) = 0;
@@ -463,8 +416,6 @@ namespace graphics
                                                     std::shared_ptr<ITexture> /* destination */,
                                                     int /* sourceSlice */,
                                                     int /* destinationSlice */)>;
-        virtual void registerCopyTextureEvent(CopyTextureEvent event) = 0;
-
 
         virtual void shutdown() = 0;
 
@@ -475,8 +426,6 @@ namespace graphics
 
         virtual void* getNativePtr() const = 0;
         virtual void* getContextPtr() const = 0;
-
-        virtual void executeDebugWorkload() = 0;
 
         template <typename ApiTraits>
         auto getAs() const
@@ -491,20 +440,6 @@ namespace graphics
                                                                                             : nullptr);
         }
     };
-
-    // A texture post-processor.
-    struct IImageProcessor
-    {
-        virtual ~IImageProcessor() = default;
-
-        virtual void reload() = 0;
-        virtual void update() = 0;
-        virtual void process(std::shared_ptr<ITexture> input,
-                             std::shared_ptr<ITexture> output,
-                             std::vector<std::shared_ptr<ITexture>>& textures,
-                             std::array<uint8_t, 1024>& blob) = 0;
-    }; 
-
 } // namespace graphics
 
 

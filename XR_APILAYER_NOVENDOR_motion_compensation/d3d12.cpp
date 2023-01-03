@@ -39,19 +39,6 @@ namespace {
     constexpr size_t MaxGpuTimers = 128;
     constexpr size_t MaxModelBuffers = 128;
 
-    // If the application uses the Streamline SDK, some D3D12 objects are shimmed, and this will confuse our Detours
-    // logic. Luckily, the Streamline SDK has a secret UUID that can be used to query the underlying interface. From
-    // https://github.com/NVIDIAGameWorks/Streamline/blob/main/source/core/sl.api/internal.h.
-    struct DECLSPEC_UUID("ADEC44E2-61F0-45C3-AD9F-1B37379284FF") StreamlineRetreiveBaseInterface : IUnknown {};
-
-    template <class T>
-    inline void GetRealD3D12Object(T* shimmedObject, T** realObject) {
-        if (FAILED(shimmedObject->QueryInterface(__uuidof(StreamlineRetreiveBaseInterface), (void**)realObject))) {
-            shimmedObject->AddRef();
-            *realObject = shimmedObject;
-        }
-    }
-
     inline void SetDebugName(ID3D12Object* resource, std::string_view name) {
         if (resource && !name.empty())
             resource->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(name.size()), name.data());
@@ -361,12 +348,11 @@ namespace {
                      const XrSwapchainCreateInfo& info,
                      const D3D12_RESOURCE_DESC& textureDesc,
                      ID3D12Resource* texture,
-                     D3D12_RESOURCE_STATES initialState,
                      D3D12Heap& rtvHeap,
                      D3D12Heap& dsvHeap,
                      D3D12Heap& rvHeap)
-            : m_device(device), m_info(info), m_textureDesc(textureDesc), m_texture(texture),
-              m_currentState(initialState), m_rtvHeap(rtvHeap), m_dsvHeap(dsvHeap), m_rvHeap(rvHeap) {
+            : m_device(device), m_info(info), m_textureDesc(textureDesc), m_texture(texture), m_rtvHeap(rtvHeap),
+              m_dsvHeap(dsvHeap), m_rvHeap(rvHeap) {
             m_shaderResourceSubView.resize(info.arraySize);
             m_unorderedAccessSubView.resize(info.arraySize);
             m_renderTargetSubView.resize(info.arraySize);
@@ -448,105 +434,29 @@ namespace {
 
             // Do the upload now.
             if (auto context = m_device->getContextAs<D3D12>()) {
-                pushState(D3D12_RESOURCE_STATE_COPY_DEST);
-
-                D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint;
-                ZeroMemory(&footprint, sizeof(footprint));
-                footprint.Footprint.Width = (UINT)m_textureDesc.Width;
-                footprint.Footprint.Height = m_textureDesc.Height;
-                footprint.Footprint.Depth = 1;
-                footprint.Footprint.RowPitch = rowPitch;
-                footprint.Footprint.Format = m_textureDesc.Format;
-                CD3DX12_TEXTURE_COPY_LOCATION src(get(m_uploadBuffer), footprint);
-                CD3DX12_TEXTURE_COPY_LOCATION dst(get(m_texture), 0);
-                context->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
-
-                popState();
+                {
+                    const auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+                        get(m_texture), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
+                    context->ResourceBarrier(1, &barrier);
+                }
+                {
+                    D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint;
+                    ZeroMemory(&footprint, sizeof(footprint));
+                    footprint.Footprint.Width = (UINT)m_textureDesc.Width;
+                    footprint.Footprint.Height = m_textureDesc.Height;
+                    footprint.Footprint.Depth = 1;
+                    footprint.Footprint.RowPitch = rowPitch;
+                    footprint.Footprint.Format = m_textureDesc.Format;
+                    CD3DX12_TEXTURE_COPY_LOCATION src(get(m_uploadBuffer), footprint);
+                    CD3DX12_TEXTURE_COPY_LOCATION dst(get(m_texture), 0);
+                    context->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+                }
+                {
+                    const auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+                        get(m_texture), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_COMMON);
+                    context->ResourceBarrier(1, &barrier);
+                }
             }
-        }
-
-        void copyTo(std::shared_ptr<ITexture> destination) override {
-            D3D12_TEXTURE_COPY_LOCATION destLoc{
-                destination->getAs<D3D12>(), D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX, 0};
-            D3D12_TEXTURE_COPY_LOCATION srcLoc{m_texture.Get(), D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX, 0};
-
-            pushState(D3D12_RESOURCE_STATE_COPY_SOURCE);
-            destination->pushState(D3D12_RESOURCE_STATE_COPY_DEST);
-
-            m_device->getContextAs<D3D12>()->CopyTextureRegion(&destLoc, 0, 0, 0, &srcLoc, nullptr);
-
-            destination->popState();
-            popState();
-        }
-
-        void copyTo(uint32_t srcX, uint32_t srcY, int32_t srcSlice, std::shared_ptr<ITexture> destination) override {
-            D3D12_TEXTURE_COPY_LOCATION destLoc{
-                destination->getAs<D3D12>(), D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX, 0};
-            D3D12_TEXTURE_COPY_LOCATION srcLoc{
-                m_texture.Get(), D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX, (UINT)srcSlice};
-
-            D3D12_BOX box;
-            box.left = srcX;
-            box.top = srcY;
-
-            box.right = box.left + destination->getInfo().width;
-            box.bottom = box.top + destination->getInfo().height;
-            box.front = 0;
-            box.back = 1;
-
-            pushState(D3D12_RESOURCE_STATE_COPY_SOURCE);
-            destination->pushState(D3D12_RESOURCE_STATE_COPY_DEST);
-
-            m_device->getContextAs<D3D12>()->CopyTextureRegion(&destLoc, 0, 0, 0, &srcLoc, &box);
-
-            destination->popState();
-            popState();
-        }
-
-        void copyTo(std::shared_ptr<ITexture> destination, uint32_t dstX, uint32_t dstY, int32_t dstSlice) override {
-            D3D12_TEXTURE_COPY_LOCATION destLoc{
-                destination->getAs<D3D12>(), D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX, (UINT)dstSlice};
-            D3D12_TEXTURE_COPY_LOCATION srcLoc{m_texture.Get(), D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX, 0};
-
-            pushState(D3D12_RESOURCE_STATE_COPY_SOURCE);
-            destination->pushState(D3D12_RESOURCE_STATE_COPY_DEST);
-
-            m_device->getContextAs<D3D12>()->CopyTextureRegion(&destLoc, dstX, dstY, 0, &srcLoc, nullptr);
-
-            destination->popState();
-            popState();
-        }
-
-        void setState(D3D12_RESOURCE_STATES newState) override {
-            if (newState != m_currentState) {
-                const auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(get(m_texture), m_currentState, newState);
-                m_device->getContextAs<D3D12>()->ResourceBarrier(1, &barrier);
-            }
-
-            m_currentState = newState;
-        }
-
-        void pushState(D3D12_RESOURCE_STATES newState) override {
-            m_stateStack.push_back(m_currentState);
-
-            if (newState != m_currentState) {
-                const auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(get(m_texture), m_currentState, newState);
-                m_device->getContextAs<D3D12>()->ResourceBarrier(1, &barrier);
-            }
-
-            m_currentState = newState;
-        }
-
-        void popState() override {
-            const auto newState = m_stateStack.back();
-            m_stateStack.pop_back();
-
-            if (newState != m_currentState) {
-                const auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(get(m_texture), m_currentState, newState);
-                m_device->getContextAs<D3D12>()->ResourceBarrier(1, &barrier);
-            }
-
-            m_currentState = newState;
         }
 
         void* getNativePtr() const override {
@@ -644,18 +554,12 @@ namespace {
             return nullptr;
         }
 
-        void setInteropTexture(std::shared_ptr<ITexture> interopTexture,
-                               std::shared_ptr<ITexture> copyTexture = nullptr) {
+        void setInteropTexture(std::shared_ptr<ITexture> interopTexture) {
             m_interopTexture = interopTexture;
-            m_interopCopyTexture = copyTexture;
         }
 
         std::shared_ptr<ITexture> getInteropTexture() {
             return m_interopTexture;
-        }
-
-        std::shared_ptr<ITexture> getInteropCopyTexture() {
-            return m_interopCopyTexture;
         }
 
         const std::shared_ptr<IDevice> m_device;
@@ -663,13 +567,9 @@ namespace {
         const D3D12_RESOURCE_DESC m_textureDesc;
         const ComPtr<ID3D12Resource> m_texture;
 
-        D3D12_RESOURCE_STATES m_currentState;
-        std::vector<D3D12_RESOURCE_STATES> m_stateStack;
-
         ComPtr<ID3D12Resource> m_uploadBuffer;
         UINT m_uploadSize{0};
         std::shared_ptr<ITexture> m_interopTexture;
-        std::shared_ptr<ITexture> m_interopCopyTexture;
 
         D3D12Heap& m_rtvHeap;
         D3D12Heap& m_dsvHeap;
@@ -692,11 +592,10 @@ namespace {
         D3D12Buffer(std::shared_ptr<IDevice> device,
                     D3D12_RESOURCE_DESC bufferDesc,
                     ID3D12Resource* buffer,
-                    D3D12_RESOURCE_STATES initialState,
                     D3D12Heap& rvHeap,
                     ID3D12Resource* uploadBuffer = nullptr)
-            : m_device(device), m_bufferDesc(bufferDesc), m_buffer(buffer), m_currentState(initialState),
-              m_rvHeap(rvHeap), m_uploadBuffer(uploadBuffer) {
+            : m_device(device), m_bufferDesc(bufferDesc), m_buffer(buffer), m_rvHeap(rvHeap),
+              m_uploadBuffer(uploadBuffer) {
         }
 
         Api getApi() const override {
@@ -713,9 +612,17 @@ namespace {
             subresourceData.RowPitch = subresourceData.SlicePitch = count;
 
             if (auto context = m_device->getContextAs<D3D12>()) {
-                pushState(D3D12_RESOURCE_STATE_COPY_DEST);
+                {
+                    const auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+                        get(m_buffer), D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_COPY_DEST);
+                    context->ResourceBarrier(1, &barrier);
+                }
                 UpdateSubresources<1>(context, get(m_buffer), uploadBuffer, 0, 0, 1, &subresourceData);
-                popState();
+                {
+                    const auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+                        get(m_buffer), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ);
+                    context->ResourceBarrier(1, &barrier);
+                }
             }
         }
 
@@ -746,29 +653,6 @@ namespace {
             return m_constantBufferView.value();
         }
 
-        void pushState(D3D12_RESOURCE_STATES newState) override {
-            m_stateStack.push_back(m_currentState);
-
-            if (newState != m_currentState) {
-                const auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(get(m_buffer), m_currentState, newState);
-                m_device->getContextAs<D3D12>()->ResourceBarrier(1, &barrier);
-            }
-
-            m_currentState = newState;
-        }
-
-        void popState() override {
-            const auto newState = m_stateStack.back();
-            m_stateStack.pop_back();
-
-            if (newState != m_currentState) {
-                const auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(get(m_buffer), m_currentState, newState);
-                m_device->getContextAs<D3D12>()->ResourceBarrier(1, &barrier);
-            }
-
-            m_currentState = newState;
-        }
-
         void* getNativePtr() const override {
             return get(m_buffer);
         }
@@ -777,9 +661,6 @@ namespace {
         const std::shared_ptr<IDevice> m_device;
         const D3D12_RESOURCE_DESC m_bufferDesc;
         const ComPtr<ID3D12Resource> m_buffer;
-
-        D3D12_RESOURCE_STATES m_currentState;
-        std::vector<D3D12_RESOURCE_STATES> m_stateStack;
 
         D3D12Heap& m_rvHeap;
 
@@ -859,20 +740,13 @@ namespace {
         // OpenXR will not allow more than 2 frames in-flight, so 2 would be sufficient, however we might split the
         // processing in two due to text rendering, so multiply this number by 2. Oh and also we have the app GPU
         // timer, so multiply again by 2.
-        // We also perform eye tracked foveated rendering mask update in this context, which is dependent on the number
-        // of passes rendered by the app and the number of masks being used per frame. We chose 24 as a wide default.
-        static constexpr size_t NumInflightContexts = 8 + 24;
+       
+        static constexpr size_t NumInflightContexts = 8;
 
       public:
-        D3D12Device(ID3D12Device* device, ID3D12CommandQueue* queue, bool enableVarjoQuirk = false)
-            : m_device(device), m_queue(queue), m_allowInterceptor(true), m_needInteropCopy(enableVarjoQuirk)
+        D3D12Device(ID3D12Device* device, ID3D12CommandQueue* queue)
+            : m_device(device), m_queue(queue), m_allowInterceptor(true)
         {
-            GetRealD3D12Object(get(m_device), set(m_realDevice));
-            if (get(m_realDevice) != get(m_device))
-            {
-                Log("Detected Streamline SDK\n");
-            }
-
             {
                 // store a reference to the command queue for easier retrieval
                 m_device->SetPrivateDataInterface(IID_ID3D12CommandQueue, get(m_queue));
@@ -899,7 +773,6 @@ namespace {
 
                         // Log the adapter name to help debugging customer issues.
                         Log("Using Direct3D 12 on adapter: %s\n", m_deviceName.c_str());
-                        m_adapter = dxgiAdapter;
                         break;
                     }
                 }
@@ -1113,10 +986,10 @@ namespace {
             if (blocking) {
                 m_queue->Signal(get(m_fence), ++m_fenceValue);
                 if (m_fence->GetCompletedValue() < m_fenceValue) {
-                    wil::unique_handle eventHandle;
-                    *eventHandle.put() = CreateEventEx(nullptr, "flushContext Fence", 0, EVENT_ALL_ACCESS);
-                    CHECK_HRCMD(m_fence->SetEventOnCompletion(m_fenceValue, eventHandle.get()));
-                    WaitForSingleObject(eventHandle.get(), INFINITE);
+                    HANDLE eventHandle = CreateEventEx(nullptr, "flushContext Fence", 0, EVENT_ALL_ACCESS);
+                    CHECK_HRCMD(m_fence->SetEventOnCompletion(m_fenceValue, eventHandle));
+                    WaitForSingleObject(eventHandle, INFINITE);
+                    CloseHandle(eventHandle);
                 }
             }
 
@@ -1183,7 +1056,6 @@ namespace {
                                                                   D3D12_RESOURCE_STATE_GENERIC_READ,
                                                                   nullptr,
                                                                   IID_PPV_ARGS(set(uploadBuffer))));
-                    SetDebugName(get(uploadBuffer), std::string(debugName) + " Upload");
                 }
                 {
                     void* mappedBuffer = nullptr;
@@ -1220,7 +1092,7 @@ namespace {
             SetDebugName(get(texture), debugName);
 
             return std::make_shared<D3D12Texture>(
-                shared_from_this(), info, desc, get(texture), initialState, m_rtvHeap, m_dsvHeap, m_rvHeap);
+                shared_from_this(), info, desc, get(texture), m_rtvHeap, m_dsvHeap, m_rvHeap);
         }
 
         std::shared_ptr<IShaderBuffer>
@@ -1249,14 +1121,12 @@ namespace {
                                                               D3D12_RESOURCE_STATE_GENERIC_READ,
                                                               nullptr,
                                                               IID_PPV_ARGS(set(uploadBuffer))));
-                SetDebugName(get(uploadBuffer), std::string(debugName) + " Upload");
             }
             SetDebugName(get(buffer), debugName);
 
             auto result = std::make_shared<D3D12Buffer>(shared_from_this(),
                                                         desc,
                                                         get(buffer),
-                                                        D3D12_RESOURCE_STATE_COMMON,
                                                         m_rvHeap,
                                                         !immutable ? get(uploadBuffer) : nullptr);
 
@@ -1401,13 +1271,6 @@ namespace {
                                : m_currentQuadShader  ? dynamic_cast<D3D12Shader*>(m_currentQuadShader.get())
                                                       : nullptr;
             if (d3d12Shader) {
-                if (m_currentComputeShader) {
-                    input->pushState(D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-                } else {
-                    input->pushState(D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-                }
-                m_currentShaderResources.push_back(input);
-
                 const auto pView = input->getShaderResourceView(slice)->getAs<D3D12>();
                 const auto descriptorHandle = m_rvHeap.getGPUHandle(*pView);
                 if (!d3d12Shader->needsResolve()) {
@@ -1429,9 +1292,6 @@ namespace {
                                : m_currentQuadShader  ? dynamic_cast<D3D12Shader*>(m_currentQuadShader.get())
                                                       : nullptr;
             if (d3d12Shader) {
-                input->pushState(D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-                m_currentShaderResources2.push_back(input);
-
                 const auto pBuffer = dynamic_cast<D3D12Buffer*>(input.get());
                 const auto descriptorHandle = m_rvHeap.getGPUHandle(pBuffer->getConstantBufferView());
                 if (!d3d12Shader->needsResolve()) {
@@ -1460,9 +1320,6 @@ namespace {
                     throw std::runtime_error("Only use slot 0 for IQuadShader");
                 }
             } else if (m_currentComputeShader) {
-                output->pushState(D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-                m_currentShaderResources.push_back(output);
-
                 const auto pView = output->getUnorderedAccessView(slice)->getAs<D3D12>();
                 auto descriptorHandle = m_rvHeap.getGPUHandle(*pView);
                 auto d3d12Shader = dynamic_cast<D3D12Shader*>(m_currentComputeShader.get());
@@ -1498,36 +1355,22 @@ namespace {
             }
 
             if (!doNotClear) {
-                while (!m_currentShaderResources.empty()) {
-                    m_currentShaderResources.back()->popState();
-                    m_currentShaderResources.pop_back();
-                }
-                while (!m_currentShaderResources2.empty()) {
-                    m_currentShaderResources2.back()->popState();
-                    m_currentShaderResources2.pop_back();
-                }
                 m_currentQuadShader.reset();
                 m_currentComputeShader.reset();
             }
         }
 
-        void unsetRenderTargets() override {
+        void unsetRenderTargets() override
+        {
             m_context->OMSetRenderTargets(0, nullptr, true, nullptr);
-            if (m_currentDrawRenderTarget) {
-                m_currentDrawRenderTarget->popState();
-                m_currentDrawRenderTarget.reset();
-            }
-            if (m_currentDrawDepthBuffer) {
-                m_currentDrawDepthBuffer->popState();
-                m_currentDrawDepthBuffer.reset();
-            }
+            m_currentDrawRenderTarget.reset();
+            m_currentDrawDepthBuffer.reset();
             m_currentMesh.reset();
         }
 
         void setRenderTargets(size_t numRenderTargets,
                               std::shared_ptr<ITexture>* renderTargets,
                               int32_t* renderSlices = nullptr,
-                              const XrRect2Di* viewport0 = nullptr,
                               std::shared_ptr<ITexture> depthBuffer = nullptr,
                               int32_t depthSlice = -1) override {
             assert(renderTargets || !numRenderTargets);
@@ -1541,7 +1384,23 @@ namespace {
             for (size_t i = 0; i < numRenderTargets; i++) {
                 auto slice = renderSlices ? renderSlices[i] : -1;
                 rtvs[i] = *renderTargets[i]->getRenderTargetView(slice)->getAs<D3D12>();
+
+                // We assume that the resource is always in the expected state.
+                // barriers.push_back(CD3DX12_RESOURCE_BARRIER::Transition(renderTargets[i]->getAs<D3D12>(),
+                //                                                         D3D12_RESOURCE_STATE_COMMON,
+                //                                                         D3D12_RESOURCE_STATE_RENDER_TARGET));
             }
+
+            // if (depthBuffer) {
+            // We assume that the resource is always in the expected state.
+            // barriers.push_back(CD3DX12_RESOURCE_BARRIER::Transition(depthBuffer[0]->getAs<D3D12>(),
+            //                                                         D3D12_RESOURCE_STATE_COMMON,
+            //                                                         D3D12_RESOURCE_STATE_DEPTH_WRITE));
+            //}
+
+            // if (!barriers.empty()) {
+            //    m_context->ResourceBarrier((UINT)barriers.size(), barriers.data());
+            //}
 
             auto pDepthStencilView =
                 depthBuffer ? depthBuffer->getDepthStencilView(depthSlice)->getAs<D3D12>() : nullptr;
@@ -1554,25 +1413,10 @@ namespace {
                 m_currentDrawDepthBuffer = std::move(depthBuffer);
                 m_currentDrawDepthBufferSlice = depthSlice;
 
-                if (m_currentDrawRenderTarget) {
-                    m_currentDrawRenderTarget->pushState(D3D12_RESOURCE_STATE_RENDER_TARGET);
-                }
-                if (m_currentDrawDepthBuffer) {
-                    m_currentDrawDepthBuffer->pushState(D3D12_RESOURCE_STATE_DEPTH_WRITE);
-                }
-
-                if (viewport0) {
-                    m_currentDrawRenderTargetViewport = *viewport0;
-                } else {
-                    m_currentDrawRenderTargetViewport.offset = {0, 0};
-                    m_currentDrawRenderTargetViewport.extent.width = m_currentDrawRenderTarget->getInfo().width;
-                    m_currentDrawRenderTargetViewport.extent.height = m_currentDrawRenderTarget->getInfo().height;
-                }
-
-                const auto viewport = CD3DX12_VIEWPORT((float)m_currentDrawRenderTargetViewport.offset.x,
-                                                       (float)m_currentDrawRenderTargetViewport.offset.y,
-                                                       (float)m_currentDrawRenderTargetViewport.extent.width,
-                                                       (float)m_currentDrawRenderTargetViewport.extent.height);
+                const auto viewport = CD3DX12_VIEWPORT(0.f,
+                                                       0.f,
+                                                       (float)m_currentDrawRenderTarget->getInfo().width,
+                                                       (float)m_currentDrawRenderTarget->getInfo().height);
                 m_context->RSSetViewports(1, &viewport);
 
                 const auto scissorRect = CD3DX12_RECT(
@@ -1580,31 +1424,20 @@ namespace {
 
                 m_context->RSSetScissorRects(1, &scissorRect);
             } else {
-                if (m_currentDrawRenderTarget) {
-                    m_currentDrawRenderTarget->popState();
-                    m_currentDrawRenderTarget.reset();
-                }
-                if (m_currentDrawDepthBuffer) {
-                    m_currentDrawDepthBuffer->popState();
-                    m_currentDrawDepthBuffer.reset();
-                }
+                m_currentDrawRenderTarget.reset();
+                m_currentDrawDepthBuffer.reset();
             }
             m_currentMesh.reset();
-        }
-
-        XrExtent2Di getViewportSize() const override {
-            return m_currentDrawRenderTargetViewport.extent;
         }
 
         void clearColor(float top, float left, float bottom, float right, const XrColor4f& color) const override {
             if (m_currentDrawRenderTarget) {
                 // When rendering text, we must use the corresponding device.
                 if (!m_isRenderingText) {
-                    const auto rect =
-                        CD3DX12_RECT(m_currentDrawRenderTargetViewport.offset.x + static_cast<LONG>(left),
-                                     m_currentDrawRenderTargetViewport.offset.y + static_cast<LONG>(top),
-                                     m_currentDrawRenderTargetViewport.offset.x + static_cast<LONG>(right),
-                                     m_currentDrawRenderTargetViewport.offset.y + static_cast<LONG>(bottom));
+                    const auto rect = CD3DX12_RECT(static_cast<LONG>(left),
+                                                    static_cast<LONG>(top),
+                                                    static_cast<LONG>(right),
+                                                    static_cast<LONG>(bottom));
                     auto renderTargetView =
                         m_currentDrawRenderTarget->getRenderTargetView(m_currentDrawRenderTargetSlice)->getAs<D3D12>();
 
@@ -1771,10 +1604,6 @@ namespace {
             m_unsetRenderTargetEvent = event;
         }
 
-        void registerCopyTextureEvent(CopyTextureEvent event) override {
-            m_copyTextureEvent = event;
-        }
-
         bool isEventsSupported() const override {
             return m_allowInterceptor;
         }
@@ -1795,9 +1624,6 @@ namespace {
             return get(m_context);
         }
 
-        void executeDebugWorkload() override {
-        }
-
       private:
         void initializeInterceptor() {
             if (!m_allowInterceptor) {
@@ -1806,21 +1632,18 @@ namespace {
 
             g_instance = this;
 
-            ComPtr<ID3D12GraphicsCommandList> realContext;
-            GetRealD3D12Object(get(m_context), set(realContext));
-
             // Hook to the Direct3D device and command list  to intercept preparation for the rendering.
-            DetourMethodAttach(get(realContext),
+            DetourMethodAttach(get(m_context),
                                // Method offset is 10 + method index (0-based) for ID3D12GraphicsCommandList.
                                46,
                                hooked_ID3D12GraphicsCommandList_OMSetRenderTargets,
                                g_original_ID3D12GraphicsCommandList_OMSetRenderTargets);
-            DetourMethodAttach(get(m_realDevice),
+            DetourMethodAttach(get(m_device),
                                // Method offset is 7 + method index (0-based) for ID3D12Device.
                                20,
                                hooked_ID3D12Device_CreateRenderTargetView,
                                g_original_ID3D12Device_CreateRenderTargetView);
-            DetourMethodAttach(get(realContext),
+            DetourMethodAttach(get(m_context),
                                // Method offset is 10 + method index (0-based) for ID3D12GraphicsCommandList.
                                16,
                                hooked_ID3D12GraphicsCommandList_CopyTextureRegion,
@@ -1828,20 +1651,17 @@ namespace {
         }
 
         void uninitializeInterceptor() {
-            ComPtr<ID3D12GraphicsCommandList> realContext;
-            GetRealD3D12Object(get(m_context), set(realContext));
-
-            DetourMethodDetach(get(realContext),
+            DetourMethodDetach(get(m_context),
                                // Method offset is 10 + method index (0-based) for ID3D12GraphicsCommandList.
                                46,
                                hooked_ID3D12GraphicsCommandList_OMSetRenderTargets,
                                g_original_ID3D12GraphicsCommandList_OMSetRenderTargets);
-            DetourMethodDetach(get(m_realDevice),
+            DetourMethodDetach(get(m_device),
                                // Method offset is 7 + method index (0-based) for ID3D12Device.
                                20,
                                hooked_ID3D12Device_CreateRenderTargetView,
                                g_original_ID3D12Device_CreateRenderTargetView);
-            DetourMethodDetach(get(realContext),
+            DetourMethodDetach(get(m_context),
                                // Method offset is 10 + method index (0-based) for ID3D12GraphicsCommandList.
                                16,
                                hooked_ID3D12GraphicsCommandList_CopyTextureRegion,
@@ -1986,30 +1806,25 @@ namespace {
 
             ComPtr<ID3D12Device> device;
             CHECK_HRCMD(resource->GetDevice(IID_PPV_ARGS(set(device))));
-            if (device != m_realDevice) {
+            if (device != m_device) {
                 return;
             }
 
             D3D12_RESOURCE_DESC resourceDesc = resource->GetDesc();
             if (resourceDesc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D) {
                 const size_t sizeBefore = m_renderTargetResourceDescriptors.size();
-                {
-                    std::unique_lock lock(m_renderTargetResourceDescriptorsLock);
-
-                    m_renderTargetResourceDescriptors.insert_or_assign(handle, resource);
-                    if (sizeBefore && !(sizeBefore % 100) && m_renderTargetResourceDescriptors.size() != sizeBefore) {
-                        Log("Dictionary of render target resource descriptor now at %zu elements\n", sizeBefore + 1);
-                    }
+                m_renderTargetResourceDescriptors.insert_or_assign(handle, resource);
+                if (sizeBefore && !(sizeBefore % 100) && m_renderTargetResourceDescriptors.size() != sizeBefore) {
+                    Log("Dictionary of render target resource descriptor now at %zu elements\n", sizeBefore + 1);
                 }
+                
             }
         }
 
 #define INVOKE_EVENT(event, ...)                                                                                       \
     do {                                                                                                               \
         if (!m_blockEvents && m_##event) {                                                                             \
-            blockCallbacks();                                                                                          \
             m_##event(##__VA_ARGS__);                                                                                  \
-            unblockCallbacks();                                                                                        \
         }                                                                                                              \
     } while (0);
 
@@ -2020,7 +1835,7 @@ namespace {
                                 const D3D12_CPU_DESCRIPTOR_HANDLE* depthStencilHandle) {
             ComPtr<ID3D12Device> device;
             CHECK_HRCMD(context->GetDevice(IID_PPV_ARGS(set(device))));
-            if (device != m_realDevice) {
+            if (device != m_device) {
                 return;
             }
 
@@ -2031,28 +1846,24 @@ namespace {
                 return;
             }
 
-            std::shared_ptr<D3D12Texture> renderTarget;
-            {
-                std::unique_lock lock(m_renderTargetResourceDescriptorsLock);
-
-                auto it = m_renderTargetResourceDescriptors.find(renderTargetHandles[0]);
-                if (it == m_renderTargetResourceDescriptors.cend()) {
-                    INVOKE_EVENT(unsetRenderTargetEvent, wrappedContext);
-                    return;
-                }
-
-                ID3D12Resource* const resource = it->second;
-                const D3D12_RESOURCE_DESC& resourceDesc = resource->GetDesc();
-
-                renderTarget = std::make_shared<D3D12Texture>(shared_from_this(),
-                                                              getTextureInfo(resourceDesc),
-                                                              resourceDesc,
-                                                              resource,
-                                                              D3D12_RESOURCE_STATE_COMMON, /* Conservative. */
-                                                              m_rtvHeap,
-                                                              m_dsvHeap,
-                                                              m_rvHeap);
+           
+            auto it = m_renderTargetResourceDescriptors.find(renderTargetHandles[0]);
+            if (it == m_renderTargetResourceDescriptors.cend()) {
+                INVOKE_EVENT(unsetRenderTargetEvent, wrappedContext);
+                return;
             }
+
+            ID3D12Resource* const resource = it->second;
+            const D3D12_RESOURCE_DESC& resourceDesc = resource->GetDesc();
+
+            auto renderTarget = std::make_shared<D3D12Texture>(shared_from_this(),
+                                                            getTextureInfo(resourceDesc),
+                                                            resourceDesc,
+                                                            resource,
+                                                            m_rtvHeap,
+                                                            m_dsvHeap,
+                                                            m_rvHeap);
+            
 
             INVOKE_EVENT(setRenderTargetEvent, wrappedContext, renderTarget);
         }
@@ -2064,7 +1875,7 @@ namespace {
                            UINT DstSubresource = 0) {
             ComPtr<ID3D12Device> device;
             CHECK_HRCMD(context->GetDevice(IID_PPV_ARGS(set(device))));
-            if (device != m_realDevice) {
+            if (device != m_device) {
                 return;
             }
 
@@ -2075,7 +1886,6 @@ namespace {
                                                          getTextureInfo(sourceTextureDesc),
                                                          sourceTextureDesc,
                                                          pSrcResource,
-                                                         D3D12_RESOURCE_STATE_COPY_SOURCE, /* Conservative. */
                                                          m_rtvHeap,
                                                          m_dsvHeap,
                                                          m_rvHeap);
@@ -2085,7 +1895,6 @@ namespace {
                                                               getTextureInfo(destinationTextureDesc),
                                                               destinationTextureDesc,
                                                               pDstResource,
-                                                              D3D12_RESOURCE_STATE_COPY_DEST, /* Conservative. */
                                                               m_rtvHeap,
                                                               m_dsvHeap,
                                                               m_rvHeap);
@@ -2096,13 +1905,9 @@ namespace {
 #undef INVOKE_EVENT
 
         const ComPtr<ID3D12Device> m_device;
-        ComPtr<IDXGIAdapter> m_adapter;
-        ComPtr<ID3D12Device> m_realDevice;
         ComPtr<ID3D12CommandQueue> m_queue;
         std::string m_deviceName;
-        GpuArchitecture m_gpuArchitecture;
         const bool m_allowInterceptor;
-        const bool m_needInteropCopy;
 
         ComPtr<ID3D12CommandAllocator> m_commandAllocator[NumInflightContexts];
         ComPtr<ID3D12GraphicsCommandList> m_commandList[NumInflightContexts];
@@ -2140,7 +1945,6 @@ namespace {
         std::shared_ptr<ITexture> m_currentTextRenderTarget;
         std::shared_ptr<ITexture> m_currentDrawRenderTarget;
         int32_t m_currentDrawRenderTargetSlice;
-        XrRect2Di m_currentDrawRenderTargetViewport;
         std::shared_ptr<ITexture> m_currentDrawDepthBuffer;
         int32_t m_currentDrawDepthBufferSlice;
         bool m_currentDrawDepthBufferIsInverted;
@@ -2148,8 +1952,6 @@ namespace {
         std::shared_ptr<ISimpleMesh> m_currentMesh;
         mutable std::shared_ptr<IQuadShader> m_currentQuadShader;
         mutable std::shared_ptr<IComputeShader> m_currentComputeShader;
-        mutable std::vector<std::shared_ptr<ITexture>> m_currentShaderResources;
-        mutable std::vector<std::shared_ptr<IShaderBuffer>> m_currentShaderResources2;
         uint32_t m_currentRootSlot;
 
         ComPtr<ID3D12InfoQueue> m_infoQueue;
@@ -2161,12 +1963,10 @@ namespace {
 
         std::map<D3D12_CPU_DESCRIPTOR_HANDLE, ID3D12Resource*, decltype(descriptorCompare)>
             m_renderTargetResourceDescriptors{descriptorCompare};
-        std::mutex m_renderTargetResourceDescriptorsLock;
 
         friend std::shared_ptr<ITexture> graphics::WrapD3D12Texture(std::shared_ptr<IDevice> device,
                                                                     const XrSwapchainCreateInfo& info,
                                                                     ID3D12Resource* texture,
-                                                                    D3D12_RESOURCE_STATES initialState,
                                                                     std::string_view debugName);
 
         static XrSwapchainCreateInfo getTextureInfo(const D3D12_RESOURCE_DESC& resourceDesc) {
@@ -2304,6 +2104,7 @@ namespace {
 } // namespace
 
 namespace graphics {
+
     void EnableD3D12DebugLayer() {
         ComPtr<ID3D12Debug> debug;
         CHECK_HRCMD(D3D12GetDebugInterface(__uuidof(ID3D12Debug), reinterpret_cast<void**>(set(debug))));
@@ -2311,15 +2112,13 @@ namespace graphics {
     }
 
     std::shared_ptr<IDevice> WrapD3D12Device(ID3D12Device* device,
-                                             ID3D12CommandQueue* queue,
-                                             bool enableVarjoQuirk) {
-        return std::make_shared<D3D12Device>(device, queue, enableVarjoQuirk);
+                                             ID3D12CommandQueue* queue) {
+        return std::make_shared<D3D12Device>(device, queue);
     }
 
     std::shared_ptr<ITexture> WrapD3D12Texture(std::shared_ptr<IDevice> device,
                                                const XrSwapchainCreateInfo& info,
                                                ID3D12Resource* texture,
-                                               D3D12_RESOURCE_STATES initialState,
                                                std::string_view debugName) {
         if (device->getApi() == Api::D3D12) {
             SetDebugName(texture, debugName);
@@ -2329,7 +2128,6 @@ namespace graphics {
                                                   info,
                                                   texture->GetDesc(),
                                                   texture,
-                                                  initialState,
                                                   d3d12Device->m_rtvHeap,
                                                   d3d12Device->m_dsvHeap,
                                                   d3d12Device->m_rvHeap);
@@ -2337,4 +2135,4 @@ namespace graphics {
         throw std::runtime_error("Not a D3D12 device");
     }
 
-} // namespace toolkit::graphics
+} // namespace graphics

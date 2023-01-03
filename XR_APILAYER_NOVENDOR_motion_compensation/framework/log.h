@@ -36,6 +36,7 @@ namespace LAYER_NAMESPACE::log {
 
 #define TLArg(var, ...) TraceLoggingValue(var, ##__VA_ARGS__)
 #define TLPArg(var, ...) TraceLoggingValue(fmt::format("0x{:08x}", (uintptr_t)(var)).c_str(), ##__VA_ARGS__)
+#define TLPArray(var, count, ...) TraceLoggingCodePointerArray((void**)var, (UINT16)count, ##__VA_ARGS__)
 
     // General logging function.
     void Log(const char* fmt, ...);

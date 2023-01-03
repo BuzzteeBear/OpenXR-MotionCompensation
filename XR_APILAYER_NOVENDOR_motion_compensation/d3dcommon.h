@@ -17,12 +17,10 @@ namespace graphics
     
     void EnableD3D12DebugLayer();
     std::shared_ptr<IDevice> WrapD3D12Device(ID3D12Device* device,
-                                             ID3D12CommandQueue* queue,
-                                             bool enableVarjoQuirk = false);
+                                             ID3D12CommandQueue* queue);
     std::shared_ptr<ITexture> WrapD3D12Texture(std::shared_ptr<IDevice> device,
                                                const XrSwapchainCreateInfo& info,
                                                ID3D12Resource* texture,
-                                               D3D12_RESOURCE_STATES initialState,
                                                std::string_view debugName);                                            
 
     namespace d3dcommon

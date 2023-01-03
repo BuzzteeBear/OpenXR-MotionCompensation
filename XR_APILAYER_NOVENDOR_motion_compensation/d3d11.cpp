@@ -37,25 +37,6 @@ namespace {
     using namespace graphics::d3dcommon;
     using namespace motion_compensation_layer::log;
 
-    const std::wstring_view FontFamily = L"Segoe UI Symbol";
-
-    // A debug shader to create a GPU workload for testing.
-    const std::string_view DebugWorkloadShader =
-        R"_(
-cbuffer Input : register(b0) { uint Count; };
-RWStructuredBuffer<float> Result;
-
-[numthreads(1, 1, 1)]
-void main(uint3 id : SV_DispatchThreadID)
-{
-    float rnd = 1;
-    for (uint i = 0; i < Count; i++) {
-        rnd = frac(sin(dot(id.xy, float2(12.9898,78.233))) * 43758.5453123 * rnd);
-    }
-    Result[id.x] = rnd;
-}
-    )_";
-
     inline void SetDebugName(ID3D11DeviceChild* resource, std::string_view name) {
         if (resource && !name.empty())
             resource->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(name.size()), name.data());
@@ -528,38 +509,7 @@ void main(uint3 id : SV_DispatchThreadID)
                 0);
         }
 
-        void copyTo(std::shared_ptr<ITexture> destination) override {
-            m_device->getContextAs<D3D11>()->CopySubresourceRegion(
-                destination->getAs<D3D11>(), 0, 0, 0, 0, m_texture.Get(), 0, nullptr);
-        }
-
-        void copyTo(uint32_t srcX, uint32_t srcY, int32_t srcSlice, std::shared_ptr<ITexture> destination) override {
-            D3D11_BOX box;
-            box.left = srcX;
-            box.top = srcY;
-
-            box.right = box.left + destination->getInfo().width;
-            box.bottom = box.top + destination->getInfo().height;
-            box.front = 0;
-            box.back = 1;
-
-            m_device->getContextAs<D3D11>()->CopySubresourceRegion(
-                destination->getAs<D3D11>(), 0, 0, 0, 0, m_texture.Get(), srcSlice, &box);
-        }
-
-        void copyTo(std::shared_ptr<ITexture> destination, uint32_t dstX, uint32_t dstY, int32_t dstSlice) override {
-            m_device->getContextAs<D3D11>()->CopySubresourceRegion(
-                destination->getAs<D3D11>(), dstSlice, dstX, dstY, 0, m_texture.Get(), 0, nullptr);
-        }
-
-        void setState(D3D12_RESOURCE_STATES newState) override {
-        }
-        void pushState(D3D12_RESOURCE_STATES newState) override {
-        }
-        void popState() override {
-        }
-
-        void* getNativePtr() const override {
+         void* getNativePtr() const override {
             return get(m_texture);
         }
 
@@ -692,11 +642,6 @@ void main(uint3 id : SV_DispatchThreadID)
             }
         }
 
-        void pushState(D3D12_RESOURCE_STATES newState) override {
-        }
-        void popState() override {
-        }
-
         void* getNativePtr() const override {
             return get(m_buffer);
         }
@@ -775,11 +720,12 @@ void main(uint3 id : SV_DispatchThreadID)
             m_device->GetImmediateContext(set(m_context));
             {
                 ComPtr<IDXGIDevice> dxgiDevice;
+                ComPtr<IDXGIAdapter> adapter;
                 DXGI_ADAPTER_DESC desc;
 
                 CHECK_HRCMD(m_device->QueryInterface(set(dxgiDevice)));
-                CHECK_HRCMD(dxgiDevice->GetAdapter(set(m_adapter)));
-                CHECK_HRCMD(m_adapter->GetDesc(&desc));
+                CHECK_HRCMD(dxgiDevice->GetAdapter(set(adapter)));
+                CHECK_HRCMD(adapter->GetDesc(&desc));
 
                 const std::wstring wadapterDescription(desc.Description);
                 std::transform(wadapterDescription.begin(),
@@ -816,7 +762,6 @@ void main(uint3 id : SV_DispatchThreadID)
             }
             initializeShadingResources();
             initializeMeshResources();
-            initializeDebugResources();
         }
 
         ~D3D11Device() override {
@@ -896,16 +841,8 @@ void main(uint3 id : SV_DispatchThreadID)
             // Ensure we are not dropping an unfinished context.
             assert(!m_state.isValid());
 
-            if (!blocking) {
+            if (blocking) {
                 m_context->Flush();
-            } else {
-                ComPtr<ID3D11DeviceContext4> Context1;
-                CHECK_HRCMD(m_context->QueryInterface(IID_PPV_ARGS(Context1.ReleaseAndGetAddressOf())));
-
-                wil::unique_handle eventHandle;
-                *eventHandle.put() = CreateEventEx(nullptr, "flushContext Fence", 0, EVENT_ALL_ACCESS);
-                Context1->Flush1(D3D11_CONTEXT_TYPE_ALL, eventHandle.get());
-                WaitForSingleObject(eventHandle.get(), INFINITE);
             }
 
             // Workaround: the Oculus OpenXR Runtime for DX11 seems to intercept some of the D3D calls as well. It
@@ -920,10 +857,6 @@ void main(uint3 id : SV_DispatchThreadID)
             if (auto count = m_infoQueue ? m_infoQueue->GetNumStoredMessages() : 0) {
                 LogInfoQueueMessage(get(m_infoQueue), count);
                 m_infoQueue->ClearStoredMessages();
-            }
-
-            if (isEndOfFrame) {
-                m_executeDebugWorkload = true;
             }
         }
 
@@ -1213,7 +1146,6 @@ void main(uint3 id : SV_DispatchThreadID)
         void setRenderTargets(size_t numRenderTargets,
                               std::shared_ptr<ITexture>* renderTargets,
                               int32_t* renderSlices = nullptr,
-                              const XrRect2Di* viewport0 = nullptr,
                               std::shared_ptr<ITexture> depthBuffer = nullptr,
                               int32_t depthSlice = -1) override {
             assert(renderTargets || !numRenderTargets);
@@ -1242,22 +1174,10 @@ void main(uint3 id : SV_DispatchThreadID)
 
                 D3D11_VIEWPORT viewport;
                 ZeroMemory(&viewport, sizeof(viewport));
-                if (viewport0) {
-                    m_currentDrawRenderTargetViewport = *viewport0;
-                    viewport.TopLeftX = (float)viewport0->offset.x;
-                    viewport.TopLeftY = (float)viewport0->offset.y;
-                    viewport.Width = (float)viewport0->extent.width;
-                    viewport.Height = (float)viewport0->extent.height;
-                } else {
-                    m_currentDrawRenderTargetViewport.offset = {0, 0};
-                    viewport.TopLeftX = 0.0f;
-                    viewport.TopLeftY = 0.0f;
-                    m_currentDrawRenderTargetViewport.extent.width = m_currentDrawRenderTarget->getInfo().width;
-                    viewport.Width = (float)m_currentDrawRenderTarget->getInfo().width;
-                    m_currentDrawRenderTargetViewport.extent.height = m_currentDrawRenderTarget->getInfo().height;
-                    viewport.Height = (float)m_currentDrawRenderTarget->getInfo().height;
-                }
-                viewport.MaxDepth = 1.0f;
+                viewport.TopLeftX = 0.0f;
+                viewport.TopLeftY = 0.0f;
+                viewport.Width = (float)m_currentDrawRenderTarget->getInfo().width;
+                viewport.Height = (float)m_currentDrawRenderTarget->getInfo().height;
                 m_context->RSSetViewports(1, &viewport);
             } else {
                 m_currentDrawRenderTarget.reset();
@@ -1266,20 +1186,15 @@ void main(uint3 id : SV_DispatchThreadID)
             m_currentMesh.reset();
         }
 
-        XrExtent2Di getViewportSize() const override {
-            return m_currentDrawRenderTargetViewport.extent;
-        }
-
         void clearColor(float top, float left, float bottom, float right, const XrColor4f& color) const override {
             if (m_currentDrawRenderTarget) {
                 ComPtr<ID3D11DeviceContext1> context11;
                 if (!FAILED(m_context->QueryInterface(set(context11)))) {
                     // The app has a sufficient FEATURE_LEVEL
-                    const auto rect =
-                        CD3D11_RECT(m_currentDrawRenderTargetViewport.offset.x + static_cast<LONG>(left),
-                                    m_currentDrawRenderTargetViewport.offset.y + static_cast<LONG>(top),
-                                    m_currentDrawRenderTargetViewport.offset.x + static_cast<LONG>(right),
-                                    m_currentDrawRenderTargetViewport.offset.y + static_cast<LONG>(bottom));
+                    const auto rect = CD3D11_RECT(static_cast<LONG>(left),
+                                                  static_cast<LONG>(top),
+                                                  static_cast<LONG>(right),
+                                                  static_cast<LONG>(bottom));
                     auto pView =
                         m_currentDrawRenderTarget->getRenderTargetView(m_currentDrawRenderTargetSlice)->getAs<D3D11>();
 
@@ -1368,12 +1283,6 @@ void main(uint3 id : SV_DispatchThreadID)
             m_unsetRenderTargetEvent = event;
         }
 
-        void registerCopyTextureEvent(CopyTextureEvent event) override {
-            m_copyTextureEvent = event;
-        }
-
-
-
         bool isEventsSupported() const override {
             return m_allowInterceptor;
         }
@@ -1394,45 +1303,6 @@ void main(uint3 id : SV_DispatchThreadID)
             return get(m_context);
         }
 
-        void executeDebugWorkload() override
-        {
-            if (!m_executeDebugWorkload)
-            {
-                return;
-            }
-
-            if (!m_debugWorkloadParams)
-            {
-                m_debugWorkloadParams = createBuffer(16, "DebugWorkloadParams", nullptr, false);
-            }
-
-            const int cpuLoad = 500;
-            const int gpuLoad = 500;
-
-            if (gpuLoad)
-            {
-                uint32_t param = gpuLoad * 5000;
-                m_debugWorkloadParams->uploadData(&param, sizeof(param));
-                m_context->CSSetShader(get(m_debugWorkloadShader), nullptr, 0);
-                const auto cb = m_debugWorkloadParams->getAs<D3D11>();
-                m_context->CSSetConstantBuffers(0, 1, &cb);
-                m_context->Dispatch(1, 1, 1);
-                m_context->CSSetShader(nullptr, nullptr, 0);
-                ID3D11Buffer* nullCBV[] = {nullptr};
-                m_context->CSSetConstantBuffers(0, 1, nullCBV);
-                m_context->Flush();
-            }
-            if (cpuLoad)
-            {
-                std::this_thread::sleep_for(cpuLoad * 100us);
-            }
-
-            // Once per frame only.
-            m_executeDebugWorkload = false;
-        }
-
-
-
       private:
         void initializeInterceptor() {
             if (!m_allowInterceptor) {
@@ -1452,26 +1322,6 @@ void main(uint3 id : SV_DispatchThreadID)
                                34,
                                hooked_ID3D11DeviceContext_OMSetRenderTargetsAndUnorderedAccessViews,
                                g_original_ID3D11DeviceContext_OMSetRenderTargetsAndUnorderedAccessViews);
-            DetourMethodAttach(get(m_context),
-                               // Method offset is 7 + method index (0-based) for ID3D11DeviceContext.
-                               44,
-                               hooked_ID3D11DeviceContext_RSSetViewports,
-                               g_original_ID3D11DeviceContext_RSSetViewports);
-            DetourMethodAttach(get(m_context),
-                               // Method offset is 7 + method index (0-based) for ID3D11DeviceContext.
-                               47,
-                               hooked_ID3D11DeviceContext_CopyResource,
-                               g_original_ID3D11DeviceContext_CopyResource);
-            DetourMethodAttach(get(m_context),
-                               // Method offset is 7 + method index (0-based) for ID3D11DeviceContext.
-                               46,
-                               hooked_ID3D11DeviceContext_CopySubresourceRegion,
-                               g_original_ID3D11DeviceContext_CopySubresourceRegion);
-            DetourMethodAttach(get(m_context),
-                               // Method offset is 7 + method index (0-based) for ID3D11DeviceContext.
-                               10,
-                               hooked_ID3D11DeviceContext_PSSetSamplers,
-                               g_original_ID3D11DeviceContext_PSSetSamplers);
         }
 
         void uninitializeInterceptor() {
@@ -1485,21 +1335,6 @@ void main(uint3 id : SV_DispatchThreadID)
                                34,
                                hooked_ID3D11DeviceContext_OMSetRenderTargetsAndUnorderedAccessViews,
                                g_original_ID3D11DeviceContext_OMSetRenderTargetsAndUnorderedAccessViews);
-            DetourMethodDetach(get(m_context),
-                               // Method offset is 7 + method index (0-based) for ID3D11DeviceContext.
-                               47,
-                               hooked_ID3D11DeviceContext_CopyResource,
-                               g_original_ID3D11DeviceContext_CopyResource);
-            DetourMethodDetach(get(m_context),
-                               // Method offset is 7 + method index (0-based) for ID3D11DeviceContext.
-                               46,
-                               hooked_ID3D11DeviceContext_CopySubresourceRegion,
-                               g_original_ID3D11DeviceContext_CopySubresourceRegion);
-            DetourMethodDetach(get(m_context),
-                               // Method offset is 7 + method index (0-based) for ID3D11DeviceContext.
-                               10,
-                               hooked_ID3D11DeviceContext_PSSetSamplers,
-                               g_original_ID3D11DeviceContext_PSSetSamplers);
 
             g_instance = nullptr;
         }
@@ -1616,23 +1451,10 @@ void main(uint3 id : SV_DispatchThreadID)
             }
         }
 
-        // Initialize the resources needed for debugging.
-        void initializeDebugResources() {
-            ComPtr<ID3DBlob> csBytes;
-            graphics::shader::CompileShader(DebugWorkloadShader, "main", set(csBytes), "cs_5_0");
-
-            CHECK_HRCMD(m_device->CreateComputeShader(
-                csBytes->GetBufferPointer(), csBytes->GetBufferSize(), nullptr, set(m_debugWorkloadShader)));
-
-            SetDebugName(get(m_debugWorkloadShader), "DebugWorkload CS");
-        }
-
 #define INVOKE_EVENT(event, ...)                                                                                       \
     do {                                                                                                               \
         if (!m_blockEvents && m_##event) {                                                                             \
-            blockCallbacks();                                                                                          \
             m_##event(##__VA_ARGS__);                                                                                  \
-            unblockCallbacks();                                                                                        \
         }                                                                                                              \
     } while (0);
 
@@ -1652,7 +1474,7 @@ void main(uint3 id : SV_DispatchThreadID)
 
             auto wrappedContext = std::make_shared<D3D11Context>(shared_from_this(), context);
 
-            if (!numViews || !renderTargetViews || !renderTargetViews[0]) {
+            if (!numViews || !renderTargetViews[0]) {
                 INVOKE_EVENT(unsetRenderTargetEvent, wrappedContext);
                 return;
             }
@@ -1686,54 +1508,9 @@ void main(uint3 id : SV_DispatchThreadID)
             INVOKE_EVENT(setRenderTargetEvent, wrappedContext, renderTarget);
         }
 
-        void onCopyResource(ID3D11DeviceContext* context,
-                            ID3D11Resource* pSrcResource,
-                            ID3D11Resource* pDstResource,
-                            UINT SrcSubresource = 0,
-                            UINT DstSubresource = 0) {
-            if (m_blockEvents) {
-                return;
-            }
-
-            ComPtr<ID3D11Device> device;
-            context->GetDevice(set(device));
-            if (device != m_device) {
-                return;
-            }
-
-            ComPtr<ID3D11Texture2D> sourceTexture;
-            if (FAILED(pSrcResource->QueryInterface(set(sourceTexture)))) {
-                return;
-            }
-
-            ComPtr<ID3D11Texture2D> destinationTexture;
-            if (FAILED(pDstResource->QueryInterface(set(destinationTexture)))) {
-                return;
-            }
-
-            auto wrappedContext = std::make_shared<D3D11Context>(shared_from_this(), context);
-
-            D3D11_TEXTURE2D_DESC sourceTextureDesc;
-            sourceTexture->GetDesc(&sourceTextureDesc);
-
-            auto source = std::make_shared<D3D11Texture>(
-                shared_from_this(), getTextureInfo(sourceTextureDesc), sourceTextureDesc, get(sourceTexture));
-
-            D3D11_TEXTURE2D_DESC destinationTextureDesc;
-            destinationTexture->GetDesc(&destinationTextureDesc);
-
-            auto destination = std::make_shared<D3D11Texture>(shared_from_this(),
-                                                              getTextureInfo(destinationTextureDesc),
-                                                              destinationTextureDesc,
-                                                              get(destinationTexture));
-
-            INVOKE_EVENT(copyTextureEvent, wrappedContext, source, destination, SrcSubresource, DstSubresource);
-        }
-
 #undef INVOKE_EVENT
 
         const ComPtr<ID3D11Device> m_device;
-        ComPtr<IDXGIAdapter> m_adapter;
         ComPtr<ID3D11DeviceContext> m_context;
         D3D11ContextState m_state;
         std::string m_deviceName;
@@ -1753,7 +1530,6 @@ void main(uint3 id : SV_DispatchThreadID)
 
         std::shared_ptr<ITexture> m_currentDrawRenderTarget;
         int32_t m_currentDrawRenderTargetSlice;
-        XrRect2Di m_currentDrawRenderTargetViewport;
         std::shared_ptr<ITexture> m_currentDrawDepthBuffer;
         int32_t m_currentDrawDepthBufferSlice;
         std::shared_ptr<ISimpleMesh> m_currentMesh;
@@ -1762,12 +1538,7 @@ void main(uint3 id : SV_DispatchThreadID)
 
         SetRenderTargetEvent m_setRenderTargetEvent;
         UnsetRenderTargetEvent m_unsetRenderTargetEvent;
-        CopyTextureEvent m_copyTextureEvent;
         std::atomic<bool> m_blockEvents{false};
-
-        ComPtr<ID3D11ComputeShader> m_debugWorkloadShader;
-        std::shared_ptr<IShaderBuffer> m_debugWorkloadParams;
-        bool m_executeDebugWorkload{false};
 
         mutable std::shared_ptr<IQuadShader> m_currentQuadShader;
         mutable std::shared_ptr<IComputeShader> m_currentComputeShader;
@@ -1834,20 +1605,17 @@ void main(uint3 id : SV_DispatchThreadID)
                                    "ID3D11DeviceContext_OMSetRenderTargets",
                                    TLPArg(Context, "Context"),
                                    TLArg(NumViews, "NumViews"),
+                                   TLPArray(ppRenderTargetViews, NumViews, "RTV"),
                                    TLPArg(pDepthStencilView, "DSV"));
-            if (IsTraceEnabled()) {
-                for (UINT i = 0; i < NumViews; i++) {
-                    TraceLoggingWriteTagged(
-                        local, "ID3D11DeviceContext_OMSetRenderTargets", TLPArg(ppRenderTargetViews[i], "RTV"));
-                }
-            }
-
+            
             assert(g_instance);
+            g_instance->onSetRenderTargets(Context, NumViews, ppRenderTargetViews, pDepthStencilView);
+
             assert(g_original_ID3D11DeviceContext_OMSetRenderTargets);
             g_original_ID3D11DeviceContext_OMSetRenderTargets(
                 Context, NumViews, ppRenderTargetViews, pDepthStencilView);
 
-            g_instance->onSetRenderTargets(Context, NumViews, ppRenderTargetViews, pDepthStencilView);
+            
 
             TraceLoggingWriteStop(local, "ID3D11DeviceContext_OMSetRenderTargets");
         }
@@ -1869,13 +1637,6 @@ void main(uint3 id : SV_DispatchThreadID)
                                    TLPArg(Context, "Context"),
                                    TLArg(NumRTVs, "NumRTVs"),
                                    TLPArg(pDepthStencilView, "DSV"));
-            if (IsTraceEnabled() && NumRTVs != D3D11_KEEP_RENDER_TARGETS_AND_DEPTH_STENCIL) {
-                for (UINT i = 0; i < NumRTVs; i++) {
-                    TraceLoggingWriteTagged(local,
-                                            "ID3D11DeviceContext_OMSetRenderTargetsAndUnorderedAccessViews",
-                                            TLPArg(ppRenderTargetViews[i], "RTV"));
-                }
-            }
 
             assert(g_instance);
             assert(g_original_ID3D11DeviceContext_OMSetRenderTargetsAndUnorderedAccessViews);
@@ -1888,122 +1649,7 @@ void main(uint3 id : SV_DispatchThreadID)
                                                                                      ppUnorderedAccessViews,
                                                                                      pUAVInitialCounts);
 
-            if (NumRTVs != D3D11_KEEP_RENDER_TARGETS_AND_DEPTH_STENCIL) {
-                g_instance->onSetRenderTargets(Context, NumRTVs, ppRenderTargetViews, pDepthStencilView);
-            }
-
             TraceLoggingWriteStop(local, "ID3D11DeviceContext_OMSetRenderTargetsAndUnorderedAccessViews");
-        }
-
-        DECLARE_DETOUR_FUNCTION(static void,
-                                STDMETHODCALLTYPE,
-                                ID3D11DeviceContext_RSSetViewports,
-                                ID3D11DeviceContext* Context,
-                                UINT NumViewports,
-                                const D3D11_VIEWPORT* pViewports) {
-            TraceLocalActivity(local);
-            TraceLoggingWriteStart(local,
-                                   "ID3D11DeviceContext_RSSetViewports",
-                                   TLPArg(Context, "Context"),
-                                   TLArg(NumViewports, "NumViewports"));
-
-            if (IsTraceEnabled() && pViewports) {
-                for (UINT i = 0; i < NumViewports; i++) {
-                    TraceLoggingWriteTagged(local,
-                                            "ID3D11DeviceContext_RSSetViewports",
-                                            TLArg(pViewports[i].TopLeftX, "TopLeftX"),
-                                            TLArg(pViewports[i].TopLeftY, "TopLeftY"),
-                                            TLArg(pViewports[i].Width, "Width"),
-                                            TLArg(pViewports[i].Height, "Height"));
-                }
-            }
-
-            assert(g_original_ID3D11DeviceContext_RSSetViewports);
-            g_original_ID3D11DeviceContext_RSSetViewports(Context, NumViewports, pViewports);
-
-            TraceLoggingWriteStop(local, "ID3D11DeviceContext_RSSetViewports");
-        }
-
-        DECLARE_DETOUR_FUNCTION(static void,
-                                STDMETHODCALLTYPE,
-                                ID3D11DeviceContext_CopyResource,
-                                ID3D11DeviceContext* Context,
-                                ID3D11Resource* pDstResource,
-                                ID3D11Resource* pSrcResource) {
-            TraceLocalActivity(local);
-            TraceLoggingWriteStart(local,
-                                   "ID3D11DeviceContext_CopyResource",
-                                   TLPArg(Context, "Context"),
-                                   TLPArg(pDstResource, "DstResource"),
-                                   TLPArg(pSrcResource, "SrcResource"));
-
-            assert(g_instance);
-            g_instance->onCopyResource(Context, pSrcResource, pDstResource);
-
-            assert(g_original_ID3D11DeviceContext_CopyResource);
-            g_original_ID3D11DeviceContext_CopyResource(Context, pDstResource, pSrcResource);
-
-            TraceLoggingWriteStop(local, "ID3D11DeviceContext_CopyResource");
-        }
-
-        DECLARE_DETOUR_FUNCTION(static void,
-                                STDMETHODCALLTYPE,
-                                ID3D11DeviceContext_CopySubresourceRegion,
-                                ID3D11DeviceContext* Context,
-                                ID3D11Resource* pDstResource,
-                                UINT DstSubresource,
-                                UINT DstX,
-                                UINT DstY,
-                                UINT DstZ,
-                                ID3D11Resource* pSrcResource,
-                                UINT SrcSubresource,
-                                const D3D11_BOX* pSrcBox) {
-            TraceLocalActivity(local);
-            TraceLoggingWriteStart(local,
-                                   "ID3D11DeviceContext_CopySubresourceRegion",
-                                   TLPArg(Context, "Context"),
-                                   TLPArg(pDstResource, "DstResource"),
-                                   TLArg(DstSubresource, "DstSubresource"),
-                                   TLPArg(pSrcResource, "SrcResource"),
-                                   TLArg(SrcSubresource, "SrcSubresource"));
-
-            assert(g_instance);
-            g_instance->onCopyResource(Context, pSrcResource, pDstResource, SrcSubresource, DstSubresource);
-
-            assert(g_original_ID3D11DeviceContext_CopySubresourceRegion);
-            g_original_ID3D11DeviceContext_CopySubresourceRegion(
-                Context, pDstResource, DstSubresource, DstX, DstY, DstZ, pSrcResource, SrcSubresource, pSrcBox);
-
-            TraceLoggingWriteStop(local, "ID3D11DeviceContext_CopySubresourceRegion");
-        }
-
-        DECLARE_DETOUR_FUNCTION(static void,
-                                STDMETHODCALLTYPE,
-                                ID3D11DeviceContext_PSSetSamplers,
-                                ID3D11DeviceContext* Context,
-                                UINT StartSlot,
-                                UINT NumSamplers,
-                                ID3D11SamplerState* const* ppSamplers) {
-            TraceLocalActivity(local);
-            TraceLoggingWriteStart(local,
-                                   "ID3D11DeviceContext_PSSetSamplers",
-                                   TLPArg(Context, "Context"),
-                                   TLArg(StartSlot, "StartSlots"),
-                                   TLArg(NumSamplers, "NumSamplers"));
-
-            if (NumSamplers > UINT(D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT))
-                NumSamplers = UINT(D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT);
-
-            ID3D11SamplerState* updatedSamplers[D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT];
-            for (UINT i = 0; i < NumSamplers; i++) {
-                TraceLoggingWriteTagged(local, "ID3D11DeviceContext_PSSetSamplers", TLPArg(ppSamplers[i], "Sampler"));
-                updatedSamplers[i] = ppSamplers[i];
-            }
-
-            assert(g_original_ID3D11DeviceContext_PSSetSamplers);
-            g_original_ID3D11DeviceContext_PSSetSamplers(Context, StartSlot, NumSamplers, updatedSamplers);
-
-            TraceLoggingWriteStop(local, "ID3D11DeviceContext_PSSetSamplers");
         }
     };
 
