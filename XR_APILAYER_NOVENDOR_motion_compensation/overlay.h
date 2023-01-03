@@ -48,8 +48,7 @@ namespace graphics
 
     struct SwapchainImages
     {
-        std::shared_ptr<graphics::ITexture> appTexture;
-        std::shared_ptr<graphics::ITexture> runtimeTexture;
+        std::vector<std::shared_ptr<graphics::ITexture>> chain;
     };
 
     struct SwapchainState
@@ -63,22 +62,22 @@ namespace graphics
     {
       public:
         ~Overlay();
-        void CreateSession(const XrSessionCreateInfo* createInfo, XrSession* session, const std::string& runtimeName);        void DestroySession(XrSession session);
-        void CreateSwapchain(XrSession session,
-                             const XrSwapchainCreateInfo* chainCreateInfo,
-                             const XrSwapchainCreateInfo* createInfo,
-                             XrSwapchain* swapchain,
-                             bool isDepth);
+        void CreateSession(const XrSessionCreateInfo* createInfo, XrSession* session, const std::string& runtimeName);
+        void DestroySession();
+        void CreateSwapchain(XrSession session, const XrSwapchainCreateInfo* createInfo, XrSwapchain* swapchain);
         void DestroySwapchain(XrSwapchain swapchain);
         XrResult AcquireSwapchainImage(XrSwapchain swapchain,
                                        const XrSwapchainImageAcquireInfo* acquireInfo,
                                        uint32_t* index);
         XrResult ReleaseSwapchainImage(XrSwapchain swapchain, const XrSwapchainImageReleaseInfo* releaseInfo);
         bool ToggleOverlay();
+        void BeginFrameBefore();
+        void BeginFrameAfter();
         void DrawOverlay(XrFrameEndInfo* chainFrameEndInfo,
                          const XrPosef& referenceTrackerPose,
                          const XrPosef& reversedManipulation,
                          bool mcActivated);
+        void UnblockCallbacks();
         
         bool m_Initialized{false};
 

@@ -148,7 +148,7 @@ namespace motion_compensation_layer
 
             float cacheTolerance{2.0};
             GetConfig()->GetFloat(Cfg::CacheTolerance, cacheTolerance);
-            Log("cache tolerance is set to %.3f ms", cacheTolerance);
+            Log("cache tolerance is set to %.3f ms\n", cacheTolerance);
             XrTime toleranceTime = (XrTime)(cacheTolerance * 1000000.0);
             m_PoseCache.SetTolerance(toleranceTime);
             m_EyeCache.SetTolerance(toleranceTime);
@@ -309,7 +309,15 @@ namespace motion_compensation_layer
             Log("xrDestroySession\n");
             TraceLoggingWrite(g_traceProvider, "xrDestroySession", TLPArg(session, "Session"));
         }
-        return OpenXrApi::xrDestroySession(session);
+        XrResult result = OpenXrApi::xrDestroySession(session);
+
+        if (m_Enabled)
+        {
+            m_Overlay->DestroySession();
+        }
+        m_Overlay.reset();
+
+        return result;
     }
 
     XrResult OpenXrLayer::xrCreateSwapchain(XrSession session,
@@ -344,17 +352,6 @@ namespace motion_compensation_layer
         {
             return OpenXrApi::xrCreateSwapchain(session, createInfo, swapchain);
         }
-
-        // Identify the swapchains of interest for our processing chain.
-        const bool useSwapchain =
-            createInfo->usageFlags &
-            (XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT | XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT |
-             XR_SWAPCHAIN_USAGE_TRANSFER_DST_BIT | XR_SWAPCHAIN_USAGE_UNORDERED_ACCESS_BIT);
-
-        // We do no do any processing to depth buffer, but we like to have them for other things like occlusion when
-        // drawing.
-        const bool isDepth = createInfo->usageFlags & XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-
         Log("Creating swapchain with dimensions=%ux%u, arraySize=%u, mipCount=%u, sampleCount=%u, format=%d, "
             "usage=0x%x\n",
             createInfo->width,
@@ -365,17 +362,10 @@ namespace motion_compensation_layer
             createInfo->format,
             createInfo->usageFlags);
 
-        XrSwapchainCreateInfo chainCreateInfo = *createInfo;
-        if (useSwapchain && !isDepth)
+        const XrResult result = OpenXrApi::xrCreateSwapchain(session, createInfo, swapchain);
+        if (XR_SUCCEEDED(result))
         {
-            // The post processor will draw a full-screen quad onto the final swapchain.
-            chainCreateInfo.usageFlags |= XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
-        }
-
-        const XrResult result = OpenXrApi::xrCreateSwapchain(session, &chainCreateInfo,  swapchain);
-        if (XR_SUCCEEDED(result) && useSwapchain)
-        {
-            m_Overlay->CreateSwapchain(session, &chainCreateInfo, createInfo, swapchain, isDepth);
+            m_Overlay->CreateSwapchain(session, createInfo, swapchain);
         }
         return result;
     }
@@ -931,6 +921,33 @@ namespace motion_compensation_layer
         return OpenXrApi::xrSyncActions(session, syncInfo);
     }
 
+    XrResult OpenXrLayer::xrBeginFrame(XrSession session, const XrFrameBeginInfo* frameBeginInfo)
+    {
+        if (!m_Enabled)
+        {
+            return OpenXrApi::xrBeginFrame(session, frameBeginInfo);
+        }
+
+        if (frameBeginInfo && frameBeginInfo->type != XR_TYPE_FRAME_BEGIN_INFO)
+        {
+            return XR_ERROR_VALIDATION_FAILURE;
+        }
+        DebugLog("xrBeginFrame\n");
+
+        TraceLoggingWrite(g_traceProvider, "xrBeginFrame", TLPArg(session, "Session"));
+
+        m_Overlay->BeginFrameBefore();
+
+        XrResult result = OpenXrApi::xrBeginFrame(session, frameBeginInfo);
+
+        if (XR_SUCCEEDED(result) && isSessionHandled(session))
+        {
+            m_Overlay->BeginFrameAfter();
+        }
+
+        return result;
+    }
+
     XrResult OpenXrLayer::xrEndFrame(XrSession session, const XrFrameEndInfo* frameEndInfo)
     {
         if (!m_Enabled || !isSessionHandled(session))
@@ -977,7 +994,9 @@ namespace motion_compensation_layer
         if (!m_Activated)
         {
             HandleKeyboardInput(chainFrameEndInfo.displayTime);
-            return OpenXrApi::xrEndFrame(session, &chainFrameEndInfo);
+            XrResult result = OpenXrApi::xrEndFrame(session, &chainFrameEndInfo);
+            m_Overlay->UnblockCallbacks();
+            return result;
         }
 
         std::vector<const XrCompositionLayerBaseHeader*> resetLayers{};
@@ -1106,6 +1125,7 @@ namespace motion_compensation_layer
                                          resetLayers.data()};
 
         XrResult result = OpenXrApi::xrEndFrame(session, &resetFrameEndInfo);
+        m_Overlay->UnblockCallbacks();
 
         // clean up memory
         for (auto projection : resetProjectionLayers)

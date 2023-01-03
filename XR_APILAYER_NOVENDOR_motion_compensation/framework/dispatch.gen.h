@@ -236,6 +236,14 @@ namespace LAYER_NAMESPACE
 		PFN_xrEndSession m_xrEndSession{ nullptr };
 
 	public:
+		virtual XrResult xrBeginFrame(XrSession session, const XrFrameBeginInfo* frameBeginInfo)
+		{
+			return m_xrBeginFrame(session, frameBeginInfo);
+		}
+	private:
+		PFN_xrBeginFrame m_xrBeginFrame{ nullptr };
+
+	public:
 		virtual XrResult xrEndFrame(XrSession session, const XrFrameEndInfo* frameEndInfo)
 		{
 			return m_xrEndFrame(session, frameEndInfo);

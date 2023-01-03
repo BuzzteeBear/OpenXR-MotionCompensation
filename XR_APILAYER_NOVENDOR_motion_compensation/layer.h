@@ -84,6 +84,7 @@ namespace motion_compensation_layer
                                uint32_t* viewCountOutput,
                                XrView* views) override;
         XrResult xrSyncActions(XrSession session, const XrActionsSyncInfo* syncInfo) override;
+        XrResult xrBeginFrame(XrSession session, const XrFrameBeginInfo* frameBeginInfo);
         XrResult xrEndFrame(XrSession session, const XrFrameEndInfo* frameEndInfo) override;
         bool GetStageToLocalSpace(XrTime time, XrPosef& location);
 

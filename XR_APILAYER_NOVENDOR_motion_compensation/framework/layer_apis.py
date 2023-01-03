@@ -18,6 +18,7 @@ override_functions = [
     "xrCreateReferenceSpace",
     "xrLocateSpace",
     "xrLocateViews",
+    "xrBeginFrame",
     "xrEndFrame"
 ]
 
