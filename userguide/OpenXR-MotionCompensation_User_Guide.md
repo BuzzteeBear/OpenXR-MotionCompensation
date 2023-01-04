@@ -149,7 +149,7 @@ To enable OXRMC to correlate translation and rotation of the rig to the virtual 
 
 ### Saving and the cor location
 The current position and orientation of the cor is part of the configuration and can be saved to the (global or app-specific) config file. When your satisfied with the current setting you can set the config key `use_cor_pos` to `1`. This causes the cor position to be loaded from the config file when calibrating instead of being determined using the hmd position and the offset values.  
-**Note that this functionality may not work with all HMD vendors. Setting up the playspace in the VR runtime configuration of your hmd might help to get this orking correctly. Rumor has it that some HMDs need to be started/initialized at the exact same location for the playspace coordinates to be consistent in between uses.**  
+**Note that this functionality may not work with all HMD vendors. Setting up the playspace in the VR runtime configuration of your hmd might help to get this working correctly. Rumor has it that some HMDs need to be started/initialized at the exact same location for the playspace coordinates to be consistent in between uses.**  
 Feedback on success or failure of this functionality using different VR systems is very welcome and can be made via [discord server](#contact) of the project.
 
 ## Running your application
