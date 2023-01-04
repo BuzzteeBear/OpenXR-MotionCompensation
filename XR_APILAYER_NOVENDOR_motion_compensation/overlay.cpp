@@ -62,9 +62,7 @@ namespace graphics
 
                         const XrGraphicsBindingD3D11KHR* d3dBindings =
                             reinterpret_cast<const XrGraphicsBindingD3D11KHR*>(entry);
-                        // Workaround: On Oculus, we must delay the initialization of Detour.
-                        const bool enableOculusQuirk = runtimeName.find("Oculus") != std::string::npos;
-                        m_GraphicsDevice = graphics::WrapD3D11Device(d3dBindings->device, enableOculusQuirk);
+                        m_GraphicsDevice = graphics::WrapD3D11Device(d3dBindings->device);
                         break;
                     }
                     else if (entry->type == XR_TYPE_GRAPHICS_BINDING_D3D12_KHR)

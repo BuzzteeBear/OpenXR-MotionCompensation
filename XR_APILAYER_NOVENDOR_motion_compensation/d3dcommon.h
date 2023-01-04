@@ -5,11 +5,7 @@
 
 namespace graphics
 {
-    void HookForD3D11DebugLayer();
-    void UnhookForD3D11DebugLayer();
-    std::shared_ptr<IDevice> WrapD3D11Device(ID3D11Device* device,
-                                             bool enableOculusQuirk = false);
-    std::shared_ptr<IDevice> WrapD3D11TextDevice(ID3D11Device* device);
+    std::shared_ptr<IDevice> WrapD3D11Device(ID3D11Device* device);
     std::shared_ptr<ITexture> WrapD3D11Texture(std::shared_ptr<IDevice> device,
                                                const XrSwapchainCreateInfo& info,
                                                ID3D11Texture2D* texture,

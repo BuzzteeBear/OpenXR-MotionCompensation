@@ -45,9 +45,6 @@ namespace motion_compensation_layer
         {
             delete m_Tracker;
         }
-#ifdef _DEBUG
-        graphics::UnhookForD3D11DebugLayer();
-#endif
     }
 
     XrResult OpenXrLayer::xrDestroyInstance(XrInstance instance)
@@ -168,11 +165,6 @@ namespace motion_compensation_layer
         }
 
         CreateTrackerAction();
-
-#ifdef _DEBUG
-        graphics::HookForD3D11DebugLayer();
-        graphics::EnableD3D12DebugLayer();
-#endif
 
         return result;
     }

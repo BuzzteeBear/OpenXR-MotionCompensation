@@ -25,7 +25,6 @@
 
 #include "d3dcommon.h"
 #include "shader_utilities.h"
-#include "detours_helpers.h"
 #include "interfaces.h"
 #include "log.h"
 
@@ -714,8 +713,8 @@ namespace {
     class D3D11Device : public IDevice, public std::enable_shared_from_this<D3D11Device>
     {
       public:
-        D3D11Device(ID3D11Device* device, bool enableOculusQuirk = false)
-            : m_device(device), m_allowInterceptor(true), m_lateInitCountdown(enableOculusQuirk ? 10 : 0)
+        D3D11Device(ID3D11Device* device)
+            : m_device(device)
         {
             m_device->GetImmediateContext(set(m_context));
             {
@@ -752,20 +751,11 @@ namespace {
             }
 #endif
             // Create common resources.
-            // Workaround: the Oculus OpenXR Runtime for DX11 seems to intercept some of the D3D calls as well.
-            // It breaks our use of Detours. Delay the call to initializeInterceptor() by a few frames (see
-            // flushContext()).
-            if (!m_lateInitCountdown)
-            {
-                Log("Early initializeInterceptor() call\n");
-                initializeInterceptor();
-            }
             initializeShadingResources();
             initializeMeshResources();
         }
 
         ~D3D11Device() override {
-            uninitializeInterceptor();
             Log("D3D11Device destroyed\n");
         }
 
@@ -843,14 +833,6 @@ namespace {
 
             if (blocking) {
                 m_context->Flush();
-            }
-
-            // Workaround: the Oculus OpenXR Runtime for DX11 seems to intercept some of the D3D calls as well. It
-            // breaks our use of Detours. Delay the call to initializeInterceptor() by an arbitrary number of
-            // frames.
-            if (m_lateInitCountdown && --m_lateInitCountdown == 0) {
-                Log("Late initializeInterceptor() call\n");
-                initializeInterceptor();
             }
 
             // Log any messages from the Debug layer.
@@ -1283,10 +1265,6 @@ namespace {
             m_unsetRenderTargetEvent = event;
         }
 
-        bool isEventsSupported() const override {
-            return m_allowInterceptor;
-        }
-
         uint32_t getBufferAlignmentConstraint() const override {
             return 16;
         }
@@ -1304,40 +1282,6 @@ namespace {
         }
 
       private:
-        void initializeInterceptor() {
-            if (!m_allowInterceptor) {
-                return;
-            }
-
-            g_instance = this;
-
-            // Hook to the Direct3D device context to intercept preparation for the rendering.
-            DetourMethodAttach(get(m_context),
-                               // Method offset is 7 + method index (0-based) for ID3D11DeviceContext.
-                               33,
-                               hooked_ID3D11DeviceContext_OMSetRenderTargets,
-                               g_original_ID3D11DeviceContext_OMSetRenderTargets);
-            DetourMethodAttach(get(m_context),
-                               // Method offset is 7 + method index (0-based) for ID3D11DeviceContext.
-                               34,
-                               hooked_ID3D11DeviceContext_OMSetRenderTargetsAndUnorderedAccessViews,
-                               g_original_ID3D11DeviceContext_OMSetRenderTargetsAndUnorderedAccessViews);
-        }
-
-        void uninitializeInterceptor() {
-            DetourMethodDetach(get(m_context),
-                               // Method offset is 7 + method index (0-based) for ID3D11DeviceContext.
-                               33,
-                               hooked_ID3D11DeviceContext_OMSetRenderTargets,
-                               g_original_ID3D11DeviceContext_OMSetRenderTargets);
-            DetourMethodDetach(get(m_context),
-                               // Method offset is 7 + method index (0-based) for ID3D11DeviceContext.
-                               34,
-                               hooked_ID3D11DeviceContext_OMSetRenderTargetsAndUnorderedAccessViews,
-                               g_original_ID3D11DeviceContext_OMSetRenderTargetsAndUnorderedAccessViews);
-
-            g_instance = nullptr;
-        }
 
         // Initialize the resources needed for dispatchShader() and related calls.
         void initializeShadingResources() {
@@ -1514,8 +1458,6 @@ namespace {
         ComPtr<ID3D11DeviceContext> m_context;
         D3D11ContextState m_state;
         std::string m_deviceName;
-        const bool m_allowInterceptor;
-        uint32_t m_lateInitCountdown{0};
 
         ComPtr<ID3D11SamplerState> m_samplers[2];
         ComPtr<ID3D11RasterizerState> m_quadRasterizer;
@@ -1585,72 +1527,11 @@ namespace {
             }
         }
 
-        static inline D3D11Device* g_instance = nullptr;
         // NB: Maximum resources possible are:
         // - D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT (128)
         // - D3D11_1_UAV_SLOT_COUNT (64)
         // - D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT (8)
-
         static inline void* const kClearResources[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT] = {nullptr};
-
-        DECLARE_DETOUR_FUNCTION(static void,
-                                STDMETHODCALLTYPE,
-                                ID3D11DeviceContext_OMSetRenderTargets,
-                                ID3D11DeviceContext* Context,
-                                UINT NumViews,
-                                ID3D11RenderTargetView* const* ppRenderTargetViews,
-                                ID3D11DepthStencilView* pDepthStencilView) {
-            TraceLocalActivity(local);
-            TraceLoggingWriteStart(local,
-                                   "ID3D11DeviceContext_OMSetRenderTargets",
-                                   TLPArg(Context, "Context"),
-                                   TLArg(NumViews, "NumViews"),
-                                   TLPArray(ppRenderTargetViews, NumViews, "RTV"),
-                                   TLPArg(pDepthStencilView, "DSV"));
-            
-            assert(g_instance);
-            g_instance->onSetRenderTargets(Context, NumViews, ppRenderTargetViews, pDepthStencilView);
-
-            assert(g_original_ID3D11DeviceContext_OMSetRenderTargets);
-            g_original_ID3D11DeviceContext_OMSetRenderTargets(
-                Context, NumViews, ppRenderTargetViews, pDepthStencilView);
-
-            
-
-            TraceLoggingWriteStop(local, "ID3D11DeviceContext_OMSetRenderTargets");
-        }
-
-        DECLARE_DETOUR_FUNCTION(static void,
-                                STDMETHODCALLTYPE,
-                                ID3D11DeviceContext_OMSetRenderTargetsAndUnorderedAccessViews,
-                                ID3D11DeviceContext* Context,
-                                UINT NumRTVs,
-                                ID3D11RenderTargetView* const* ppRenderTargetViews,
-                                ID3D11DepthStencilView* pDepthStencilView,
-                                UINT UAVStartSlot,
-                                UINT NumUAVs,
-                                ID3D11UnorderedAccessView* const* ppUnorderedAccessViews,
-                                const UINT* pUAVInitialCounts) {
-            TraceLocalActivity(local);
-            TraceLoggingWriteStart(local,
-                                   "ID3D11DeviceContext_OMSetRenderTargetsAndUnorderedAccessViews",
-                                   TLPArg(Context, "Context"),
-                                   TLArg(NumRTVs, "NumRTVs"),
-                                   TLPArg(pDepthStencilView, "DSV"));
-
-            assert(g_instance);
-            assert(g_original_ID3D11DeviceContext_OMSetRenderTargetsAndUnorderedAccessViews);
-            g_original_ID3D11DeviceContext_OMSetRenderTargetsAndUnorderedAccessViews(Context,
-                                                                                     NumRTVs,
-                                                                                     ppRenderTargetViews,
-                                                                                     pDepthStencilView,
-                                                                                     UAVStartSlot,
-                                                                                     NumUAVs,
-                                                                                     ppUnorderedAccessViews,
-                                                                                     pUAVInitialCounts);
-
-            TraceLoggingWriteStop(local, "ID3D11DeviceContext_OMSetRenderTargetsAndUnorderedAccessViews");
-        }
     };
 
     decltype(D3D11CreateDeviceAndSwapChain)* g_original_D3D11CreateDeviceAndSwapChain = nullptr;
@@ -1718,32 +1599,9 @@ namespace {
 
 namespace graphics
 {
-    void HookForD3D11DebugLayer()
+    std::shared_ptr<IDevice> WrapD3D11Device(ID3D11Device* device)
     {
-        DetourDllAttach("d3d11.dll",
-                        "D3D11CreateDeviceAndSwapChain",
-                        Hooked_D3D11CreateDeviceAndSwapChain,
-                        g_original_D3D11CreateDeviceAndSwapChain);
-        DetourDllAttach("d3d11.dll", "D3D11CreateDevice", Hooked_D3D11CreateDevice, g_original_D3D11CreateDevice);
-    }
-
-    void UnhookForD3D11DebugLayer()
-    {
-        DetourDllDetach("d3d11.dll",
-                        "D3D11CreateDeviceAndSwapChain",
-                        Hooked_D3D11CreateDeviceAndSwapChain,
-                        g_original_D3D11CreateDeviceAndSwapChain);
-        DetourDllDetach("d3d11.dll", "D3D11CreateDevice", Hooked_D3D11CreateDevice, g_original_D3D11CreateDevice);
-    }
-
-    std::shared_ptr<IDevice> WrapD3D11Device(ID3D11Device* device, bool enableOculusQuirk)
-    {
-        return std::make_shared<D3D11Device>(device, enableOculusQuirk);
-    }
-
-    std::shared_ptr<IDevice> WrapD3D11TextDevice(ID3D11Device* device)
-    {
-        return std::make_shared<D3D11Device>(device, true /* textOnly */);
+        return std::make_shared<D3D11Device>(device);
     }
 
     std::shared_ptr<ITexture> WrapD3D11Texture(std::shared_ptr<IDevice> device,

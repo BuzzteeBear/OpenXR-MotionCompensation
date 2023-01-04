@@ -853,35 +853,12 @@ namespace {
                 m_context = m_commandList[0];
             }
 
-            // Initialize the D3D11on12 interop device that we need for text rendering.
-            // We use the text rendering primitives from the D3D11Device implmenentation (d3d11.cpp).
-            {
-                ComPtr<ID3D11Device> textDevice;
-                D3D_FEATURE_LEVEL featureLevel = {D3D_FEATURE_LEVEL_11_1};
-                CHECK_HRCMD(D3D11On12CreateDevice(device,
-                                                  D3D11_CREATE_DEVICE_SINGLETHREADED,
-                                                  &featureLevel,
-                                                  1,
-                                                  reinterpret_cast<IUnknown**>(&queue),
-                                                  1,
-                                                  0,
-                                                  set(textDevice),
-                                                  nullptr,
-                                                  nullptr));
-                CHECK_HRCMD(textDevice->QueryInterface(set(m_textInteropDevice)));
-
-                m_textDevice = WrapD3D11TextDevice(get(textDevice));
-            }
-
             CHECK_HRCMD(m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(set(m_fence))));
-
-            initializeInterceptor();
             initializeShadingResources();
             initializeMeshResources();
         }
 
         ~D3D12Device() override {
-            uninitializeInterceptor();
             Log("D3D12Device destroyed\n");
         }
 
@@ -904,7 +881,6 @@ namespace {
             m_currentQuadShader.reset();
             m_currentDrawRenderTarget.reset();
             m_currentDrawDepthBuffer.reset();
-            m_currentTextRenderTarget.reset();
 
             m_currentMesh.reset();
             for (uint32_t i = 0; i < ARRAYSIZE(m_meshViewProjectionBuffer); i++) {
@@ -1431,22 +1407,19 @@ namespace {
         }
 
         void clearColor(float top, float left, float bottom, float right, const XrColor4f& color) const override {
-            if (m_currentDrawRenderTarget) {
-                // When rendering text, we must use the corresponding device.
-                if (!m_isRenderingText) {
-                    const auto rect = CD3DX12_RECT(static_cast<LONG>(left),
-                                                    static_cast<LONG>(top),
-                                                    static_cast<LONG>(right),
-                                                    static_cast<LONG>(bottom));
-                    auto renderTargetView =
-                        m_currentDrawRenderTarget->getRenderTargetView(m_currentDrawRenderTargetSlice)->getAs<D3D12>();
+            if (m_currentDrawRenderTarget){
+            
+                const auto rect = CD3DX12_RECT(static_cast<LONG>(left),
+                                               static_cast<LONG>(top),
+                                               static_cast<LONG>(right),
+                                               static_cast<LONG>(bottom));
+                auto renderTargetView =
+                    m_currentDrawRenderTarget->getRenderTargetView(m_currentDrawRenderTargetSlice)->getAs<D3D12>();
 
-                    // XrColor4f components are in the expected order
-                    m_context->ClearRenderTargetView(*renderTargetView, &color.r, 1, &rect);
-                } else {
-                    m_textDevice->clearColor(top, left, bottom, right, color);
-                }
-            }
+                // XrColor4f components are in the expected order
+                m_context->ClearRenderTargetView(*renderTargetView, &color.r, 1, &rect);
+            }   
+            
         }
 
         void clearDepth(float value) override {
@@ -1604,10 +1577,6 @@ namespace {
             m_unsetRenderTargetEvent = event;
         }
 
-        bool isEventsSupported() const override {
-            return m_allowInterceptor;
-        }
-
         uint32_t getBufferAlignmentConstraint() const override {
             return D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT;
         }
@@ -1625,50 +1594,6 @@ namespace {
         }
 
       private:
-        void initializeInterceptor() {
-            if (!m_allowInterceptor) {
-                return;
-            }
-
-            g_instance = this;
-
-            // Hook to the Direct3D device and command list  to intercept preparation for the rendering.
-            DetourMethodAttach(get(m_context),
-                               // Method offset is 10 + method index (0-based) for ID3D12GraphicsCommandList.
-                               46,
-                               hooked_ID3D12GraphicsCommandList_OMSetRenderTargets,
-                               g_original_ID3D12GraphicsCommandList_OMSetRenderTargets);
-            DetourMethodAttach(get(m_device),
-                               // Method offset is 7 + method index (0-based) for ID3D12Device.
-                               20,
-                               hooked_ID3D12Device_CreateRenderTargetView,
-                               g_original_ID3D12Device_CreateRenderTargetView);
-            DetourMethodAttach(get(m_context),
-                               // Method offset is 10 + method index (0-based) for ID3D12GraphicsCommandList.
-                               16,
-                               hooked_ID3D12GraphicsCommandList_CopyTextureRegion,
-                               g_original_ID3D12GraphicsCommandList_CopyTextureRegion);
-        }
-
-        void uninitializeInterceptor() {
-            DetourMethodDetach(get(m_context),
-                               // Method offset is 10 + method index (0-based) for ID3D12GraphicsCommandList.
-                               46,
-                               hooked_ID3D12GraphicsCommandList_OMSetRenderTargets,
-                               g_original_ID3D12GraphicsCommandList_OMSetRenderTargets);
-            DetourMethodDetach(get(m_device),
-                               // Method offset is 7 + method index (0-based) for ID3D12Device.
-                               20,
-                               hooked_ID3D12Device_CreateRenderTargetView,
-                               g_original_ID3D12Device_CreateRenderTargetView);
-            DetourMethodDetach(get(m_context),
-                               // Method offset is 10 + method index (0-based) for ID3D12GraphicsCommandList.
-                               16,
-                               hooked_ID3D12GraphicsCommandList_CopyTextureRegion,
-                               g_original_ID3D12GraphicsCommandList_CopyTextureRegion);
-
-            g_instance = nullptr;
-        }
 
         // Initialize the resources needed for dispatchShader() and related calls.
         void initializeShadingResources() {
@@ -1938,11 +1863,6 @@ namespace {
         uint64_t m_queryBuffer[MaxGpuTimers * 2];
         uint64_t m_gpuTickFrequency{0};
 
-        std::shared_ptr<IDevice> m_textDevice;
-        ComPtr<ID3D11On12Device> m_textInteropDevice;
-        bool m_isRenderingText{false};
-
-        std::shared_ptr<ITexture> m_currentTextRenderTarget;
         std::shared_ptr<ITexture> m_currentDrawRenderTarget;
         int32_t m_currentDrawRenderTargetSlice;
         std::shared_ptr<ITexture> m_currentDrawDepthBuffer;
@@ -2006,99 +1926,7 @@ namespace {
                     Log("D3D12: %.*s\n", message->DescriptionByteLength, message->pDescription);
                 }
             }
-        }
-
-        static inline D3D12Device* g_instance = nullptr;
-
-        DECLARE_DETOUR_FUNCTION(static void,
-                                STDMETHODCALLTYPE,
-                                ID3D12Device_CreateRenderTargetView,
-                                ID3D12Device* Device,
-                                ID3D12Resource* pResource,
-                                const D3D12_RENDER_TARGET_VIEW_DESC* pDesc,
-                                D3D12_CPU_DESCRIPTOR_HANDLE DestDescriptor) {
-            TraceLocalActivity(local);
-            TraceLoggingWriteStart(
-                local, "ID3D12Device_CreateRenderTargetView", TLPArg(Device, "Device"), TLPArg(pResource, "Resource"));
-
-            assert(g_instance);
-            g_instance->registerRenderTargetView(pResource, pDesc, DestDescriptor);
-
-            assert(g_original_ID3D12Device_CreateRenderTargetView);
-            g_original_ID3D12Device_CreateRenderTargetView(Device, pResource, pDesc, DestDescriptor);
-
-            TraceLoggingWriteStop(
-                local, "ID3D12Device_CreateRenderTargetView", TLPArg(DestDescriptor.ptr, "Descriptor"));
-        }
-
-        DECLARE_DETOUR_FUNCTION(static void,
-                                STDMETHODCALLTYPE,
-                                ID3D12GraphicsCommandList_OMSetRenderTargets,
-                                ID3D12GraphicsCommandList* Context,
-                                UINT NumRenderTargetDescriptors,
-                                const D3D12_CPU_DESCRIPTOR_HANDLE* pRenderTargetDescriptors,
-                                BOOL RTsSingleHandleToDescriptorRange,
-                                const D3D12_CPU_DESCRIPTOR_HANDLE* pDepthStencilDescriptor) {
-            TraceLocalActivity(local);
-            TraceLoggingWriteStart(local,
-                                   "ID3D12GraphicsCommandList_OMSetRenderTargets",
-                                   TLPArg(Context, "Context"),
-                                   TLArg(NumRenderTargetDescriptors, "NumRenderTargetDescriptors"),
-                                   TLArg(RTsSingleHandleToDescriptorRange, "RTsSingleHandleToDescriptorRange"),
-                                   TLPArg(pDepthStencilDescriptor ? pDepthStencilDescriptor->ptr : 0, "DSV"));
-            if (IsTraceEnabled()) {
-                for (UINT i = 0; i < NumRenderTargetDescriptors; i++) {
-                    TraceLoggingWriteTagged(local,
-                                            "ID3D12GraphicsCommandList_OMSetRenderTargets",
-                                            TLPArg(pRenderTargetDescriptors[i].ptr, "RTV"));
-                }
-            }
-
-            assert(g_instance);
-            assert(g_original_ID3D12GraphicsCommandList_OMSetRenderTargets);
-            g_original_ID3D12GraphicsCommandList_OMSetRenderTargets(Context,
-                                                                    NumRenderTargetDescriptors,
-                                                                    pRenderTargetDescriptors,
-                                                                    RTsSingleHandleToDescriptorRange,
-                                                                    pDepthStencilDescriptor);
-
-            g_instance->onSetRenderTargets(Context,
-                                           NumRenderTargetDescriptors,
-                                           pRenderTargetDescriptors,
-                                           RTsSingleHandleToDescriptorRange,
-                                           pDepthStencilDescriptor);
-
-            TraceLoggingWriteStop(local, "ID3D12GraphicsCommandList_OMSetRenderTargets");
-        }
-
-        DECLARE_DETOUR_FUNCTION(static void,
-                                STDMETHODCALLTYPE,
-                                ID3D12GraphicsCommandList_CopyTextureRegion,
-                                ID3D12GraphicsCommandList* Context,
-                                const D3D12_TEXTURE_COPY_LOCATION* pDst,
-                                UINT DstX,
-                                UINT DstY,
-                                UINT DstZ,
-                                const D3D12_TEXTURE_COPY_LOCATION* pSrc,
-                                const D3D12_BOX* pSrcBox) {
-            TraceLocalActivity(local);
-            TraceLoggingWriteStart(local,
-                                   "ID3D12GraphicsCommandList_CopyTextureRegion",
-                                   TLPArg(Context, "Context"),
-                                   TLPArg(pDst->pResource, "Destination"),
-                                   TLArg(pDst->SubresourceIndex, "DestinationIndex"),
-                                   TLPArg(pSrc->pResource, "Source"),
-                                   TLArg(pSrc->SubresourceIndex, "SourceIndex"));
-
-            assert(g_instance);
-            g_instance->onCopyTexture(
-                Context, pSrc->pResource, pDst->pResource, pSrc->SubresourceIndex, pDst->SubresourceIndex);
-
-            assert(g_original_ID3D12GraphicsCommandList_CopyTextureRegion);
-            g_original_ID3D12GraphicsCommandList_CopyTextureRegion(Context, pDst, DstX, DstY, DstZ, pSrc, pSrcBox);
-
-            TraceLoggingWriteStop(local, "ID3D12GraphicsCommandList_CopyTextureRegion");
-        }
+        }  
     };
 
 } // namespace

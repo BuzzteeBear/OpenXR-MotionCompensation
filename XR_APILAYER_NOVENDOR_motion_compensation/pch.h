@@ -64,7 +64,6 @@ using Microsoft::WRL::ComPtr;
 #include <d3d11_4.h>
 #include <d3d12.h>
 #include <d3dx12.h>
-#include <d3d11on12.h>
 #include <d3dcompiler.h>
 
 // OpenXR + Windows-specific definitions.
@@ -87,10 +86,6 @@ using Microsoft::WRL::ComPtr;
 
 // FMT formatter.
 #include <fmt/format.h>
-
-// Detours
-#include <detours.h>
-#include "detours_helpers.h"
 
 // Helpers for ComPtr manipulation.
 
