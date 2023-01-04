@@ -1,5 +1,9 @@
 OpenXR-MotionCompensation Changelog
 
+Version 0.2.5
+
+	TBD
+
 Version 0.2.4
 
 	Graphical overlay
