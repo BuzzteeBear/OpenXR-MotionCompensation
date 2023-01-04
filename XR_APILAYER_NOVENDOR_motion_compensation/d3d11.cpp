@@ -1156,6 +1156,7 @@ namespace {
 
                 D3D11_VIEWPORT viewport;
                 ZeroMemory(&viewport, sizeof(viewport));
+                viewport.MaxDepth = 1.0f;
                 viewport.TopLeftX = 0.0f;
                 viewport.TopLeftY = 0.0f;
                 viewport.Width = (float)m_currentDrawRenderTarget->getInfo().width;
