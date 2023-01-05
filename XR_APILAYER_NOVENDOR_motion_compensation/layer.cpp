@@ -986,9 +986,7 @@ namespace motion_compensation_layer
         if (!m_Activated)
         {
             HandleKeyboardInput(chainFrameEndInfo.displayTime);
-            XrResult result = OpenXrApi::xrEndFrame(session, &chainFrameEndInfo);
-            m_Overlay->UnblockCallbacks();
-            return result;
+            return OpenXrApi::xrEndFrame(session, &chainFrameEndInfo);
         }
 
         std::vector<const XrCompositionLayerBaseHeader*> resetLayers{};
@@ -1117,7 +1115,6 @@ namespace motion_compensation_layer
                                          resetLayers.data()};
 
         XrResult result = OpenXrApi::xrEndFrame(session, &resetFrameEndInfo);
-        m_Overlay->UnblockCallbacks();
 
         // clean up memory
         for (auto projection : resetProjectionLayers)

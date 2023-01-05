@@ -10,8 +10,6 @@ namespace graphics
                                                const XrSwapchainCreateInfo& info,
                                                ID3D11Texture2D* texture,
                                                std::string_view debugName);
-    
-    void EnableD3D12DebugLayer();
     std::shared_ptr<IDevice> WrapD3D12Device(ID3D12Device* device,
                                              ID3D12CommandQueue* queue);
     std::shared_ptr<ITexture> WrapD3D12Texture(std::shared_ptr<IDevice> device,
@@ -56,14 +54,6 @@ VSOutput vsMain(VSInput input) {
 
 float4 psMain(VSOutput input) : SV_TARGET {
     return float4(input.Color, 1);
-}
-)_";
-
-        const std::string_view QuadVertexShader = R"_(
-void vsMain(in uint id : SV_VertexID, out float4 position : SV_Position, out float2 texcoord : TEXCOORD0)
-{
-    texcoord = float2((id == 1) ? 2.0 : 0.0, (id == 2) ? 2.0 : 0.0);
-    position = float4(texcoord * float2(2.0, -2.0) + float2(-1.0, 1.0), 0.0, 1.0);
 }
 )_";
     } // namespace d3dcommon

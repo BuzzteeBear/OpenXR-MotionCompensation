@@ -77,7 +77,6 @@ namespace graphics
                          const XrPosef& referenceTrackerPose,
                          const XrPosef& reversedManipulation,
                          bool mcActivated);
-        void UnblockCallbacks();
         
         bool m_Initialized{false};
 

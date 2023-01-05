@@ -115,7 +115,6 @@ namespace graphics
     {
         if (m_GraphicsDevice)
         {
-            m_GraphicsDevice->blockCallbacks();
             m_GraphicsDevice->flushContext(true);
         }
         m_Swapchains.clear();
@@ -261,7 +260,9 @@ namespace graphics
                         depthInfo.usageFlags = XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 
                         std::shared_ptr<ITexture> texture =
-                            m_GraphicsDevice->createTexture(depthInfo, "depth buffer", DXGI_FORMAT_D32_FLOAT);
+                            m_GraphicsDevice->createTexture(depthInfo,
+                                                            fmt::format("depth buffer {}", (long long)*swapchain),
+                                                            DXGI_FORMAT_D32_FLOAT);
                         m_OwnDepthBuffers.insert_or_assign(*swapchain, texture);
                     }
 
@@ -406,8 +407,6 @@ namespace graphics
         {
             if (m_OverlayActive && m_GraphicsDevice)
             {
-                m_GraphicsDevice->resolveQueries();
-                m_GraphicsDevice->blockCallbacks();
                 m_GraphicsDevice->saveContext();
                 m_GraphicsDevice->unsetRenderTargets();
 
@@ -549,14 +548,6 @@ namespace graphics
         else
         {
             ErrorLog("%s: unable to cast instance to OpenXrLayer\n", __FUNCTION__);
-        }
-    }
-
-    void Overlay::UnblockCallbacks()
-    {
-        if (m_GraphicsDevice)
-        {
-            m_GraphicsDevice->unblockCallbacks();
         }
     }
 

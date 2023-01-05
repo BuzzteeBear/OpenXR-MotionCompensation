@@ -279,113 +279,6 @@ namespace {
         bool m_isValid{false};
     };
 
-    // Wrap a pixel shader resource. Obtained from D3D11Device.
-    class D3D11QuadShader : public IQuadShader {
-      public:
-        D3D11QuadShader(std::shared_ptr<IDevice> device, ID3D11PixelShader* pixelShader)
-            : m_device(device), m_pixelShader(pixelShader) {
-        }
-
-        Api getApi() const override {
-            return Api::D3D11;
-        }
-
-        std::shared_ptr<IDevice> getDevice() const override {
-            return m_device;
-        }
-
-        void* getNativePtr() const override {
-            return get(m_pixelShader);
-        }
-
-      private:
-        const std::shared_ptr<IDevice> m_device;
-        const ComPtr<ID3D11PixelShader> m_pixelShader;
-    };
-
-    // Wrap a compute shader resource. Obtained from D3D11Device.
-    class D3D11ComputeShader : public IComputeShader {
-      public:
-        D3D11ComputeShader(std::shared_ptr<IDevice> device,
-                           ID3D11ComputeShader* computeShader,
-                           const std::array<unsigned int, 3>& threadGroups)
-            : m_device(device), m_computeShader(computeShader), m_threadGroups(threadGroups) {
-        }
-
-        Api getApi() const override {
-            return Api::D3D11;
-        }
-
-        std::shared_ptr<IDevice> getDevice() const override {
-            return m_device;
-        }
-
-        void updateThreadGroups(const std::array<unsigned int, 3>& threadGroups) override {
-            m_threadGroups = threadGroups;
-        }
-
-        const std::array<unsigned int, 3>& getThreadGroups() const {
-            return m_threadGroups;
-        }
-
-        void* getNativePtr() const override {
-            return get(m_computeShader);
-        }
-
-      private:
-        const std::shared_ptr<IDevice> m_device;
-        const ComPtr<ID3D11ComputeShader> m_computeShader;
-        std::array<unsigned int, 3> m_threadGroups;
-    };
-
-    // Wrap a texture shader resource view. Obtained from D3D11Texture.
-    class D3D11ShaderResourceView : public IShaderInputTextureView {
-      public:
-        D3D11ShaderResourceView(std::shared_ptr<IDevice> device, ID3D11ShaderResourceView* shaderResourceView)
-            : m_device(device), m_shaderResourceView(shaderResourceView) {
-        }
-
-        Api getApi() const override {
-            return Api::D3D11;
-        }
-
-        std::shared_ptr<IDevice> getDevice() const override {
-            return m_device;
-        }
-
-        void* getNativePtr() const override {
-            return get(m_shaderResourceView);
-        }
-
-      private:
-        const std::shared_ptr<IDevice> m_device;
-        const ComPtr<ID3D11ShaderResourceView> m_shaderResourceView;
-    };
-
-    // Wrap a texture unordered access view. Obtained from D3D11Texture.
-    class D3D11UnorderedAccessView : public IComputeShaderOutputView {
-      public:
-        D3D11UnorderedAccessView(std::shared_ptr<IDevice> device, ID3D11UnorderedAccessView* unorderedAccessView)
-            : m_device(device), m_unorderedAccessView(unorderedAccessView) {
-        }
-
-        Api getApi() const override {
-            return Api::D3D11;
-        }
-
-        std::shared_ptr<IDevice> getDevice() const override {
-            return m_device;
-        }
-
-        void* getNativePtr() const override {
-            return get(m_unorderedAccessView);
-        }
-
-      private:
-        const std::shared_ptr<IDevice> m_device;
-        const ComPtr<ID3D11UnorderedAccessView> m_unorderedAccessView;
-    };
-
     // Wrap a render target view. Obtained from D3D11Texture.
     class D3D11RenderTargetView : public IRenderTargetView {
       public:
@@ -442,8 +335,6 @@ namespace {
                      const D3D11_TEXTURE2D_DESC& textureDesc,
                      ID3D11Texture2D* texture)
             : m_device(device), m_info(info), m_textureDesc(textureDesc), m_texture(texture) {
-            m_shaderResourceSubView.resize(info.arraySize);
-            m_unorderedAccessSubView.resize(info.arraySize);
             m_renderTargetSubView.resize(info.arraySize);
             m_depthStencilSubView.resize(info.arraySize);
         }
@@ -462,22 +353,6 @@ namespace {
 
         bool isArray() const override {
             return m_textureDesc.ArraySize > 1;
-        }
-
-        std::shared_ptr<IShaderInputTextureView> getShaderResourceView(int32_t slice) const override {
-            assert(slice < 0 || m_shaderResourceSubView.size() > size_t(slice));
-            auto& view = slice < 0 ? m_shaderResourceView : m_shaderResourceSubView[slice];
-            if (!view)
-                view = makeShaderInputViewInternal(std::max(slice, 0));
-            return view;
-        }
-
-        std::shared_ptr<IComputeShaderOutputView> getUnorderedAccessView(int32_t slice) const override {
-            assert(slice < 0 || m_unorderedAccessSubView.size() > size_t(slice));
-            auto& view = slice < 0 ? m_unorderedAccessView : m_unorderedAccessSubView[slice];
-            if (!view)
-                view = makeUnorderedAccessViewInternal(std::max(slice, 0));
-            return view;
         }
 
         std::shared_ptr<IRenderTargetView> getRenderTargetView(int32_t slice) const override {
@@ -513,49 +388,6 @@ namespace {
         }
 
       private:
-        std::shared_ptr<D3D11ShaderResourceView> makeShaderInputViewInternal(uint32_t slice) const {
-            if (!(m_textureDesc.BindFlags & D3D11_BIND_SHADER_RESOURCE)) {
-                throw std::runtime_error("Texture was not created with D3D11_BIND_SHADER_RESOURCE");
-            }
-            if (auto device = m_device->getAs<D3D11>()) {
-                D3D11_SHADER_RESOURCE_VIEW_DESC desc;
-                ZeroMemory(&desc, sizeof(desc));
-                desc.Format = (DXGI_FORMAT)m_info.format;
-                desc.ViewDimension =
-                    m_info.arraySize == 1 ? D3D11_SRV_DIMENSION_TEXTURE2D : D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
-                desc.Texture2DArray.ArraySize = 1;
-                desc.Texture2DArray.FirstArraySlice = slice;
-                desc.Texture2DArray.MipLevels = m_info.mipCount;
-                desc.Texture2DArray.MostDetailedMip = D3D11CalcSubresource(0, 0, m_info.mipCount);
-
-                ComPtr<ID3D11ShaderResourceView> srv;
-                CHECK_HRCMD(device->CreateShaderResourceView(get(m_texture), &desc, set(srv)));
-                return std::make_shared<D3D11ShaderResourceView>(m_device, get(srv));
-            }
-            return nullptr;
-        }
-
-        std::shared_ptr<D3D11UnorderedAccessView> makeUnorderedAccessViewInternal(uint32_t slice) const {
-            if (!(m_textureDesc.BindFlags & D3D11_BIND_UNORDERED_ACCESS)) {
-                throw std::runtime_error("Texture was not created with D3D11_BIND_UNORDERED_ACCESS");
-            }
-            if (auto device = m_device->getAs<D3D11>()) {
-                D3D11_UNORDERED_ACCESS_VIEW_DESC desc;
-                ZeroMemory(&desc, sizeof(desc));
-                desc.Format = (DXGI_FORMAT)m_info.format;
-                desc.ViewDimension =
-                    m_info.arraySize == 1 ? D3D11_UAV_DIMENSION_TEXTURE2D : D3D11_UAV_DIMENSION_TEXTURE2DARRAY;
-                desc.Texture2DArray.ArraySize = 1;
-                desc.Texture2DArray.FirstArraySlice = slice;
-                desc.Texture2DArray.MipSlice = D3D11CalcSubresource(0, 0, m_info.mipCount);
-
-                ComPtr<ID3D11UnorderedAccessView> uav;
-                CHECK_HRCMD(device->CreateUnorderedAccessView(get(m_texture), &desc, set(uav)));
-                return std::make_shared<D3D11UnorderedAccessView>(m_device, get(uav));
-            }
-            return nullptr;
-        }
-
         std::shared_ptr<D3D11RenderTargetView> makeRenderTargetViewInternal(uint32_t slice) const {
             if (!(m_textureDesc.BindFlags & D3D11_BIND_RENDER_TARGET)) {
                 throw std::runtime_error("Texture was not created with D3D11_BIND_RENDER_TARGET");
@@ -603,10 +435,6 @@ namespace {
         const D3D11_TEXTURE2D_DESC m_textureDesc;
         const ComPtr<ID3D11Texture2D> m_texture;
 
-        mutable std::shared_ptr<D3D11ShaderResourceView> m_shaderResourceView;
-        mutable std::vector<std::shared_ptr<D3D11ShaderResourceView>> m_shaderResourceSubView;
-        mutable std::shared_ptr<D3D11UnorderedAccessView> m_unorderedAccessView;
-        mutable std::vector<std::shared_ptr<D3D11UnorderedAccessView>> m_unorderedAccessSubView;
         mutable std::shared_ptr<D3D11RenderTargetView> m_renderTargetView;
         mutable std::vector<std::shared_ptr<D3D11RenderTargetView>> m_renderTargetSubView;
         mutable std::shared_ptr<D3D11DepthStencilView> m_depthStencilView;
@@ -727,13 +555,14 @@ namespace {
                 CHECK_HRCMD(adapter->GetDesc(&desc));
 
                 const std::wstring wadapterDescription(desc.Description);
+                std::string deviceName;
                 std::transform(wadapterDescription.begin(),
                                wadapterDescription.end(),
-                               std::back_inserter(m_deviceName),
+                               std::back_inserter(deviceName),
                                [](wchar_t c) { return (char)c; });
 
                 // Log the adapter name to help debugging customer issues.
-                Log("Using Direct3D 11 on adapter: %s\n", m_deviceName.c_str());
+                Log("Using Direct3D 11 on adapter: %s\n", deviceName.c_str());
             }
 
 #ifdef _DEBUG
@@ -751,7 +580,6 @@ namespace {
             }
 #endif
             // Create common resources.
-            initializeShadingResources();
             initializeMeshResources();
         }
 
@@ -761,8 +589,6 @@ namespace {
 
         void shutdown() override {
             // Clear all references that could hold a cyclic reference themselves.
-            m_currentComputeShader.reset();
-            m_currentQuadShader.reset();
             m_currentDrawRenderTarget.reset();
             m_currentDrawDepthBuffer.reset();
             m_currentMesh.reset();
@@ -773,40 +599,6 @@ namespace {
 
         Api getApi() const override {
             return Api::D3D11;
-        }
-
-        const std::string& getDeviceName() const override {
-            return m_deviceName;
-        }
-
-        int64_t getTextureFormat(TextureFormat format) const override {
-            switch (format) {
-            case TextureFormat::R32G32B32A32_FLOAT:
-                return (int64_t)DXGI_FORMAT_R32G32B32A32_FLOAT;
-
-            case TextureFormat::R16G16B16A16_UNORM:
-                return (int64_t)DXGI_FORMAT_R16G16B16A16_UNORM;
-
-            case TextureFormat::R10G10B10A2_UNORM:
-                return (int64_t)DXGI_FORMAT_R10G10B10A2_UNORM;
-
-            case TextureFormat::R8G8B8A8_UNORM:
-                return (int64_t)DXGI_FORMAT_R8G8B8A8_UNORM;
-
-            default:
-                throw std::runtime_error("Unknown texture format");
-            };
-        }
-
-        bool isTextureFormatSRGB(int64_t format) const override {
-            switch ((DXGI_FORMAT)format) {
-            case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
-            case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
-            case DXGI_FORMAT_B8G8R8X8_UNORM_SRGB:
-                return true;
-            default:
-                return false;
-            };
         }
 
         void saveContext(bool clear) override {
@@ -943,180 +735,6 @@ namespace {
                 shared_from_this(), get(vertexBuffer), sizeof(SimpleMeshVertex), get(indexBuffer), indices.size());
         }
 
-        std::shared_ptr<IQuadShader> createQuadShader(const std::filesystem::path& shaderFile,
-                                                      const std::string& entryPoint,
-                                                      std::string_view debugName,
-                                                      const D3D_SHADER_MACRO* defines,
-                                                      std::filesystem::path includePath = "") override {
-            ComPtr<ID3DBlob> psBytes;
-            if (!includePath.empty()) {
-                graphics::shader::IncludeHeader includes({std::move(includePath)});
-                graphics::shader::CompileShader(
-                    shaderFile, entryPoint.c_str(), set(psBytes), defines, &includes, "ps_5_0");
-            } else {
-                graphics::shader::CompileShader(
-                    shaderFile, entryPoint.c_str(), set(psBytes), defines, nullptr, "ps_5_0");
-            }
-
-            ComPtr<ID3D11PixelShader> compiledShader;
-            CHECK_HRCMD(m_device->CreatePixelShader(
-                psBytes->GetBufferPointer(), psBytes->GetBufferSize(), nullptr, set(compiledShader)));
-
-            SetDebugName(get(compiledShader), debugName);
-
-            return std::make_shared<D3D11QuadShader>(shared_from_this(), get(compiledShader));
-        }
-
-        std::shared_ptr<IComputeShader> createComputeShader(const std::filesystem::path& shaderFile,
-                                                            const std::string& entryPoint,
-                                                            std::string_view debugName,
-                                                            const std::array<unsigned int, 3>& threadGroups,
-                                                            const D3D_SHADER_MACRO* defines,
-                                                            std::filesystem::path includePath = "") override {
-            ComPtr<ID3DBlob> csBytes;
-            if (!includePath.empty()) {
-                graphics::shader::IncludeHeader includes({std::move(includePath)});
-                graphics::shader::CompileShader(
-                    shaderFile, entryPoint.c_str(), set(csBytes), defines, &includes, "cs_5_0");
-            } else {
-                graphics::shader::CompileShader(
-                    shaderFile, entryPoint.c_str(), set(csBytes), defines, nullptr, "cs_5_0");
-            }
-
-            ComPtr<ID3D11ComputeShader> compiledShader;
-            CHECK_HRCMD(m_device->CreateComputeShader(
-                csBytes->GetBufferPointer(), csBytes->GetBufferSize(), nullptr, set(compiledShader)));
-
-            SetDebugName(get(compiledShader), debugName);
-
-            return std::make_shared<D3D11ComputeShader>(shared_from_this(), get(compiledShader), threadGroups);
-        }
-
-        void setShader(std::shared_ptr<IQuadShader> shader, SamplerType sampler) override {
-            m_currentQuadShader.reset();
-            m_currentComputeShader.reset();
-            m_currentShaderHighestSRV = m_currentShaderHighestUAV = m_currentShaderHighestRTV = 0;
-
-            if (auto shader11 = shader->getAs<D3D11>()) {
-                // Prepare to draw the quad.
-                m_context->OMSetBlendState(nullptr, nullptr, 0xffffffff);
-                m_context->OMSetDepthStencilState(nullptr, 0);
-                m_context->IASetIndexBuffer(nullptr, DXGI_FORMAT_UNKNOWN, 0);
-                m_context->IASetVertexBuffers(0, 0, nullptr, nullptr, nullptr);
-                m_context->IASetInputLayout(nullptr);
-                m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-                m_context->VSSetShader(get(m_quadVertexShader), nullptr, 0);
-
-                // TODO: This is somewhat restrictive, but for now we only support a linear sampler in slot 0.
-                ID3D11SamplerState* const samplers[] = {get(m_samplers[to_integral(sampler)])};
-                m_context->PSSetSamplers(0, ARRAYSIZE(samplers), samplers);
-                m_context->PSSetShader(shader11, nullptr, 0);
-
-                m_currentQuadShader = shader;
-            }
-        }
-
-        void setShader(std::shared_ptr<IComputeShader> shader, SamplerType sampler) override {
-            m_currentQuadShader.reset();
-            m_currentComputeShader.reset();
-            m_currentShaderHighestSRV = m_currentShaderHighestUAV = m_currentShaderHighestRTV = 0;
-
-            if (auto shader11 = shader->getAs<D3D11>()) {
-                // TODO: This is somewhat restrictive, but for now we only support a linear sampler in slot 0.
-                ID3D11SamplerState* const samplers[] = {get(m_samplers[to_integral(sampler)])};
-                m_context->CSSetSamplers(0, ARRAYSIZE(samplers), samplers);
-                m_context->CSSetShader(shader11, nullptr, 0);
-
-                m_currentComputeShader = shader;
-            }
-        }
-
-        void setShaderInput(uint32_t slot, std::shared_ptr<ITexture> input, int32_t slice) override {
-            ID3D11ShaderResourceView* const shaderResourceViews[] = {
-                input->getShaderResourceView(slice)->getAs<D3D11>()};
-            if (m_currentQuadShader) {
-                m_context->PSSetShaderResources(slot, ARRAYSIZE(shaderResourceViews), shaderResourceViews);
-            } else if (m_currentComputeShader) {
-                m_context->CSSetShaderResources(slot, ARRAYSIZE(shaderResourceViews), shaderResourceViews);
-            } else {
-                throw std::runtime_error("No shader is set");
-            }
-            m_currentShaderHighestSRV = std::max(m_currentShaderHighestSRV, slot);
-        }
-
-        void setShaderInput(uint32_t slot, std::shared_ptr<IShaderBuffer> input) override {
-            ID3D11Buffer* const constantBuffers[] = {input->getAs<D3D11>()};
-            if (m_currentQuadShader) {
-                m_context->PSSetConstantBuffers(slot, ARRAYSIZE(constantBuffers), constantBuffers);
-            } else if (m_currentComputeShader) {
-                m_context->CSSetConstantBuffers(slot, ARRAYSIZE(constantBuffers), constantBuffers);
-            } else {
-                throw std::runtime_error("No shader is set");
-            }
-        }
-
-        void setShaderOutput(uint32_t slot, std::shared_ptr<ITexture> output, int32_t slice) override {
-            if (m_currentQuadShader) {
-                if (slot) {
-                    throw std::runtime_error("Only use slot 0 for IQuadShader");
-                }
-
-                setRenderTargets(1, &output, &slice);
-
-                m_context->RSSetState(output->getInfo().sampleCount > 1 ? get(m_quadRasterizerMSAA)
-                                                                        : get(m_quadRasterizer));
-                m_currentShaderHighestRTV = std::max(m_currentShaderHighestRTV, slot);
-
-            } else if (m_currentComputeShader) {
-                ID3D11UnorderedAccessView* const unorderedAccessViews[] = {
-                    output->getUnorderedAccessView(slice)->getAs<D3D11>()};
-                m_context->CSSetUnorderedAccessViews(
-                    slot, ARRAYSIZE(unorderedAccessViews), unorderedAccessViews, nullptr);
-                m_currentShaderHighestUAV = std::max(m_currentShaderHighestUAV, slot);
-            } else {
-                throw std::runtime_error("No shader is set");
-            }
-        }
-
-        void dispatchShader(bool doNotClear) const override {
-            if (m_currentQuadShader) {
-                m_context->Draw(3, 0);
-            } else if (m_currentComputeShader) {
-                m_context->Dispatch(m_currentComputeShader->getThreadGroups()[0],
-                                    m_currentComputeShader->getThreadGroups()[1],
-                                    m_currentComputeShader->getThreadGroups()[2]);
-            } else {
-                throw std::runtime_error("No shader is set");
-            }
-
-            if (!doNotClear) {
-                // We must unbind all the resources to avoid D3D debug layer issues.
-                const auto numRTV =
-                    std::min(m_currentShaderHighestRTV + 1, uint32_t(D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT));
-                auto renderTargetViews = reinterpret_cast<ID3D11RenderTargetView* const*>(kClearResources);
-                m_context->OMSetRenderTargets(numRTV, renderTargetViews, nullptr);
-                m_currentShaderHighestRTV = 0;
-
-                const auto numSRV =
-                    std::min(m_currentShaderHighestSRV + 1, uint32_t(D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT));
-                auto shaderResourceViews = reinterpret_cast<ID3D11ShaderResourceView* const*>(kClearResources);
-                if (m_currentQuadShader) {
-                    m_context->PSSetShaderResources(0, numSRV, shaderResourceViews);
-                } else {
-                    m_context->CSSetShaderResources(0, numSRV, shaderResourceViews);
-                }
-                m_currentShaderHighestSRV = 0;
-
-                const auto numUAV = std::min(m_currentShaderHighestUAV + 1, uint32_t(D3D11_1_UAV_SLOT_COUNT));
-                auto unorderedAccessViews = reinterpret_cast<ID3D11UnorderedAccessView* const*>(kClearResources);
-                m_context->CSSetUnorderedAccessViews(0, numUAV, unorderedAccessViews, nullptr);
-                m_currentShaderHighestUAV = 0;
-
-                m_currentQuadShader.reset();
-                m_currentComputeShader.reset();
-            }
-        }
-
         void unsetRenderTargets() override {
             auto renderTargetViews = reinterpret_cast<ID3D11RenderTargetView* const*>(kClearResources);
             m_context->OMSetRenderTargets(D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT, renderTargetViews, nullptr);
@@ -1167,24 +785,6 @@ namespace {
                 m_currentDrawDepthBuffer.reset();
             }
             m_currentMesh.reset();
-        }
-
-        void clearColor(float top, float left, float bottom, float right, const XrColor4f& color) const override {
-            if (m_currentDrawRenderTarget) {
-                ComPtr<ID3D11DeviceContext1> context11;
-                if (!FAILED(m_context->QueryInterface(set(context11)))) {
-                    // The app has a sufficient FEATURE_LEVEL
-                    const auto rect = CD3D11_RECT(static_cast<LONG>(left),
-                                                  static_cast<LONG>(top),
-                                                  static_cast<LONG>(right),
-                                                  static_cast<LONG>(bottom));
-                    auto pView =
-                        m_currentDrawRenderTarget->getRenderTargetView(m_currentDrawRenderTargetSlice)->getAs<D3D11>();
-
-                    // XrColor4f components are in the expected order
-                    context11->ClearView(pView, &color.r, &rect, 1);
-                }
-            }
         }
 
         void clearDepth(float value) override {
@@ -1247,29 +847,6 @@ namespace {
             }
         }
 
-        void resolveQueries() override {
-        }
-
-        void blockCallbacks() override {
-            m_blockEvents = true;
-        }
-
-        void unblockCallbacks() override {
-            m_blockEvents = false;
-        }
-
-        void registerSetRenderTargetEvent(SetRenderTargetEvent event) override {
-            m_setRenderTargetEvent = event;
-        }
-
-        void registerUnsetRenderTargetEvent(UnsetRenderTargetEvent event) override {
-            m_unsetRenderTargetEvent = event;
-        }
-
-        uint32_t getBufferAlignmentConstraint() const override {
-            return 16;
-        }
-
         uint32_t getTextureAlignmentConstraint() const override {
             return 16;
         }
@@ -1283,50 +860,6 @@ namespace {
         }
 
       private:
-
-        // Initialize the resources needed for dispatchShader() and related calls.
-        void initializeShadingResources() {
-            {
-                D3D11_SAMPLER_DESC desc;
-                ZeroMemory(&desc, sizeof(desc));
-                desc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
-                desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-                desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-                desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-                desc.MaxAnisotropy = 1;
-                desc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
-                desc.BorderColor[3] = 1.0f;
-                CHECK_HRCMD(
-                    m_device->CreateSamplerState(&desc, set(m_samplers[to_integral(SamplerType::NearestClamp)])));
-
-                desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-                desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-                desc.MinLOD = D3D11_MIP_LOD_BIAS_MIN;
-                desc.MaxLOD = D3D11_MIP_LOD_BIAS_MAX;
-                CHECK_HRCMD(
-                    m_device->CreateSamplerState(&desc, set(m_samplers[to_integral(SamplerType::LinearClamp)])));
-            }
-            {
-                D3D11_RASTERIZER_DESC desc;
-                ZeroMemory(&desc, sizeof(desc));
-                desc.FillMode = D3D11_FILL_SOLID;
-                desc.CullMode = D3D11_CULL_NONE;
-                desc.FrontCounterClockwise = TRUE;
-                CHECK_HRCMD(m_device->CreateRasterizerState(&desc, set(m_quadRasterizer)));
-                desc.MultisampleEnable = TRUE;
-                CHECK_HRCMD(m_device->CreateRasterizerState(&desc, set(m_quadRasterizerMSAA)));
-            }
-            {
-                ComPtr<ID3DBlob> vsBytes;
-                graphics::shader::CompileShader(QuadVertexShader, "vsMain", set(vsBytes), "vs_5_0");
-
-                CHECK_HRCMD(m_device->CreateVertexShader(
-                    vsBytes->GetBufferPointer(), vsBytes->GetBufferSize(), nullptr, set(m_quadVertexShader)));
-
-                SetDebugName(get(m_quadVertexShader), "Quad PS");
-            }
-        }
-
         // Initialize the resources needed for draw() and related calls.
         void initializeMeshResources() {
             {
@@ -1396,74 +929,10 @@ namespace {
             }
         }
 
-#define INVOKE_EVENT(event, ...)                                                                                       \
-    do {                                                                                                               \
-        if (!m_blockEvents && m_##event) {                                                                             \
-            m_##event(##__VA_ARGS__);                                                                                  \
-        }                                                                                                              \
-    } while (0);
-
-        void onSetRenderTargets(ID3D11DeviceContext* context,
-                                UINT numViews,
-                                ID3D11RenderTargetView* const* renderTargetViews,
-                                ID3D11DepthStencilView* depthStencilView) {
-            if (m_blockEvents) {
-                return;
-            }
-
-            ComPtr<ID3D11Device> device;
-            context->GetDevice(set(device));
-            if (device != m_device) {
-                return;
-            }
-
-            auto wrappedContext = std::make_shared<D3D11Context>(shared_from_this(), context);
-
-            if (!numViews || !renderTargetViews[0]) {
-                INVOKE_EVENT(unsetRenderTargetEvent, wrappedContext);
-                return;
-            }
-
-            {
-                D3D11_RENDER_TARGET_VIEW_DESC desc;
-                renderTargetViews[0]->GetDesc(&desc);
-                if (desc.ViewDimension != D3D11_RTV_DIMENSION_TEXTURE2D &&
-                    desc.ViewDimension != D3D11_RTV_DIMENSION_TEXTURE2DMS &&
-                    desc.ViewDimension != D3D11_RTV_DIMENSION_TEXTURE2DARRAY &&
-                    desc.ViewDimension != D3D11_RTV_DIMENSION_TEXTURE2DMSARRAY) {
-                    INVOKE_EVENT(unsetRenderTargetEvent, wrappedContext);
-                    return;
-                }
-            }
-
-            ComPtr<ID3D11Resource> resource;
-            renderTargetViews[0]->GetResource(set(resource));
-
-            ComPtr<ID3D11Texture2D> texture;
-            if (FAILED(resource->QueryInterface(set(texture)))) {
-                INVOKE_EVENT(unsetRenderTargetEvent, wrappedContext);
-                return;
-            }
-
-            D3D11_TEXTURE2D_DESC textureDesc;
-            texture->GetDesc(&textureDesc);
-
-            auto renderTarget = std::make_shared<D3D11Texture>(
-                shared_from_this(), getTextureInfo(textureDesc), textureDesc, get(texture));
-            INVOKE_EVENT(setRenderTargetEvent, wrappedContext, renderTarget);
-        }
-
-#undef INVOKE_EVENT
-
         const ComPtr<ID3D11Device> m_device;
         ComPtr<ID3D11DeviceContext> m_context;
         D3D11ContextState m_state;
-        std::string m_deviceName;
 
-        ComPtr<ID3D11SamplerState> m_samplers[2];
-        ComPtr<ID3D11RasterizerState> m_quadRasterizer;
-        ComPtr<ID3D11RasterizerState> m_quadRasterizerMSAA;
-        ComPtr<ID3D11VertexShader> m_quadVertexShader;
         ComPtr<ID3D11DepthStencilState> m_DepthNoStencilTest;
         ComPtr<ID3D11VertexShader> m_meshVertexShader;
         ComPtr<ID3D11PixelShader> m_meshPixelShader;
@@ -1479,12 +948,6 @@ namespace {
 
         ComPtr<ID3D11InfoQueue> m_infoQueue;
 
-        SetRenderTargetEvent m_setRenderTargetEvent;
-        UnsetRenderTargetEvent m_unsetRenderTargetEvent;
-        std::atomic<bool> m_blockEvents{false};
-
-        mutable std::shared_ptr<IQuadShader> m_currentQuadShader;
-        mutable std::shared_ptr<IComputeShader> m_currentComputeShader;
         mutable uint32_t m_currentShaderHighestSRV;
         mutable uint32_t m_currentShaderHighestUAV;
         mutable uint32_t m_currentShaderHighestRTV;
@@ -1534,68 +997,6 @@ namespace {
         // - D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT (8)
         static inline void* const kClearResources[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT] = {nullptr};
     };
-
-    decltype(D3D11CreateDeviceAndSwapChain)* g_original_D3D11CreateDeviceAndSwapChain = nullptr;
-
-    HRESULT STDMETHODCALLTYPE Hooked_D3D11CreateDeviceAndSwapChain(IDXGIAdapter* pAdapter,
-                                                                   D3D_DRIVER_TYPE DriverType,
-                                                                   HMODULE Software,
-                                                                   UINT Flags,
-                                                                   const D3D_FEATURE_LEVEL* pFeatureLevels,
-                                                                   UINT FeatureLevels,
-                                                                   UINT SDKVersion,
-                                                                   const DXGI_SWAP_CHAIN_DESC* pSwapChainDesc,
-                                                                   IDXGISwapChain** ppSwapChain,
-                                                                   ID3D11Device** ppDevice,
-                                                                   D3D_FEATURE_LEVEL* pFeatureLevel,
-                                                                   ID3D11DeviceContext** ppImmediateContext) {
-        assert(g_original_D3D11CreateDeviceAndSwapChain);
-
-        Log("Creating D3D11 device with D3D11_CREATE_DEVICE_DEBUG flag\n");
-        return g_original_D3D11CreateDeviceAndSwapChain(pAdapter,
-                                                        DriverType,
-                                                        Software,
-                                                        Flags | D3D11_CREATE_DEVICE_DEBUG,
-                                                        pFeatureLevels,
-                                                        FeatureLevels,
-                                                        SDKVersion,
-                                                        pSwapChainDesc,
-                                                        ppSwapChain,
-                                                        ppDevice,
-                                                        pFeatureLevel,
-                                                        ppImmediateContext);
-    }
-
-    decltype(D3D11CreateDevice)* g_original_D3D11CreateDevice = nullptr;
-
-    HRESULT STDMETHODCALLTYPE Hooked_D3D11CreateDevice(IDXGIAdapter* pAdapter,
-                                                       D3D_DRIVER_TYPE DriverType,
-                                                       HMODULE Software,
-                                                       UINT Flags,
-                                                       const D3D_FEATURE_LEVEL* pFeatureLevels,
-                                                       UINT FeatureLevels,
-                                                       UINT SDKVersion,
-                                                       ID3D11Device** ppDevice,
-                                                       D3D_FEATURE_LEVEL* pFeatureLevel,
-                                                       ID3D11DeviceContext** ppImmediateContext) {
-        assert(g_original_D3D11CreateDevice);
-
-        // The actual implementation of D3D11CreateDevice() seems to call D3D11CreateDeviceAndSwapChain(). In order to
-        // avoid recursion, we follow the same pattern.
-        return Hooked_D3D11CreateDeviceAndSwapChain(pAdapter,
-                                                    DriverType,
-                                                    Software,
-                                                    Flags,
-                                                    pFeatureLevels,
-                                                    FeatureLevels,
-                                                    SDKVersion,
-                                                    nullptr,
-                                                    nullptr,
-                                                    ppDevice,
-                                                    pFeatureLevel,
-                                                    ppImmediateContext);
-    }
-
 } // namespace
 
 namespace graphics

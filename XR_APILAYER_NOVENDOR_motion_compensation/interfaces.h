@@ -64,17 +64,14 @@ namespace graphics
             UINT numIndices;
         };
         using Mesh = MeshData*;
-        using PixelShader = ID3D11PixelShader*;
-        using ComputeShader = ID3D11ComputeShader*;
-        using ShaderInputView = ID3D11ShaderResourceView*;
-        using ComputeShaderOutputView = ID3D11UnorderedAccessView*;
+        using PixelShader = ID3D11PixelShader*;       
         using RenderTargetView = ID3D11RenderTargetView*;
         using DepthStencilView = ID3D11DepthStencilView*;
 
         // clang-format off
             template <typename T>
             static constexpr bool is_concrete_api_v = is_any_of_v<T,
-              Device, Context, Texture, Buffer, Mesh, PixelShader, ComputeShader, ShaderInputView, RenderTargetView, DepthStencilView>;
+              Device, Context, Texture, Buffer, Mesh, PixelShader, RenderTargetView, DepthStencilView>;
         // clang-format on
     };
 
@@ -100,16 +97,13 @@ namespace graphics
             ID3D12PipelineState* pipelineState;
         };
         using PixelShader = ShaderData*;
-        using ComputeShader = ShaderData*;
-        using ShaderInputView = D3D12_CPU_DESCRIPTOR_HANDLE*;
-        using ComputeShaderOutputView = D3D12_CPU_DESCRIPTOR_HANDLE*;
         using RenderTargetView = D3D12_CPU_DESCRIPTOR_HANDLE*;
         using DepthStencilView = D3D12_CPU_DESCRIPTOR_HANDLE*;
 
         // clang-format off
             template <typename T>
             static constexpr bool is_concrete_api_v = is_any_of_v<T,
-              Device, Context, Texture, Buffer, Mesh, PixelShader, ComputeShader, ShaderInputView, RenderTargetView, DepthStencilView>;
+              Device, Context, Texture, Buffer, Mesh, PixelShader, RenderTargetView, DepthStencilView>;
         // clang-format on
     };
 
@@ -138,77 +132,6 @@ namespace graphics
 
     struct IDevice;
     struct ITexture;
-
-    // A shader that will be rendered on a quad wrapping the entire target.
-    struct IQuadShader
-    {
-        virtual ~IQuadShader() = default;
-
-        virtual Api getApi() const = 0;
-        virtual std::shared_ptr<IDevice> getDevice() const = 0;
-
-        virtual void* getNativePtr() const = 0;
-
-        template <typename ApiTraits>
-        auto getAs() const
-        {
-            return GetAs<typename ApiTraits::PixelShader>(this);
-        }
-    };
-
-    // A compute shader.
-    struct IComputeShader
-    {
-        virtual ~IComputeShader() = default;
-
-        virtual Api getApi() const = 0;
-        virtual std::shared_ptr<IDevice> getDevice() const = 0;
-
-        virtual void updateThreadGroups(const std::array<unsigned int, 3>& threadGroups) = 0;
-        virtual const std::array<unsigned int, 3>& getThreadGroups() const = 0;
-
-        virtual void* getNativePtr() const = 0;
-
-        template <typename ApiTraits>
-        auto getAs() const
-        {
-            return GetAs<typename ApiTraits::ComputeShader>(this);
-        }
-    };
-
-    // The view of a texture in input of a shader.
-    struct IShaderInputTextureView
-    {
-        virtual ~IShaderInputTextureView() = default;
-
-        virtual Api getApi() const = 0;
-        virtual std::shared_ptr<IDevice> getDevice() const = 0;
-
-        virtual void* getNativePtr() const = 0;
-
-        template <typename ApiTraits>
-        auto getAs() const
-        {
-            return GetAs<typename ApiTraits::ShaderInputView>(this);
-        }
-    };
-
-    // The view of a texture in output of a compute shader.
-    struct IComputeShaderOutputView
-    {
-        virtual ~IComputeShaderOutputView() = default;
-
-        virtual Api getApi() const = 0;
-        virtual std::shared_ptr<IDevice> getDevice() const = 0;
-
-        virtual void* getNativePtr() const = 0;
-
-        template <typename ApiTraits>
-        auto getAs() const
-        {
-            return GetAs<typename ApiTraits::ComputeShaderOutputView>(this);
-        }
-    };
 
     // The view of a texture in output of a quad shader or used for rendering.
     struct IRenderTargetView
@@ -254,8 +177,7 @@ namespace graphics
         virtual const XrSwapchainCreateInfo& getInfo() const = 0;
         virtual bool isArray() const = 0;
 
-        virtual std::shared_ptr<IShaderInputTextureView> getShaderResourceView(int32_t slice = -1) const = 0;
-        virtual std::shared_ptr<IComputeShaderOutputView> getUnorderedAccessView(int32_t slice = -1) const = 0;
+       
         virtual std::shared_ptr<IRenderTargetView> getRenderTargetView(int32_t slice = -1) const = 0;
         virtual std::shared_ptr<IDepthStencilView> getDepthStencilView(int32_t slice = -1) const = 0;
 
@@ -336,11 +258,6 @@ namespace graphics
 
         virtual Api getApi() const = 0;
 
-        virtual const std::string& getDeviceName() const = 0;
-
-        virtual int64_t getTextureFormat(TextureFormat format) const = 0;
-        virtual bool isTextureFormatSRGB(int64_t format) const = 0;
-
         virtual void saveContext(bool clear = true) = 0;
         virtual void restoreContext() = 0;
         virtual void flushContext(bool blocking = false, bool isEndOfFrame = false) = 0;
@@ -361,31 +278,6 @@ namespace graphics
                                                               std::vector<uint16_t>& indices,
                                                               std::string_view debugName) = 0;
 
-        virtual std::shared_ptr<IQuadShader> createQuadShader(const std::filesystem::path& shaderFile,
-                                                              const std::string& entryPoint,
-                                                              std::string_view debugName,
-                                                              const D3D_SHADER_MACRO* defines = nullptr,
-                                                              std::filesystem::path includePath = "") = 0;
-
-        virtual std::shared_ptr<IComputeShader> createComputeShader(const std::filesystem::path& shaderFile,
-                                                                    const std::string& entryPoint,
-                                                                    std::string_view debugName,
-                                                                    const std::array<unsigned int, 3>& threadGroups,
-                                                                    const D3D_SHADER_MACRO* defines = nullptr,
-                                                                    std::filesystem::path includePath = "") = 0;
-
-        // Must be invoked prior to setting the input/output.
-        virtual void setShader(std::shared_ptr<IQuadShader> shader, SamplerType sampler) = 0;
-
-        // Must be invoked prior to setting the input/output.
-        virtual void setShader(std::shared_ptr<IComputeShader> shader, SamplerType sampler) = 0;
-
-        virtual void setShaderInput(uint32_t slot, std::shared_ptr<ITexture> input, int32_t slice = -1) = 0;
-        virtual void setShaderInput(uint32_t slot, std::shared_ptr<IShaderBuffer> input) = 0;
-        virtual void setShaderOutput(uint32_t slot, std::shared_ptr<ITexture> output, int32_t slice = -1) = 0;
-
-        virtual void dispatchShader(bool doNotClear = false) const = 0;
-
         virtual void setRenderTargets(size_t numRenderTargets,
                                       std::shared_ptr<ITexture>* renderTargets,
                                       int32_t* renderSlices = nullptr,
@@ -393,7 +285,6 @@ namespace graphics
                                       int32_t depthSlice = -1) = 0;
         virtual void unsetRenderTargets() = 0;
 
-        virtual void clearColor(float top, float left, float bottom, float right, const XrColor4f& color) const = 0;
         virtual void clearDepth(float value) = 0;
 
         virtual void setViewProjection(const xr::math::ViewProjection& view) = 0;
@@ -401,25 +292,8 @@ namespace graphics
                           const XrPosef& pose,
                           XrVector3f scaling = {1.0f, 1.0f, 1.0f}) = 0;
 
-        virtual void resolveQueries() = 0;
-
-        virtual void blockCallbacks() = 0;
-        virtual void unblockCallbacks() = 0;
-
-        using SetRenderTargetEvent =
-            std::function<void(std::shared_ptr<IContext>, std::shared_ptr<ITexture> renderTarget)>;
-        virtual void registerSetRenderTargetEvent(SetRenderTargetEvent event) = 0;
-        using UnsetRenderTargetEvent = std::function<void(std::shared_ptr<IContext>)>;
-        virtual void registerUnsetRenderTargetEvent(UnsetRenderTargetEvent event) = 0;
-        using CopyTextureEvent = std::function<void(std::shared_ptr<IContext> /* context */,
-                                                    std::shared_ptr<ITexture> /* source */,
-                                                    std::shared_ptr<ITexture> /* destination */,
-                                                    int /* sourceSlice */,
-                                                    int /* destinationSlice */)>;
-
         virtual void shutdown() = 0;
 
-        virtual uint32_t getBufferAlignmentConstraint() const = 0;
         virtual uint32_t getTextureAlignmentConstraint() const = 0;
 
         virtual void* getNativePtr() const = 0;
