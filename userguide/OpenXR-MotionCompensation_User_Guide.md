@@ -82,8 +82,9 @@ What you can modify in a configuration file:
 
 ### Sections in configuration file
 - `startup`: You can disable OXRMC features by setting the corresponding key to 0:
-  - `enabled`: you can disable all functionality for a single application or globally by modifying default or application specific config file respectively. Note that you cannot enable a single application if oxrmc is disabled globally in the default config file.
-  - `physical_enabled`: initialization of physical tracker (motion controller or vive tracker) on startup can be skipped (e.g. if you're using a virtual tracker).
+  - `enabled`: you can disable all functionality for a single application or globally by modifying default or application specific config file respectively. Note that you cannot enable a single application if oxrmc is disabled globally in the default config file. Modifiying this setting requires an applcation restart.
+  - `physical_enabled`: initialization of physical tracker (motion controller or vive tracker) on startup can be skipped (e.g. if you're using a virtual tracker). Modifiying this setting requires an application restart.
+  - `overlay_enabled`: can be used to omit intitialization of the graphical overlay (for example if it's not required beacuse of using a physical tracker or if the position of the center of rotation is successfully setup and `use_cor_pos` = 1 is used). Changing this value requires the VR session to be restarted.
 - `tracker`: The following tracker `type` keys are available:
   - `controller`: use either the left or the right motion controller as reference tracker. Valid options for the key `side` are `left` and `right` (**Note that changing the side or switching between motion controller and vive tracker requires a restart of the vr session**)
   - `vive`: use a vive tracker as reference for motion compensation. The key `side` has to match the role assigned to the tracker. Valid options for that are:

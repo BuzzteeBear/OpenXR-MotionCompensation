@@ -227,15 +227,22 @@ namespace motion_compensation_layer
                           TLPArg(instance, "Instance"),
                           TLArg((int)createInfo->systemId, "SystemId"),
                           TLArg(createInfo->createFlags, "CreateFlags"));
-
-        m_Overlay = std::make_unique<graphics::Overlay>(graphics::Overlay());
-
         const XrResult result = OpenXrApi::xrCreateSession(instance, createInfo, session);
         if (XR_SUCCEEDED(result))
         {
             if (isSystemHandled(createInfo->systemId))
             {
-                m_Overlay->CreateSession(createInfo, session, m_RuntimeName);
+                // enable / disable graphical overlay initialization
+                GetConfig()->GetBool(Cfg::OverlayEnabled, m_OverlayEnabled);
+                if (m_OverlayEnabled)
+                {
+                    m_Overlay = std::make_unique<graphics::Overlay>(graphics::Overlay());
+                    m_Overlay->CreateSession(createInfo, session, m_RuntimeName);
+                }
+                else
+                {
+                    Log("initialization of graphical overlay disabled in config file\n");
+                }
                 
                 m_Session = *session;
 
@@ -303,7 +310,7 @@ namespace motion_compensation_layer
         }
         XrResult result = OpenXrApi::xrDestroySession(session);
 
-        if (m_Enabled)
+        if (m_Enabled && m_OverlayEnabled)
         {
             m_Overlay->DestroySession();
         }
@@ -316,7 +323,7 @@ namespace motion_compensation_layer
                                const XrSwapchainCreateInfo* createInfo,
                                XrSwapchain* swapchain)
     {
-        if (!m_Enabled)
+        if (!m_Enabled || !m_OverlayEnabled)
         {
             return OpenXrApi::xrCreateSwapchain(session, createInfo, swapchain);
         }
@@ -364,7 +371,7 @@ namespace motion_compensation_layer
 
     XrResult OpenXrLayer::xrDestroySwapchain(XrSwapchain swapchain)
     {
-        if (!m_Enabled)
+        if (!m_Enabled || !m_OverlayEnabled)
         {
             return OpenXrApi::xrDestroySwapchain(swapchain);
         }
@@ -383,7 +390,7 @@ namespace motion_compensation_layer
 
     XrResult OpenXrLayer::xrWaitSwapchainImage(XrSwapchain swapchain, const XrSwapchainImageWaitInfo* waitInfo)
     {
-        if (!m_Enabled)
+        if (!m_Enabled || !m_OverlayEnabled)
         {
             return OpenXrApi::xrWaitSwapchainImage(swapchain, waitInfo);
         }
@@ -412,7 +419,7 @@ namespace motion_compensation_layer
                                      const XrSwapchainImageAcquireInfo* acquireInfo,
                                      uint32_t* index)
     {
-        if (!m_Enabled)
+        if (!m_Enabled || !m_OverlayEnabled)
         {
             return OpenXrApi::xrAcquireSwapchainImage(swapchain, acquireInfo, index);
         }
@@ -435,7 +442,7 @@ namespace motion_compensation_layer
 
     XrResult OpenXrLayer::xrReleaseSwapchainImage(XrSwapchain swapchain, const XrSwapchainImageReleaseInfo* releaseInfo)
     {
-        if (!m_Enabled)
+        if (!m_Enabled || !m_OverlayEnabled)
         {
             return OpenXrApi::xrReleaseSwapchainImage(swapchain, releaseInfo);
         }
@@ -915,7 +922,7 @@ namespace motion_compensation_layer
 
     XrResult OpenXrLayer::xrBeginFrame(XrSession session, const XrFrameBeginInfo* frameBeginInfo)
     {
-        if (!m_Enabled)
+        if (!m_Enabled || !m_OverlayEnabled)
         {
             return OpenXrApi::xrBeginFrame(session, frameBeginInfo);
         }
@@ -980,8 +987,10 @@ namespace motion_compensation_layer
                 m_UseEyeCache ? m_EyeCache.GetSample(chainFrameEndInfo.displayTime) : std::vector<XrPosef>();
             m_EyeCache.CleanUp(chainFrameEndInfo.displayTime);
         }
-
-        m_Overlay->DrawOverlay(&chainFrameEndInfo, referenceTrackerPose, reversedManipulation, m_Activated);
+        if (m_OverlayEnabled)
+        {
+            m_Overlay->DrawOverlay(&chainFrameEndInfo, referenceTrackerPose, reversedManipulation, m_Activated);
+        }
 
         if (!m_Activated)
         {
@@ -1334,10 +1343,13 @@ namespace motion_compensation_layer
 
     void OpenXrLayer::ToggleOverlay()
     {
-        if (!m_Overlay->ToggleOverlay())
+        if (!m_OverlayEnabled)
         {
-            GetAudioOut()->Execute(Event::Error); 
+            GetAudioOut()->Execute(Event::Error);
+            ErrorLog("overlay is deactivated in config file and cannot be activated\n"); 
+            return;
         }
+        m_Overlay->ToggleOverlay();
     }
 
     void OpenXrLayer::ToggleCache()

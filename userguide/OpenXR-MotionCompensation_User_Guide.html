@@ -116,8 +116,9 @@ Upon starting an OpenXR application with the API layer active for the first time
 <ul>
 <li><p><code>startup</code>: You can disable OXRMC features by setting the corresponding key to 0:</p>
 <ul>
-<li><code>enabled</code>: you can disable all functionality for a single application or globally by modifying default or application specific config file respectively. Note that you cannot enable a single application if oxrmc is disabled globally in the default config file.</li>
-<li><code>physical_enabled</code>: initialization of physical tracker (motion controller or vive tracker) on startup can be skipped (e.g. if you're using a virtual tracker).</li>
+<li><code>enabled</code>: you can disable all functionality for a single application or globally by modifying default or application specific config file respectively. Note that you cannot enable a single application if oxrmc is disabled globally in the default config file. Modifiying this setting requires an applcation restart.</li>
+<li><code>physical_enabled</code>: initialization of physical tracker (motion controller or vive tracker) on startup can be skipped (e.g. if you're using a virtual tracker). Modifiying this setting requires an application restart.</li>
+<li><code>overlay_enabled</code>: can be used to omit intitialization of the graphical overlay (for example if it's not required beacuse of using a physical tracker or if the position of the center of rotation is successfully setup and <code>use_cor_pos</code> = 1 is used). Changing this value requires the VR session to be restarted.</li>
 </ul>
 </li>
 <li><p><code>tracker</code>: The following tracker <code>type</code> keys are available:</p>

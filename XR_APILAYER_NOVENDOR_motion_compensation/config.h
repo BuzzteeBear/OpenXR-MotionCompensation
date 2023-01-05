@@ -5,6 +5,7 @@ enum class Cfg
 {
     Enabled = 0,
     PhysicalEnabled,
+    OverlayEnabled,
     TrackerType,
     TrackerSide,
     TrackerTimeout,
@@ -76,6 +77,7 @@ class ConfigManager
     std::map<Cfg, std::pair<std::string, std::string>> m_Keys{
         {Cfg::Enabled, {"startup", "enabled"}},
         {Cfg::PhysicalEnabled, {"startup", "physical_enabled"}},
+        {Cfg::OverlayEnabled, {"startup", "overlay_enabled"}},
 
         {Cfg::TrackerType, {"tracker", "type"}},
         {Cfg::TrackerSide, {"tracker", "side"}},

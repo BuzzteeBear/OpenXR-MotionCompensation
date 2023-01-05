@@ -134,6 +134,7 @@ namespace motion_compensation_layer
         std::string m_RuntimeName;
         bool m_Enabled{false};
         bool m_PhysicalEnabled{false};
+        bool m_OverlayEnabled{false};
         bool m_ActionSetAttached{false};
         bool m_InteractionProfileSuggested{false};
         bool m_Initialized{true};

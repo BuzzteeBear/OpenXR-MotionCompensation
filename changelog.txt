@@ -2,8 +2,12 @@ OpenXR-MotionCompensation Changelog
 
 Version 0.2.5
 
-	TBD
+	Graphical overlay
+	- added toggle to deactivate initialization
 
+	Bugfixes
+	- fixed crash on vr session end with oxrtk present
+	
 Version 0.2.4
 
 	Graphical overlay

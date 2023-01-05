@@ -360,6 +360,7 @@ namespace graphics
         if (!m_Initialized)
         {
             m_OverlayActive = false;
+            ErrorLog("grapical overlay is not properly initiailized\n");
             GetAudioOut()->Execute(Feedback::Event::Error);
             return false;
         }
