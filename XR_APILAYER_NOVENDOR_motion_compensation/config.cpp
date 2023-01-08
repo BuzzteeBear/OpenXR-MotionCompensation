@@ -43,7 +43,7 @@ bool ConfigManager::Init(const std::string& application)
         char buffer[2048];
         if (0 < GetPrivateProfileString(enabledKey->second.first.c_str(),
                                         enabledKey->second.second.c_str(),
-                                        NULL,
+                                        nullptr,
                                         buffer,
                                         2047,
                                         coreIni.c_str()) &&
@@ -60,7 +60,7 @@ bool ConfigManager::Init(const std::string& application)
             
             if (0 < GetPrivateProfileString(entry.second.first.c_str(),
                                             entry.second.second.c_str(),
-                                            NULL,
+                                            nullptr,
                                             buffer,
                                             2047,
                                             m_ApplicationIni.c_str()))
@@ -69,7 +69,7 @@ bool ConfigManager::Init(const std::string& application)
             }
             else if ((0 < GetPrivateProfileString(entry.second.first.c_str(),
                                                   entry.second.second.c_str(),
-                                                  NULL,
+                                                  nullptr,
                                                   buffer,
                                                   2047,
                                                   coreIni.c_str())))
@@ -97,7 +97,7 @@ bool ConfigManager::Init(const std::string& application)
     return true;
 }
 
-bool ConfigManager::GetBool(Cfg key, bool& val)
+bool ConfigManager::GetBool(const Cfg key, bool& val)
 {
     std::string strVal;
     if (GetString(key, strVal))
@@ -118,7 +118,7 @@ bool ConfigManager::GetBool(Cfg key, bool& val)
     }
     return false;
 }
-bool ConfigManager::GetInt(Cfg key, int& val)
+bool ConfigManager::GetInt(const Cfg key, int& val)
 {
     std::string strVal;
     if (GetString(key, strVal))
@@ -139,7 +139,7 @@ bool ConfigManager::GetInt(Cfg key, int& val)
     }
     return false;
 }
-bool ConfigManager::GetFloat(Cfg key, float& val)
+bool ConfigManager::GetFloat(const Cfg key, float& val)
 {
     std::string strVal;
     if (GetString(key, strVal))
@@ -161,7 +161,7 @@ bool ConfigManager::GetFloat(Cfg key, float& val)
     }
     return false;
 }
-bool ConfigManager::GetString(Cfg key, std::string& val)
+bool ConfigManager::GetString(const Cfg key, std::string& val)
 {
     const auto it = m_Values.find(key);
     if (m_Values.end() == it)
@@ -174,13 +174,13 @@ bool ConfigManager::GetString(Cfg key, std::string& val)
     val = it->second;
     return true;
 }
-bool ConfigManager::GetShortcut(Cfg key, std::set<int>& val)
+bool ConfigManager::GetShortcut(const Cfg key, std::set<int>& val)
 {
-    std::string strVal, remaining, errors;
+    std::string strVal, errors;
     if (GetString(key, strVal))
     {
         size_t separator;
-        remaining = strVal;
+        std::string remaining = strVal;
         do
         {
             separator = remaining.find_first_of("+");
@@ -211,36 +211,36 @@ bool ConfigManager::GetShortcut(Cfg key, std::set<int>& val)
 std::string ConfigManager::GetControllerSide()
 {
     std::string side{"left"};
-    if (!GetConfig()->GetString(Cfg::TrackerSide, side))
+    if (!GetString(Cfg::TrackerSide, side))
     {
-        ErrorLog("%s: unable to determine contoller side. Defaulting to %s\n", __FUNCTION__, side.c_str());
+        ErrorLog("%s: unable to determine controller side. Defaulting to %s\n", __FUNCTION__, side.c_str());
     }
     if ("right" != side && "left" != side)
     {
-        ErrorLog("%s: invalid contoller side: %s. Defaulting to 'left'\n", __FUNCTION__, side.c_str());
+        ErrorLog("%s: invalid controller side: %s. Defaulting to 'left'\n", __FUNCTION__, side.c_str());
         side = "left";
     }
     return side;
 }
 
-void ConfigManager::SetValue(Cfg key, bool val)
+void ConfigManager::SetValue(const Cfg key, const bool val)
 {
     SetValue(key, std::to_string(val));
 }
-void ConfigManager::SetValue(Cfg key, int val)
+void ConfigManager::SetValue(const Cfg key, const int val)
 {
     SetValue(key, std::to_string(val));
 }
-void ConfigManager::SetValue(Cfg key, float val)
+void ConfigManager::SetValue(const Cfg key, const float val)
 {
     SetValue(key, std::to_string(val));
 }
-void ConfigManager::SetValue(Cfg key, const std::string& val)
+void ConfigManager::SetValue(const Cfg key, const std::string& val)
 {
     m_Values[key] = val;
 }
 
-void ConfigManager::WriteConfig(bool forApp)
+void ConfigManager::WriteConfig(const bool forApp)
 {
     bool error{false};
     const std::string configFile =
@@ -248,11 +248,9 @@ void ConfigManager::WriteConfig(bool forApp)
                : motion_compensation_layer::localAppData.string() + "\\" + "OpenXR-MotionCompensation.ini";
     for (const auto key : m_KeysToSave)
     {
-        const auto& keyEntry = m_Keys.find(key);
-        if (m_Keys.end() != keyEntry)
+        if (const auto& keyEntry = m_Keys.find(key); m_Keys.end() != keyEntry)
         {
-            const auto& valueEntry = m_Values.find(key);
-            if (m_Values.end() != valueEntry)
+            if (const auto& valueEntry = m_Values.find(key); m_Values.end() != valueEntry)
             {
                 if (!WritePrivateProfileString(keyEntry->second.first.c_str(),
                                                keyEntry->second.second.c_str(),

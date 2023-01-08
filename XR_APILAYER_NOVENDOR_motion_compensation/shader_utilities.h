@@ -49,19 +49,6 @@ namespace graphics::shader
         CompileShader(code.data(), code.size(), entryPoint, blob, nullptr, nullptr, target);
     }
 
-    struct IncludeHeader : ID3DInclude
-    {
-        IncludeHeader(std::vector<std::filesystem::path> includePaths) : m_includePaths(std::move(includePaths))
-        {}
-
-        HRESULT
-        Open(D3D_INCLUDE_TYPE includeType, LPCSTR pFileName, LPCVOID pParentData, LPCVOID* ppData, UINT* pBytes);
-        HRESULT Close(LPCVOID pData);
-
-        std::vector<std::vector<char>> m_data;
-        std::vector<std::filesystem::path> m_includePaths;
-    };
-
     namespace
     {
         template <typename T>
@@ -88,29 +75,4 @@ namespace graphics::shader
             return value;
         }
     } // namespace
-
-    class Defines
-    {
-      public:
-        template <typename T>
-        void add(const std::string& define, const T& val)
-        {
-            m_definesVector.push_back({define, toStr(val)});
-        }
-        template <typename T>
-        void set(const std::string& define, const T& val)
-        {
-            auto it = std::find_if(m_definesVector.begin(), m_definesVector.end(), [&](const auto& entry) {
-                return entry.first == define;
-            });
-            if (it != m_definesVector.end())
-                it->second = toStr(val);
-        }
-        const D3D_SHADER_MACRO* get() const;
-
-      private:
-        std::vector<std::pair<std::string, std::string>> m_definesVector;
-        mutable std::unique_ptr<D3D_SHADER_MACRO[]> m_defines;
-    };
-
 } // namespace utility::shader

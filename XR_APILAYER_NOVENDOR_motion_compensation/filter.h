@@ -13,14 +13,14 @@ namespace Filter
     class FilterBase
     {
       public:
-        FilterBase(float strength)
+        explicit FilterBase(const float strength)
         {
-            SetStrength(strength);
+            FilterBase<Value>::SetStrength(strength);
         }
         virtual ~FilterBase(){};
-        virtual float SetStrength(float strength)
+        virtual float SetStrength(const float strength)
         {
-            float limitedStrength = std::min(1.0f, std::max(0.0f, strength));
+            const float limitedStrength = std::min(1.0f, std::max(0.0f, strength));
             LAYER_NAMESPACE::log::DebugLog("Filter(%s) set strength: %f\n", typeid(Value).name(), limitedStrength);
             m_Strength = limitedStrength;
             return m_Strength;
@@ -43,8 +43,7 @@ namespace Filter
     class SingleEmaFilter : public FilterBase<XrVector3f>
     {
       public:
-        SingleEmaFilter(float strength) : FilterBase(strength){};
-        virtual ~SingleEmaFilter(){};
+        SingleEmaFilter(const float strength) : FilterBase(strength){}
         virtual float SetStrength(float strength) override;
         virtual void ApplyFilter(XrVector3f& location) override;
         virtual void Reset(const XrVector3f& location) override;
@@ -53,14 +52,13 @@ namespace Filter
         XrVector3f m_Alpha{1.0f - m_Strength, 1.0f - m_Strength, 1.0f - m_Strength};
         XrVector3f m_OneMinusAlpha{m_Strength, m_Strength, m_Strength};
         XrVector3f m_Ema{0, 0, 0};
-        XrVector3f EmaFunction(XrVector3f current, XrVector3f stored) const;
+        [[nodiscard]] XrVector3f EmaFunction(XrVector3f current, XrVector3f stored) const;
     };
 
     class DoubleEmaFilter : public SingleEmaFilter
     {
       public:
-        DoubleEmaFilter(float strength) : SingleEmaFilter(strength){};
-        virtual ~DoubleEmaFilter(){};
+        explicit DoubleEmaFilter(const float strength) : SingleEmaFilter(strength){};
         virtual void ApplyFilter(XrVector3f& location) override;
         virtual void Reset(const XrVector3f& location) override;
 
@@ -71,8 +69,7 @@ namespace Filter
     class TripleEmaFilter : public DoubleEmaFilter
     {
       public:
-        TripleEmaFilter(float strength) : DoubleEmaFilter(strength){};
-        virtual ~TripleEmaFilter(){};
+        explicit TripleEmaFilter(const float strength) : DoubleEmaFilter(strength){};
         virtual void ApplyFilter(XrVector3f& location) override;
         virtual void Reset(const XrVector3f& location) override;
 
@@ -84,8 +81,7 @@ namespace Filter
     class SingleSlerpFilter : public FilterBase<XrQuaternionf>
     {
       public:
-        SingleSlerpFilter(float strength) : FilterBase(strength){};
-        virtual ~SingleSlerpFilter(){};
+        explicit SingleSlerpFilter(const float strength) : FilterBase(strength){};
         virtual void ApplyFilter(XrQuaternionf& rotation) override;
         virtual void Reset(const XrQuaternionf& rotation) override;
 
@@ -96,8 +92,7 @@ namespace Filter
     class DoubleSlerpFilter : public SingleSlerpFilter
     {
       public:
-        DoubleSlerpFilter(float strength) : SingleSlerpFilter(strength){};
-        virtual ~DoubleSlerpFilter(){};
+        DoubleSlerpFilter(const float strength) : SingleSlerpFilter(strength){};
         virtual void ApplyFilter(XrQuaternionf& rotation) override;
         virtual void Reset(const XrQuaternionf& rotation) override;
 
@@ -108,8 +103,7 @@ namespace Filter
     class TripleSlerpFilter : public DoubleSlerpFilter
     {
       public:
-        TripleSlerpFilter(float strength) : DoubleSlerpFilter(strength){};
-        virtual ~TripleSlerpFilter(){};
+        TripleSlerpFilter(const float strength) : DoubleSlerpFilter(strength){};
         virtual void ApplyFilter(XrQuaternionf& rotation) override;
         virtual void Reset(const XrQuaternionf& rotation) override;
 

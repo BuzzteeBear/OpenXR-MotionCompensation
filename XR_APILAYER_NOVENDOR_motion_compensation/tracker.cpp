@@ -16,14 +16,8 @@ namespace Tracker
 {
     TrackerBase::~TrackerBase()
     {
-        if (m_TransFilter)
-        {
-            delete m_TransFilter;
-        }
-        if (m_RotFilter)
-        {
-            delete m_RotFilter;
-        }
+        delete m_TransFilter;
+        delete m_RotFilter;
     }
 
     bool TrackerBase::Init()
@@ -60,14 +54,9 @@ namespace Tracker
             return false;
         }
         // remove previous filter objects
-        if (m_TransFilter)
-        {
-            delete m_TransFilter;
-        }
-        if (m_RotFilter)
-        {
-            delete m_RotFilter;
-        }
+
+        delete m_TransFilter;
+        delete m_RotFilter;
 
         m_TransStrength = strengthTrans;
         m_RotStrength = strengthRot;
@@ -87,12 +76,12 @@ namespace Tracker
         return true;
     }
 
-    void TrackerBase::ModifyFilterStrength(bool trans, bool increase)
+    void TrackerBase::ModifyFilterStrength(const bool trans, const bool increase)
     {
         float* currentValue = trans ? &m_TransStrength : &m_RotStrength;
-        float prevValue = *currentValue;
-        float amount = (1.1f - *currentValue) * 0.05f;
-        float newValue = *currentValue + (increase ? amount : -amount);
+        const float prevValue = *currentValue;
+        const float amount = (1.1f - *currentValue) * 0.05f;
+        const float newValue = *currentValue + (increase ? amount : -amount);
         if (trans)
         {
             *currentValue = m_TransFilter->SetStrength(newValue);
@@ -125,7 +114,7 @@ namespace Tracker
         SetReferencePose(Pose::Multiply(m_ReferencePose, pose));
     }
 
-    XrPosef TrackerBase::GetReferencePose(XrSession session, XrTime time)
+    XrPosef TrackerBase::GetReferencePose(XrSession session, XrTime time) const
     {
         return m_ReferencePose;
     }
@@ -146,8 +135,7 @@ namespace Tracker
         {
             m_ResetReferencePose = !ResetReferencePose(session, time);
         }
-        XrPosef curPose{Pose::Identity()};
-        if (GetPose(curPose, session, time))
+        if (XrPosef curPose{Pose::Identity()}; GetPose(curPose, session, time))
         {
             // apply translational filter
             m_TransFilter->Filter(curPose.position);
@@ -182,8 +170,7 @@ namespace Tracker
             ErrorLog("physical tracker disabled in config file\n");
             return false;
         }
-        OpenXrLayer* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
-        if (layer)
+        if (auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance()))
         {
             // Query the latest tracker pose.
             XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
@@ -253,8 +240,7 @@ namespace Tracker
 
     bool OpenXrTracker::ResetReferencePose(XrSession session, XrTime time)
     {
-        XrPosef curPose;
-        if (GetPose(curPose, session, time))
+        if (XrPosef curPose; GetPose(curPose, session, time))
         {
             SetReferencePose(curPose);
             return true;
@@ -318,7 +304,7 @@ namespace Tracker
         return success;
     }
 
-    bool VirtualTracker::LazyInit(XrTime time)
+    bool VirtualTracker::LazyInit(const XrTime time)
     {
         bool success = true;
         if (!m_SkipLazyInit)
@@ -337,7 +323,7 @@ namespace Tracker
         return success;
     }
 
-    bool VirtualTracker::ResetReferencePose(XrSession session, XrTime time)
+    bool VirtualTracker::ResetReferencePose(const XrSession session, const XrTime time)
     {
         bool success = true;
         if (m_LoadPoseFromFile)
@@ -346,8 +332,7 @@ namespace Tracker
         }
         else
         {
-            OpenXrLayer* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
-            if (layer)
+            if (auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance()))
             {
                 XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
                 if (XR_SUCCEEDED(layer->OpenXrApi::xrLocateSpace(layer->m_ViewSpace,
@@ -363,15 +348,15 @@ namespace Tracker
                                                             LoadXrQuaternion(location.pose.orientation)));
                     forward.y = 0;
                     forward = Normalize(forward);
-                    XrVector3f right{-forward.z, 0.0f, forward.x};
+                    const XrVector3f right{-forward.z, 0.0f, forward.x};
 
                     // calculate and apply translational offset
-                    XrVector3f offset =
+                    const XrVector3f offset =
                         m_OffsetForward * forward + m_OffsetRight * right + XrVector3f{0.0f, -m_OffsetDown, 0.0f};
                     location.pose.position = location.pose.position + offset;
 
                     // calculate orientation parallel to floor
-                    float yawAngle = atan2f(forward.x, forward.z);
+                    const float yawAngle = atan2f(forward.x, forward.z);
                     StoreXrQuaternion(&location.pose.orientation,
                                       DirectX::XMQuaternionRotationRollPitchYaw(0.0f, yawAngle, 0.0f));
 
@@ -381,8 +366,7 @@ namespace Tracker
                     {
                         // manipulate ref pose orientation to match motion controller
                         m_OriginalRefPose = refPose;
-                        XrPosef controllerPose;
-                        if (GetControllerPose(controllerPose, session, time))
+                        if (XrPosef controllerPose; GetControllerPose(controllerPose, session, time))
                         {
                             refPose.orientation = controllerPose.orientation;
                         }
@@ -406,7 +390,7 @@ namespace Tracker
         return success;
     }
 
-    bool VirtualTracker::ChangeOffset(XrVector3f modification)
+    bool VirtualTracker::ChangeOffset(const XrVector3f modification)
     {
         if (m_DebugMode)
         {
@@ -428,7 +412,7 @@ namespace Tracker
             m_OffsetForward,
             m_OffsetDown,
             m_OffsetRight);
-        XrPosef adjustment{{Quaternion::Identity()}, modification};
+        const XrPosef adjustment{{Quaternion::Identity()}, modification};
         m_ReferencePose = Pose::Multiply(adjustment, m_ReferencePose);
         TraceLoggingWrite(g_traceProvider,
                           "ChangeOffset",
@@ -436,7 +420,7 @@ namespace Tracker
         return true;
     }
 
-    bool VirtualTracker::ChangeRotation(bool right)
+    bool VirtualTracker::ChangeRotation(const bool right)
     {
         if (m_DebugMode)
         {
@@ -451,12 +435,12 @@ namespace Tracker
         return true;
     }
 
-    void VirtualTracker::SaveReferencePose(XrTime time)
+    void VirtualTracker::SaveReferencePose(const XrTime time) const
     {
         if (m_Calibrated)
         {
             XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
-            OpenXrLayer* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
+            auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
             if (!layer)
             {
                 ErrorLog("%s: unable to cast layer to OpenXrLayer\n", __FUNCTION__);
@@ -468,7 +452,7 @@ namespace Tracker
                 ErrorLog("%s: unable to determine local to stage pose\n", __FUNCTION__);
                 return;
             }
-            XrPosef refPosInStageSpace = Pose::Multiply(m_ReferencePose, Pose::Invert(stageToLocal));
+            const XrPosef refPosInStageSpace = Pose::Multiply(m_ReferencePose, Pose::Invert(stageToLocal));
 
             GetConfig()->SetValue(Cfg::CorX, refPosInStageSpace.position.x);
             GetConfig()->SetValue(Cfg::CorY, refPosInStageSpace.position.y);
@@ -481,7 +465,7 @@ namespace Tracker
     }
 
     
-    bool VirtualTracker::LoadReferencePose(XrSession session, XrTime time)
+    bool VirtualTracker::LoadReferencePose(const XrSession session, const XrTime time)
     {
         bool success = true;
         XrPosef refPose;
@@ -503,8 +487,8 @@ namespace Tracker
             ErrorLog("%s: rotation values are invalid in config file\n", __FUNCTION__);
             return false;
         }
-        
-        OpenXrLayer* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
+
+        auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
         if (success && !layer)
         {
             ErrorLog("%s: unable to cast layer to OpenXrLayer\n", __FUNCTION__);
@@ -518,7 +502,7 @@ namespace Tracker
         }
         if (success)
         {
-            Log("referance pose succesfully loaded from config file\n");
+            Log("reference pose successfully loaded from config file\n");
 
             TraceLoggingWrite(g_traceProvider,
                               "LoadReferencePose",
@@ -531,8 +515,7 @@ namespace Tracker
             {
                 // manipulate ref pose orientation to match motion controller
                 m_OriginalRefPose = refPose;
-                XrPosef controllerPose;
-                if (GetControllerPose(controllerPose, session, time))
+                if (XrPosef controllerPose; GetControllerPose(controllerPose, session, time))
                 {
                     refPose.orientation = controllerPose.orientation;
                     TraceLoggingWrite(g_traceProvider,
@@ -557,8 +540,7 @@ namespace Tracker
             if (success)
             {
                 // manipulate ref pose orientation to match motion controller
-                XrPosef controllerPose;
-                if (GetControllerPose(controllerPose, session, time))
+                if (XrPosef controllerPose; GetControllerPose(controllerPose, session, time))
                 {
                     m_OriginalRefPose = m_ReferencePose;
                     m_ReferencePose.orientation = controllerPose.orientation;
@@ -584,7 +566,7 @@ namespace Tracker
         return success;
     }
 
-    bool VirtualTracker::GetPose(XrPosef& trackerPose, XrSession session, XrTime time)
+    bool VirtualTracker::GetPose(XrPosef& trackerPose, const XrSession session, const XrTime time)
     {
         bool success{true};
 
@@ -615,8 +597,7 @@ namespace Tracker
         if (GetConfig()->GetBool(Cfg::UseYawGeOffset, useGameEngineValues) && useGameEngineValues)
         {
             // calculate difference between floor and headset and set offset according to file values
-            OpenXrLayer* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
-            if (layer)
+            if (const auto layer = reinterpret_cast<OpenXrLayer*>(GetInstance()))
             {
                 XrSpaceLocation hmdLocation{XR_TYPE_SPACE_LOCATION, nullptr};
                 if (XR_SUCCEEDED(layer->OpenXrApi::xrLocateSpace(layer->m_ViewSpace,
@@ -625,14 +606,13 @@ namespace Tracker
                                                                  &hmdLocation)) &&
                     Pose::IsPoseValid(hmdLocation.locationFlags))
                 {
-                    XrPosef stageToLocal{Pose::Identity()};
-                    if (layer->GetStageToLocalSpace(time, stageToLocal))
+                    if (XrPosef stageToLocal{Pose::Identity()}; layer->GetStageToLocalSpace(time, stageToLocal))
                     {
-                        XrPosef hmdPosInStageSpace = Pose::Multiply(hmdLocation.pose, Pose::Invert(stageToLocal));
+                        const XrPosef hmdPosInStageSpace = Pose::Multiply(hmdLocation.pose, Pose::Invert(stageToLocal));
                         YawData data{};
                         if (m_Mmf.Read(&data, sizeof(data), time))
                         {
-                            Log("Yaw Geme Engine values: rotationHeight = %f, rotationForwardHead = %f",
+                            Log("Yaw Game Engine values: rotationHeight = %f, rotationForwardHead = %f",
                                 data.rotationHeight,
                                 data.rotationForwardHead);
 
@@ -640,7 +620,7 @@ namespace Tracker
                             m_OffsetForward = data.rotationForwardHead / 100.0f;
                             m_OffsetDown = hmdPosInStageSpace.position.y - data.rotationHeight / 100.0f;
 
-                            Log("offset down value based on Yaw Geme Engine value: %f", m_OffsetDown);
+                            Log("offset down value based on Yaw Game Engine value: %f", m_OffsetDown);
                         }
                         else
                         {
@@ -736,11 +716,13 @@ namespace Tracker
                           TLArg(data.heave, "Heave"));
 
         StoreXrQuaternion(&rigPose.orientation,
-                          DirectX::XMQuaternionRotationRollPitchYaw((float)data.pitch * -angleToRadian,
-                                                                    (float)data.yaw * angleToRadian,
-                                                                    (float)data.roll * (m_IsSrs ? -angleToRadian : angleToRadian)));
-        rigPose.position =
-            XrVector3f{(float)data.sway / -1000.0f, (float)data.heave / 1000.0f, (float)data.surge / 1000.0f};
+                          DirectX::XMQuaternionRotationRollPitchYaw(static_cast<float>(data.pitch) * -angleToRadian,
+                                                                    static_cast<float>(data.yaw) * angleToRadian,
+                                                                    static_cast<float>(data.roll) *
+                                                                        (m_IsSrs ? -angleToRadian : angleToRadian)));
+        rigPose.position = XrVector3f{static_cast<float>(data.sway) / -1000.0f,
+                                      static_cast<float>(data.heave) / 1000.0f,
+                                      static_cast<float>(data.surge) / 1000.0f};
 
         trackerPose = Pose::Multiply(rigPose, m_ReferencePose);
         return true;
@@ -748,57 +730,52 @@ namespace Tracker
 
     void GetTracker(TrackerBase** tracker)
     {
-        TrackerBase* previousTracker = *tracker;
+        const TrackerBase* previousTracker = *tracker;
         std::string trackerType;
         if (GetConfig()->GetString(Cfg::TrackerType, trackerType))
         {
             if ("yaw" == trackerType)
             {
                 Log("using Yaw Game Engine memory mapped file as tracker\n");
-                if (previousTracker)
-                {
-                    delete previousTracker;
-                }
+
+                delete previousTracker;
+
                 *tracker = new YawTracker();
                 return;
             }
             if ("srs" == trackerType)
             {
                 Log("using SRS memory mapped file as tracker\n");
-                if (previousTracker)
-                {
-                    delete previousTracker;
-                }
+
+                delete previousTracker;
+
                 *tracker = new SrsTracker();
                 return;
             }
             if ("flypt" == trackerType)
             {
                 Log("using FlyPT Mover memory mapped file as tracker\n");
-                if (previousTracker)
-                {
-                    delete previousTracker;
-                }
+
+                delete previousTracker;
+
                 *tracker = new FlyPtTracker();
                 return;
             }
             if ("controller" == trackerType)
             {
                 Log("using motion controller as tracker\n");
-                if (previousTracker)
-                {
-                    delete previousTracker;
-                }
+
+                delete previousTracker;
+
                 *tracker = new OpenXrTracker();
                 return;
             }
             if ("vive" == trackerType)
             {
                 Log("using vive tracker as tracker\n");
-                if (previousTracker)
-                {
-                    delete previousTracker;
-                }
+
+                delete previousTracker;
+
                 *tracker = new OpenXrTracker();
                 return;
             }

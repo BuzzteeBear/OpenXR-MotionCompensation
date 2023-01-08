@@ -61,11 +61,10 @@ namespace graphics
     class Overlay
     {
       public:
-        ~Overlay();
         void CreateSession(const XrSessionCreateInfo* createInfo, XrSession* session, const std::string& runtimeName);
         void DestroySession();
         void CreateSwapchain(XrSession session, const XrSwapchainCreateInfo* createInfo, XrSwapchain* swapchain);
-        void DestroySwapchain(XrSwapchain swapchain);
+        void DestroySwapchain(const XrSwapchain swapchain);
         XrResult AcquireSwapchainImage(XrSwapchain swapchain,
                                        const XrSwapchainImageAcquireInfo* acquireInfo,
                                        uint32_t* index);
@@ -73,7 +72,7 @@ namespace graphics
         bool ToggleOverlay();
         void BeginFrameBefore();
         void BeginFrameAfter();
-        void DrawOverlay(XrFrameEndInfo* chainFrameEndInfo,
+        void DrawOverlay(const XrFrameEndInfo* chainFrameEndInfo,
                          const XrPosef& referenceTrackerPose,
                          const XrPosef& reversedManipulation,
                          bool mcActivated);
@@ -81,14 +80,14 @@ namespace graphics
         bool m_Initialized{false};
 
       private:
-        std::vector<SimpleMeshVertex> CreateMarker(bool rgb);
-        std::vector<SimpleMeshVertex> CreateConeMesh(XrVector3f top,
-                                                     XrVector3f side,
-                                                     XrVector3f offset,
-                                                     XrVector3f topColor,
-                                                     XrVector3f sideColor,
-                                                     XrVector3f bottomColor);
-        std::vector<unsigned short> CreateIndices(size_t amount);
+        static std::vector<SimpleMeshVertex> CreateMarker(bool rgb);
+        static std::vector<SimpleMeshVertex> CreateConeMesh(const XrVector3f& top,
+                                                            const XrVector3f& side,
+                                                            const XrVector3f& offset,
+                                                            const XrVector3f& topColor,
+                                                            const XrVector3f& sideColor,
+                                                            const XrVector3f& bottomColor);
+        static std::vector<unsigned short> CreateIndices(size_t amount);
 
         bool m_OverlayActive{false};
         std::shared_ptr<graphics::IDevice> m_GraphicsDevice;

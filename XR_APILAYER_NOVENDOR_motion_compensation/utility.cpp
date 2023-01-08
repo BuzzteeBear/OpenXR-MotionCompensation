@@ -15,11 +15,11 @@ namespace utility
     bool KeyboardInput::Init()
     {
         bool success = true;
-        std::set<Cfg> activities{Cfg::KeyActivate,   Cfg::KeyCenter,        Cfg::KeyTransInc,     Cfg::KeyTransDec,
-                                 Cfg::KeyRotInc,     Cfg::KeyRotDec,        Cfg::KeyOffForward,   Cfg::KeyOffBack,
-                                 Cfg::KeyOffUp,      Cfg::KeyOffDown,       Cfg::KeyOffRight,     Cfg::KeyOffLeft,
-                                 Cfg::KeyRotRight,   Cfg::KeyRotLeft,       Cfg::KeyOverlay,      Cfg::KeyCache,
-                                 Cfg::KeySaveConfig, Cfg::KeySaveConfigApp, Cfg::KeyReloadConfig, Cfg::KeyDebugCor};
+        const std::set<Cfg> activities{
+            Cfg::KeyActivate, Cfg::KeyCenter,     Cfg::KeyTransInc,      Cfg::KeyTransDec,     Cfg::KeyRotInc,
+            Cfg::KeyRotDec,   Cfg::KeyOffForward, Cfg::KeyOffBack,       Cfg::KeyOffUp,        Cfg::KeyOffDown,
+            Cfg::KeyOffRight, Cfg::KeyOffLeft,    Cfg::KeyRotRight,      Cfg::KeyRotLeft,      Cfg::KeyOverlay,
+            Cfg::KeyCache,    Cfg::KeySaveConfig, Cfg::KeySaveConfigApp, Cfg::KeyReloadConfig, Cfg::KeyDebugCor};
         std::string errors;
         for (const Cfg& activity : activities)
         {
@@ -36,7 +36,7 @@ namespace utility
         return success;
     }
 
-    bool KeyboardInput::GetKeyState(Cfg key, bool& isRepeat)
+    bool KeyboardInput::GetKeyState(const Cfg key, bool& isRepeat)
     {
         auto it = m_ShortCuts.find(key);
         if (it == m_ShortCuts.end())
@@ -49,7 +49,7 @@ namespace utility
 
     bool KeyboardInput::UpdateKeyState(const std::set<int>& vkKeySet, bool& isRepeat)
     {
-        const auto isPressed = vkKeySet.size() > 0 && std::all_of(vkKeySet.begin(), vkKeySet.end(), [](int vk) {
+        const auto isPressed = vkKeySet.size() > 0 && std::ranges::all_of(vkKeySet, [](const int vk) {
                                    return GetAsyncKeyState(vk) < 0;
                                });
         auto keyState = m_KeyStates.find(vkKeySet);
@@ -74,7 +74,7 @@ namespace utility
         float check;
         if (GetConfig()->GetFloat(Cfg::TrackerCheck, check) && check >= 0)
         {
-            m_Check = (XrTime)(check * 1000000000.0);
+            m_Check = static_cast<XrTime>(check * 1000000000.0);
             Log("mmf connection refresh interval is set to %.3f ms\n", m_Check / 1000000.0);
         }
         else
@@ -95,14 +95,14 @@ namespace utility
         m_Name = name;
     }
 
-    bool Mmf::Open(XrTime time)
+    bool Mmf::Open(const XrTime time)
     {
         m_FileHandle = OpenFileMapping(FILE_MAP_READ, FALSE, m_Name.c_str());
 
         if (m_FileHandle)
         {
             m_View = MapViewOfFile(m_FileHandle, FILE_MAP_READ, 0, 0, 0);
-            if (m_View != NULL)
+            if (m_View != nullptr)
             {
                 m_LastRefresh = time;
                 m_ConnectionLost = false;
@@ -126,7 +126,7 @@ namespace utility
         }
         return true;
     }
-    bool Mmf::Read(void* buffer, size_t size, XrTime time)
+    bool Mmf::Read(void* buffer, const size_t size, const XrTime time)
     {
         if (m_Check > 0 && time - m_LastRefresh > m_Check)
         {
@@ -170,22 +170,20 @@ namespace utility
 
     std::string LastErrorMsg()
     {
-        DWORD error = GetLastError();
-        if (error)
+        if (const DWORD error = GetLastError())
         {
             LPVOID buffer;
-            DWORD bufLen = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
-                                             FORMAT_MESSAGE_IGNORE_INSERTS,
-                                         NULL,
-                                         error,
-                                         MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                                         (LPTSTR)&buffer,
-                                         0,
-                                         NULL);
-            if (bufLen)
+            if (const DWORD bufLen = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
+                                                       FORMAT_MESSAGE_IGNORE_INSERTS,
+                                                   nullptr,
+                                                   error,
+                                                   MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                                                   reinterpret_cast<LPTSTR>(&buffer),
+                                                   0,
+                                                   nullptr))
             {
-                LPCSTR lpStr = (LPCSTR)buffer;
-                std::string result(lpStr, lpStr + bufLen);
+                const auto lpStr = static_cast<LPCSTR>(buffer);
+                const std::string result(lpStr, lpStr + bufLen);
                 LocalFree(buffer);
                 return std::to_string(error) + " - " + result;
             }

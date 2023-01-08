@@ -9,12 +9,12 @@ using namespace xr::math;
 
 namespace Filter
 {
-    XrVector3f SingleEmaFilter::EmaFunction(XrVector3f current, XrVector3f stored) const
+    XrVector3f SingleEmaFilter::EmaFunction(const XrVector3f current, const XrVector3f stored) const
     {
         return m_Alpha * current + m_OneMinusAlpha * stored;
     }
 
-    float SingleEmaFilter::SetStrength(float strength)
+    float SingleEmaFilter::SetStrength(const float strength)
     {
         FilterBase::SetStrength(strength);
         m_Alpha = {1.0f - m_Strength, 1.0f - m_Strength, 1.0f - m_Strength};
@@ -51,7 +51,7 @@ namespace Filter
         m_Ema = EmaFunction(location, m_Ema);
         m_EmaEma = EmaFunction(m_Ema, m_EmaEma);
         m_EmaEmaEma = EmaFunction(m_EmaEma, m_EmaEmaEma);
-        XrVector3f three{3, 3, 3};
+        constexpr XrVector3f three{3, 3, 3};
         location = three * m_Ema - three * m_EmaEma + m_EmaEmaEma;
     }
 

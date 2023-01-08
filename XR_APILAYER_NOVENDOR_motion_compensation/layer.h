@@ -44,7 +44,7 @@ namespace motion_compensation_layer
       public:
         OpenXrLayer() = default;
 
-        virtual ~OpenXrLayer();
+        virtual ~OpenXrLayer() override;
         XrResult xrDestroyInstance(XrInstance instance) override;
 
         XrResult xrCreateInstance(const XrInstanceCreateInfo* createInfo) override;
@@ -86,7 +86,7 @@ namespace motion_compensation_layer
         XrResult xrSyncActions(XrSession session, const XrActionsSyncInfo* syncInfo) override;
         XrResult xrBeginFrame(XrSession session, const XrFrameBeginInfo* frameBeginInfo);
         XrResult xrEndFrame(XrSession session, const XrFrameEndInfo* frameEndInfo) override;
-        bool GetStageToLocalSpace(XrTime time, XrPosef& location);
+        bool GetStageToLocalSpace(XrTime time, XrPosef& pose);
 
         XrActionSet m_ActionSet{XR_NULL_HANDLE};
         XrAction m_TrackerPoseAction{XR_NULL_HANDLE};
@@ -108,26 +108,26 @@ namespace motion_compensation_layer
             RotLeft
         };
 
-        bool isSystemHandled(XrSystemId systemId) const;
+        [[nodiscard]] bool isSystemHandled(XrSystemId systemId) const;
         bool isSessionHandled(XrSession session) const;
         bool isViewSpace(XrSpace space) const;
-        uint32_t GetNumViews();
+        [[nodiscard]] uint32_t GetNumViews() const;
         void CreateTrackerAction();
         void CreateTrackerActionSpace();
         void ToggleActive(XrTime time);
         void Recalibrate(XrTime time);
-        void ToggleOverlay();
+        void ToggleOverlay() const;
         void ToggleCache();
-        void ChangeOffset(Direction dir);
+        void ChangeOffset(Direction dir) const;
         void ReloadConfig();
-        void SaveConfig(XrTime time, bool forApp);
-        void ToggleCorDebug(XrTime time);
+        void SaveConfig(XrTime time, bool forApp) const;
+        void ToggleCorDebug(XrTime time) const;
         bool LazyInit(XrTime time);
         void HandleKeyboardInput(XrTime time);
 
         static std::string getXrPath(XrPath path);
 
-        bool TestRotation(XrPosef* pose, XrTime time, bool reverse);
+        bool TestRotation(XrPosef* pose, XrTime time, bool reverse) const;
 
         XrSystemId m_systemId{XR_NULL_SYSTEM_ID};
         XrSession m_Session{XR_NULL_HANDLE};

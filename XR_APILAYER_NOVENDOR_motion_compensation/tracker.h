@@ -17,7 +17,7 @@ namespace Tracker
         void ModifyFilterStrength(bool trans, bool increase);
         virtual bool ResetReferencePose(XrSession session, XrTime time) = 0;
         void AdjustReferencePose(const XrPosef& pose);
-        XrPosef GetReferencePose(XrSession session, XrTime time);
+        XrPosef GetReferencePose(XrSession session, XrTime time) const;
         bool GetPoseDelta(XrPosef& poseDelta, XrSession session, XrTime time);
         bool m_SkipLazyInit{false};
         bool m_Calibrated{false};
@@ -62,7 +62,7 @@ namespace Tracker
         virtual bool ResetReferencePose(XrSession session, XrTime time) override;
         bool ChangeOffset(XrVector3f modification);
         bool ChangeRotation(bool right);
-        void SaveReferencePose(XrTime time);
+        void SaveReferencePose(XrTime time) const;
         bool ToggleDebugMode(XrSession session, XrTime time);
 
       protected:
@@ -150,7 +150,7 @@ namespace Tracker
         const std::string profile{"/interaction_profiles/htc/vive_tracker_htcx"};
     };
 
-    constexpr float angleToRadian{(float)M_PI / 180.0f};
+    constexpr float angleToRadian{static_cast<float>(M_PI) / 180.0f};
 
     void GetTracker(TrackerBase** tracker);
 } // namespace Tracker

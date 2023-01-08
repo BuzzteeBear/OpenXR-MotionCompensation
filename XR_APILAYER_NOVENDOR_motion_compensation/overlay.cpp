@@ -28,7 +28,6 @@
 #include "feedback.h"
 #include "shader_utilities.h"
 #include "d3dcommon.h"
-#include <util.h>
 #include <log.h>
 
 using namespace motion_compensation_layer;
@@ -36,11 +35,6 @@ using namespace motion_compensation_layer::log;
 
 namespace graphics
 {
-    Overlay::~Overlay()
-    {
-        m_Swapchains.clear();
-    }
-
     void Overlay::CreateSession(const XrSessionCreateInfo* createInfo,
                                 XrSession* session,
                                 const std::string& runtimeName)
@@ -48,20 +42,19 @@ namespace graphics
         m_Initialized = true;
         m_OwnDepthBuffers.clear();
 
-        OpenXrLayer* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
-        if (layer)
+        if (auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance()))
         {
             try
             {
                 // Get the graphics device.
-                const XrBaseInStructure* entry = reinterpret_cast<const XrBaseInStructure*>(createInfo->next);
+                const auto* entry = static_cast<const XrBaseInStructure*>(createInfo->next);
                 while (entry)
                 {
                     if (entry->type == XR_TYPE_GRAPHICS_BINDING_D3D11_KHR)
                     {
                         TraceLoggingWrite(g_traceProvider, "UseD3D11");
 
-                        const XrGraphicsBindingD3D11KHR* d3dBindings =
+                        const auto* d3dBindings =
                             reinterpret_cast<const XrGraphicsBindingD3D11KHR*>(entry);
                         m_GraphicsDevice = graphics::WrapD3D11Device(d3dBindings->device);
                         break;
@@ -70,7 +63,7 @@ namespace graphics
                     {
                         TraceLoggingWrite(g_traceProvider, "UseD3D12");
 
-                        const XrGraphicsBindingD3D12KHR* d3dBindings =
+                        const auto* d3dBindings =
                             reinterpret_cast<const XrGraphicsBindingD3D12KHR*>(entry);
                         m_GraphicsDevice =
                             graphics::WrapD3D12Device(d3dBindings->device, d3dBindings->queue);
@@ -99,7 +92,7 @@ namespace graphics
                     Log("Unsupported graphics runtime.\n");
                 }
             }
-            catch (std::exception e)
+            catch (std::exception& e)
             {
                 ErrorLog("%s: encountered exception: %s", __FUNCTION__, e.what());
                 m_Initialized = false;
@@ -139,8 +132,7 @@ namespace graphics
 
     void Overlay::CreateSwapchain(XrSession session, const XrSwapchainCreateInfo* createInfo, XrSwapchain* swapchain)
     {
-        OpenXrLayer* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
-        if (layer)
+        if (auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance()))
         {
             // Identify the swapchains of interest for our processing chain.
             if (createInfo->usageFlags &
@@ -270,7 +262,7 @@ namespace graphics
 
                     TraceLoggingWrite(g_traceProvider, "xrCreateSwapchain", TLPArg(*swapchain, "Swapchain"));
                 }
-                catch (std::exception e)
+                catch (std::exception& e)
                 {
                     ErrorLog("%s: encountered exception: %s", __FUNCTION__, e.what());
                     m_Initialized = false;
@@ -284,7 +276,7 @@ namespace graphics
         }
     }
 
-    void Overlay::DestroySwapchain(XrSwapchain swapchain)
+    void Overlay::DestroySwapchain(const XrSwapchain swapchain)
     {
         m_OwnDepthBuffers.erase(swapchain);
         m_Swapchains.erase(swapchain);
@@ -294,11 +286,9 @@ namespace graphics
                                                   const XrSwapchainImageAcquireInfo* acquireInfo,
                                                   uint32_t* index)
     {
-        
-        OpenXrLayer* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
-        if (layer)
+        if (auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance()))
         {
-            auto swapchainIt = m_Swapchains.find(swapchain);
+            const auto swapchainIt = m_Swapchains.find(swapchain);
             if (swapchainIt != m_Swapchains.end())
             {
                 // Perform the release now in case it was delayed.
@@ -336,10 +326,9 @@ namespace graphics
 
     XrResult Overlay::ReleaseSwapchainImage(XrSwapchain swapchain, const XrSwapchainImageReleaseInfo* releaseInfo)
     {
-        OpenXrLayer* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
-        if (layer)
+        if (auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance()))
         {
-            auto swapchainIt = m_Swapchains.find(swapchain);
+            const auto swapchainIt = m_Swapchains.find(swapchain);
             if (swapchainIt != m_Swapchains.end())
             {
                 // Perform a delayed release: we still need to write to the swapchain in our xrEndFrame()!
@@ -361,7 +350,7 @@ namespace graphics
         if (!m_Initialized)
         {
             m_OverlayActive = false;
-            ErrorLog("grapical overlay is not properly initiailized\n");
+            ErrorLog("graphical overlay is not properly initialized\n");
             GetAudioOut()->Execute(Feedback::Event::Error);
             return false;
         }
@@ -399,13 +388,12 @@ namespace graphics
         }
     }
 
-    void Overlay::DrawOverlay(XrFrameEndInfo* chainFrameEndInfo,
+    void Overlay::DrawOverlay(const XrFrameEndInfo* chainFrameEndInfo,
                               const XrPosef& referenceTrackerPose,
                               const XrPosef& reversedManipulation,
                               bool mcActivated)
     {
-        OpenXrLayer* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
-        if (layer)
+        if (auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance()))
         {
             try
             {
@@ -427,7 +415,7 @@ namespace graphics
                     {
                         if (chainFrameEndInfo->layers[i]->type == XR_TYPE_COMPOSITION_LAYER_PROJECTION)
                         {
-                            const XrCompositionLayerProjection* proj =
+                            const auto* proj =
                                 reinterpret_cast<const XrCompositionLayerProjection*>(chainFrameEndInfo->layers[i]);
                             for (uint32_t eye = 0; eye < graphics::ViewCount; eye++)
                             {
@@ -459,7 +447,7 @@ namespace graphics
                     {
                         const bool useVPRT =
                             textureForOverlay[1] == textureForOverlay[0] && sliceForOverlay[0] != sliceForOverlay[1];
-                        const XrVector3f scaling{0.02f, 0.02f, 0.02f};
+                        constexpr XrVector3f scaling{0.02f, 0.02f, 0.02f};
 
                         // render the tracker pose(s)
                         for (uint32_t eye = 0; eye < graphics::ViewCount; eye++)
@@ -507,7 +495,7 @@ namespace graphics
                     }
                 }
             }
-            catch (std::exception e)
+            catch (std::exception& e)
             {
                 ErrorLog("%s: encountered exception: %s", __FUNCTION__, e.what());
                 m_Initialized = false;
@@ -521,13 +509,12 @@ namespace graphics
 
     std::vector<SimpleMeshVertex> Overlay::CreateMarker(bool rgb)
     {
-        std::vector<SimpleMeshVertex> vertices;
-        vertices = CreateConeMesh({-4.f, 0.f, 0.f},
-                                  {-1.5f, 0.5f, 0.f},
-                                  {0.f, 0.f, 0.f},
-                                  rgb ? DarkRed : DarkMagenta,
-                                  rgb ? Red : Magenta,
-                                  rgb ? LightRed : LightMagenta);
+        std::vector<SimpleMeshVertex> vertices = CreateConeMesh({-4.f, 0.f, 0.f},
+                                                                {-1.5f, 0.5f, 0.f},
+                                                                {0.f, 0.f, 0.f},
+                                                                rgb ? DarkRed : DarkMagenta,
+                                                                rgb ? Red : Magenta,
+                                                                rgb ? LightRed : LightMagenta);
         std::vector<SimpleMeshVertex> top = CreateConeMesh({0.f, 4.f, 0.f},
                                                             {0.f, 1.5f, 0.5f},
                                                             {0.f, 0.f, 0.f},
@@ -545,12 +532,12 @@ namespace graphics
         return vertices;
     }
 
-    std::vector<SimpleMeshVertex> Overlay::CreateConeMesh(XrVector3f top,
-                                                          XrVector3f side,
-                                                          XrVector3f offset,
-                                                          XrVector3f topColor,
-                                                          XrVector3f sideColor,
-                                                          XrVector3f bottomColor)
+    std::vector<SimpleMeshVertex> Overlay::CreateConeMesh(const XrVector3f& top,
+                                                          const XrVector3f& side,
+                                                          const XrVector3f& offset,
+                                                          const XrVector3f& topColor,
+                                                          const XrVector3f& sideColor,
+                                                          const XrVector3f& bottomColor)
     {
         std::vector<SimpleMeshVertex> vertices;
         const DirectX::XMVECTOR dxTop = xr::math::LoadXrVector3(top);
@@ -667,52 +654,6 @@ namespace graphics
                 }
                 CHECK_HRESULT(hr, "Failed to compile shader");
             }
-        }
-
-        HRESULT IncludeHeader::Open(D3D_INCLUDE_TYPE /*includeType*/,
-                                    LPCSTR pFileName,
-                                    LPCVOID /*pParentData*/,
-                                    LPCVOID* ppData,
-                                    UINT* pBytes)
-        {
-            for (auto& it : m_includePaths)
-            {
-                auto path = it / pFileName;
-                auto file = std::ifstream(path, std::ios_base::binary);
-                if (file.is_open())
-                {
-                    assert(ppData && pBytes);
-                    m_data.push_back({});
-                    auto& buf = m_data.back();
-                    buf.resize(static_cast<size_t>(std::filesystem::file_size(path)));
-                    file.read(buf.data(), static_cast<std::streamsize>(buf.size()));
-                    buf.erase(std::remove(buf.begin(), buf.end(), '\0'), buf.end());
-                    *ppData = buf.data();
-                    *pBytes = static_cast<UINT>(buf.size());
-                    return S_OK;
-                }
-            }
-            throw std::runtime_error("Error opening shader file include header");
-        }
-
-        HRESULT IncludeHeader::Close(LPCVOID pData)
-        {
-            return S_OK;
-        }
-
-        const D3D_SHADER_MACRO* Defines::get() const
-        {
-            static const D3D_SHADER_MACRO kEmpty = {nullptr, nullptr};
-            if (!m_definesVector.empty())
-            {
-                m_defines = std::make_unique<D3D_SHADER_MACRO[]>(m_definesVector.size() + 1);
-                for (size_t i = 0; i < m_definesVector.size(); ++i)
-                    m_defines[i] = {m_definesVector[i].first.c_str(), m_definesVector[i].second.c_str()};
-                m_defines[m_definesVector.size()] = kEmpty;
-                return m_defines.get();
-            }
-            m_defines = nullptr;
-            return &kEmpty;
         }
     } // namespace shader
 } // namespace graphics

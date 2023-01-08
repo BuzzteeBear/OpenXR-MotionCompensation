@@ -39,7 +39,7 @@ namespace Feedback
         void Execute(Event feedback);
 
       private:
-        std::map<Event, int> m_SoundResources;
+        std::map<Event, int> m_SoundResources{};
     };
 
 } // namespace Feedback

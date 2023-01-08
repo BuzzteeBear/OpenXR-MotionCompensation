@@ -44,14 +44,13 @@ namespace Feedback
     }
 
     void AudioOut::Execute(Event feedback)
-    {  
-        auto soundResource = m_SoundResources.find(feedback);
+    {
+        const auto soundResource = m_SoundResources.find(feedback);
         if (m_SoundResources.end() != soundResource)
         {
-
-            if (!PlaySound(NULL, 0, 0) || !PlaySound(MAKEINTRESOURCE(soundResource->second),
-                                                     motion_compensation_layer::dllModule,
-                                                     SND_RESOURCE | SND_ASYNC))
+            if (!PlaySound(nullptr, 0, 0) || !PlaySound(MAKEINTRESOURCE(soundResource->second),
+                                                        motion_compensation_layer::dllModule,
+                                                        SND_RESOURCE | SND_ASYNC))
 
             {
                 ErrorLog("%s: unable to play sound (%d : % d): %s\n",

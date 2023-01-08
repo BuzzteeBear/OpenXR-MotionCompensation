@@ -27,9 +27,9 @@ namespace utility
     class Cache
     {
       public:
-        Cache(Sample fallback) : m_Fallback(fallback){};
+        explicit Cache(Sample fallback) : m_Fallback(fallback){};
 
-        void SetTolerance(XrTime tolerance)
+        void SetTolerance(const XrTime tolerance)
         {
             m_Tolerance = tolerance;
         }
@@ -50,7 +50,7 @@ namespace utility
             LAYER_NAMESPACE::log::DebugLog("GetSample(%s): %u\n", typeid(Sample).name(), time);
 
             auto it = m_Cache.lower_bound(time);
-            bool itIsEnd = m_Cache.end() == it;
+            const bool itIsEnd = m_Cache.end() == it;
             if (!itIsEnd)
             {
                 if (it->first == time)
@@ -81,7 +81,7 @@ namespace utility
                     return it->second;
                 }
             }
-            bool itIsBegin = m_Cache.begin() == it;
+            const bool itIsBegin = m_Cache.begin() == it;
             if (!itIsBegin)
             {
                 auto lowerIt = it;
@@ -111,7 +111,7 @@ namespace utility
                 {
                     auto lowerIt = it;
                     lowerIt--;
-                    // both etries are valid -> select better match
+                    // both entries are valid -> select better match
                     auto returnIt = (time - lowerIt->first < it->first - time ? lowerIt : it);
                     TraceLoggingWrite(LAYER_NAMESPACE::log::g_traceProvider,
                                       "GetSample_Failed",
@@ -145,14 +145,14 @@ namespace utility
                                   TLArg(lowerIt->first, "Time"));
                 return lowerIt->second;
             }
-            // cache is emtpy -> return fallback
+            // cache is empty -> return fallback
             LAYER_NAMESPACE::log::ErrorLog("Using fallback!!!\n", time);
             TraceLoggingWrite(LAYER_NAMESPACE::log::g_traceProvider, "GetSample_Failed", TLArg("Fallback", "Type"));
             return m_Fallback;
         }
 
         // remove outdated entries
-        void CleanUp(XrTime time)
+        void CleanUp(const XrTime time)
         {
             std::unique_lock lock(m_Mutex);
 

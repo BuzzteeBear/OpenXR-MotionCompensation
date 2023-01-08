@@ -39,10 +39,7 @@ namespace motion_compensation_layer
 {
     OpenXrLayer::~OpenXrLayer()
     {
-        if (m_Tracker)
-        {
-            delete m_Tracker;
-        }
+        delete m_Tracker;
     }
 
     XrResult OpenXrLayer::xrDestroyInstance(XrInstance instance)
@@ -85,7 +82,7 @@ namespace motion_compensation_layer
         }
 
         // Needed to resolve the requested function pointers.
-        XrResult result = OpenXrApi::xrCreateInstance(createInfo);
+        const XrResult result = OpenXrApi::xrCreateInstance(createInfo);
 
         m_Application = GetApplicationName();
 
@@ -133,7 +130,7 @@ namespace motion_compensation_layer
             float timeout;
             if (GetConfig()->GetFloat(Cfg::TrackerTimeout, timeout))
             {
-                m_RecoveryWait = (XrTime)(timeout * 1000000000.0);
+                m_RecoveryWait = static_cast<XrTime>(timeout * 1000000000.0);
                 Log("tracker timeout is set to %.3f ms\n", m_RecoveryWait / 1000000.0);
             }
             else
@@ -144,7 +141,7 @@ namespace motion_compensation_layer
             float cacheTolerance{2.0};
             GetConfig()->GetFloat(Cfg::CacheTolerance, cacheTolerance);
             Log("cache tolerance is set to %.3f ms\n", cacheTolerance);
-            XrTime toleranceTime = (XrTime)(cacheTolerance * 1000000.0);
+            const auto toleranceTime = static_cast<XrTime>(cacheTolerance * 1000000.0);
             m_PoseCache.SetTolerance(toleranceTime);
             m_EyeCache.SetTolerance(toleranceTime);
         }
@@ -246,10 +243,10 @@ namespace motion_compensation_layer
 
                 CreateTrackerActionSpace();
 
-                XrReferenceSpaceCreateInfo referenceSpaceCreateInfo{XR_TYPE_REFERENCE_SPACE_CREATE_INFO,
-                                                                    nullptr,
-                                                                    XR_REFERENCE_SPACE_TYPE_VIEW,
-                                                                    Pose::Identity()};
+                const XrReferenceSpaceCreateInfo referenceSpaceCreateInfo{XR_TYPE_REFERENCE_SPACE_CREATE_INFO,
+                                                                          nullptr,
+                                                                          XR_REFERENCE_SPACE_TYPE_VIEW,
+                                                                          Pose::Identity()};
                 CHECK_XRCMD(xrCreateReferenceSpace(*session, &referenceSpaceCreateInfo, &m_ViewSpace));
             }
 
@@ -278,7 +275,7 @@ namespace motion_compensation_layer
             TLPArg(session, "Session"),
             TLArg(xr::ToCString(beginInfo->primaryViewConfigurationType), "PrimaryViewConfigurationType"));
 
-        XrResult result = OpenXrApi::xrBeginSession(session, beginInfo);
+        const XrResult result = OpenXrApi::xrBeginSession(session, beginInfo);
         m_ViewConfigType = beginInfo->primaryViewConfigurationType;
 
         return result;
@@ -306,7 +303,7 @@ namespace motion_compensation_layer
             Log("xrDestroySession\n");
             TraceLoggingWrite(g_traceProvider, "xrDestroySession", TLPArg(session, "Session"));
         }
-        XrResult result = OpenXrApi::xrDestroySession(session);
+        const XrResult result = OpenXrApi::xrDestroySession(session);
 
         if (m_Enabled && m_OverlayEnabled)
         {
@@ -464,7 +461,7 @@ namespace motion_compensation_layer
                                                          XrPath topLevelUserPath,
                                                          XrInteractionProfileState* interactionProfile)
     {
-        XrResult result =  OpenXrApi::xrGetCurrentInteractionProfile(session, topLevelUserPath, interactionProfile);
+        const XrResult result =  OpenXrApi::xrGetCurrentInteractionProfile(session, topLevelUserPath, interactionProfile);
         if (m_Enabled && XR_SUCCEEDED(result) && interactionProfile)
         {
             Log("current interaction profile for %s: %s\n",
@@ -570,7 +567,7 @@ namespace motion_compensation_layer
         }
 
         bindingProfiles.suggestedBindings = bindings.data();
-        bindingProfiles.countSuggestedBindings = (uint32_t)bindings.size();
+        bindingProfiles.countSuggestedBindings = static_cast<uint32_t>(bindings.size());
         return OpenXrApi::xrSuggestInteractionProfileBindings(instance, &bindingProfiles);
     }
 
@@ -631,9 +628,9 @@ namespace motion_compensation_layer
         newActionSets.push_back(m_ActionSet);
 
         chainAttachInfo.actionSets = newActionSets.data();
-        chainAttachInfo.countActionSets = (uint32_t)newActionSets.size();
+        chainAttachInfo.countActionSets = static_cast<uint32_t>(newActionSets.size());
 
-        XrResult result = OpenXrApi::xrAttachSessionActionSets(session, &chainAttachInfo);
+        const XrResult result = OpenXrApi::xrAttachSessionActionSets(session, &chainAttachInfo);
         if (XR_SUCCEEDED(result))
         {
             Log("tracker action set attached\n");
@@ -736,13 +733,12 @@ namespace motion_compensation_layer
                               TLArg(location->locationFlags, "LocationFlags"));
 
             // manipulate pose using tracker
-            bool spaceIsViewSpace = isViewSpace(space);
-            bool baseSpaceIsViewSpace = isViewSpace(baseSpace);
+            const bool spaceIsViewSpace = isViewSpace(space);
+            const bool baseSpaceIsViewSpace = isViewSpace(baseSpace);
 
             XrPosef trackerDelta = Pose::Identity();
-            bool success = !m_TestRotation ? m_Tracker->GetPoseDelta(trackerDelta, m_Session, time)
-                                           : TestRotation(&trackerDelta, time, false);
-            if (success)
+            if (!m_TestRotation ? m_Tracker->GetPoseDelta(trackerDelta, m_Session, time)
+                                : TestRotation(&trackerDelta, time, false))
             {
                 m_RecoveryStart = 0;
                 if (spaceIsViewSpace && !baseSpaceIsViewSpace)
@@ -834,11 +830,11 @@ namespace motion_compensation_layer
         if (m_EyeOffsets.empty())
         {
             // determine eye poses
-            XrViewLocateInfo offsetViewLocateInfo{viewLocateInfo->type,
-                                                  nullptr,
-                                                  viewLocateInfo->viewConfigurationType,
-                                                  viewLocateInfo->displayTime,
-                                                  m_ViewSpace};
+            const XrViewLocateInfo offsetViewLocateInfo{viewLocateInfo->type,
+                                                        nullptr,
+                                                        viewLocateInfo->viewConfigurationType,
+                                                        viewLocateInfo->displayTime,
+                                                        m_ViewSpace};
 
             CHECK_XRCMD(OpenXrApi::xrLocateViews(session,
                                                  &offsetViewLocateInfo,
@@ -902,7 +898,7 @@ namespace motion_compensation_layer
         const auto trackerActionSet = m_ActionSet;
         if (trackerActionSet != XR_NULL_HANDLE)
         {
-            newActiveActionSets.resize((size_t)chainSyncInfo.countActiveActionSets + 1);
+            newActiveActionSets.resize(static_cast<size_t>(chainSyncInfo.countActiveActionSets) + 1);
             memcpy(newActiveActionSets.data(),
                    chainSyncInfo.activeActionSets,
                    chainSyncInfo.countActiveActionSets * sizeof(XrActionSet));
@@ -935,7 +931,7 @@ namespace motion_compensation_layer
 
         m_Overlay->BeginFrameBefore();
 
-        XrResult result = OpenXrApi::xrBeginFrame(session, frameBeginInfo);
+        const XrResult result = OpenXrApi::xrBeginFrame(session, frameBeginInfo);
 
         if (XR_SUCCEEDED(result) && isSessionHandled(session))
         {
@@ -1010,7 +1006,7 @@ namespace motion_compensation_layer
             {
                 DebugLog("xrEndFrame: projection layer %u, space: %u\n", i, baseHeader.space);
 
-                const XrCompositionLayerProjection* projectionLayer =
+                const auto* projectionLayer =
                     reinterpret_cast<const XrCompositionLayerProjection*>(chainFrameEndInfo.layers[i]);
 
                 TraceLoggingWrite(g_traceProvider,
@@ -1019,8 +1015,7 @@ namespace motion_compensation_layer
                                   TLArg(projectionLayer->layerFlags, "Flags"),
                                   TLPArg(projectionLayer->space, "Space"));
 
-                std::vector<XrCompositionLayerProjectionView>* projectionViews =
-                    new std::vector<XrCompositionLayerProjectionView>{};
+                auto projectionViews = new std::vector<XrCompositionLayerProjectionView>{};
                 resetViews.push_back(projectionViews);
                 projectionViews->resize(projectionLayer->viewCount);
                 memcpy(projectionViews->data(),
@@ -1058,13 +1053,12 @@ namespace motion_compensation_layer
                 }
             
                 // create layer with reset view poses
-                XrCompositionLayerProjection* const resetProjectionLayer =
-                    new XrCompositionLayerProjection{projectionLayer->type,
-                                                     projectionLayer->next,
-                                                     projectionLayer->layerFlags,
-                                                     projectionLayer->space,
-                                                     projectionLayer->viewCount,
-                                                     projectionViews->data()};
+                const auto resetProjectionLayer = new XrCompositionLayerProjection{projectionLayer->type,
+                                                                                   projectionLayer->next,
+                                                                                   projectionLayer->layerFlags,
+                                                                                   projectionLayer->space,
+                                                                                   projectionLayer->viewCount,
+                                                                                   projectionViews->data()};
                 resetProjectionLayers.push_back(resetProjectionLayer);
                 resetBaseHeader = reinterpret_cast<XrCompositionLayerBaseHeader*>(resetProjectionLayer);
             }
@@ -1073,8 +1067,7 @@ namespace motion_compensation_layer
                 // compensate quad layers unless they are relative to view space
                 DebugLog("xrEndFrame: quad layer %u, space: %u\n", i, baseHeader.space);
 
-                const XrCompositionLayerQuad* quadLayer =
-                    reinterpret_cast<const XrCompositionLayerQuad*>(chainFrameEndInfo.layers[i]);
+                const auto* quadLayer = reinterpret_cast<const XrCompositionLayerQuad*>(chainFrameEndInfo.layers[i]);
 
                TraceLoggingWrite(g_traceProvider,
                                   "xrEndFrame_Layer",
@@ -1092,14 +1085,14 @@ namespace motion_compensation_layer
                                   TLArg(xr::ToString(resetPose).c_str(), "Pose"));
 
                 // create quad layer with reset pose
-                XrCompositionLayerQuad* const resetQuadLayer = new XrCompositionLayerQuad{quadLayer->type,
-                                                                                          quadLayer->next,
-                                                                                          quadLayer->layerFlags,
-                                                                                          quadLayer->space,
-                                                                                          quadLayer->eyeVisibility,
-                                                                                          quadLayer->subImage,
-                                                                                          resetPose,
-                                                                                          quadLayer->size};
+                auto* const resetQuadLayer = new XrCompositionLayerQuad{quadLayer->type,
+                                                                        quadLayer->next,
+                                                                        quadLayer->layerFlags,
+                                                                        quadLayer->space,
+                                                                        quadLayer->eyeVisibility,
+                                                                        quadLayer->subImage,
+                                                                        resetPose,
+                                                                        quadLayer->size};
                 resetQuadLayers.push_back(resetQuadLayer);
                 resetBaseHeader = reinterpret_cast<XrCompositionLayerBaseHeader*>(resetQuadLayer);
             }
@@ -1140,7 +1133,7 @@ namespace motion_compensation_layer
         return result;
     }
 
-    bool OpenXrLayer::GetStageToLocalSpace(XrTime time, XrPosef& pose)
+    bool OpenXrLayer::GetStageToLocalSpace(const XrTime time, XrPosef& pose)
     {
         if (m_StageSpace == XR_NULL_HANDLE)
         {
@@ -1162,7 +1155,7 @@ namespace motion_compensation_layer
                 }
                 else
                 {
-                    ErrorLog("pose of local space in stage space not vaild. locationFlags: %d\n",
+                    ErrorLog("pose of local space in stage space not valid. locationFlags: %d\n",
                              location.locationFlags);
                 }
             }
@@ -1191,10 +1184,10 @@ namespace motion_compensation_layer
 
     bool OpenXrLayer::isViewSpace(XrSpace space) const
     {
-        return m_ViewSpaces.count(space);
+        return m_ViewSpaces.contains(space);
     }
 
-    uint32_t OpenXrLayer::GetNumViews()
+    uint32_t OpenXrLayer::GetNumViews() const
     {
         return XR_VIEW_CONFIGURATION_TYPE_PRIMARY_MONO == m_ViewConfigType                                ? 1
                : XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO == m_ViewConfigType                            ? 2
@@ -1234,7 +1227,7 @@ namespace motion_compensation_layer
             {
                 actionCreateInfo.countSubactionPaths = 0;
             }
-            if (!XR_SUCCEEDED(xrCreateAction(m_ActionSet, &actionCreateInfo, &m_TrackerPoseAction)))
+            if (XR_FAILED(xrCreateAction(m_ActionSet, &actionCreateInfo, &m_TrackerPoseAction)))
             {
                 ErrorLog("%s: unable to create action\n", __FUNCTION__);
             }
@@ -1255,7 +1248,7 @@ namespace motion_compensation_layer
                       xrStringToPath(GetXrInstance(), m_ViveTracker.role.c_str(), &actionSpaceCreateInfo.subactionPath))
                 : actionSpaceCreateInfo.subactionPath = XR_NULL_PATH;
             actionSpaceCreateInfo.poseInActionSpace = Pose::Identity();
-            if (!XR_SUCCEEDED(GetInstance()->xrCreateActionSpace(m_Session, &actionSpaceCreateInfo, &m_TrackerSpace)))
+            if (XR_FAILED(GetInstance()->xrCreateActionSpace(m_Session, &actionSpaceCreateInfo, &m_TrackerSpace)))
             {
                 ErrorLog("%s: unable to create action space\n", __FUNCTION__);
             }
@@ -1276,9 +1269,9 @@ namespace motion_compensation_layer
         }
 
         // perform last-minute initialization before activation
-        bool lazySuccess = m_Activated || LazyInit(time);
+        const bool lazySuccess = m_Activated || LazyInit(time);
 
-        const bool oldstate = m_Activated;
+        const bool oldState = m_Activated;
         if (m_Initialized && lazySuccess)
         {
             // if tracker is not initialized, activate only after successful init
@@ -1286,13 +1279,13 @@ namespace motion_compensation_layer
         }
         else
         {
-            ErrorLog("layer intitalization failed or incomplete!\n");
+            ErrorLog("layer initialization failed or incomplete!\n");
         }
         Log("motion compensation %s\n",
-            oldstate != m_Activated ? (m_Activated ? "activated" : "deactivated")
+            oldState != m_Activated ? (m_Activated ? "activated" : "deactivated")
             : m_Activated           ? "kept active"
                                     : "could not be activated");
-        if (oldstate != m_Activated)
+        if (oldState != m_Activated)
         {
             GetAudioOut()->Execute(m_Activated ? Event::Activated : Event::Deactivated);
         }
@@ -1339,7 +1332,7 @@ namespace motion_compensation_layer
         }
     }
 
-    void OpenXrLayer::ToggleOverlay()
+    void OpenXrLayer::ToggleOverlay() const
     {
         if (!m_OverlayEnabled)
         {
@@ -1357,7 +1350,7 @@ namespace motion_compensation_layer
         GetAudioOut()->Execute(m_UseEyeCache ? Event::EyeCached : Event::EyeCalculated); 
     }
 
-    void OpenXrLayer::ChangeOffset(Direction dir)
+    void OpenXrLayer::ChangeOffset(const Direction dir) const
     {
         bool success = true;
         std::string trackerType;
@@ -1365,20 +1358,19 @@ namespace motion_compensation_layer
         {
             if ("yaw" == trackerType || "srs" == trackerType || "flypt" == trackerType)
             {
-                Tracker::VirtualTracker* tracker = reinterpret_cast<Tracker::VirtualTracker*>(m_Tracker);
-                if (tracker)
+                if (auto* tracker = reinterpret_cast<Tracker::VirtualTracker*>(m_Tracker))
                 {
                     if (Direction::RotLeft != dir && Direction::RotRight != dir)
                     {
-                        XrVector3f direction{Direction::Left == dir    ? 0.01f
-                                             : Direction::Right == dir ? -0.01f
-                                                                       : 0.0f,
-                                             Direction::Up == dir     ? 0.01f
-                                             : Direction::Down == dir ? -0.01f
-                                                                      : 0.0f,
-                                             Direction::Fwd == dir    ? 0.01f
-                                             : Direction::Back == dir ? -0.01f
-                                                                      : 0.0f};
+                        const XrVector3f direction{Direction::Left == dir    ? 0.01f
+                                                   : Direction::Right == dir ? -0.01f
+                                                                             : 0.0f,
+                                                   Direction::Up == dir     ? 0.01f
+                                                   : Direction::Down == dir ? -0.01f
+                                                                            : 0.0f,
+                                                   Direction::Fwd == dir    ? 0.01f
+                                                   : Direction::Back == dir ? -0.01f
+                                                                            : 0.0f};
                         success = tracker->ChangeOffset(direction);
                     }
                     else
@@ -1431,7 +1423,7 @@ namespace motion_compensation_layer
         GetAudioOut()->Execute(!success ? Event::Error : Event::Load);
     }
 
-    void OpenXrLayer::SaveConfig(XrTime time, bool forApp)
+    void OpenXrLayer::SaveConfig(XrTime time, bool forApp) const
     {
         std::string trackerType;
         if (GetConfig()->GetString(Cfg::TrackerType, trackerType))
@@ -1452,7 +1444,7 @@ namespace motion_compensation_layer
         GetConfig()->WriteConfig(forApp);
     }
 
-    void OpenXrLayer::ToggleCorDebug(XrTime time)
+    void OpenXrLayer::ToggleCorDebug(const XrTime time) const
     {
         bool success = true;
         std::string trackerType;
@@ -1460,8 +1452,7 @@ namespace motion_compensation_layer
         {
             if ("yaw" == trackerType || "srs" == trackerType || "flypt" == trackerType)
             {
-                Tracker::VirtualTracker* tracker = reinterpret_cast<Tracker::VirtualTracker*>(m_Tracker);
-                if (tracker)
+                if (auto* tracker = reinterpret_cast<Tracker::VirtualTracker*>(m_Tracker))
                 {
                     success = tracker->ToggleDebugMode(m_Session, time);
                 }
@@ -1487,7 +1478,7 @@ namespace motion_compensation_layer
         }
     }
 
-    bool OpenXrLayer::LazyInit(XrTime time)
+    bool OpenXrLayer::LazyInit(const XrTime time)
     {
         bool success = true;
         if (m_ReferenceSpace == XR_NULL_HANDLE)
@@ -1526,10 +1517,10 @@ namespace motion_compensation_layer
         {
             Log("action set attached during lazy init\n");
             std::vector<XrActionSet> actionSets;
-            XrSessionActionSetsAttachInfo actionSetAttachInfo{XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO,
-                                                              nullptr,
-                                                              0,
-                                                              actionSets.data()};
+            const XrSessionActionSetsAttachInfo actionSetAttachInfo{XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO,
+                                                                    nullptr,
+                                                                    0,
+                                                                    actionSets.data()};
             TraceLoggingWrite(g_traceProvider,
                               "OpenXrLayer::LazyInit",
                               TLPArg("Executed", "xrAttachSessionActionSets"));
@@ -1550,7 +1541,7 @@ namespace motion_compensation_layer
         return success;
     }
 
-    void OpenXrLayer::HandleKeyboardInput(XrTime time)
+    void OpenXrLayer::HandleKeyboardInput(const XrTime time)
     {
         bool isRepeat{false};
         if (m_Input.GetKeyState(Cfg::KeyActivate, isRepeat) && !isRepeat)
@@ -1635,7 +1626,7 @@ namespace motion_compensation_layer
         }
     }
 
-    std::string OpenXrLayer::getXrPath(XrPath path)
+    std::string OpenXrLayer::getXrPath(const XrPath path)
     {
         char buf[XR_MAX_PATH_LENGTH];
         uint32_t count;
@@ -1645,14 +1636,14 @@ namespace motion_compensation_layer
         return str;
     }
 
-    bool OpenXrLayer::TestRotation(XrPosef* pose, XrTime time, bool reverse)
+    bool OpenXrLayer::TestRotation(XrPosef* pose, const XrTime time, const bool reverse) const
     {
         // save current location
-        XrVector3f pos = pose->position;
+        const XrVector3f pos = pose->position;
 
         // determine rotation angle
-        int64_t milliseconds = ((time - m_TestRotStart) / 1000000) % 10000;
-        float angle = (float)M_PI * 0.0002f * milliseconds;
+        const int64_t milliseconds = ((time - m_TestRotStart) / 1000000) % 10000;
+        float angle = static_cast<float>(M_PI) * 0.0002f * milliseconds;
         if (reverse)
         {
             angle = -angle;
