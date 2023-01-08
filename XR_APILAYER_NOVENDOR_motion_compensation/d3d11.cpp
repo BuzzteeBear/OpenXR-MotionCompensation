@@ -746,6 +746,7 @@ namespace {
         void setRenderTargets(size_t numRenderTargets,
                               std::shared_ptr<ITexture>* renderTargets,
                               int32_t* renderSlices = nullptr,
+                              const XrRect2Di* viewport0 = nullptr,
                               std::shared_ptr<ITexture> depthBuffer = nullptr,
                               int32_t depthSlice = -1) override {
             assert(renderTargets || !numRenderTargets);
@@ -774,11 +775,21 @@ namespace {
 
                 D3D11_VIEWPORT viewport;
                 ZeroMemory(&viewport, sizeof(viewport));
+                if (viewport0)
+                {
+                    viewport.TopLeftX = (float)viewport0->offset.x;
+                    viewport.TopLeftY = (float)viewport0->offset.y;
+                    viewport.Width = (float)viewport0->extent.width;
+                    viewport.Height = (float)viewport0->extent.height;
+                }
+                else
+                {
+                    viewport.TopLeftX = 0.0f;
+                    viewport.TopLeftY = 0.0f;
+                    viewport.Width = (float)m_currentDrawRenderTarget->getInfo().width;
+                    viewport.Height = (float)m_currentDrawRenderTarget->getInfo().height;
+                }
                 viewport.MaxDepth = 1.0f;
-                viewport.TopLeftX = 0.0f;
-                viewport.TopLeftY = 0.0f;
-                viewport.Width = (float)m_currentDrawRenderTarget->getInfo().width;
-                viewport.Height = (float)m_currentDrawRenderTarget->getInfo().height;
                 m_context->RSSetViewports(1, &viewport);
             } else {
                 m_currentDrawRenderTarget.reset();

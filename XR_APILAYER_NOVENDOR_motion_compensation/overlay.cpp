@@ -40,6 +40,7 @@ namespace graphics
     {
         m_Swapchains.clear();
     }
+
     void Overlay::CreateSession(const XrSessionCreateInfo* createInfo,
                                 XrSession* session,
                                 const std::string& runtimeName)
@@ -144,7 +145,6 @@ namespace graphics
             // Identify the swapchains of interest for our processing chain.
             if (createInfo->usageFlags &
                 (XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT | XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT))
-
             {
                 try
                 {
@@ -254,15 +254,15 @@ namespace graphics
                         throw std::runtime_error("Unsupported graphics runtime");
                     }
 
-                    if (m_OwnDepthBuffers.find(*swapchain) == m_OwnDepthBuffers.cend())
+                    if (!m_OwnDepthBuffers.contains(*swapchain))
                     {
                         XrSwapchainCreateInfo depthInfo = *createInfo;
                         depthInfo.usageFlags = XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 
-                        std::shared_ptr<ITexture> texture =
-                            m_GraphicsDevice->createTexture(depthInfo,
-                                                            fmt::format("depth buffer {}", (long long)*swapchain),
-                                                            DXGI_FORMAT_D32_FLOAT);
+                        std::shared_ptr<ITexture> texture = m_GraphicsDevice->createTexture(
+                            depthInfo,
+                            fmt::format("depth buffer {}", reinterpret_cast<long long>(*swapchain)),
+                            DXGI_FORMAT_D32_FLOAT);
                         m_OwnDepthBuffers.insert_or_assign(*swapchain, texture);
                     }
 
@@ -355,6 +355,7 @@ namespace graphics
             return XR_ERROR_INSTANCE_LOST;
         }
     }
+
     bool Overlay::ToggleOverlay()
     {
         if (!m_Initialized)
@@ -406,144 +407,110 @@ namespace graphics
         OpenXrLayer* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
         if (layer)
         {
-            if (m_OverlayActive && m_GraphicsDevice)
+            try
             {
-                m_GraphicsDevice->saveContext();
-                m_GraphicsDevice->unsetRenderTargets();
-
-                std::shared_ptr<graphics::ITexture> textureForOverlay[graphics::ViewCount]{};
-                uint32_t sliceForOverlay[graphics::ViewCount]{};
-                std::shared_ptr<graphics::ITexture> depthForOverlay[graphics::ViewCount]{};
-                xr::math::ViewProjection viewForOverlay[graphics::ViewCount]{};
-
-                std::vector<XrCompositionLayerProjection> layerProjectionAllocator;
-                std::vector<std::array<XrCompositionLayerProjectionView, 2>> layerProjectionViewsAllocator;
-
-                for (uint32_t i = 0; i < chainFrameEndInfo->layerCount; i++)
+                if (m_OverlayActive && m_GraphicsDevice)
                 {
-                    if (chainFrameEndInfo->layers[i]->type == XR_TYPE_COMPOSITION_LAYER_PROJECTION)
+                    m_GraphicsDevice->saveContext();
+                    m_GraphicsDevice->unsetRenderTargets();
+
+                    std::shared_ptr<graphics::ITexture> textureForOverlay[graphics::ViewCount]{};
+                    uint32_t sliceForOverlay[graphics::ViewCount]{};
+                    std::shared_ptr<graphics::ITexture> depthForOverlay[graphics::ViewCount]{};
+                    xr::math::ViewProjection viewForOverlay[graphics::ViewCount]{};
+                    XrRect2Di viewportForOverlay[graphics::ViewCount];
+
+                    std::vector<XrCompositionLayerProjection> layerProjectionAllocator;
+                    std::vector<std::array<XrCompositionLayerProjectionView, 2>> layerProjectionViewsAllocator;
+
+                    for (uint32_t i = 0; i < chainFrameEndInfo->layerCount; i++)
                     {
-                        const XrCompositionLayerProjection* proj =
-                            reinterpret_cast<const XrCompositionLayerProjection*>(chainFrameEndInfo->layers[i]);
+                        if (chainFrameEndInfo->layers[i]->type == XR_TYPE_COMPOSITION_LAYER_PROJECTION)
+                        {
+                            const XrCompositionLayerProjection* proj =
+                                reinterpret_cast<const XrCompositionLayerProjection*>(chainFrameEndInfo->layers[i]);
+                            for (uint32_t eye = 0; eye < graphics::ViewCount; eye++)
+                            {
+                                const XrCompositionLayerProjectionView& view = proj->views[eye];
+
+                                auto swapchainIt = m_Swapchains.find(view.subImage.swapchain);
+                                if (swapchainIt == m_Swapchains.end())
+                                {
+                                    throw std::runtime_error("Swapchain is not registered");
+                                }
+                                auto& swapchainState = swapchainIt->second;
+                                auto& swapchainImages = swapchainState.images[swapchainState.acquiredImageIndex];
+
+                                xr::math::NearFar nearFar{0.001f, 100.f};
+                                textureForOverlay[eye] = swapchainImages.chain.back();
+                                sliceForOverlay[eye] = view.subImage.imageArrayIndex;
+                                auto ownDepthBufferIt = m_OwnDepthBuffers.find(swapchainIt->first);
+                                depthForOverlay[eye] =
+                                    ownDepthBufferIt != m_OwnDepthBuffers.cend() ? ownDepthBufferIt->second : nullptr;
+                                viewForOverlay[eye].Pose = view.pose;
+                                viewForOverlay[eye].Fov = view.fov;
+                                viewForOverlay[eye].NearFar = nearFar;
+                                viewportForOverlay[eye] = view.subImage.imageRect;
+                            }
+                        }
+                    }
+
+                    if (textureForOverlay[0])
+                    {
+                        const bool useVPRT =
+                            textureForOverlay[1] == textureForOverlay[0] && sliceForOverlay[0] != sliceForOverlay[1];
+                        const XrVector3f scaling{0.02f, 0.02f, 0.02f};
+
+                        // render the tracker pose(s)
                         for (uint32_t eye = 0; eye < graphics::ViewCount; eye++)
                         {
-                            const XrCompositionLayerProjectionView& view = proj->views[eye];
+                            m_GraphicsDevice->setRenderTargets(
+                                1,
+                                &textureForOverlay[eye],
+                                useVPRT ? reinterpret_cast<int32_t*>(&sliceForOverlay[eye]) : nullptr,
+                                &viewportForOverlay[eye],
+                                depthForOverlay[eye],
+                                useVPRT ? eye : -1);
+                            m_GraphicsDevice->setViewProjection(viewForOverlay[eye]);
+                            m_GraphicsDevice->clearDepth(1.f);
 
-                            auto swapchainIt = m_Swapchains.find(view.subImage.swapchain);
-                            if (swapchainIt == m_Swapchains.end())
+                            if (mcActivated)
                             {
-                                throw std::runtime_error("Swapchain is not registered");
-                            }
-                            auto& swapchainState = swapchainIt->second;
-                            auto& swapchainImages = swapchainState.images[swapchainState.acquiredImageIndex];
-
-                            // Look for the depth buffer.
-                            std::shared_ptr<graphics::ITexture> depthBuffer;
-                            xr::math::NearFar nearFar{0.001f, 100.f};
-                            const XrBaseInStructure* entry = reinterpret_cast<const XrBaseInStructure*>(view.next);
-                            while (entry)
-                            {
-                                if (entry->type == XR_TYPE_COMPOSITION_LAYER_DEPTH_INFO_KHR)
-                                {
-                                    DebugLog("Depthbuffer found\n ");
-                                    const XrCompositionLayerDepthInfoKHR* depth =
-                                        reinterpret_cast<const XrCompositionLayerDepthInfoKHR*>(entry);
-
-                                    TraceLoggingWrite(
-                                        g_traceProvider,
-                                        "xrEndFrame_View",
-                                        TLArg("Depth", "Type"),
-                                        TLArg(eye, "Index"),
-                                        TLPArg(depth->subImage.swapchain, "Swapchain"),
-                                        TLArg(depth->subImage.imageArrayIndex, "ImageArrayIndex"),
-                                        TLArg(xr::ToString(depth->subImage.imageRect).c_str(), "ImageRect"),
-                                        TLArg(depth->nearZ, "Near"),
-                                        TLArg(depth->farZ, "Far"),
-                                        TLArg(depth->minDepth, "MinDepth"),
-                                        TLArg(depth->maxDepth, "MaxDepth"));
-
-                                    // The order of color/depth textures must match.
-                                    if (depth->subImage.imageArrayIndex == view.subImage.imageArrayIndex)
-                                    {
-                                        auto depthSwapchainIt = m_Swapchains.find(depth->subImage.swapchain);
-                                        if (depthSwapchainIt == m_Swapchains.end())
-                                        {
-                                            throw std::runtime_error("Swapchain is not registered");
-                                        }
-                                        auto& depthSwapchainState = depthSwapchainIt->second;
-
-                                        assert(depthSwapchainState.images[depthSwapchainState.acquiredImageIndex]
-                                                   .chain.size() == 1);
-                                        depthBuffer =
-                                            depthSwapchainState.images[depthSwapchainState.acquiredImageIndex].chain[0];
-                                        nearFar.Near = depth->nearZ;
-                                        nearFar.Far = depth->farZ;
-                                    }
-                                    break;
-                                }
-                                entry = entry->next;
+                                m_GraphicsDevice->draw(
+                                    m_MeshRGB,
+                                    xr::math::Pose::Multiply(referenceTrackerPose,
+                                                             xr::math::Pose::Invert(reversedManipulation)),
+                                    scaling);
                             }
 
-                            textureForOverlay[eye] = swapchainImages.chain.back();
-                            sliceForOverlay[eye] = view.subImage.imageArrayIndex;
-                            auto ownDepthBufferIt = m_OwnDepthBuffers.find(swapchainIt->first);
-                            depthForOverlay[eye] = depthBuffer ? depthBuffer
-                                                   : ownDepthBufferIt != m_OwnDepthBuffers.cend()
-                                                       ? ownDepthBufferIt->second
-                                                       : nullptr;
-                            viewForOverlay[eye].Pose = view.pose;
-                            viewForOverlay[eye].Fov = view.fov;
-                            viewForOverlay[eye].NearFar = nearFar;
+                            m_GraphicsDevice->draw(mcActivated ? m_MeshCMY : m_MeshRGB, referenceTrackerPose, scaling);
                         }
+
+                        m_GraphicsDevice->unsetRenderTargets();
                     }
+                    m_GraphicsDevice->restoreContext();
+                    m_GraphicsDevice->flushContext(false, true);
                 }
 
-                if (textureForOverlay[0])
+                // Release the swapchain images now, as we are really done this time.
+                for (auto& swapchain : m_Swapchains)
                 {
-                    const bool useVPRT = textureForOverlay[1] == textureForOverlay[0];
-
-                    // render the tracker pose(s)
-                    for (uint32_t eye = 0; eye < graphics::ViewCount; eye++)
+                    if (swapchain.second.delayedRelease)
                     {
-                        m_GraphicsDevice->setRenderTargets(1,
-                                                           &textureForOverlay[eye],
-                                                           useVPRT ? reinterpret_cast<int32_t*>(&sliceForOverlay[eye])
-                                                                   : nullptr,
-                                                           depthForOverlay[eye],
-                                                           useVPRT ? eye : -1);
-                        m_GraphicsDevice->setViewProjection(viewForOverlay[eye]);
-                        m_GraphicsDevice->clearDepth(1.f);
+                        TraceLoggingWrite(g_traceProvider,
+                                          "DelayedSwapchainRelease",
+                                          TLPArg(swapchain.first, "Swapchain"));
 
-                        XrVector3f scaling{0.02f, 0.02f, 0.02f};
-                        if (mcActivated)
-                        {
-                            m_GraphicsDevice->draw(
-                                m_MeshRGB,
-                                xr::math::Pose::Multiply(referenceTrackerPose,
-                                                         xr::math::Pose::Invert(reversedManipulation)),
-                                scaling);
-                        }
-
-                        m_GraphicsDevice->draw(mcActivated ? m_MeshCMY : m_MeshRGB, referenceTrackerPose, scaling);
+                        XrSwapchainImageReleaseInfo releaseInfo{XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};
+                        swapchain.second.delayedRelease = false;
+                        CHECK_XRCMD(layer->OpenXrApi::xrReleaseSwapchainImage(swapchain.first, &releaseInfo));
                     }
-
-                    m_GraphicsDevice->unsetRenderTargets();
                 }
-                m_GraphicsDevice->restoreContext();
-                m_GraphicsDevice->flushContext(false, true);  
             }
-
-            // Release the swapchain images now, as we are really done this time.
-            for (auto& swapchain : m_Swapchains)
+            catch (std::exception e)
             {
-                if (swapchain.second.delayedRelease)
-                {
-                    TraceLoggingWrite(g_traceProvider, "DelayedSwapchainRelease", TLPArg(swapchain.first, "Swapchain"));
-
-                    XrSwapchainImageReleaseInfo releaseInfo{XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};
-                    swapchain.second.delayedRelease = false;
-                    CHECK_XRCMD(layer->OpenXrApi::xrReleaseSwapchainImage(swapchain.first, &releaseInfo));
-                }
+                ErrorLog("%s: encountered exception: %s", __FUNCTION__, e.what());
+                m_Initialized = false;
             }
         }
         else

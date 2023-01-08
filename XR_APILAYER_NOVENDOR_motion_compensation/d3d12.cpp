@@ -773,6 +773,7 @@ namespace {
         void setRenderTargets(size_t numRenderTargets,
                               std::shared_ptr<ITexture>* renderTargets,
                               int32_t* renderSlices = nullptr,
+                              const XrRect2Di* viewport0 = nullptr,
                               std::shared_ptr<ITexture> depthBuffer = nullptr,
                               int32_t depthSlice = -1) override {
             assert(renderTargets || !numRenderTargets);
@@ -815,10 +816,22 @@ namespace {
                 m_currentDrawDepthBuffer = std::move(depthBuffer);
                 m_currentDrawDepthBufferSlice = depthSlice;
 
-                const auto viewport = CD3DX12_VIEWPORT(0.f,
-                                                       0.f,
-                                                       (float)m_currentDrawRenderTarget->getInfo().width,
-                                                       (float)m_currentDrawRenderTarget->getInfo().height);
+                XrRect2Di viewportRect;
+                if (viewport0)
+                {
+                    viewportRect = *viewport0;
+                }
+                else
+                {
+                    viewportRect.offset = {0, 0};
+                    viewportRect.extent.width = m_currentDrawRenderTarget->getInfo().width;
+                    viewportRect.extent.height = m_currentDrawRenderTarget->getInfo().height;
+                }
+
+                const auto viewport = CD3DX12_VIEWPORT((float)viewportRect.offset.x,
+                                                       (float)viewportRect.offset.y,
+                                                       (float)viewportRect.extent.width,
+                                                       (float)viewportRect.extent.height);
                 m_context->RSSetViewports(1, &viewport);
 
                 const auto scissorRect = CD3DX12_RECT(
