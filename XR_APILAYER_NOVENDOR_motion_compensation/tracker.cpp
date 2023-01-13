@@ -176,18 +176,13 @@ namespace Tracker
             XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
             {
                 // TODO: skip xrSyncActions if other actions are active as well?
-                XrActiveActionSet activeActionSets;
-                activeActionSets.actionSet = layer->m_ActionSet;
-                activeActionSets.subactionPath = XR_NULL_PATH;
-
-                XrActionsSyncInfo syncInfo{XR_TYPE_ACTIONS_SYNC_INFO, nullptr};
-                syncInfo.activeActionSets = &activeActionSets;
-                syncInfo.countActiveActionSets = 1;
-
+                const XrActionsSyncInfo syncInfo{XR_TYPE_ACTIONS_SYNC_INFO, nullptr, 0, nullptr};
+                
                 TraceLoggingWrite(g_traceProvider,
                                   "GetControllerPose",
                                   TLPArg(layer->m_ActionSet, "xrSyncActions"),
                                   TLArg(time, "Time"));
+
                 CHECK_XRCMD(GetInstance()->xrSyncActions(session, &syncInfo));
             }
             {

@@ -911,7 +911,7 @@ namespace motion_compensation_layer
             chainSyncInfo.countActiveActionSets = nextActionSetSlot;
         }
 
-        return OpenXrApi::xrSyncActions(session, syncInfo);
+        return OpenXrApi::xrSyncActions(session, &chainSyncInfo);
     }
 
     XrResult OpenXrLayer::xrBeginFrame(XrSession session, const XrFrameBeginInfo* frameBeginInfo)
@@ -1308,6 +1308,15 @@ namespace motion_compensation_layer
             return;
         }
 
+        std::string trackerType;
+        if (m_PhysicalEnabled && !m_Activated && GetConfig()->GetString(Cfg::TrackerType, trackerType) &&
+            ("controller" == trackerType || "vive" == trackerType))
+        {
+            // trigger interaction suggestion and action set attachment if necessary
+            LazyInit(time);
+        }
+
+
         if (m_Tracker->ResetReferencePose(m_Session, time))
         {
             GetAudioOut()->Execute(Event::Calibrated);
@@ -1515,7 +1524,6 @@ namespace motion_compensation_layer
         
         if (m_PhysicalEnabled && !m_ActionSetAttached)
         {
-            Log("action set attached during lazy init\n");
             std::vector<XrActionSet> actionSets;
             const XrSessionActionSetsAttachInfo actionSetAttachInfo{XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO,
                                                                     nullptr,
@@ -1524,8 +1532,9 @@ namespace motion_compensation_layer
             TraceLoggingWrite(g_traceProvider,
                               "OpenXrLayer::LazyInit",
                               TLPArg("Executed", "xrAttachSessionActionSets"));
-            if (XR_SUCCEEDED(GetInstance()->xrAttachSessionActionSets(m_Session, &actionSetAttachInfo)))
+            if (XR_SUCCEEDED(xrAttachSessionActionSets(m_Session, &actionSetAttachInfo)))
             {
+                Log("action set attached during lazy init\n");
                 m_ActionSetAttached = true;
             }
             else
