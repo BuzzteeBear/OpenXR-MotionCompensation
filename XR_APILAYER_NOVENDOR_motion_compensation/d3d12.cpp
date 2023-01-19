@@ -24,19 +24,18 @@
 #include "pch.h"
 
 #include "d3dcommon.h"
-#include "shader_utilities.h"
 #include "interfaces.h"
-#include "log.h"
+#include <log.h>
 
 #include <wincodec.h>
 
 namespace {
 
     using namespace graphics;
-    using namespace graphics::d3dcommon;
+    using namespace d3dcommon;
     using namespace motion_compensation_layer::log;
 
-    constexpr size_t MaxGpuTimers = 128;
+   
     constexpr size_t MaxModelBuffers = 128;
 
     inline void SetDebugName(ID3D12Object* resource, std::string_view name) {

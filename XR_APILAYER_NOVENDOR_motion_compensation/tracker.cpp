@@ -8,7 +8,7 @@
 #include <util.h>
 
 using namespace motion_compensation_layer;
-using namespace motion_compensation_layer::log;
+using namespace log;
 using namespace Feedback;
 using namespace xr::math;
 

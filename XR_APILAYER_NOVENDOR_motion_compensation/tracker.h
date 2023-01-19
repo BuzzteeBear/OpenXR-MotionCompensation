@@ -1,7 +1,6 @@
 // Copyright(c) 2022 Sebastian Veith
 
 #pragma once
-#include "pch.h"
 #include "utility.h"
 #include "filter.h"
 

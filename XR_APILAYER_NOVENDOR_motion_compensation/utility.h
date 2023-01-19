@@ -2,27 +2,10 @@
 
 #pragma once
 
-#include "pch.h"
-
-#include "config.h"
-#include "log.h"
+#include <log.h>
 
 namespace utility
 {
-    class KeyboardInput
-    {
-      public:
-        bool Init();
-        bool GetKeyState(Cfg key, bool& isRepeat);
-
-      private:
-        bool UpdateKeyState(const std::set<int>& vkKeySet, bool& isRepeat);
-
-        std::map<Cfg, std::set<int>> m_ShortCuts;
-        std::map<std::set<int>, std::pair<bool, std::chrono::steady_clock::time_point>> m_KeyStates;
-        const std::chrono::milliseconds m_KeyRepeatDelay = 300ms;
-    };
-
     template <typename Sample>
     class Cache
     {

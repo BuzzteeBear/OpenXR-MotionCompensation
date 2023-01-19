@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include "input.h"
 #include "framework/dispatch.gen.h"
 #include "tracker.h"
 #include "overlay.h"
@@ -68,7 +69,7 @@ namespace motion_compensation_layer
                                          const XrSwapchainImageReleaseInfo* releaseInfo) override;
         XrResult xrGetCurrentInteractionProfile(XrSession session,
                                                 XrPath topLevelUserPath,
-                                                XrInteractionProfileState* interactionProfile);
+                                                XrInteractionProfileState* interactionProfile) override;
         XrResult xrAttachSessionActionSets(XrSession session, const XrSessionActionSetsAttachInfo* attachInfo) override;
         XrResult
         xrSuggestInteractionProfileBindings(XrInstance instance,
@@ -84,7 +85,7 @@ namespace motion_compensation_layer
                                uint32_t* viewCountOutput,
                                XrView* views) override;
         XrResult xrSyncActions(XrSession session, const XrActionsSyncInfo* syncInfo) override;
-        XrResult xrBeginFrame(XrSession session, const XrFrameBeginInfo* frameBeginInfo);
+        XrResult xrBeginFrame(XrSession session, const XrFrameBeginInfo* frameBeginInfo)override;
         XrResult xrEndFrame(XrSession session, const XrFrameEndInfo* frameEndInfo) override;
         bool GetStageToLocalSpace(XrTime time, XrPosef& pose);
 
@@ -96,34 +97,13 @@ namespace motion_compensation_layer
         XrSpace m_StageSpace{XR_NULL_HANDLE};
 
       private:
-        enum class Direction
-        {
-            Fwd,
-            Back,
-            Up,
-            Down,
-            Left,
-            Right,
-            RotRight,
-            RotLeft
-        };
-
         [[nodiscard]] bool isSystemHandled(XrSystemId systemId) const;
         bool isSessionHandled(XrSession session) const;
         bool isViewSpace(XrSpace space) const;
         [[nodiscard]] uint32_t GetNumViews() const;
         void CreateTrackerAction();
         void CreateTrackerActionSpace();
-        void ToggleActive(XrTime time);
-        void Recalibrate(XrTime time);
-        void ToggleOverlay() const;
-        void ToggleCache();
-        void ChangeOffset(Direction dir) const;
-        void ReloadConfig();
-        void SaveConfig(XrTime time, bool forApp) const;
-        void ToggleCorDebug(XrTime time) const;
         bool LazyInit(XrTime time);
-        void HandleKeyboardInput(XrTime time);
 
         static std::string getXrPath(XrPath path);
 
@@ -151,8 +131,8 @@ namespace motion_compensation_layer
                                                                              xr::math::Pose::Identity(),
                                                                              xr::math::Pose::Identity(),
                                                                              xr::math::Pose::Identity()}};
-        utility::KeyboardInput m_Input;
         std::unique_ptr<graphics::Overlay> m_Overlay;
+        std::unique_ptr<Input::InputHandler> m_Input;
 
         // connection recovery
         XrTime m_RecoveryWait{3000000000}; // 3 sec default timeout
@@ -166,6 +146,8 @@ namespace motion_compensation_layer
         // debugging
         bool m_TestRotation{false};
         XrTime m_TestRotStart{0};
+
+        friend class Input::InputHandler;
     };
 
     // Singleton accessor.

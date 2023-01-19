@@ -2,9 +2,7 @@
 
 #pragma once
 
-#include "pch.h"
-
-#include "log.h"
+#include <log.h>
 
 namespace Filter
 {

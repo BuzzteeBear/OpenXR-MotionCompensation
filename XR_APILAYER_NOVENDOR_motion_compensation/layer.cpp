@@ -27,7 +27,6 @@
 #include "feedback.h"
 #include "utility.h"
 #include "config.h"
-#include "d3dcommon.h"
 #include <log.h>
 #include <util.h>
 
@@ -154,7 +153,8 @@ namespace motion_compensation_layer
         }
 
         // initialize keyboard input handler
-        if (!m_Input.Init())
+        m_Input = std::make_unique<Input::InputHandler>(Input::InputHandler(this));
+        if (!m_Input->Init())
         {
             m_Initialized = false;
         }
@@ -988,7 +988,7 @@ namespace motion_compensation_layer
 
         if (!m_Activated)
         {
-            HandleKeyboardInput(chainFrameEndInfo.displayTime);
+            m_Input->HandleKeyboardInput(chainFrameEndInfo.displayTime);
             return OpenXrApi::xrEndFrame(session, &chainFrameEndInfo);
         }
 
@@ -1105,7 +1105,7 @@ namespace motion_compensation_layer
                 resetLayers.push_back(chainFrameEndInfo.layers[i]);
             }
         }
-        HandleKeyboardInput(chainFrameEndInfo.displayTime);
+        m_Input->HandleKeyboardInput(chainFrameEndInfo.displayTime);
 
         XrFrameEndInfo resetFrameEndInfo{chainFrameEndInfo.type,
                                          chainFrameEndInfo.next,
@@ -1257,235 +1257,6 @@ namespace motion_compensation_layer
                               TLPArg(m_TrackerSpace, "xrCreateActionSpace"));
         }
     }
-    void OpenXrLayer::ToggleActive(XrTime time)
-    {
-        // handle debug test rotation
-        if (m_TestRotation)
-        {
-            m_TestRotStart = time;
-            m_Activated = !m_Activated;
-            Log("test rotation motion compensation % s\n", m_Activated ? "activated" : "deactivated");
-            return;
-        }
-
-        // perform last-minute initialization before activation
-        const bool lazySuccess = m_Activated || LazyInit(time);
-
-        const bool oldState = m_Activated;
-        if (m_Initialized && lazySuccess)
-        {
-            // if tracker is not initialized, activate only after successful init
-            m_Activated = m_Tracker->m_Calibrated ? !m_Activated : m_Tracker->ResetReferencePose(m_Session, time);
-        }
-        else
-        {
-            ErrorLog("layer initialization failed or incomplete!\n");
-        }
-        Log("motion compensation %s\n",
-            oldState != m_Activated ? (m_Activated ? "activated" : "deactivated")
-            : m_Activated           ? "kept active"
-                                    : "could not be activated");
-        if (oldState != m_Activated)
-        {
-            GetAudioOut()->Execute(m_Activated ? Event::Activated : Event::Deactivated);
-        }
-        else if (!m_Activated)
-        {
-            GetAudioOut()->Execute(Event::Error);
-        }
-        TraceLoggingWrite(g_traceProvider,
-                          "ToggleActive",
-                          TLArg(m_Activated ? "Deactivated" : "Activated", "MotionCompensation"),
-                          TLArg(time, "Time"));
-    }
-
-    void OpenXrLayer::Recalibrate(XrTime time)
-    {
-        if (m_TestRotation)
-        {
-            m_TestRotStart = time;
-            Log("test rotation motion compensation recalibrated\n");
-            return;
-        }
-
-        std::string trackerType;
-        if (m_PhysicalEnabled && !m_Activated && GetConfig()->GetString(Cfg::TrackerType, trackerType) &&
-            ("controller" == trackerType || "vive" == trackerType))
-        {
-            // trigger interaction suggestion and action set attachment if necessary
-            LazyInit(time);
-        }
-
-
-        if (m_Tracker->ResetReferencePose(m_Session, time))
-        {
-            GetAudioOut()->Execute(Event::Calibrated);
-            TraceLoggingWrite(g_traceProvider,
-                              "Recalibrate",
-                              TLArg("Reset", "Tracker_Reference"),
-                              TLArg(time, "Time"));
-        }
-        else
-        {
-            // failed to update reference pose -> deactivate mc
-            if (m_Activated)
-            {
-                ErrorLog("motion compensation deactivated because tracker reference pose cold not be reset\n");
-            }
-            m_Activated = false;
-            GetAudioOut()->Execute(Event::Error);
-            TraceLoggingWrite(g_traceProvider,
-                              "Recalibrate",
-                              TLArg("Deactivated_Reset", "MotionCompensation"),
-                              TLArg(time, "Time"));
-        }
-    }
-
-    void OpenXrLayer::ToggleOverlay() const
-    {
-        if (!m_OverlayEnabled)
-        {
-            GetAudioOut()->Execute(Event::Error);
-            ErrorLog("overlay is deactivated in config file and cannot be activated\n"); 
-            return;
-        }
-        m_Overlay->ToggleOverlay();
-    }
-
-    void OpenXrLayer::ToggleCache()
-    {
-        m_UseEyeCache = !m_UseEyeCache;
-        GetConfig()->SetValue(Cfg::CacheUseEye, m_UseEyeCache);
-        GetAudioOut()->Execute(m_UseEyeCache ? Event::EyeCached : Event::EyeCalculated); 
-    }
-
-    void OpenXrLayer::ChangeOffset(const Direction dir) const
-    {
-        bool success = true;
-        std::string trackerType;
-        if (GetConfig()->GetString(Cfg::TrackerType, trackerType))
-        {
-            if ("yaw" == trackerType || "srs" == trackerType || "flypt" == trackerType)
-            {
-                if (auto* tracker = reinterpret_cast<Tracker::VirtualTracker*>(m_Tracker))
-                {
-                    if (Direction::RotLeft != dir && Direction::RotRight != dir)
-                    {
-                        const XrVector3f direction{Direction::Left == dir    ? 0.01f
-                                                   : Direction::Right == dir ? -0.01f
-                                                                             : 0.0f,
-                                                   Direction::Up == dir     ? 0.01f
-                                                   : Direction::Down == dir ? -0.01f
-                                                                            : 0.0f,
-                                                   Direction::Fwd == dir    ? 0.01f
-                                                   : Direction::Back == dir ? -0.01f
-                                                                            : 0.0f};
-                        success = tracker->ChangeOffset(direction);
-                    }
-                    else
-                    {
-                        success = tracker->ChangeRotation(Direction::RotRight == dir);
-                    }
-                }
-                else
-                {
-                    ErrorLog("unable to cast tracker to VirtualTracker pointer\n");
-                    success = false;
-                }
-            }
-            else
-            {
-                ErrorLog("unable to modify offset, wrong type of tracker: %s\n", trackerType);
-                success = false;
-            }
-        }
-        else
-        {
-            success = false;
-        }
-        GetAudioOut()->Execute(!success                    ? Event::Error
-                               : Direction::Up == dir      ? Event::Up
-                               : Direction::Down == dir    ? Event::Down
-                               : Direction::Fwd == dir     ? Event::Forward
-                               : Direction::Back == dir    ? Event::Back
-                               : Direction::Left == dir    ? Event::Left
-                               : Direction::Right == dir   ? Event::Right
-                               : Direction::RotLeft == dir ? Event::RotLeft
-                                                           : Event::RotRight);
-    }
-
-    void OpenXrLayer::ReloadConfig()
-    {
-        m_Tracker->m_Calibrated = false;
-        m_Activated = false;
-        bool success = GetConfig()->Init(m_Application);
-        if (success)
-        {
-            GetConfig()->GetBool(Cfg::TestRotation, m_TestRotation);
-            GetConfig()->GetBool(Cfg::CacheUseEye, m_UseEyeCache);
-            Tracker::GetTracker(&m_Tracker);
-            if (!m_Tracker->Init())
-            {
-                success = false;
-            }
-        }
-        GetAudioOut()->Execute(!success ? Event::Error : Event::Load);
-    }
-
-    void OpenXrLayer::SaveConfig(XrTime time, bool forApp) const
-    {
-        std::string trackerType;
-        if (GetConfig()->GetString(Cfg::TrackerType, trackerType))
-        {
-            if ("yaw" == trackerType || "srs" == trackerType || "flypt" == trackerType)
-            {
-                Tracker::VirtualTracker* tracker = reinterpret_cast<Tracker::VirtualTracker*>(m_Tracker);
-                if (tracker)
-                {
-                    tracker->SaveReferencePose(time);
-                }
-                else
-                {
-                    ErrorLog("unable to cast tracker to VirtualTracker pointer\n");
-                }
-            }
-        }
-        GetConfig()->WriteConfig(forApp);
-    }
-
-    void OpenXrLayer::ToggleCorDebug(const XrTime time) const
-    {
-        bool success = true;
-        std::string trackerType;
-        if (GetConfig()->GetString(Cfg::TrackerType, trackerType))
-        {
-            if ("yaw" == trackerType || "srs" == trackerType || "flypt" == trackerType)
-            {
-                if (auto* tracker = reinterpret_cast<Tracker::VirtualTracker*>(m_Tracker))
-                {
-                    success = tracker->ToggleDebugMode(m_Session, time);
-                }
-                else
-                {
-                    ErrorLog("unable to cast tracker to VirtualTracker pointer\n");
-                    success = false;
-                }
-            }
-            else
-            {
-                ErrorLog("unable to activate cor debug mode, wrong type of tracker: %s\n", trackerType);
-                success = false;
-            }
-        }
-        else
-        {
-            success = false;
-        }
-        if (!success)
-        {
-            GetAudioOut()->Execute(Event::Error);
-        }
-    }
 
     bool OpenXrLayer::LazyInit(const XrTime time)
     {
@@ -1548,91 +1319,6 @@ namespace motion_compensation_layer
             success = false;
         }
         return success;
-    }
-
-    void OpenXrLayer::HandleKeyboardInput(const XrTime time)
-    {
-        bool isRepeat{false};
-        if (m_Input.GetKeyState(Cfg::KeyActivate, isRepeat) && !isRepeat)
-        {
-            ToggleActive(time);
-        }
-        if (m_Input.GetKeyState(Cfg::KeyCenter, isRepeat) && !isRepeat)
-        {
-            Recalibrate(time);
-        }
-        if (m_Input.GetKeyState(Cfg::KeyTransInc, isRepeat))
-        {
-            m_Tracker->ModifyFilterStrength(true, true);
-        }
-        if (m_Input.GetKeyState(Cfg::KeyTransDec, isRepeat))
-        {
-            m_Tracker->ModifyFilterStrength(true, false);
-        }
-        if (m_Input.GetKeyState(Cfg::KeyRotInc, isRepeat))
-        {
-            m_Tracker->ModifyFilterStrength(false, true);
-        }
-        if (m_Input.GetKeyState(Cfg::KeyRotDec, isRepeat))
-        {
-            m_Tracker->ModifyFilterStrength(false, false);
-        }
-        if (m_Input.GetKeyState(Cfg::KeyOffForward, isRepeat))
-        {
-           ChangeOffset(Direction::Fwd);
-        }
-        if (m_Input.GetKeyState(Cfg::KeyOffBack, isRepeat))
-        {
-            ChangeOffset(Direction::Back);
-        }
-        if (m_Input.GetKeyState(Cfg::KeyOffUp, isRepeat))
-        {
-            ChangeOffset(Direction::Up);
-        }
-        if (m_Input.GetKeyState(Cfg::KeyOffDown, isRepeat))
-        {
-            ChangeOffset(Direction::Down);
-        }
-        if (m_Input.GetKeyState(Cfg::KeyOffRight, isRepeat))
-        {
-            ChangeOffset(Direction::Right);
-        }
-        if (m_Input.GetKeyState(Cfg::KeyOffLeft, isRepeat))
-        {
-            ChangeOffset(Direction::Left);
-        }
-        if (m_Input.GetKeyState(Cfg::KeyRotRight, isRepeat))
-        {
-            ChangeOffset(Direction::RotRight);
-        }
-        if (m_Input.GetKeyState(Cfg::KeyRotLeft, isRepeat))
-        {
-            ChangeOffset(Direction::RotLeft);
-        }
-        if (m_Input.GetKeyState(Cfg::KeyOverlay, isRepeat) && !isRepeat)
-        {
-            ToggleOverlay();
-        }
-        if (m_Input.GetKeyState(Cfg::KeyCache, isRepeat) && !isRepeat)
-        {
-            ToggleCache();
-        }
-        if (m_Input.GetKeyState(Cfg::KeySaveConfig, isRepeat) && !isRepeat)
-        {
-            SaveConfig(time, false);
-        }
-        if (m_Input.GetKeyState(Cfg::KeySaveConfigApp, isRepeat) && !isRepeat)
-        {
-            SaveConfig(time, true);
-        }
-        if (m_Input.GetKeyState(Cfg::KeyReloadConfig, isRepeat) && !isRepeat)
-        {
-            ReloadConfig();
-        }
-        if (m_Input.GetKeyState(Cfg::KeyDebugCor, isRepeat) && !isRepeat)
-        {
-            ToggleCorDebug(time);
-        }
     }
 
     std::string OpenXrLayer::getXrPath(const XrPath path)

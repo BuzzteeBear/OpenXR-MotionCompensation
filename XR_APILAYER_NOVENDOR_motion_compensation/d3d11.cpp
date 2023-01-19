@@ -26,7 +26,7 @@
 #include "d3dcommon.h"
 #include "shader_utilities.h"
 #include "interfaces.h"
-#include "log.h"
+#include <log.h>
 
 #include <wincodec.h>
 

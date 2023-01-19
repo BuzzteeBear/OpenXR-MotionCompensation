@@ -3,7 +3,6 @@
 #include "pch.h"
 
 #include "filter.h"
-#include "layer.h"
 
 using namespace xr::math;
 

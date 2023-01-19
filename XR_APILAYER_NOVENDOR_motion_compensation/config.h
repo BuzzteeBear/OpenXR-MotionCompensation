@@ -1,6 +1,7 @@
 // Copyright(c) 2022 Sebastian Veith
 
 #pragma once
+
 enum class Cfg
 {
     Enabled = 0,

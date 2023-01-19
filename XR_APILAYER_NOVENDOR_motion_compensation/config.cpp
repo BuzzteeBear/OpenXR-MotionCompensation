@@ -7,7 +7,6 @@
 #include "feedback.h"
 #include "utility.h"
 #include <log.h>
-#include <util.h>
 
 using namespace motion_compensation_layer::log;
 using namespace utility;

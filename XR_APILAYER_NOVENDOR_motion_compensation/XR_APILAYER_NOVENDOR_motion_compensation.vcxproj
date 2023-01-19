@@ -166,6 +166,7 @@ xcopy $(SolutionDir)\configuration\OpenXR-MotionCompensation.ini $(OutDir) /y /q
     <ClInclude Include="d3dcommon.h" />
     <ClInclude Include="feedback.h" />
     <ClInclude Include="filter.h" />
+    <ClInclude Include="input.h" />
     <ClInclude Include="interfaces.h" />
     <ClInclude Include="overlay.h" />
     <ClInclude Include="resource.h" />
@@ -185,6 +186,7 @@ xcopy $(SolutionDir)\configuration\OpenXR-MotionCompensation.ini $(OutDir) /y /q
     <ClCompile Include="d3d12.cpp" />
     <ClCompile Include="feedback.cpp" />
     <ClCompile Include="filter.cpp" />
+    <ClCompile Include="input.cpp" />
     <ClCompile Include="overlay.cpp" />
     <ClCompile Include="utility.cpp" />
     <ClCompile Include="framework\dispatch.cpp" />

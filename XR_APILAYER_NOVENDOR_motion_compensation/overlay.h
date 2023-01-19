@@ -21,7 +21,6 @@
 // SOFTWARE.
 
 #pragma once
-#include "pch.h"
 #include "interfaces.h"
 
 namespace graphics

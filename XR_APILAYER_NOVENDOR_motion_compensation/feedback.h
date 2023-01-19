@@ -1,6 +1,7 @@
 // Copyright(c) 2022 Sebastian Veith
 
 #pragma once
+
 namespace Feedback
 {
     enum class Event
