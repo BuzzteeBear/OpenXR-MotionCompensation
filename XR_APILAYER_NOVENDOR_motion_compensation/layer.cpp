@@ -1293,7 +1293,8 @@ namespace motion_compensation_layer
             }
         }
         
-        if (m_PhysicalEnabled && !m_ActionSetAttached)
+        if (m_PhysicalEnabled && !m_ActionSetAttached && GetConfig()->GetString(Cfg::TrackerType, trackerType) &&
+            ("controller" == trackerType || "vive" == trackerType))
         {
             std::vector<XrActionSet> actionSets;
             const XrSessionActionSetsAttachInfo actionSetAttachInfo{XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO,
