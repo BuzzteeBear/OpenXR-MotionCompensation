@@ -41,6 +41,7 @@ namespace Input
       public:
         explicit InputHandler(motion_compensation_layer::OpenXrLayer* layer);
         bool Init();
+        void HandleKeyboardInput(XrTime time);
         void ToggleActive(XrTime time) const;
         void Recalibrate(XrTime time) const;
         void ToggleOverlay() const;
@@ -49,7 +50,6 @@ namespace Input
         void ReloadConfig() const;
         void SaveConfig(XrTime time, bool forApp) const;
         void ToggleCorDebug(XrTime time) const;
-        void HandleKeyboardInput(XrTime time);
 
       private:
         motion_compensation_layer::OpenXrLayer* m_Layer;

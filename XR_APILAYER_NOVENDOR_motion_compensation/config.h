@@ -49,7 +49,8 @@ enum class Cfg
     KeySaveConfigApp,
     KeyReloadConfig,
     KeyDebugCor,
-    TestRotation
+    TestRotation,
+    InteractionProfile
 };
 
 class ConfigManager
@@ -74,7 +75,7 @@ class ConfigManager
 
     std::string m_ApplicationIni;
 
-    // needs to include all values of enum ConfigKey
+    // needs to include all configurable values of enum ConfigKey
     std::map<Cfg, std::pair<std::string, std::string>> m_Keys{
         {Cfg::Enabled, {"startup", "enabled"}},
         {Cfg::PhysicalEnabled, {"startup", "physical_enabled"}},

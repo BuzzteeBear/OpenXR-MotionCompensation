@@ -18,6 +18,7 @@ bool ConfigManager::Init(const std::string& application)
     if (enabledKey == m_Keys.cend())
     {
         ErrorLog("unable to find internal enable entry\n");
+        return false;
     }
     m_ApplicationIni = motion_compensation_layer::localAppData.string() + "\\" + application + ".ini";
     if ((_access(m_ApplicationIni.c_str(), 0)) == -1)

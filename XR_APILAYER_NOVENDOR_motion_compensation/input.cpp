@@ -23,6 +23,10 @@ namespace Input
             Cfg::KeyOffRight, Cfg::KeyOffLeft,    Cfg::KeyRotRight,      Cfg::KeyRotLeft,      Cfg::KeyOverlay,
             Cfg::KeyCache,    Cfg::KeySaveConfig, Cfg::KeySaveConfigApp, Cfg::KeyReloadConfig, Cfg::KeyDebugCor};
         std::string errors;
+
+        // undocumented / uncofigurable shoprtcuts:
+        m_ShortCuts[Cfg::InteractionProfile] = {VK_CONTROL, VK_SHIFT, VK_MENU, 0x49}; // ctrl+shift+alt+i
+
         for (const Cfg& activity : activities)
         {
             std::set<int> shortcut;
@@ -36,6 +40,95 @@ namespace Input
             }
         }
         return success;
+    }
+
+    void InputHandler::HandleKeyboardInput(const XrTime time)
+    {
+        bool isRepeat{false};
+        if (m_Input.GetKeyState(Cfg::KeyActivate, isRepeat) && !isRepeat)
+        {
+            ToggleActive(time);
+        }
+        if (m_Input.GetKeyState(Cfg::KeyCenter, isRepeat) && !isRepeat)
+        {
+            Recalibrate(time);
+        }
+        if (m_Input.GetKeyState(Cfg::KeyTransInc, isRepeat))
+        {
+            m_Layer->m_Tracker->ModifyFilterStrength(true, true);
+        }
+        if (m_Input.GetKeyState(Cfg::KeyTransDec, isRepeat))
+        {
+            m_Layer->m_Tracker->ModifyFilterStrength(true, false);
+        }
+        if (m_Input.GetKeyState(Cfg::KeyRotInc, isRepeat))
+        {
+            m_Layer->m_Tracker->ModifyFilterStrength(false, true);
+        }
+        if (m_Input.GetKeyState(Cfg::KeyRotDec, isRepeat))
+        {
+            m_Layer->m_Tracker->ModifyFilterStrength(false, false);
+        }
+        if (m_Input.GetKeyState(Cfg::KeyOffForward, isRepeat))
+        {
+            ChangeOffset(Direction::Fwd);
+        }
+        if (m_Input.GetKeyState(Cfg::KeyOffBack, isRepeat))
+        {
+            ChangeOffset(Direction::Back);
+        }
+        if (m_Input.GetKeyState(Cfg::KeyOffUp, isRepeat))
+        {
+            ChangeOffset(Direction::Up);
+        }
+        if (m_Input.GetKeyState(Cfg::KeyOffDown, isRepeat))
+        {
+            ChangeOffset(Direction::Down);
+        }
+        if (m_Input.GetKeyState(Cfg::KeyOffRight, isRepeat))
+        {
+            ChangeOffset(Direction::Right);
+        }
+        if (m_Input.GetKeyState(Cfg::KeyOffLeft, isRepeat))
+        {
+            ChangeOffset(Direction::Left);
+        }
+        if (m_Input.GetKeyState(Cfg::KeyRotRight, isRepeat))
+        {
+            ChangeOffset(Direction::RotRight);
+        }
+        if (m_Input.GetKeyState(Cfg::KeyRotLeft, isRepeat))
+        {
+            ChangeOffset(Direction::RotLeft);
+        }
+        if (m_Input.GetKeyState(Cfg::KeyOverlay, isRepeat) && !isRepeat)
+        {
+            ToggleOverlay();
+        }
+        if (m_Input.GetKeyState(Cfg::KeyCache, isRepeat) && !isRepeat)
+        {
+            ToggleCache();
+        }
+        if (m_Input.GetKeyState(Cfg::KeySaveConfig, isRepeat) && !isRepeat)
+        {
+            SaveConfig(time, false);
+        }
+        if (m_Input.GetKeyState(Cfg::KeySaveConfigApp, isRepeat) && !isRepeat)
+        {
+            SaveConfig(time, true);
+        }
+        if (m_Input.GetKeyState(Cfg::KeyReloadConfig, isRepeat) && !isRepeat)
+        {
+            ReloadConfig();
+        }
+        if (m_Input.GetKeyState(Cfg::KeyDebugCor, isRepeat) && !isRepeat)
+        {
+            ToggleCorDebug(time);
+        }
+        if (m_Input.GetKeyState(Cfg::InteractionProfile, isRepeat) && !isRepeat)
+        {
+            m_Layer->RequestCurrentInteractionProfile();
+        }
     }
 
     bool KeyboardInput::GetKeyState(const Cfg key, bool& isRepeat)
@@ -307,92 +400,6 @@ namespace Input
         if (!success)
         {
             GetAudioOut()->Execute(Event::Error);
-        }
-    }
-
-
-    void InputHandler::HandleKeyboardInput(const XrTime time)
-    {
-        bool isRepeat{false};
-        if (m_Input.GetKeyState(Cfg::KeyActivate, isRepeat) && !isRepeat)
-        {
-            ToggleActive(time);
-        }
-        if (m_Input.GetKeyState(Cfg::KeyCenter, isRepeat) && !isRepeat)
-        {
-            Recalibrate(time);
-        }
-        if (m_Input.GetKeyState(Cfg::KeyTransInc, isRepeat))
-        {
-            m_Layer->m_Tracker->ModifyFilterStrength(true, true);
-        }
-        if (m_Input.GetKeyState(Cfg::KeyTransDec, isRepeat))
-        {
-            m_Layer->m_Tracker->ModifyFilterStrength(true, false);
-        }
-        if (m_Input.GetKeyState(Cfg::KeyRotInc, isRepeat))
-        {
-            m_Layer->m_Tracker->ModifyFilterStrength(false, true);
-        }
-        if (m_Input.GetKeyState(Cfg::KeyRotDec, isRepeat))
-        {
-            m_Layer->m_Tracker->ModifyFilterStrength(false, false);
-        }
-        if (m_Input.GetKeyState(Cfg::KeyOffForward, isRepeat))
-        {
-            ChangeOffset(Direction::Fwd);
-        }
-        if (m_Input.GetKeyState(Cfg::KeyOffBack, isRepeat))
-        {
-            ChangeOffset(Direction::Back);
-        }
-        if (m_Input.GetKeyState(Cfg::KeyOffUp, isRepeat))
-        {
-            ChangeOffset(Direction::Up);
-        }
-        if (m_Input.GetKeyState(Cfg::KeyOffDown, isRepeat))
-        {
-            ChangeOffset(Direction::Down);
-        }
-        if (m_Input.GetKeyState(Cfg::KeyOffRight, isRepeat))
-        {
-            ChangeOffset(Direction::Right);
-        }
-        if (m_Input.GetKeyState(Cfg::KeyOffLeft, isRepeat))
-        {
-            ChangeOffset(Direction::Left);
-        }
-        if (m_Input.GetKeyState(Cfg::KeyRotRight, isRepeat))
-        {
-            ChangeOffset(Direction::RotRight);
-        }
-        if (m_Input.GetKeyState(Cfg::KeyRotLeft, isRepeat))
-        {
-            ChangeOffset(Direction::RotLeft);
-        }
-        if (m_Input.GetKeyState(Cfg::KeyOverlay, isRepeat) && !isRepeat)
-        {
-            ToggleOverlay();
-        }
-        if (m_Input.GetKeyState(Cfg::KeyCache, isRepeat) && !isRepeat)
-        {
-            ToggleCache();
-        }
-        if (m_Input.GetKeyState(Cfg::KeySaveConfig, isRepeat) && !isRepeat)
-        {
-            SaveConfig(time, false);
-        }
-        if (m_Input.GetKeyState(Cfg::KeySaveConfigApp, isRepeat) && !isRepeat)
-        {
-            SaveConfig(time, true);
-        }
-        if (m_Input.GetKeyState(Cfg::KeyReloadConfig, isRepeat) && !isRepeat)
-        {
-            ReloadConfig();
-        }
-        if (m_Input.GetKeyState(Cfg::KeyDebugCor, isRepeat) && !isRepeat)
-        {
-            ToggleCorDebug(time);
         }
     }
 } // namespace Input

@@ -1171,6 +1171,23 @@ namespace motion_compensation_layer
         return false;
     }
 
+    void OpenXrLayer::RequestCurrentInteractionProfile()
+    {
+        XrPath path;
+        const std::string topLevel(m_ViveTracker.active ? m_ViveTracker.role
+                                                            : "/user/hand/" + GetConfig()->GetControllerSide());
+        XrInteractionProfileState profileState{XR_TYPE_INTERACTION_PROFILE_STATE, NULL, XR_NULL_PATH};
+        try
+        {
+            CHECK_XRCMD(xrStringToPath(GetXrInstance(), topLevel.c_str(), &path));
+            xrGetCurrentInteractionProfile(m_Session, path, &profileState);
+        }
+        catch (std::exception& e)
+        {
+            ErrorLog("%s: encountered exception: %s", __FUNCTION__, e.what());
+        }
+    }
+
     // private
     bool OpenXrLayer::isSystemHandled(XrSystemId systemId) const
     {

@@ -88,6 +88,7 @@ namespace motion_compensation_layer
         XrResult xrBeginFrame(XrSession session, const XrFrameBeginInfo* frameBeginInfo)override;
         XrResult xrEndFrame(XrSession session, const XrFrameEndInfo* frameEndInfo) override;
         bool GetStageToLocalSpace(XrTime time, XrPosef& pose);
+        void RequestCurrentInteractionProfile();
 
         XrActionSet m_ActionSet{XR_NULL_HANDLE};
         XrAction m_TrackerPoseAction{XR_NULL_HANDLE};
