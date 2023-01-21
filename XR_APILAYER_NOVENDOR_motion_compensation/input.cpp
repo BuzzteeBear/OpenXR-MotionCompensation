@@ -26,6 +26,7 @@ namespace Input
 
         // undocumented / uncofigurable shoprtcuts:
         m_ShortCuts[Cfg::InteractionProfile] = {VK_CONTROL, VK_SHIFT, VK_MENU, 0x49}; // ctrl+shift+alt+i
+        m_ShortCuts[Cfg::CurrentTrackerPose] = {VK_CONTROL, VK_SHIFT, VK_MENU, 0x54}; // ctrl+shift+alt+t
 
         for (const Cfg& activity : activities)
         {
@@ -128,6 +129,10 @@ namespace Input
         if (m_Input.GetKeyState(Cfg::InteractionProfile, isRepeat) && !isRepeat)
         {
             m_Layer->RequestCurrentInteractionProfile();
+        }
+        if (m_Input.GetKeyState(Cfg::CurrentTrackerPose, isRepeat) && !isRepeat)
+        {
+            m_Layer->m_Tracker->LogCurrentTrackerPoses(m_Layer->m_Session, time, m_Layer->m_Activated);
         }
     }
 

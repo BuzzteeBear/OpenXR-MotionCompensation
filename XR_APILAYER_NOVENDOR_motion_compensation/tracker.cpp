@@ -163,6 +163,36 @@ namespace Tracker
         }
     }
 
+    void TrackerBase::LogCurrentTrackerPoses(XrSession session, XrTime time, bool activated)
+    {
+        Log("current reference pose in reference space: %s\n", xr::ToString(m_ReferencePose).c_str());
+        XrPosef currentPose{Pose::Identity()};
+        if (activated && GetPose(currentPose, session, time))
+        {
+            Log("current tracker pose in reference space: %s\n", xr::ToString(currentPose).c_str());
+        }
+        auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
+        if (!layer)
+        {
+            ErrorLog("%s: unable to cast layer to OpenXrLayer\n", __FUNCTION__);
+            return;
+        }
+        XrPosef stageToLocal{Pose::Identity()};
+        if (!layer->GetStageToLocalSpace(time, stageToLocal))
+        {
+            ErrorLog("%s: unable to determine local to stage pose\n", __FUNCTION__);
+            return;
+        }
+        Log("local space to stage space: %s\n", xr::ToString(stageToLocal).c_str()); 
+        const XrPosef refPosInStageSpace = Pose::Multiply(m_ReferencePose, Pose::Invert(stageToLocal));
+        Log("current reference pose in stage space: %s\n", xr::ToString(refPosInStageSpace).c_str());
+        if (activated)
+        {
+            const XrPosef curPosInStageSpace = Pose::Multiply(currentPose, Pose::Invert(stageToLocal));
+            Log("current tracker pose in stage space: %s\n", xr::ToString(curPosInStageSpace).c_str());
+        }
+    }
+
     bool TrackerBase::GetControllerPose(XrPosef& trackerPose, XrSession session, XrTime time)
     {
         if (!m_PhysicalEnabled)

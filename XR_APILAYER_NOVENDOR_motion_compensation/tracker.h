@@ -18,6 +18,7 @@ namespace Tracker
         void AdjustReferencePose(const XrPosef& pose);
         XrPosef GetReferencePose(XrSession session, XrTime time) const;
         bool GetPoseDelta(XrPosef& poseDelta, XrSession session, XrTime time);
+        void LogCurrentTrackerPoses(XrSession session, XrTime time, bool activated);
         bool m_SkipLazyInit{false};
         bool m_Calibrated{false};
         bool m_ResetReferencePose{false};

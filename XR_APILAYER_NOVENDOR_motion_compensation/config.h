@@ -50,7 +50,8 @@ enum class Cfg
     KeyReloadConfig,
     KeyDebugCor,
     TestRotation,
-    InteractionProfile
+    InteractionProfile,
+    CurrentTrackerPose
 };
 
 class ConfigManager
