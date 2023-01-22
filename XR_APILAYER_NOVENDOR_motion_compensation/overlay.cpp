@@ -35,12 +35,21 @@ using namespace motion_compensation_layer::log;
 
 namespace graphics
 {
+    void Overlay::SetMarkerSize()
+    {
+        float scaling{0.1f};
+        GetConfig()->GetFloat(Cfg::MarkerSize, scaling);
+        scaling /= 100.f;
+        m_MarkerSize = {scaling, scaling, scaling};
+    }
+
     void Overlay::CreateSession(const XrSessionCreateInfo* createInfo,
                                 XrSession* session,
                                 const std::string& runtimeName)
     {
         m_Initialized = true;
         m_OwnDepthBuffers.clear();
+        SetMarkerSize();
 
         if (auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance()))
         {
@@ -447,7 +456,6 @@ namespace graphics
                     {
                         const bool useVPRT =
                             textureForOverlay[1] == textureForOverlay[0] && sliceForOverlay[0] != sliceForOverlay[1];
-                        constexpr XrVector3f scaling{0.02f, 0.02f, 0.02f};
 
                         // render the tracker pose(s)
                         for (uint32_t eye = 0; eye < graphics::ViewCount; eye++)
@@ -468,10 +476,12 @@ namespace graphics
                                     m_MeshRGB,
                                     xr::math::Pose::Multiply(referenceTrackerPose,
                                                              xr::math::Pose::Invert(reversedManipulation)),
-                                    scaling);
+                                    m_MarkerSize);
                             }
 
-                            m_GraphicsDevice->draw(mcActivated ? m_MeshCMY : m_MeshRGB, referenceTrackerPose, scaling);
+                            m_GraphicsDevice->draw(mcActivated ? m_MeshCMY : m_MeshRGB,
+                                                   referenceTrackerPose,
+                                                   m_MarkerSize);
                         }
 
                         m_GraphicsDevice->unsetRenderTargets();
@@ -509,21 +519,21 @@ namespace graphics
 
     std::vector<SimpleMeshVertex> Overlay::CreateMarker(bool rgb)
     {
-        std::vector<SimpleMeshVertex> vertices = CreateConeMesh({-4.f, 0.f, 0.f},
-                                                                {-1.5f, 0.5f, 0.f},
+        std::vector<SimpleMeshVertex> vertices = CreateConeMesh({-1.f, 0.f, 0.f},
+                                                                {-0.375f, 0.125f, 0.f},
                                                                 {0.f, 0.f, 0.f},
                                                                 rgb ? DarkRed : DarkMagenta,
                                                                 rgb ? Red : Magenta,
                                                                 rgb ? LightRed : LightMagenta);
-        std::vector<SimpleMeshVertex> top = CreateConeMesh({0.f, 4.f, 0.f},
-                                                            {0.f, 1.5f, 0.5f},
+        std::vector<SimpleMeshVertex> top = CreateConeMesh({0.f, 1.f, 0.f},
+                                                            {0.f, 0.375f, 0.125f},
                                                             {0.f, 0.f, 0.f},
                                                             rgb ? DarkBlue : DarkCyan,
                                                             rgb ? Blue : Cyan,
                                                             rgb ? LightBlue : LightCyan);
         vertices.insert(vertices.end(), top.begin(), top.end());
-        std::vector<SimpleMeshVertex> front = CreateConeMesh({0.f, 0.f, 4.f},
-                                                           {0.5f, 0.f, 1.5f},
+        std::vector<SimpleMeshVertex> front = CreateConeMesh({0.f, 0.f, 1.f},
+                                                           {0.125f, 0.f, 0.375f},
                                                            {0.f, 0.f, 0.f},
                                                            rgb ? DarkGreen : DarkYellow,
                                                            rgb ? Green : Yellow,

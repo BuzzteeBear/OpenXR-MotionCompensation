@@ -60,6 +60,7 @@ namespace graphics
     class Overlay
     {
       public:
+        void SetMarkerSize();
         void CreateSession(const XrSessionCreateInfo* createInfo, XrSession* session, const std::string& runtimeName);
         void DestroySession();
         void CreateSwapchain(XrSession session, const XrSwapchainCreateInfo* createInfo, XrSwapchain* swapchain);
@@ -93,5 +94,6 @@ namespace graphics
         std::map<XrSwapchain, graphics::SwapchainState> m_Swapchains;
         std::unordered_map<XrSwapchain, std::shared_ptr<ITexture>> m_OwnDepthBuffers;
         std::shared_ptr<graphics::ISimpleMesh> m_MeshRGB, m_MeshCMY;
+        XrVector3f m_MarkerSize{0.1f, 0.1f, 0.1f};
     };
 } // namespace graphics

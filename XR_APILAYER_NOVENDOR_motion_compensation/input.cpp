@@ -349,6 +349,10 @@ namespace Input
             {
                 success = false;
             }
+            if (m_Layer->m_Overlay)
+            {
+                m_Layer->m_Overlay->SetMarkerSize();
+            }
         }
         GetAudioOut()->Execute(!success ? Event::Error : Event::Load);
     }

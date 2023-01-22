@@ -23,6 +23,7 @@ enum class Cfg
     CorC,
     CorD,
     UseCorPos,
+    MarkerSize,
     TransStrength,
     TransOrder,
     RotStrength,
@@ -102,6 +103,8 @@ class ConfigManager
         {Cfg::CorC, {"tracker", "cor_c"}},
         {Cfg::CorD, {"tracker", "cor_d"}},
         {Cfg::UseCorPos, {"tracker", "use_cor_pos"}},
+
+        {Cfg::MarkerSize, {"tracker", "marker_size"}},
 
         {Cfg::TransStrength, {"translation_filter", "strength"}},
         {Cfg::TransOrder, {"translation_filter", "order"}},
