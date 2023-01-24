@@ -103,7 +103,7 @@ namespace graphics
             }
             catch (std::exception& e)
             {
-                ErrorLog("%s: encountered exception: %s", __FUNCTION__, e.what());
+                ErrorLog("%s: encountered exception: %s\n", __FUNCTION__, e.what());
                 m_Initialized = false;
             }
         }
@@ -273,7 +273,7 @@ namespace graphics
                 }
                 catch (std::exception& e)
                 {
-                    ErrorLog("%s: encountered exception: %s", __FUNCTION__, e.what());
+                    ErrorLog("%s: encountered exception: %s\n", __FUNCTION__, e.what());
                     m_Initialized = false;
                 }
             }
@@ -507,7 +507,7 @@ namespace graphics
             }
             catch (std::exception& e)
             {
-                ErrorLog("%s: encountered exception: %s", __FUNCTION__, e.what());
+                ErrorLog("%s: encountered exception: %s\n", __FUNCTION__, e.what());
                 m_Initialized = false;
             }
         }
@@ -625,7 +625,7 @@ namespace graphics
             {
                 if (cdErrorBlob)
                 {
-                    Log("%s", (char*)cdErrorBlob->GetBufferPointer());
+                    Log("%s\n", (char*)cdErrorBlob->GetBufferPointer());
                 }
                 CHECK_HRESULT(hr, "Failed to compile shader file");
             }
@@ -660,7 +660,7 @@ namespace graphics
             {
                 if (cdErrorBlob)
                 {
-                    Log("%s", (char*)cdErrorBlob->GetBufferPointer());
+                    Log("%s\n", (char*)cdErrorBlob->GetBufferPointer());
                 }
                 CHECK_HRESULT(hr, "Failed to compile shader");
             }

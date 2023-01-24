@@ -1001,7 +1001,7 @@ namespace {
                                               set(errors));
                 if (FAILED(hr)) {
                     if (errors) {
-                        Log("%s", (char*)errors->GetBufferPointer());
+                        Log("%s\n", (char*)errors->GetBufferPointer());
                     }
                     CHECK_HRESULT(hr, "Failed to compile shader");
                 }
@@ -1021,7 +1021,7 @@ namespace {
                                               set(errors));
                 if (FAILED(hr)) {
                     if (errors) {
-                        Log("%s", (char*)errors->GetBufferPointer());
+                        Log("%s\n", (char*)errors->GetBufferPointer());
                     }
                     CHECK_HRESULT(hr, "Failed to compile shader");
                 }
@@ -1051,7 +1051,7 @@ namespace {
                     &desc, D3D_ROOT_SIGNATURE_VERSION_1, set(serializedRootSignature), set(errors));
                 if (FAILED(hr)) {
                     if (errors) {
-                        Log("%s", (char*)errors->GetBufferPointer());
+                        Log("%s\n", (char*)errors->GetBufferPointer());
                     }
                     CHECK_HRESULT(hr, "Failed to serialize root signature");
                 }

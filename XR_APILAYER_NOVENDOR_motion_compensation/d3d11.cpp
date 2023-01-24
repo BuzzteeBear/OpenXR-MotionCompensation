@@ -921,7 +921,7 @@ namespace {
                                         set(errors));
                 if (FAILED(hr)) {
                     if (errors) {
-                        Log("%s", (char*)errors->GetBufferPointer());
+                        Log("%s\n", (char*)errors->GetBufferPointer());
                     }
                     CHECK_HRESULT(hr, "Failed to compile shader");
                 }

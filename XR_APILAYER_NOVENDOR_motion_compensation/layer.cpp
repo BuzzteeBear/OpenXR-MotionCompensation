@@ -1205,7 +1205,7 @@ namespace motion_compensation_layer
         }
         catch (std::exception& e)
         {
-            ErrorLog("%s: encountered exception: %s", __FUNCTION__, e.what());
+            ErrorLog("%s: encountered exception: %s\n", __FUNCTION__, e.what());
         }
     }
 

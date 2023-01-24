@@ -199,7 +199,7 @@ bool ConfigManager::GetShortcut(const Cfg key, std::set<int>& val)
     }
     if (!errors.empty())
     {
-        ErrorLog("%s: unable to convert value (%s) for key (%s) to shortcut:\n%s",
+        ErrorLog("%s: unable to convert value (%s) for key (%s) to shortcut: %s\n",
                  __FUNCTION__,
                  strVal.c_str(),
                  m_Keys[key].first.c_str(),

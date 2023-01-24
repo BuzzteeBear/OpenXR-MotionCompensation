@@ -62,7 +62,7 @@ namespace utility
         {
             if (!m_ConnectionLost)
             {
-                ErrorLog("could not open file mapping object %s: %s", m_Name.c_str(), LastErrorMsg().c_str());
+                ErrorLog("could not open file mapping object %s: %s\n", m_Name.c_str(), LastErrorMsg().c_str());
                 m_ConnectionLost = true;
             }
             return false;

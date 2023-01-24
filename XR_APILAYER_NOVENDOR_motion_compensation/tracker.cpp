@@ -637,7 +637,7 @@ namespace Tracker
                         YawData data{};
                         if (m_Mmf.Read(&data, sizeof(data), time))
                         {
-                            Log("Yaw Game Engine values: rotationHeight = %f, rotationForwardHead = %f",
+                            Log("Yaw Game Engine values: rotationHeight = %f, rotationForwardHead = %f\n",
                                 data.rotationHeight,
                                 data.rotationForwardHead);
 
@@ -645,7 +645,7 @@ namespace Tracker
                             m_OffsetForward = data.rotationForwardHead / 100.0f;
                             m_OffsetDown = hmdPosInStageSpace.position.y - data.rotationHeight / 100.0f;
 
-                            Log("offset down value based on Yaw Game Engine value: %f", m_OffsetDown);
+                            Log("offset down value based on Yaw Game Engine value: %f\n", m_OffsetDown);
                         }
                         else
                         {
