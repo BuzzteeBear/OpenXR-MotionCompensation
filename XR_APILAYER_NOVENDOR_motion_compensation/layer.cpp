@@ -892,6 +892,27 @@ namespace motion_compensation_layer
                               TLArg(syncInfo->activeActionSets[i].subactionPath, "SubactionPath"));
         }
 
+        if (!m_ActionSetAttached)
+        {
+            std::vector<XrActionSet> actionSets;
+            const XrSessionActionSetsAttachInfo actionSetAttachInfo{XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO,
+                                                                    nullptr,
+                                                                    0,
+                                                                    actionSets.data()};
+            TraceLoggingWrite(g_traceProvider,
+                              "xrSyncActions",
+                              TLPArg("Executed", "xrAttachSessionActionSets"));
+            if (XR_SUCCEEDED(xrAttachSessionActionSets(m_Session, &actionSetAttachInfo)))
+            {
+                Log("action set attached during xrSyncActions\n");
+                m_ActionSetAttached = true;
+            }
+            else
+            {
+                ErrorLog("%s: xrAttachSessionActionSets failed\n", __FUNCTION__);
+            }
+        }
+
         XrActionsSyncInfo chainSyncInfo = *syncInfo;
         std::vector<XrActiveActionSet> newActiveActionSets;
         const auto trackerActionSet = m_ActionSet;
@@ -909,8 +930,9 @@ namespace motion_compensation_layer
             chainSyncInfo.activeActionSets = newActiveActionSets.data();
             chainSyncInfo.countActiveActionSets = nextActionSetSlot;
         }
-
-        return OpenXrApi::xrSyncActions(session, &chainSyncInfo);
+        XrResult res = OpenXrApi::xrSyncActions(session, &chainSyncInfo);
+        DebugLog("xrSyncAction result = %d\n", res);
+        return res;
     }
 
     XrResult OpenXrLayer::xrBeginFrame(XrSession session, const XrFrameBeginInfo* frameBeginInfo)
@@ -1227,7 +1249,6 @@ namespace motion_compensation_layer
             TraceLoggingWrite(g_traceProvider,
                               "OpenXrLayer::CreateTrackerAction",
                               TLPArg(m_ActionSet, "xrCreateActionSet"));
-
             XrActionCreateInfo actionCreateInfo{XR_TYPE_ACTION_CREATE_INFO, nullptr};
             strcpy_s(actionCreateInfo.actionName, "general_tracker");
             strcpy_s(actionCreateInfo.localizedActionName, "General Tracker");
@@ -1292,8 +1313,7 @@ namespace motion_compensation_layer
             }
         }
         std::string trackerType;
-        if (m_StageSpace == XR_NULL_HANDLE && GetConfig()->GetString(Cfg::TrackerType, trackerType) &&
-            ("yaw" == trackerType || "srs" == trackerType || "flypt" == trackerType))
+        if (m_StageSpace == XR_NULL_HANDLE)
         {
             Log("stage space created during lazy init\n");
             // Create a reference space.

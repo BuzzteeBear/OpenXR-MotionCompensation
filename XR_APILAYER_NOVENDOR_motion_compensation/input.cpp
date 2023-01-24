@@ -316,7 +316,7 @@ namespace Input
             }
             else
             {
-                ErrorLog("unable to modify offset, wrong type of tracker: %s\n", trackerType);
+                ErrorLog("unable to modify offset, wrong type of tracker: %s\n", trackerType.c_str());
                 success = false;
             }
         }
@@ -398,7 +398,7 @@ namespace Input
             }
             else
             {
-                ErrorLog("unable to activate cor debug mode, wrong type of tracker: %s\n", trackerType);
+                ErrorLog("unable to activate cor debug mode, wrong type of tracker: %s\n", trackerType.c_str());
                 success = false;
             }
         }
