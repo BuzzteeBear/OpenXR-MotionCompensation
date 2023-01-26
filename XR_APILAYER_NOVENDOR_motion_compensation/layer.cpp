@@ -631,9 +631,12 @@ namespace motion_compensation_layer
         chainAttachInfo.countActionSets = static_cast<uint32_t>(newActionSets.size());
 
         const XrResult result = OpenXrApi::xrAttachSessionActionSets(session, &chainAttachInfo);
+        Log("action set(s)%s attached, result = %d, #sets = %d\n",
+            XR_SUCCEEDED(result) ? "" : " not",
+            result,
+            chainAttachInfo.countActionSets);
         if (XR_SUCCEEDED(result))
         {
-            Log("tracker action set attached\n");
             m_ActionSetAttached = true;
         }
         return result;
@@ -905,7 +908,6 @@ namespace motion_compensation_layer
             if (XR_SUCCEEDED(xrAttachSessionActionSets(m_Session, &actionSetAttachInfo)))
             {
                 Log("action set attached during xrSyncActions\n");
-                m_ActionSetAttached = true;
             }
             else
             {
@@ -921,7 +923,7 @@ namespace motion_compensation_layer
             newActiveActionSets.resize(static_cast<size_t>(chainSyncInfo.countActiveActionSets) + 1);
             memcpy(newActiveActionSets.data(),
                    chainSyncInfo.activeActionSets,
-                   chainSyncInfo.countActiveActionSets * sizeof(XrActionSet));
+                   chainSyncInfo.countActiveActionSets * sizeof(XrActiveActionSet));
             uint32_t nextActionSetSlot = chainSyncInfo.countActiveActionSets;
 
             newActiveActionSets[nextActionSetSlot].actionSet = trackerActionSet;
@@ -931,7 +933,7 @@ namespace motion_compensation_layer
             chainSyncInfo.countActiveActionSets = nextActionSetSlot;
         }
         XrResult res = OpenXrApi::xrSyncActions(session, &chainSyncInfo);
-        DebugLog("xrSyncAction result = %d\n", res);
+        DebugLog("xrSyncAction result = %d, #sets = %d\n", res, chainSyncInfo.countActiveActionSets);
         return res;
     }
 
@@ -1343,7 +1345,6 @@ namespace motion_compensation_layer
             if (XR_SUCCEEDED(xrAttachSessionActionSets(m_Session, &actionSetAttachInfo)))
             {
                 Log("action set attached during lazy init\n");
-                m_ActionSetAttached = true;
             }
             else
             {
