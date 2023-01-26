@@ -50,6 +50,7 @@ namespace motion_compensation_layer
 
         XrResult xrCreateInstance(const XrInstanceCreateInfo* createInfo) override;
         XrResult xrGetSystem(XrInstance instance, const XrSystemGetInfo* getInfo, XrSystemId* systemId) override;
+        XrResult xrPollEvent(XrInstance instance, XrEventDataBuffer* eventData) override;
         XrResult xrCreateSession(XrInstance instance,
                                  const XrSessionCreateInfo* createInfo,
                                  XrSession* session) override;
@@ -121,6 +122,7 @@ namespace motion_compensation_layer
         bool m_Initialized{true};
         bool m_Activated{false};
         bool m_UseEyeCache{false};
+        bool m_VarjoPollWorkaround{false};
         std::string m_Application;
         std::set<XrSpace> m_ViewSpaces{};
         std::vector<XrView> m_EyeOffsets{};

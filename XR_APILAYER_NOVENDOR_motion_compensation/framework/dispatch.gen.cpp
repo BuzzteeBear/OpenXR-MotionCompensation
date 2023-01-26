@@ -39,6 +39,30 @@ namespace LAYER_NAMESPACE
 
 	// Auto-generated wrappers for the requested APIs.
 
+	XrResult xrPollEvent(XrInstance instance, XrEventDataBuffer* eventData)
+	{
+		TraceLoggingWrite(g_traceProvider, "xrPollEvent");
+
+		XrResult result;
+		try
+		{
+			result = LAYER_NAMESPACE::GetInstance()->xrPollEvent(instance, eventData);
+		}
+		catch (std::exception exc)
+		{
+			TraceLoggingWrite(g_traceProvider, "xrPollEvent_Error", TLArg(exc.what(), "Error"));
+			ErrorLog("xrPollEvent: %s\n", exc.what());
+			result = XR_ERROR_RUNTIME_FAILURE;
+		}
+
+		TraceLoggingWrite(g_traceProvider, "xrPollEvent_Result", TLArg(xr::ToCString(result), "Result"));
+		if (XR_FAILED(result)) {
+			ErrorLog("xrPollEvent failed with %s\n", xr::ToCString(result));
+		}
+
+		return result;
+	}
+
 	XrResult xrGetSystem(XrInstance instance, const XrSystemGetInfo* getInfo, XrSystemId* systemId)
 	{
 		TraceLoggingWrite(g_traceProvider, "xrGetSystem");
@@ -507,6 +531,11 @@ namespace LAYER_NAMESPACE
 		{
 			m_xrDestroyInstance = reinterpret_cast<PFN_xrDestroyInstance>(*function);
 			*function = reinterpret_cast<PFN_xrVoidFunction>(LAYER_NAMESPACE::xrDestroyInstance);
+		}
+		else if (apiName == "xrPollEvent")
+		{
+			m_xrPollEvent = reinterpret_cast<PFN_xrPollEvent>(*function);
+			*function = reinterpret_cast<PFN_xrVoidFunction>(LAYER_NAMESPACE::xrPollEvent);
 		}
 		else if (apiName == "xrGetSystem")
 		{

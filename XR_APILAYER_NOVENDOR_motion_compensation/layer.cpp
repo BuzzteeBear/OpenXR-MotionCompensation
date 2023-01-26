@@ -98,6 +98,8 @@ namespace motion_compensation_layer
         Log("Application: %s\n", m_Application.c_str());
         Log("Using OpenXR runtime: %s\n", m_RuntimeName.c_str());
 
+        m_VarjoPollWorkaround = m_RuntimeName.find("Varjo") != std::string::npos;
+
         // Initialize Configuration
         m_Initialized = GetConfig()->Init(m_Application);
 
@@ -200,6 +202,13 @@ namespace motion_compensation_layer
         TraceLoggingWrite(g_traceProvider, "xrGetSystem", TLArg((int)*systemId, "SystemId"));
 
         return result;
+    }
+
+    XrResult OpenXrLayer::xrPollEvent(XrInstance instance, XrEventDataBuffer* eventData)
+    {
+        TraceLoggingWrite(g_traceProvider, "xrPollEvent", TLPArg(instance, "Instance"));
+        m_VarjoPollWorkaround = false;
+        return OpenXrApi::xrPollEvent(instance, eventData);
     }
 
     XrResult OpenXrLayer::xrCreateSession(XrInstance instance,
@@ -939,6 +948,12 @@ namespace motion_compensation_layer
 
     XrResult OpenXrLayer::xrBeginFrame(XrSession session, const XrFrameBeginInfo* frameBeginInfo)
     {
+        if (m_VarjoPollWorkaround && m_Enabled && m_PhysicalEnabled)
+        {
+            // call xrPollEvent (if the app hasn't already) to acquire focus
+            XrEventDataBuffer buf{XR_TYPE_EVENT_DATA_BUFFER};
+            OpenXrApi::xrPollEvent(GetXrInstance(), &buf);
+        }
         if (!m_Enabled || !m_OverlayEnabled)
         {
             return OpenXrApi::xrBeginFrame(session, frameBeginInfo);

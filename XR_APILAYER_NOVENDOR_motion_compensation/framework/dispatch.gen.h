@@ -100,6 +100,14 @@ namespace LAYER_NAMESPACE
 		PFN_xrGetInstanceProperties m_xrGetInstanceProperties{ nullptr };
 
 	public:
+		virtual XrResult xrPollEvent(XrInstance instance, XrEventDataBuffer* eventData)
+		{
+			return m_xrPollEvent(instance, eventData);
+		}
+	private:
+		PFN_xrPollEvent m_xrPollEvent{ nullptr };
+
+	public:
 		virtual XrResult xrGetSystem(XrInstance instance, const XrSystemGetInfo* getInfo, XrSystemId* systemId)
 		{
 			return m_xrGetSystem(instance, getInfo, systemId);

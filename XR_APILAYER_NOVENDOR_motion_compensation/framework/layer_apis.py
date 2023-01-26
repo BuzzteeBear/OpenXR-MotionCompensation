@@ -1,6 +1,7 @@
 # The list of OpenXR functions our layer will override.
 override_functions = [
     "xrGetSystem",
+    "xrPollEvent",
     "xrCreateSession",
     "xrBeginSession",
     "xrEndSession",
