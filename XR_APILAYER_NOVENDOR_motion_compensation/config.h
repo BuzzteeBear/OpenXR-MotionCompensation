@@ -7,6 +7,7 @@ enum class Cfg
     Enabled = 0,
     PhysicalEnabled,
     OverlayEnabled,
+    PhysicalEarly,
     TrackerType,
     TrackerSide,
     TrackerTimeout,
@@ -82,6 +83,7 @@ class ConfigManager
         {Cfg::Enabled, {"startup", "enabled"}},
         {Cfg::PhysicalEnabled, {"startup", "physical_enabled"}},
         {Cfg::OverlayEnabled, {"startup", "overlay_enabled"}},
+        {Cfg::PhysicalEarly, {"startup", "physical_early_init"}},
 
         {Cfg::TrackerType, {"tracker", "type"}},
         {Cfg::TrackerSide, {"tracker", "side"}},

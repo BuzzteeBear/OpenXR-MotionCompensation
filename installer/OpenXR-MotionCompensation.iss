@@ -56,6 +56,7 @@ Root: HKLM; Subkey: "SOFTWARE\Khronos\OpenXR\1\ApiLayers\Implicit"; ValueName: "
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "startup"; Key: "enabled"; String: "1"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "startup"; Key: "physical_enabled"; String: "1"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "startup"; Key: "overlay_enabled"; String: "1"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "startup"; Key: "physical_early_init"; String: "0"; Flags: createkeyifdoesntexist
 
 ; [tracker]
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "tracker"; Key: "type"; String: "controller"; Flags: createkeyifdoesntexist

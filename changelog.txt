@@ -5,10 +5,13 @@ Version 0.2.5
 	Graphical overlay
 	- added toggle to deactivate initialization
 	- configurable marker size
+	
+	Physical tracker
+	- added early initialization option (required for iRacing & DFR in OXRTK)
 
 	Bugfixes
 	- fixed crash on vr session end with oxrtk present
-	- fixed bug during physical tracker fallback initialization
+	- fixed physical tracker fallback initialization
 	- fixed reference space creation causing cor position to jump on mc activation
 	
 Version 0.2.4

@@ -252,6 +252,16 @@ namespace motion_compensation_layer
 
                 CreateTrackerActionSpace();
 
+                bool earlyPhysicalInit;
+                std::string trackerType;
+                if (m_PhysicalEnabled && GetConfig()->GetBool(Cfg::PhysicalEarly, earlyPhysicalInit) &&
+                    earlyPhysicalInit && GetConfig()->GetString(Cfg::TrackerType, trackerType) &&
+                    ("controller" == trackerType || "vive" == trackerType))
+                {
+                    // initialize everything except tracker
+                    LazyInit(0);
+                }
+
                 const XrReferenceSpaceCreateInfo referenceSpaceCreateInfo{XR_TYPE_REFERENCE_SPACE_CREATE_INFO,
                                                                           nullptr,
                                                                           XR_REFERENCE_SPACE_TYPE_VIEW,
@@ -644,6 +654,11 @@ namespace motion_compensation_layer
             XR_SUCCEEDED(result) ? "" : " not",
             result,
             chainAttachInfo.countActionSets);
+        if (XR_ERROR_ACTIONSETS_ALREADY_ATTACHED == result)
+        {
+            Log("If you're using an application that does not support motion controllers, try disabling physical "
+                "tracker (if you don't use it for mc) or enabling early initialization\n");
+        }
         if (XR_SUCCEEDED(result))
         {
             m_ActionSetAttached = true;
@@ -1367,7 +1382,7 @@ namespace motion_compensation_layer
                 success = false;
             }
         }
-        if (!m_Tracker->LazyInit(time))
+        if (time != 0 && !m_Tracker->LazyInit(time))
         {
             success = false;
         }
