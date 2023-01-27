@@ -29,6 +29,7 @@ namespace MmfReader
         /// </summary>
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             this.comboBox1 = new System.Windows.Forms.ComboBox();
             this.backgroundWorker1 = new System.ComponentModel.BackgroundWorker();
             this.labelSelect = new System.Windows.Forms.Label();
@@ -355,6 +356,7 @@ namespace MmfReader
             this.Controls.Add(this.labelSelect);
             this.Controls.Add(this.comboBox1);
             this.ForeColor = System.Drawing.SystemColors.ButtonHighlight;
+            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.Name = "Form1";
             this.Text = "OpenXR-MotionCompensation MMF Reader";
