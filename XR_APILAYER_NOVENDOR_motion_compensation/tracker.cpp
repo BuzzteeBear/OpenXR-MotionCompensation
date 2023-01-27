@@ -286,6 +286,11 @@ namespace Tracker
     bool VirtualTracker::Init()
     {
         bool success{true};
+        if(!GetConfig()->GetBool(Cfg::UpsideDown, m_UpsideDown))
+        {
+            success = false; 
+        }
+        Log("Virtual tracker is%s upside down\n", m_UpsideDown ? "" : " not");
         float value;
         if (GetConfig()->GetFloat(Cfg::TrackerOffsetForward, value))
         {
@@ -375,9 +380,17 @@ namespace Tracker
                     forward = Normalize(forward);
                     const XrVector3f right{-forward.z, 0.0f, forward.x};
 
+                    float offsetRight = m_OffsetRight;
+                    float offsetDown = m_OffsetDown;
+                    if (m_UpsideDown)
+                    {
+                        offsetRight = -offsetRight;
+                        offsetDown = -offsetDown;
+                    }
+
                     // calculate and apply translational offset
                     const XrVector3f offset =
-                        m_OffsetForward * forward + m_OffsetRight * right + XrVector3f{0.0f, -m_OffsetDown, 0.0f};
+                        m_OffsetForward * forward + offsetRight * right + XrVector3f{0.0f, -offsetDown, 0.0f};
                     location.pose.position = location.pose.position + offset;
 
                     // calculate orientation parallel to floor
@@ -415,13 +428,15 @@ namespace Tracker
         return success;
     }
 
-    bool VirtualTracker::ChangeOffset(const XrVector3f modification)
+    bool VirtualTracker::ChangeOffset(XrVector3f modification)
     {
         if (m_DebugMode)
         {
             ErrorLog("%s: unable to change offset while cor debug mode is active\n", __FUNCTION__);
             return false;
         }
+
+       
 
         m_OffsetForward += modification.z;
         GetConfig()->SetValue(Cfg::TrackerOffsetForward, m_OffsetForward * 100.0f);
@@ -437,6 +452,13 @@ namespace Tracker
             m_OffsetForward,
             m_OffsetDown,
             m_OffsetRight);
+
+        if (m_UpsideDown)
+        {
+            modification.y = -modification.y;
+            modification.x = -modification.x;
+        }
+
         const XrPosef adjustment{{Quaternion::Identity()}, modification};
         m_ReferencePose = Pose::Multiply(adjustment, m_ReferencePose);
         TraceLoggingWrite(g_traceProvider,
@@ -453,8 +475,9 @@ namespace Tracker
             return false;
         }
         XrPosef adjustment{Pose::Identity()};
+        const float direction = (right ? -1.0f : 1.0f) * (m_UpsideDown ? -1.0f : 1.0f);
         StoreXrQuaternion(&adjustment.orientation,
-                          DirectX::XMQuaternionRotationRollPitchYaw(0.0f, (right ? -1.0f : 1.0f) * angleToRadian, 0.0f));
+                          DirectX::XMQuaternionRotationRollPitchYaw(0.0f, direction * angleToRadian, 0.0f));
         Log("cor orientation rotated to the %s\n", right ? "right" : "left");
         SetReferencePose(Pose::Multiply(adjustment, m_ReferencePose));
         return true;
@@ -705,6 +728,12 @@ namespace Tracker
                           TLArg(data.autoX, "AutoX"),
                           TLArg(data.autoY, "AutoY"));
 
+        if (m_UpsideDown)
+        {
+            data.pitch = -data.pitch;
+            data.yaw = -data.yaw;
+        }
+
         StoreXrQuaternion(&rotation.orientation,
                           DirectX::XMQuaternionRotationRollPitchYaw(data.pitch * angleToRadian,
                                                                     -data.yaw * angleToRadian,
@@ -739,6 +768,14 @@ namespace Tracker
                           TLArg(data.sway, "Sway"),
                           TLArg(data.surge, "Surge"),
                           TLArg(data.heave, "Heave"));
+
+        if (m_UpsideDown)
+        {
+            data.pitch = -data.pitch;
+            data.yaw = -data.yaw;
+            data.sway = -data.sway;
+            data.heave = -data.heave;
+        }
 
         StoreXrQuaternion(&rigPose.orientation,
                           DirectX::XMQuaternionRotationRollPitchYaw(static_cast<float>(data.pitch) * -angleToRadian,

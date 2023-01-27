@@ -519,18 +519,23 @@ namespace graphics
 
     std::vector<SimpleMeshVertex> Overlay::CreateMarker(bool rgb)
     {
-        std::vector<SimpleMeshVertex> vertices = CreateConeMesh({-1.f, 0.f, 0.f},
-                                                                {-0.375f, 0.125f, 0.f},
+        bool upsideDown;
+        GetConfig()->GetBool(Cfg::UpsideDown, upsideDown);
+        // right
+        std::vector<SimpleMeshVertex> vertices = CreateConeMesh({upsideDown ? 1.f : -1.f, 0.f, 0.f},
+                                                                {upsideDown ? 0.375f : -0.375f, 0.125f, 0.f},
                                                                 {0.f, 0.f, 0.f},
                                                                 rgb ? DarkRed : DarkMagenta,
                                                                 rgb ? Red : Magenta,
                                                                 rgb ? LightRed : LightMagenta);
-        std::vector<SimpleMeshVertex> top = CreateConeMesh({0.f, 1.f, 0.f},
-                                                            {0.f, 0.375f, 0.125f},
+        // up
+        std::vector<SimpleMeshVertex> top = CreateConeMesh({0.f, upsideDown ? -1.f : 1.f, 0.f},
+                                                           {0.f, upsideDown ? -0.375f : 0.375f, 0.125f},
                                                             {0.f, 0.f, 0.f},
                                                             rgb ? DarkBlue : DarkCyan,
                                                             rgb ? Blue : Cyan,
                                                             rgb ? LightBlue : LightCyan);
+        // forward
         vertices.insert(vertices.end(), top.begin(), top.end());
         std::vector<SimpleMeshVertex> front = CreateConeMesh({0.f, 0.f, 1.f},
                                                            {0.125f, 0.f, 0.375f},

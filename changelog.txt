@@ -6,6 +6,9 @@ Version 0.2.5
 	- added toggle to deactivate initialization
 	- configurable marker size
 	
+	Virtual tracker
+	- added upside down mode (required  for iRacing)
+	
 	Physical tracker
 	- added early initialization option (required for iRacing & DFR in OXRTK)
 

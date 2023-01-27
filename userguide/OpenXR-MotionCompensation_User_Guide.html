@@ -120,6 +120,7 @@ Upon starting an OpenXR application with the API layer active for the first time
 <li><code>physical_enabled</code>: initialization of physical tracker (motion controller or vive tracker) on startup can be skipped (e.g. if you're using a virtual tracker). Modifiying this setting requires an application restart.</li>
 <li><code>overlay_enabled</code>: can be used to omit intitialization of the graphical overlay (for example if it's not required beacuse of using a physical tracker or if the position of the center of rotation is successfully setup and <code>use_cor_pos</code> = 1 is used). Changing this value requires the VR session to be restarted.</li>
 <li><code>physical_early_init</code>: initialize physical tracker as soon instead of as late as possible. May be required in native OpenXR games / sims that do not support motion controllers input (e.g. iRacing). May avoid conflicts with other open xr layers (e.g. eye tracking in OpenXR toolkit)</li>
+<li><code>upside_down</code>: turns in-game coordinate system upside down by rotating it 180 degrees around the 'forward' axis. Necessary for correct orientation of virtual tracker in some games (e.g. iRacing)</li>
 </ul>
 </li>
 <li><p><code>tracker</code>: The following tracker <code>type</code> keys are available:</p>
@@ -231,6 +232,7 @@ Feedback on success or failure of this functionality using different VR systems 
 <li>blue points upwards</li>
 <li>green points forward</li>
 <li>red points to the right</li>
+<li>if blue and red are pointing in the opposite direction, try setting <code>upside_down</code> to 1 in the <code>startup</code> section of the config file of the corresponding application (or check if it is set to 1 inadvertently).</li>
 </ul>
 </li>
 <li>for a physical tracker the orientation of the marker is depending on the runtime implementation</li>

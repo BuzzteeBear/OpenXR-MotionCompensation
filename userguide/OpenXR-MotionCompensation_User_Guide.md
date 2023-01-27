@@ -86,6 +86,7 @@ What you can modify in a configuration file:
   - `physical_enabled`: initialization of physical tracker (motion controller or vive tracker) on startup can be skipped (e.g. if you're using a virtual tracker). Modifiying this setting requires an application restart.
   - `overlay_enabled`: can be used to omit intitialization of the graphical overlay (for example if it's not required beacuse of using a physical tracker or if the position of the center of rotation is successfully setup and `use_cor_pos` = 1 is used). Changing this value requires the VR session to be restarted.
   - `physical_early_init`: initialize physical tracker as soon instead of as late as possible. May be required in native OpenXR games / sims that do not support motion controllers input (e.g. iRacing). May avoid conflicts with other open xr layers (e.g. eye tracking in OpenXR toolkit)
+  - `upside_down`: turns in-game coordinate system upside down by rotating it 180 degrees around the 'forward' axis. Necessary for correct orientation of virtual tracker in some games (e.g. iRacing)
 - `tracker`: The following tracker `type` keys are available:
   - `controller`: use either the left or the right motion controller as reference tracker. Valid options for the key `side` are `left` and `right` (**Note that changing the side or switching between motion controller and vive tracker requires a restart of the vr session**)
   - `vive`: use a vive tracker as reference for motion compensation. The key `side` has to match the role assigned to the tracker. Valid options for that are:
@@ -176,6 +177,7 @@ You can enable/disable the overlay using the `toggle_overlay` shortcut. It displ
     - blue points upwards
     - green points forward
     - red points to the right
+    - if blue and red are pointing in the opposite direction, try setting `upside_down` to 1 in the `startup` section of the config file of the corresponding application (or check if it is set to 1 inadvertently). 
   - for a physical tracker the orientation of the marker is depending on the runtime implementation
 - the current tracker position, if mc is currently active. This marker uses:
   - cyan instead of blue

@@ -8,6 +8,7 @@ enum class Cfg
     PhysicalEnabled,
     OverlayEnabled,
     PhysicalEarly,
+    UpsideDown,
     TrackerType,
     TrackerSide,
     TrackerTimeout,
@@ -84,6 +85,7 @@ class ConfigManager
         {Cfg::PhysicalEnabled, {"startup", "physical_enabled"}},
         {Cfg::OverlayEnabled, {"startup", "overlay_enabled"}},
         {Cfg::PhysicalEarly, {"startup", "physical_early_init"}},
+        {Cfg::UpsideDown, {"startup", "upside_down"}},
 
         {Cfg::TrackerType, {"tracker", "type"}},
         {Cfg::TrackerSide, {"tracker", "side"}},
