@@ -17,6 +17,9 @@ Version 0.2.5
 	- fixed physical tracker fallback initialization
 	- fixed reference space creation causing cor position to jump on mc activation
 	
+	Known issues
+	- incompatible with DCS World native OpenXR mode (unacceptable fps drop, under investigation)
+	
 Version 0.2.4
 
 	Graphical overlay
