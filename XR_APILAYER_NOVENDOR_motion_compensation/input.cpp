@@ -22,18 +22,28 @@ namespace Input
             Cfg::KeyRotDec,   Cfg::KeyOffForward, Cfg::KeyOffBack,       Cfg::KeyOffUp,        Cfg::KeyOffDown,
             Cfg::KeyOffRight, Cfg::KeyOffLeft,    Cfg::KeyRotRight,      Cfg::KeyRotLeft,      Cfg::KeyOverlay,
             Cfg::KeyCache,    Cfg::KeySaveConfig, Cfg::KeySaveConfigApp, Cfg::KeyReloadConfig, Cfg::KeyDebugCor};
+        const std::set<int> modifiers{VK_CONTROL, VK_SHIFT, VK_MENU};
         std::string errors;
 
         // undocumented / uncofigurable shoprtcuts:
-        m_ShortCuts[Cfg::InteractionProfile] = {VK_CONTROL, VK_SHIFT, VK_MENU, 0x49}; // ctrl+shift+alt+i
-        m_ShortCuts[Cfg::CurrentTrackerPose] = {VK_CONTROL, VK_SHIFT, VK_MENU, 0x54}; // ctrl+shift+alt+t
+        m_ShortCuts[Cfg::InteractionProfile] = {{VK_CONTROL, VK_SHIFT, VK_MENU, 0x49}, {}}; // ctrl+shift+alt+i
+        m_ShortCuts[Cfg::CurrentTrackerPose] = {{VK_CONTROL, VK_SHIFT, VK_MENU, 0x54}, {}}; // ctrl+shift+alt+t
 
         for (const Cfg& activity : activities)
         {
             std::set<int> shortcut;
             if (GetConfig()->GetShortcut(activity, shortcut))
             {
-                m_ShortCuts[activity] = shortcut;
+                // modifiers not included in the shortcut are put in the exclusion list
+                std::set<int> modifiersNotSet;
+                for (const int& modifier : modifiers)
+                {
+                    if (!shortcut.contains(modifier))
+                    {
+                        modifiersNotSet.insert(modifier);
+                    }
+                }
+                m_ShortCuts[activity] = {shortcut, modifiersNotSet};
             }
             else
             {
@@ -144,13 +154,15 @@ namespace Input
             motion_compensation_layer::log::ErrorLog("%s(%d): unable to find key\n", __FUNCTION__, key);
             return false;
         }
-        return UpdateKeyState(it->second, isRepeat);
+        return UpdateKeyState(it->second.first, it->second.second, isRepeat);
     }
 
-    bool KeyboardInput::UpdateKeyState(const std::set<int>& vkKeySet, bool& isRepeat)
+    bool KeyboardInput::UpdateKeyState(const std::set<int>& vkKeySet, const std::set<int>& vkExclusionSet,  bool& isRepeat)
     {
         const auto isPressed =
-            vkKeySet.size() > 0 && std::ranges::all_of(vkKeySet, [](const int vk) { return GetAsyncKeyState(vk) < 0; });
+            vkKeySet.size() > 0 &&
+            std::ranges::all_of(vkKeySet, [](const int vk) { return GetAsyncKeyState(vk) < 0; }) &&
+            std::ranges::none_of(vkExclusionSet, [](const int vk) { return GetAsyncKeyState(vk) < 0; });
         auto keyState = m_KeyStates.find(vkKeySet);
         const auto now = std::chrono::steady_clock::now();
         if (m_KeyStates.end() == keyState)

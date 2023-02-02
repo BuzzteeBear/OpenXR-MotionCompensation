@@ -18,9 +18,9 @@ namespace Input
         bool GetKeyState(Cfg key, bool& isRepeat);
 
       private:
-        bool UpdateKeyState(const std::set<int>& vkKeySet, bool& isRepeat);
+        bool UpdateKeyState(const std::set<int>& vkKeySet, const std::set<int>& vkExclusionSet, bool& isRepeat);
 
-        std::map<Cfg, std::set<int>> m_ShortCuts;
+        std::map<Cfg, std::pair<std::set<int>, std::set<int>>> m_ShortCuts;
         std::map<std::set<int>, std::pair<bool, std::chrono::steady_clock::time_point>> m_KeyStates;
         const std::chrono::milliseconds m_KeyRepeatDelay = 300ms;
     };
