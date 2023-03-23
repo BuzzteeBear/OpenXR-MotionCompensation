@@ -1,5 +1,10 @@
 OpenXR-MotionCompensation Changelog
 
+Version 0.2.6
+
+	Input
+	- excluded inpouts with additional modifiers (only for artificial keyboard input e.g. joy2key)
+	
 Version 0.2.5
 
 	Graphical overlay
