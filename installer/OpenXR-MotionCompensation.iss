@@ -240,7 +240,7 @@ end;
 procedure ReorderApiLayerRegEntries;
 var
   Names: TArrayOfString;
-  Name, Path, ToolkitKey, LeapMotionKey: string;
+  Name, Path, ToolkitKey, LeapMotionKey, VarjoFoveatedKey: string;
   I: Integer;
   Value: Cardinal;
 begin
@@ -252,13 +252,17 @@ begin
     for I := 0 to GetArrayLength(Names) - 1 do
     begin
       Name := Names[I];
-      if EndsWith('XR_APILAYER_NOVENDOR_toolkit.json', Name) then
+      if EndsWith('XR_APILAYER_NOVENDOR_toolkit.json', Name) or EndsWith('XR_APILAYER_MBUCCHIA_toolkit.json', Name) then
       begin
         ToolkitKey := Name;
       end;
       if EndsWith('UltraleapHandTracking.json', Name) then
       begin
         LeapMotionKey := Name;
+      end;
+      if EndsWith('XR_APILAYER_MBUCCHIA_varjo_foveated.json', Name) then
+      begin
+        VarjoFoveatedKey := Name;
       end;
     end;
     if ToolkitKey <> '' then
@@ -295,6 +299,24 @@ begin
       else
       begin
         MsgBox('Unable to read registry key value: Computer\HKEY_LOCAL_MACHINE ' + Path + ToolkitKey, mbError, MB_OK);
+      end;
+    end;
+    if VarjoFoveatedKey <> '' then
+    begin
+      if RegQueryDWordValue(HKLM, Path, VarjoFoveatedKey, Value) then
+      begin
+        if RegDeleteValue(HKLM, Path, VarjoFoveatedKey) and RegWriteDWordValue(HKLM, Path, VarjoFoveatedKey, Value) then
+        begin
+          Log(Format('Recreated registry key: %s = %d', ['Computer\HKEY_LOCAL_MACHINE' + Path + VarjoFoveatedKey, Value]));
+        end
+        else
+        begin
+          MsgBox('Unable to recreate registry key: Computer\HKEY_LOCAL_MACHINE ' + Path + VarjoFoveatedKey, mbError, MB_OK);
+        end;
+      end
+      else
+      begin
+        MsgBox('Unable to read registry key value: Computer\HKEY_LOCAL_MACHINE ' + Path +  VarjoFoveatedKey, mbError, MB_OK);
       end;
     end;
   end;
