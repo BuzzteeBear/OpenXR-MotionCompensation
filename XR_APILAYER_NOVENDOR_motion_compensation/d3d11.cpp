@@ -565,20 +565,6 @@ namespace {
                 Log("Using Direct3D 11 on adapter: %s\n", deviceName.c_str());
             }
 
-#ifdef _DEBUG
-            // Initialize Debug layer logging.
-
-            if (SUCCEEDED(m_device->QueryInterface(set(m_infoQueue))))
-            {
-                Log("D3D11 Debug layer is enabled\n");
-            }
-            else
-            {
-                Log("Failed to enable debug layer - please check that the 'Graphics Tools' feature of Windows "
-                    "is "
-                    "installed\n");
-            }
-#endif
             // Create common resources.
             initializeMeshResources();
         }
@@ -625,12 +611,6 @@ namespace {
 
             if (blocking) {
                 m_context->Flush();
-            }
-
-            // Log any messages from the Debug layer.
-            if (auto count = m_infoQueue ? m_infoQueue->GetNumStoredMessages() : 0) {
-                LogInfoQueueMessage(get(m_infoQueue), count);
-                m_infoQueue->ClearStoredMessages();
             }
         }
 
@@ -956,12 +936,6 @@ namespace {
         std::shared_ptr<ITexture> m_currentDrawDepthBuffer;
         int32_t m_currentDrawDepthBufferSlice;
         std::shared_ptr<ISimpleMesh> m_currentMesh;
-
-        ComPtr<ID3D11InfoQueue> m_infoQueue;
-
-        mutable uint32_t m_currentShaderHighestSRV;
-        mutable uint32_t m_currentShaderHighestUAV;
-        mutable uint32_t m_currentShaderHighestRTV;
 
         static XrSwapchainCreateInfo getTextureInfo(const D3D11_TEXTURE2D_DESC& textureDesc) {
             XrSwapchainCreateInfo info;

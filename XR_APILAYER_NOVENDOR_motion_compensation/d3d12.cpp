@@ -483,32 +483,6 @@ namespace {
                     }
                 }
             }
-
-#ifdef _DEBUG
-            // Initialize Debug layer logging.
-            if (SUCCEEDED(m_device->QueryInterface(set(m_infoQueue))))
-            {
-                Log("D3D12 Debug layer is enabled\n");
-
-                // Disable some common warnings.
-                D3D12_MESSAGE_ID messages[] = {
-                    D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,
-                    D3D12_MESSAGE_ID_CLEARDEPTHSTENCILVIEW_MISMATCHINGCLEARVALUE,
-                    D3D12_MESSAGE_ID_CREATERESOURCE_CLEARVALUEDENORMFLUSH,
-                    D3D12_MESSAGE_ID_REFLECTSHAREDPROPERTIES_INVALIDOBJECT, // Caused by D3D11on12.
-                };
-                D3D12_INFO_QUEUE_FILTER filter;
-                ZeroMemory(&filter, sizeof(filter));
-                filter.DenyList.NumIDs = ARRAYSIZE(messages);
-                filter.DenyList.pIDList = messages;
-                m_infoQueue->AddStorageFilterEntries(&filter);
-            }
-            else
-            {
-                Log("Failed to enable debug layer - please check that the 'Graphics Tools' feature of Windows is "
-                    "installed\n");
-            }
-#endif
         
             // Initialize the command lists and heaps.
             m_rtvHeap.initialize(get(m_device), D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
@@ -606,12 +580,6 @@ namespace {
             CHECK_HRCMD(m_commandAllocator[m_currentContext]->Reset());
             CHECK_HRCMD(m_commandList[m_currentContext]->Reset(get(m_commandAllocator[m_currentContext]), nullptr));
             m_context = m_commandList[m_currentContext];
-
-            // Log any messages from the Debug layer.
-            if (auto count = m_infoQueue ? m_infoQueue->GetNumStoredMessages() : 0) {
-                LogInfoQueueMessage(get(m_infoQueue), count);
-                m_infoQueue->ClearStoredMessages();
-            }
         }
 
         std::shared_ptr<ITexture> createTexture(const XrSwapchainCreateInfo& info,
@@ -1094,8 +1062,6 @@ namespace {
         bool m_currentDrawDepthBufferIsInverted;
 
         std::shared_ptr<ISimpleMesh> m_currentMesh;
-
-        ComPtr<ID3D12InfoQueue> m_infoQueue;
 
         friend std::shared_ptr<ITexture> graphics::WrapD3D12Texture(std::shared_ptr<IDevice> device,
                                                                     const XrSwapchainCreateInfo& info,
