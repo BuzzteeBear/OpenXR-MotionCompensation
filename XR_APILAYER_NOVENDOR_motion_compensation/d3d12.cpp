@@ -485,9 +485,9 @@ namespace {
             }
         
             // Initialize the command lists and heaps.
-            m_rtvHeap.initialize(get(m_device), D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-            m_dsvHeap.initialize(get(m_device), D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-            m_rvHeap.initialize(get(m_device), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 32 + MaxModelBuffers);
+            m_rtvHeap.initialize(get(m_device), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 128);
+            m_dsvHeap.initialize(get(m_device), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 128);
+            m_rvHeap.initialize(get(m_device), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 128 + MaxModelBuffers);
            
             {
                 for (uint32_t i = 0; i < NumInflightContexts; i++) {
