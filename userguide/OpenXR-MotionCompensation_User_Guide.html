@@ -225,7 +225,7 @@ Feedback on success or failure of this functionality using different VR systems 
 <h3 id="graphical-overlay">Graphical overlay</h3>
 <p>You can enable/disable the overlay using the <code>toggle_overlay</code> shortcut. It displays a marker in your headset view for:</p>
 <ul>
-<li>the current neutral position of the reference tracker.
+<li>the current neutral position of the reference tracker. <strong>Note that the position of the marker does not represent the cor position prior to calibration</strong>
 <ul>
 <li>for a virtual tracker the neutral position corresponds to the center of rotation currently configured. The marker uses the following color coding:
 <ul>
@@ -262,22 +262,67 @@ Feedback on success or failure of this functionality using different VR systems 
 </ul>
 </li>
 </ul>
-<h2 id="additional-notes">Additional Notes</h2>
-<ul>
-<li><p>Upon activating any shortcut you get audible feedback, corresponding to the performed action (or an error, if something went wrong).</p>
-</li>
-<li><p>If you recenter the in-app view during a session the reference pose is reset by default. Therefore you should only do that while your motion rig is in neutral position. It is possible (depending on the application) that this automatic recalibration is not triggered, causing the view and reference pose to be out of sync and leading to erroneous motion compensation. You should do the following steps to get this corrected again:</p>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<p>Upon activating any shortcut you get audible feedback, corresponding to the performed action (or an error, if something went wrong).
+If you're getting 'error' or no feedback at all, check for error entries (search for keyword 'error') in the log file at <strong>...\Users&lt;Your_Username&gt;\AppData\Local\OpenXR-MotionCompensation\OpenXR-MotionCompensation.log</strong>.</p>
+<h3 id="recentering-in-game-view">Recentering in-game view</h3>
+<p>If you recenter the in-app view during a session the reference pose is reset by default. Therefore you should only do that while your motion rig is in neutral position. It is possible (depending on the application) that this automatic recalibration is not triggered, causing the view and reference pose to be out of sync and leading to erroneous motion compensation. You should do the following steps to get this corrected again:</p>
 <ol>
 <li>deactivate motion compensation by pressing the <code>activate</code> shortcut</li>
 <li>bring your motion rig to neutral position. Face forward if yout using a virtual tracker</li>
 <li>recalibrate by pressing the <code>center</code> shortcut</li>
 <li>reactivate motion compensation by pressing the <code>activate</code> shortcut</li>
 </ol>
+<h3 id="virtual-tracker">Virtual tracker</h3>
+<p>When using a <strong>virtual tracker</strong> and the audible feedback says 'motion compensation activated' but you don't get motion compensation as you would expect
+Use the <a href="#mmf-reader">MmfReader App</a> to make sure oxrmc is actually receiving data from the motion software.</p>
+<ul>
+<li>check center of rotation position</li>
+<li>activate graphical overlay</li>
+<li>verify position and orientation of the marker
+If don't have a clue where the cor of your motion rig is supposed to be, you can try this procedure, that should work for most motion rig setups:</li>
+</ul>
+<ol>
+<li>Find a way to feed your motion software with artificial rotational telemetry (e.g. Joystick mode in the Setup section of SRS, a sine wave generator for FlyPT Mover or Gamepad / DirectInput plugin for YawVR Game Engine.</li>
+<li>Calibrate your cor (ctrl+del by default) as described in <a href="#calibrate-virtual-tracker">here</a> and activate motion compenation</li>
+<li>Find the right height
+<ol>
+<li>start rolling fully to the right while keeping the head still (in reference to the seat) and check if your ingame position is moving.</li>
+<li>if your view is moved to the right, lower your cor position (ctrl+page down), if it's moving left lift it up (ctrl + page up)</li>
+<li>rinse &amp; repeat until your in-game position does not move when rolling</li>
+</ol>
 </li>
-<li><p>If the motion controller cannot be tracked for whatever reason (or if the memory mapped file containing the motion data for a virtual tracker cannot be found or accessed) when activating motion compensation or recalibrating the tracker pose, the API layer is unable to set the reference pose and motion compensation is (or stays) deactivated.</p>
+<li>Set the forward distance
+<ol>
+<li>start pitching fully backward do the same as for roll, but this time check if you're moved up or down in game</li>
+<li>if your position is rising move the cor backwards, if it's lowering move it forward</li>
+<li>rinse &amp; repeat until your in-game position does not move when rolling</li>
+</ol>
+</li>
+<li>Save your configuration (ctrl + shift + s), once you got your cor dialed in. That causes the new offset values as well as the current cor position to be written into the config file for later use.</li>
+</ol>
+<h3 id="physical-tracker">Physical tracker</h3>
+<ul>
+<li>Make sure the tracker/controller doesn't go into standby mode</li>
+<li>Place a lighthouse based tracker to have line of sight to as many basestations as possible</li>
+<li>If you're experiencing tracking issues on strong vibrations (e.g. transducer) on the rig, try to find a better mounting spot or tune vibrations down.</li>
+</ul>
+<p>You can always request help on the <a href="https://discord.gg/BVWugph5XF">Discord server</a></p>
+<ul>
+<li>provide as much <strong>information</strong> as possible about your setup and the isssue you're having, including:
+<ul>
+<li>log file</li>
+<li>tracker type</li>
+<li>hmd</li>
+<li>game(s)</li>
+<li>usin OpenComposite o</li>
+</ul>
 </li>
 </ul>
-<h2 id="debugging">Debugging</h2>
+<h2 id="additional-notes">Additional Notes</h2>
+<ul>
+<li>If the motion controller cannot be tracked for whatever reason (or if the memory mapped file containing the motion data for a virtual tracker cannot be found or accessed) when activating motion compensation or recalibrating the tracker pose, the API layer is unable to set the reference pose and motion compensation is (or stays) deactivated.</li>
+</ul>
 <h3 id="mmf-reader">MMF Reader</h3>
 <p>The software package includes a small app called MMF Reader which allows you to display the content of the memory mapped file used for virtual trackers. Just execute it from windows start menu or use the executable in the installation directory and select the kind of tracker you're using from the dropdown menu.</p>
 <ul>
@@ -290,7 +335,7 @@ Feedback on success or failure of this functionality using different VR systems 
 <p><a href="https://docs.microsoft.com/en-us/windows/win32/tracelogging/trace-logging-portal">Tracelogging</a> can become very useful to investigate user issues.</p>
 <p>To capture a trace for the API layer:</p>
 <ul>
-<li>start the OpenXr application</li>
+<li>start the OpenXR application</li>
 <li>Open a command line prompt or powershell in administrator mode and in a folder where you have write permissions</li>
 <li>Begin recording a trace with the command: <code>wpr -start path\to\Trace_OpenXR-MotionCompensation.wprp -filemode</code></li>
 <li>Leave that command prompt open</li>

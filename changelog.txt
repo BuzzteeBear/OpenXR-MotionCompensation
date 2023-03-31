@@ -2,8 +2,11 @@ OpenXR-MotionCompensation Changelog
 
 Version 0.2.6
 
+	Installer
+	- added API layer reordering for Varjo-Foveated
+
 	Input
-	- excluded inpouts with additional modifiers (only for artificial keyboard input e.g. joy2key)
+	- excluded inputs with additional modifiers (only for artificial keyboard input e.g. joy2key)
 	
 Version 0.2.5
 
