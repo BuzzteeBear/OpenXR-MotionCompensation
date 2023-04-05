@@ -1,6 +1,10 @@
 OpenXR-MotionCompensation Changelog
 
 Version 0.2.6
+	Automatic activation
+	- added option to ativate motion compensation on application startup
+	- added delay for auto activation
+	- added audible countdown for auto activation
 
 	Installer
 	- added API layer reordering for Varjo-Foveated

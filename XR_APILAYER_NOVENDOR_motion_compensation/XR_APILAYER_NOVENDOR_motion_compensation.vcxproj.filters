@@ -205,5 +205,41 @@
     <Media Include="sounds\overlay_on.wav">
       <Filter>Sounds</Filter>
     </Media>
+    <Media Include="sounds\0.wav">
+      <Filter>Sounds</Filter>
+    </Media>
+    <Media Include="sounds\1.wav">
+      <Filter>Sounds</Filter>
+    </Media>
+    <Media Include="sounds\2.wav">
+      <Filter>Sounds</Filter>
+    </Media>
+    <Media Include="sounds\3.wav">
+      <Filter>Sounds</Filter>
+    </Media>
+    <Media Include="sounds\4.wav">
+      <Filter>Sounds</Filter>
+    </Media>
+    <Media Include="sounds\5.wav">
+      <Filter>Sounds</Filter>
+    </Media>
+    <Media Include="sounds\6.wav">
+      <Filter>Sounds</Filter>
+    </Media>
+    <Media Include="sounds\7.wav">
+      <Filter>Sounds</Filter>
+    </Media>
+    <Media Include="sounds\8.wav">
+      <Filter>Sounds</Filter>
+    </Media>
+    <Media Include="sounds\9.wav">
+      <Filter>Sounds</Filter>
+    </Media>
+    <Media Include="sounds\10.wav">
+      <Filter>Sounds</Filter>
+    </Media>
+    <Media Include="sounds\point.wav">
+      <Filter>Sounds</Filter>
+    </Media>
   </ItemGroup>
 </Project>

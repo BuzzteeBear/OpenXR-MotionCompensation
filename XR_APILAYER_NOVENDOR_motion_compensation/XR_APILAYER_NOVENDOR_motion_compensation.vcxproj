@@ -216,6 +216,17 @@ xcopy $(SolutionDir)\configuration\OpenXR-MotionCompensation.ini $(OutDir) /y /q
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
+    <Media Include="sounds\0.wav" />
+    <Media Include="sounds\1.wav" />
+    <Media Include="sounds\10.wav" />
+    <Media Include="sounds\2.wav" />
+    <Media Include="sounds\3.wav" />
+    <Media Include="sounds\4.wav" />
+    <Media Include="sounds\5.wav" />
+    <Media Include="sounds\6.wav" />
+    <Media Include="sounds\7.wav" />
+    <Media Include="sounds\8.wav" />
+    <Media Include="sounds\9.wav" />
     <Media Include="sounds\activated.wav" />
     <Media Include="sounds\back.wav" />
     <Media Include="sounds\calibrated.wav" />
@@ -236,6 +247,7 @@ xcopy $(SolutionDir)\configuration\OpenXR-MotionCompensation.ini $(OutDir) /y /q
     <Media Include="sounds\overlay_off.wav" />
     <Media Include="sounds\overlay_on.wav" />
     <Media Include="sounds\plus.wav" />
+    <Media Include="sounds\point.wav" />
     <Media Include="sounds\right.wav" />
     <Media Include="sounds\rot_left.wav" />
     <Media Include="sounds\rot_right.wav" />

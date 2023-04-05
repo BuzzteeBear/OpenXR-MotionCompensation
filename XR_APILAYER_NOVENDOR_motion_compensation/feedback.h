@@ -38,6 +38,7 @@ namespace Feedback
       public:
         bool Init();
         void Execute(Event feedback);
+        static void CountDown(int seconds);
 
       private:
         std::map<Event, int> m_SoundResources{};

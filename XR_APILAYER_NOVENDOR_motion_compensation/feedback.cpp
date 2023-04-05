@@ -43,7 +43,7 @@ namespace Feedback
         return true;
     }
 
-    void AudioOut::Execute(Event feedback)
+    void AudioOut::Execute(const Event feedback)
     {
         const auto soundResource = m_SoundResources.find(feedback);
         if (m_SoundResources.end() != soundResource)
@@ -63,6 +63,21 @@ namespace Feedback
         else
         {
             ErrorLog("%s: unknown feedback identifier: %d\n", __FUNCTION__, feedback);
+        }
+    }
+
+    void AudioOut::CountDown(const int seconds)
+    {
+        if (seconds > 0 && seconds <= 10 &&
+            (!PlaySound(nullptr, 0, 0) || !PlaySound(MAKEINTRESOURCE(COUNT0_WAV + seconds),
+                                                     motion_compensation_layer::dllModule,
+                                                     SND_RESOURCE | SND_ASYNC)))
+        {
+            ErrorLog("%s: unable to play sound (%d : % d): %s\n",
+                     __FUNCTION__,
+                     -seconds,
+                     126 + seconds,
+                     utility::LastErrorMsg().c_str());
         }
     }
 } // namespace Feedback

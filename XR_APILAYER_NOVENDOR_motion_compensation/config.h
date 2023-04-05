@@ -9,6 +9,9 @@ enum class Cfg
     OverlayEnabled,
     PhysicalEarly,
     UpsideDown,
+    AutoActive,
+    AutoActiveDelay,
+    AutoActiveCountdown,
     TrackerType,
     TrackerSide,
     TrackerTimeout,
@@ -86,13 +89,16 @@ class ConfigManager
         {Cfg::OverlayEnabled, {"startup", "overlay_enabled"}},
         {Cfg::PhysicalEarly, {"startup", "physical_early_init"}},
         {Cfg::UpsideDown, {"startup", "upside_down"}},
+        {Cfg::AutoActive, {"startup", "activate"}},
+        {Cfg::AutoActiveDelay, {"startup", "activate_delay"}},
+        {Cfg::AutoActiveCountdown, {"startup", "activate_countdown"}},
 
         {Cfg::TrackerType, {"tracker", "type"}},
         {Cfg::TrackerSide, {"tracker", "side"}},
-        
+
         {Cfg::TrackerTimeout, {"tracker", "connection_timeout"}},
         {Cfg::TrackerCheck, {"tracker", "connection_check"}},
-        
+
         {Cfg::TrackerOffsetForward, {"tracker", "offset_forward"}},
         {Cfg::TrackerOffsetDown, {"tracker", "offset_down"}},
         {Cfg::TrackerOffsetRight, {"tracker", "offset_right"}},

@@ -58,6 +58,9 @@ Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "startup"; Key: "
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "startup"; Key: "overlay_enabled"; String: "1"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "startup"; Key: "physical_early_init"; String: "0"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "startup"; Key: "upside_down"; String: "0"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "startup"; Key: "activate"; String: "0"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "startup"; Key: "activate_delay"; String: "10"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "startup"; Key: "activate_countdown"; String: "1"; Flags: createkeyifdoesntexist
 
 ; [tracker]
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "tracker"; Key: "type"; String: "controller"; Flags: createkeyifdoesntexist

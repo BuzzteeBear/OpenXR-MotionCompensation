@@ -3,9 +3,25 @@
 #pragma once
 
 #include <log.h>
+#include "input.h"
+
+
 
 namespace utility
 {
+    class AutoActivator
+    {
+      private:
+        std::shared_ptr<Input::InputHandler> m_Input;
+        bool m_Activate{false};
+        bool m_Countdown{false};
+        int m_SecondsLeft{0};
+        XrTime m_ActivationTime{0};
+      public:
+        explicit AutoActivator(std::shared_ptr<Input::InputHandler> input);
+        void ActivateIfNecessary(XrTime time);
+    };
+
     template <typename Sample>
     class Cache
     {

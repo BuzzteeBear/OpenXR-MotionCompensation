@@ -155,11 +155,14 @@ namespace motion_compensation_layer
         }
 
         // initialize keyboard input handler
-        m_Input = std::make_unique<Input::InputHandler>(Input::InputHandler(this));
+        m_Input = std::make_shared<Input::InputHandler>(Input::InputHandler(this));
         if (!m_Input->Init())
         {
             m_Initialized = false;
         }
+
+        // initialize auto activator
+        m_AutoActivator = std::make_unique<utility::AutoActivator>(utility::AutoActivator(m_Input));
 
         CreateTrackerAction();
 
@@ -1017,6 +1020,10 @@ namespace motion_compensation_layer
         if (m_RecenterInProgress && !m_LocalRefSpaceCreated)
         {
             m_RecenterInProgress = false;
+        }
+        else if (m_AutoActivator)
+        {
+            m_AutoActivator->ActivateIfNecessary(frameEndInfo->displayTime);
         }
         m_LocalRefSpaceCreated = false; 
 

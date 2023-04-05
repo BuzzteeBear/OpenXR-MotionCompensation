@@ -100,6 +100,30 @@ OVERLAY_ON_WAV          WAVE                    "sounds\\overlay_on.wav"
 
 OVERLAY_OFF_WAV         WAVE                    "sounds\\overlay_off.wav"
 
+COUNT0_WAV              WAVE                    "sounds\\0.wav"
+
+COUNT1_WAV              WAVE                    "sounds\\1.wav"
+
+COUNT2_WAV              WAVE                    "sounds\\2.wav"
+
+COUNT3_WAV              WAVE                    "sounds\\3.wav"
+
+COUNT4_WAV              WAVE                    "sounds\\4.wav"
+
+COUNT5_WAV              WAVE                    "sounds\\5.wav"
+
+COUNT6_WAV              WAVE                    "sounds\\6.wav"
+
+COUNT7_WAV              WAVE                    "sounds\\7.wav"
+
+COUNT8_WAV              WAVE                    "sounds\\8.wav"
+
+COUNT9_WAV              WAVE                    "sounds\\9.wav"
+
+COUNT10_WAV             WAVE                    "sounds\\10.wav"
+
+POINT_WAV               WAVE                    "sounds\\point.wav"
+
 #endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////
 

@@ -5,13 +5,52 @@
 #include <DirectXMath.h>
 #include <log.h>
 #include "utility.h"
+#include "layer.h"
 #include "config.h"
+#include "feedback.h"
 
-using namespace motion_compensation_layer::log;
+using namespace motion_compensation_layer;
+using namespace log;
 using namespace xr::math;
 
 namespace utility
 {
+    AutoActivator::AutoActivator(std::shared_ptr<Input::InputHandler> input)
+    {
+        m_Input = input;
+        GetConfig()->GetBool(Cfg::AutoActive, m_Activate);
+        GetConfig()->GetInt(Cfg::AutoActiveDelay, m_SecondsLeft);
+        GetConfig()->GetBool(Cfg::AutoActiveCountdown, m_Countdown);
+
+        Log("auto activation %s, delay: %d seconds, countdown %s\n",
+            m_Activate ? "on" : "off",
+            m_SecondsLeft,
+            m_Countdown ? "on" : "off");
+    }
+    void AutoActivator::ActivateIfNecessary(const XrTime time)
+    {
+        if (m_Activate)
+        {
+            if (m_SecondsLeft <= 0)
+            {
+                m_Input->ToggleActive(time);
+                m_Activate = false;
+                return;
+            }
+            if (0 == m_ActivationTime)
+            {
+                m_ActivationTime = time + ++m_SecondsLeft * 1000000000ll;
+            }
+            const int currentlyLeft = static_cast<int>((m_ActivationTime - time) / 1000000000ll);
+
+            if (m_Countdown && currentlyLeft < m_SecondsLeft)
+            {
+                Feedback::AudioOut::CountDown(currentlyLeft);
+            }
+            m_SecondsLeft = currentlyLeft;
+        }
+    }
+
     Mmf::Mmf()
     {
         float check;

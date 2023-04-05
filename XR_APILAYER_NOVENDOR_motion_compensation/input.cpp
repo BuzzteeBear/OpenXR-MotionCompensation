@@ -5,6 +5,7 @@
 #include "input.h"
 #include "layer.h"
 #include "feedback.h"
+#include "utility.h"
 #include <log.h>
 
 namespace Input
@@ -356,6 +357,8 @@ namespace Input
         {
             GetConfig()->GetBool(Cfg::TestRotation, m_Layer->m_TestRotation);
             GetConfig()->GetBool(Cfg::CacheUseEye, m_Layer->m_UseEyeCache);
+            m_Layer->m_AutoActivator =
+                std::make_unique<utility::AutoActivator>(utility::AutoActivator(m_Layer->m_Input));
             Tracker::GetTracker(&m_Layer->m_Tracker);
             if (!m_Layer->m_Tracker->Init())
             {

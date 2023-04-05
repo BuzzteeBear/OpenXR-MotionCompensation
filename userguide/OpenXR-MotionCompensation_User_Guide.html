@@ -114,13 +114,16 @@ Upon starting an OpenXR application with the API layer active for the first time
 </ul>
 <h3 id="sections-in-configuration-file">Sections in configuration file</h3>
 <ul>
-<li><p><code>startup</code>: You can disable OXRMC features by setting the corresponding key to 0:</p>
+<li><p><code>startup</code>: You can modify oxrmc's behaviour on application start, e.g. disable a specific feature by setting the corresponding key to 0.</p>
 <ul>
-<li><code>enabled</code>: you can disable all functionality for a single application or globally by modifying default or application specific config file respectively. Note that you cannot enable a single application if oxrmc is disabled globally in the default config file. Modifiying this setting requires an applcation restart.</li>
+<li><code>enabled</code>: you can disable all functionality globally or for a single application. Note that you cannot enable a single application if oxrmc is disabled globally in the default config file. Modifiying this setting requires an applcation restart.</li>
 <li><code>physical_enabled</code>: initialization of physical tracker (motion controller or vive tracker) on startup can be skipped (e.g. if you're using a virtual tracker). Modifiying this setting requires an application restart.</li>
-<li><code>overlay_enabled</code>: can be used to omit intitialization of the graphical overlay (for example if it's not required beacuse of using a physical tracker or if the position of the center of rotation is successfully setup and <code>use_cor_pos</code> = 1 is used). Changing this value requires the VR session to be restarted.</li>
-<li><code>physical_early_init</code>: initialize physical tracker as soon instead of as late as possible. May be required in native OpenXR games / sims that do not support motion controllers input (e.g. iRacing). May avoid conflicts with other open xr layers (e.g. eye tracking in OpenXR toolkit)</li>
-<li><code>upside_down</code>: turns in-game coordinate system upside down by rotating it 180 degrees around the 'forward' axis. Necessary for correct orientation of virtual tracker in some games (e.g. iRacing)</li>
+<li><code>overlay_enabled</code>: enable intitialization of the graphical overlay (for example if it's not required beacuse of using a physical tracker or if the position of the center of rotation is successfully setup and <code>use_cor_pos</code> = 1 is used). Changing this value requires the VR session to be restarted.</li>
+<li><code>physical_early_init</code>: initialize physical tracker as soon instead of as late as possible. May be required in native OpenXR games / sims that do not support motion controllers input (e.g. iRacing). May avoid conflicts with other open xr layers (e.g. eye tracking in OpenXR toolkit). Modifiying this setting requires an applcation restart.</li>
+<li><code>upside_down</code>: turn in-game coordinate system upside down by rotating it 180 degrees around the 'forward' axis. Necessary for correct orientation of virtual tracker and motion compensation in some games (e.g. iRacing). Changing this value requires the VR session to be restarted.</li>
+<li><code>activate</code>: automatically activate motion compensation on application start and configuration reload.</li>
+<li><code>activate_delay</code>: delay auto-activation by specified number of seconds. The required time for successful activation may vary, depending on application and tracker type used.</li>
+<li><code>activate_countdown_</code>: enable audible countdown for the last 10 seconds before auto-activation. This is supposed to allow getting to neutral postion and timely centering of in-game view.</li>
 </ul>
 </li>
 <li><p><code>tracker</code>: The following tracker <code>type</code> keys are available:</p>

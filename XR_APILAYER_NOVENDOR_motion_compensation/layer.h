@@ -135,7 +135,8 @@ namespace motion_compensation_layer
                                                                              xr::math::Pose::Identity(),
                                                                              xr::math::Pose::Identity()}};
         std::unique_ptr<graphics::Overlay> m_Overlay;
-        std::unique_ptr<Input::InputHandler> m_Input;
+        std::shared_ptr<Input::InputHandler> m_Input;
+        std::unique_ptr<utility::AutoActivator> m_AutoActivator;
 
         // connection recovery
         XrTime m_RecoveryWait{3000000000}; // 3 sec default timeout
@@ -145,7 +146,7 @@ namespace motion_compensation_layer
         XrTime m_LastFrameTime{0};
         bool m_LocalRefSpaceCreated{false};
         bool m_RecenterInProgress{false};
-       
+
         // debugging
         bool m_TestRotation{false};
         XrTime m_TestRotStart{0};
