@@ -56,7 +56,6 @@ namespace LAYER_NAMESPACE::log {
                                     lt.wMilliseconds);
 
             vsnprintf_s(buf + offset, sizeof(buf) - offset, _TRUNCATE, fmt, va);
-            OutputDebugStringA(buf);
             if (logStream.is_open()) {
                 logStream << buf;
                 logStream.flush();
