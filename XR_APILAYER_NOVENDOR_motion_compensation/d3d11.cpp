@@ -609,8 +609,19 @@ namespace {
             // Ensure we are not dropping an unfinished context.
             assert(!m_state.isValid());
 
-            if (blocking) {
+            if (!blocking)
+            {
                 m_context->Flush();
+            }
+            else
+            {
+                ComPtr<ID3D11DeviceContext4> Context1;
+                CHECK_HRCMD(m_context->QueryInterface(IID_PPV_ARGS(Context1.ReleaseAndGetAddressOf())));
+
+                wil::unique_handle eventHandle;
+                *eventHandle.put() = CreateEventEx(nullptr, "flushContext d3d11", 0, EVENT_ALL_ACCESS);
+                Context1->Flush1(D3D11_CONTEXT_TYPE_ALL, eventHandle.get());
+                WaitForSingleObject(eventHandle.get(), INFINITE);
             }
         }
 

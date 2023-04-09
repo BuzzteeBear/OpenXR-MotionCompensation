@@ -564,13 +564,15 @@ namespace {
             ID3D12CommandList* const lists[] = {get(m_context)};
             m_queue->ExecuteCommandLists(ARRAYSIZE(lists), lists);
 
-            if (blocking) {
+            if (blocking)
+            {
                 m_queue->Signal(get(m_fence), ++m_fenceValue);
-                if (m_fence->GetCompletedValue() < m_fenceValue) {
-                    HANDLE eventHandle = CreateEventEx(nullptr, "flushContext Fence", 0, EVENT_ALL_ACCESS);
-                    CHECK_HRCMD(m_fence->SetEventOnCompletion(m_fenceValue, eventHandle));
-                    WaitForSingleObject(eventHandle, INFINITE);
-                    CloseHandle(eventHandle);
+                if (m_fence->GetCompletedValue() < m_fenceValue)
+                {
+                    wil::unique_handle eventHandle;
+                    *eventHandle.put() = CreateEventEx(nullptr, "flushContext d3d12", 0, EVENT_ALL_ACCESS);
+                    CHECK_HRCMD(m_fence->SetEventOnCompletion(m_fenceValue, eventHandle.get()));
+                    WaitForSingleObject(eventHandle.get(), INFINITE);
                 }
             }
 
