@@ -239,9 +239,9 @@ namespace MmfReader
             this.labelHeaveUnit.Font = new System.Drawing.Font("Segoe UI", 12F);
             this.labelHeaveUnit.Location = new System.Drawing.Point(710, 326);
             this.labelHeaveUnit.Name = "labelHeaveUnit";
-            this.labelHeaveUnit.Size = new System.Drawing.Size(41, 38);
+            this.labelHeaveUnit.Size = new System.Drawing.Size(65, 38);
             this.labelHeaveUnit.TabIndex = 19;
-            this.labelHeaveUnit.Text = "m";
+            this.labelHeaveUnit.Text = "mm";
             this.labelHeaveUnit.TextAlign = System.Drawing.ContentAlignment.TopRight;
             // 
             // labelSwayUnit
@@ -250,9 +250,9 @@ namespace MmfReader
             this.labelSwayUnit.Font = new System.Drawing.Font("Segoe UI", 12F);
             this.labelSwayUnit.Location = new System.Drawing.Point(710, 220);
             this.labelSwayUnit.Name = "labelSwayUnit";
-            this.labelSwayUnit.Size = new System.Drawing.Size(41, 38);
+            this.labelSwayUnit.Size = new System.Drawing.Size(65, 38);
             this.labelSwayUnit.TabIndex = 18;
-            this.labelSwayUnit.Text = "m";
+            this.labelSwayUnit.Text = "mm";
             this.labelSwayUnit.TextAlign = System.Drawing.ContentAlignment.TopRight;
             // 
             // labelSurgeUnit
@@ -261,9 +261,9 @@ namespace MmfReader
             this.labelSurgeUnit.Font = new System.Drawing.Font("Segoe UI", 12F);
             this.labelSurgeUnit.Location = new System.Drawing.Point(710, 123);
             this.labelSurgeUnit.Name = "labelSurgeUnit";
-            this.labelSurgeUnit.Size = new System.Drawing.Size(41, 38);
+            this.labelSurgeUnit.Size = new System.Drawing.Size(65, 38);
             this.labelSurgeUnit.TabIndex = 17;
-            this.labelSurgeUnit.Text = "m";
+            this.labelSurgeUnit.Text = "mm";
             this.labelSurgeUnit.TextAlign = System.Drawing.ContentAlignment.TopRight;
             // 
             // labelYawUnit
