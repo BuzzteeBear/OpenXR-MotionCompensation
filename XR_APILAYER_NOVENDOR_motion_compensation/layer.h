@@ -134,6 +134,7 @@ namespace motion_compensation_layer
                                                                              xr::math::Pose::Identity(),
                                                                              xr::math::Pose::Identity(),
                                                                              xr::math::Pose::Identity()}};
+        std::mutex m_FrameLock;
         std::unique_ptr<graphics::Overlay> m_Overlay;
         std::shared_ptr<Input::InputHandler> m_Input;
         std::unique_ptr<utility::AutoActivator> m_AutoActivator;

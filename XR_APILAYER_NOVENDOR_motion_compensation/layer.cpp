@@ -396,6 +396,8 @@ namespace motion_compensation_layer
         DebugLog("xrDestroySwapchain\n");
         TraceLoggingWrite(g_traceProvider, "xrDestroySwapchain", TLPArg(swapchain, "Swapchain"));
 
+        std::unique_lock lock(m_FrameLock);
+
         const XrResult result = OpenXrApi::xrDestroySwapchain(swapchain);
         if (XR_SUCCEEDED(result))
         {
@@ -983,6 +985,8 @@ namespace motion_compensation_layer
         }
         DebugLog("xrBeginFrame\n");
 
+        std::unique_lock lock(m_FrameLock);
+
         TraceLoggingWrite(g_traceProvider, "xrBeginFrame", TLPArg(session, "Session"));
 
         m_Overlay->BeginFrameBefore();
@@ -1015,6 +1019,8 @@ namespace motion_compensation_layer
                           TLPArg(session, "Session"),
                           TLArg(frameEndInfo->displayTime, "DisplayTime"),
                           TLArg(xr::ToCString(frameEndInfo->environmentBlendMode), "EnvironmentBlendMode"));
+
+        std::unique_lock lock(m_FrameLock);
 
         m_LastFrameTime = frameEndInfo->displayTime;
         if (m_RecenterInProgress && !m_LocalRefSpaceCreated)
