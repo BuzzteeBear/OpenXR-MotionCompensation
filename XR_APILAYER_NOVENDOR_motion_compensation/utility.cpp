@@ -79,6 +79,7 @@ namespace utility
 
     bool Mmf::Open(const XrTime time)
     {
+        std::unique_lock lock(m_MmfLock);
         m_FileHandle = OpenFileMapping(FILE_MAP_READ, FALSE, m_Name.c_str());
 
         if (m_FileHandle)
@@ -93,6 +94,7 @@ namespace utility
             {
                 DWORD err = GetLastError();
                 ErrorLog("unable to map view of mmf %s: %s\n", m_Name.c_str(), LastErrorMsg().c_str());
+                lock.unlock();
                 Close();
                 return false;
             }
@@ -118,6 +120,7 @@ namespace utility
         {
             Open(time);
         }
+        std::unique_lock lock(m_MmfLock);
         if (m_View)
         {
             try
@@ -138,6 +141,7 @@ namespace utility
 
     void Mmf::Close()
     {
+        std::unique_lock lock(m_MmfLock);
         if (m_View)
         {
             UnmapViewOfFile(m_View);

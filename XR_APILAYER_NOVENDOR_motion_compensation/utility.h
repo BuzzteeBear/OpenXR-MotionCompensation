@@ -191,6 +191,7 @@ namespace utility
         HANDLE m_FileHandle{nullptr};
         void* m_View{nullptr};
         bool m_ConnectionLost{false};
+        std::mutex m_MmfLock;
     };
 
     std::string LastErrorMsg();
