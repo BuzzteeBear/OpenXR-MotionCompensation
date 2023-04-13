@@ -155,7 +155,7 @@ Upon starting an OpenXR application with the API layer active for the first time
 <li><code>marker_size</code> sets the size of the cor / reference tracker marker displayed in the overlay. The value corresponds to the length of one double cone in cm.</li>
 </ul>
 </li>
-<li><p><code>translational_filter</code> and <code>rotational_filter</code>: set the filtering magnitude (key <code>strength</code> with valid options between <strong>0.0</strong> and <strong>1.0</strong>) number of filtering stages (key <code>order</code>with valid options: <strong>1, 2, 3</strong>).</p>
+<li><p><code>translational_filter</code> and <code>rotational_filter</code>: set the filtering magnitude (key <code>strength</code> with valid options between <strong>0.0</strong> and <strong>1.0</strong>) number of filtering stages (key <code>order</code>with valid options: <strong>1, 2, 3</strong>). The key <code>vertical_factor</code> is applied to filter strength in vertical/heave direction (Note that the filter strength is multiplied by the factor and the resulting product of strength * vertical_factor is clamped internally between 0.0 and 1.0).</p>
 </li>
 <li><p><code>cache</code>: you can modify th cache used for reverting the motion corrected pose on frame submission:</p>
 <ul>

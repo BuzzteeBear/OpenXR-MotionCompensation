@@ -84,6 +84,7 @@ Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "tracker"; Key: "
 ; [translation_filter]
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "translation_filter"; Key: "strength"; String: "0.50"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "translation_filter"; Key: "order"; String: "2"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "translation_filter"; Key: "vertical_factor"; String: "1.0"; Flags: createkeyifdoesntexist
 
 ; [rotation_filter]
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "rotation_filter"; Key: "strength"; String: "0.50"; Flags: createkeyifdoesntexist

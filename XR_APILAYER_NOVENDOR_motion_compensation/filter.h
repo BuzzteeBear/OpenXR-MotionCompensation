@@ -41,7 +41,7 @@ namespace Filter
     class SingleEmaFilter : public FilterBase<XrVector3f>
     {
       public:
-        SingleEmaFilter(const float strength) : FilterBase(strength){}
+        explicit SingleEmaFilter(const float strength);
         virtual float SetStrength(float strength) override;
         virtual void ApplyFilter(XrVector3f& location) override;
         virtual void Reset(const XrVector3f& location) override;
@@ -51,6 +51,8 @@ namespace Filter
         XrVector3f m_OneMinusAlpha{m_Strength, m_Strength, m_Strength};
         XrVector3f m_Ema{0, 0, 0};
         [[nodiscard]] XrVector3f EmaFunction(XrVector3f current, XrVector3f stored) const;
+      private:
+        float m_VerticalFactor{1.f};
     };
 
     class DoubleEmaFilter : public SingleEmaFilter

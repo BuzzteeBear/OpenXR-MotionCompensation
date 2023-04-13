@@ -3,11 +3,19 @@
 #include "pch.h"
 
 #include "filter.h"
+#include "config.h"
 
 using namespace xr::math;
 
 namespace Filter
 {
+    SingleEmaFilter::SingleEmaFilter(const float strength) : FilterBase(strength)
+    {
+        GetConfig()->GetFloat(Cfg::TransVerticalFactor, m_VerticalFactor);
+        m_VerticalFactor = std::max(0.0f, m_VerticalFactor);
+        SetStrength(m_Strength);
+    }
+
     XrVector3f SingleEmaFilter::EmaFunction(const XrVector3f current, const XrVector3f stored) const
     {
         return m_Alpha * current + m_OneMinusAlpha * stored;
@@ -16,8 +24,8 @@ namespace Filter
     float SingleEmaFilter::SetStrength(const float strength)
     {
         FilterBase::SetStrength(strength);
-        m_Alpha = {1.0f - m_Strength, 1.0f - m_Strength, 1.0f - m_Strength};
-        m_OneMinusAlpha = {m_Strength, m_Strength, m_Strength};
+        m_Alpha = {1.0f - m_Strength, std::max(0.f, 1.0f - (m_VerticalFactor * m_Strength)), 1.0f - m_Strength};
+        m_OneMinusAlpha = {m_Strength, std::min(1.f, m_VerticalFactor * m_Strength), m_Strength};
         return m_Strength;
     }
 

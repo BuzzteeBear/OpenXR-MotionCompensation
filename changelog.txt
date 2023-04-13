@@ -12,6 +12,9 @@ Version 0.2.6
 	Input
 	- excluded inputs with additional modifiers (only for artificial keyboard input e.g. joy2key)
 	
+	Filter
+	- added ability to modify vertical translational filter strength
+	
 Version 0.2.5
 
 	Graphical overlay

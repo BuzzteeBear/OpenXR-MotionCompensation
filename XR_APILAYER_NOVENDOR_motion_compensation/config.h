@@ -31,6 +31,7 @@ enum class Cfg
     MarkerSize,
     TransStrength,
     TransOrder,
+    TransVerticalFactor,
     RotStrength,
     RotOrder,
     CacheUseEye,
@@ -118,6 +119,7 @@ class ConfigManager
 
         {Cfg::TransStrength, {"translation_filter", "strength"}},
         {Cfg::TransOrder, {"translation_filter", "order"}},
+        {Cfg::TransVerticalFactor, {"translation_filter", "vertical_factor"}},
         {Cfg::RotStrength, {"rotation_filter", "strength"}},
         {Cfg::RotOrder, {"rotation_filter", "order"}},
 
