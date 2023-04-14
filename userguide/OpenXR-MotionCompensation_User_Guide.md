@@ -27,7 +27,8 @@ You can find the [source code](https://github.com/BuzzteeBear/OpenXR-MotionCompe
 
 If you are (or know someone) willing and able to support the software development (mostly C++, maybe some GUI stuff later on) side of the project, feel free to contact **@BuzzteeBear** on the Discord server to ask about ways to contribute.
 
-Donations to the project are very welcome and can be made via [Paypal](https://www.paypal.com/donate/?hosted_button_id=Q64DT2ADFCBU8). 
+Donations to the project are very welcome and can be made via [Paypal](https://www.paypal.com/donate/?hosted_button_id=Q64DT2ADFCBU8).  
+On explicit user request you can also sponsor the project via [GitHub Sponsors](https://github.com/sponsors/BuzzteeBear?o=esb)
 
 ## Installation
 
