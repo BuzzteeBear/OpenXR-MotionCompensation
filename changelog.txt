@@ -20,6 +20,7 @@ Version 0.2.6
 	Bugfixes
 	- fixed multithreading bug causing ctd in MSFS
 	- fixed performance issue in DCS World
+	- fixed unit for translations in MMF reader app (m -> mm)
 	
 Version 0.2.5
 

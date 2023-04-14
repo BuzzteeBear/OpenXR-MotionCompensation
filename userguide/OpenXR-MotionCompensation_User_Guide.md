@@ -113,7 +113,8 @@ What you can modify in a configuration file:
   - `yaw`: use the virtual tracker data provided by Yaw VR and Yaw 2. Either while using SRS or Game Engine.
   - the keys `offset_...`, `use_cor_pos` and `cor_...` are used to handle the configuration of the center of rotation (cor) for all available virtual trackers.
   - `marker_size` sets the size of the cor / reference tracker marker displayed in the overlay. The value corresponds to the length of one double cone in cm.
-- `translational_filter` and `rotational_filter`: set the filtering magnitude (key `strength` with valid options between **0.0** and **1.0**) number of filtering stages (key `order`with valid options: **1, 2, 3**). The key `vertical_factor` is applied to filter strength in vertical/heave direction (Note that the filter strength is multiplied by the factor and the resulting product of strength * vertical_factor is clamped internally between 0.0 and 1.0).
+- `translational_filter` and `rotational_filter`: set the filtering magnitude (key `strength` with valid options between **0.0** and **1.0**) number of filtering stages (key `order`with valid options: **1, 2, 3**).  
+  The key `vertical_factor` is applied to translational filter strength in vertical/heave direction only (Note that the filter strength is multiplied by the factor and the resulting product of strength * vertical_factor is clamped internally between 0.0 and 1.0).
 - `cache`: you can modify th cache used for reverting the motion corrected pose on frame submission:
   - `use_eye_cache` - choose between calcuating eye poses (0 = default) or use cached eye poses (1, was default up until version 0.1.4). Either one might work better with some games or hmds if you encounter jitter with mc activated. You can also modify this setting (and subsequently save it to config file) during runtime with the corresponding shortcut below.
   - `tolerance` - modify the time values are kept in cache for before deletion. This may affect eye calculation as well as cached eye positions.
@@ -131,7 +132,7 @@ What you can modify in a configuration file:
   - `reload_config` - read in and apply configuration for current app from config files. For technical reasons motion compensation is automatically deactivated and the reference tracker pose is invalidated upon configuration reload.
   - Note that there are some immutable keyboard shortcuts:
     - `ctrl + shift + alt + i`: logs your current interaction profile, which can be useful when debugging issues with a physical tracker.
-    - `ctrl + shift + alt + i`: logs the current pose of the reference tracker, can also be used for the purpose of troubleshooting. 
+    - `ctrl + shift + alt + t`: logs the current pose of the reference tracker, can also be used for the purpose of troubleshooting. 
 - `debug`: For debugging reasons you can check, if the motion compensation functionality generally works on your system without using tracker input from the motion controllers at all by setting `testrotation` value to `1` and reloading the configuration. You should be able to see the world rotating around you after pressing the activation shortcut.  
 **Beware that this can be a nauseating experience because your eyes suggest that your head is turning in the virtual world, while your inner ear tells your brain otherwise. You can stop motion compensation at any time by pressing the activation shortcut again!** 
 
@@ -218,7 +219,7 @@ Use the [MmfReader App](#mmf-reader) to make sure oxrmc is actually receiving da
 - check center of rotation position
 - activate graphical overlay
 - verify position and orientation of the marker
-If don't have a clue where the cor of your motion rig is supposed to be, you can try this procedure, that should work for most motion rig setups (you can also find a video of a similar procedure at [YouTube](https://youtu.be/mIIlIlV-B_4)):
+If don't have a clue where the cor of your motion rig is supposed to be, you can try this procedure, that should work for most motion rig setups (you can watch a [video of a similar procedure at YouTube](https://youtu.be/mIIlIlV-B_4)):
 1. Find a way to feed your motion software with artificial rotational telemetry (e.g. Joystick mode in the Setup section of SRS, a sine wave generator for FlyPT Mover or Gamepad / DirectInput plugin for YawVR Game Engine.  
 2. Calibrate your cor (ctrl+del by default) as described in [here](#calibrate-virtual-tracker) and activate motion compenation
 3. Find the right height
