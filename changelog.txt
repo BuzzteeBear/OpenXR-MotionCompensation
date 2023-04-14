@@ -1,6 +1,7 @@
 OpenXR-MotionCompensation Changelog
 
 Version 0.2.6
+
 	Automatic activation
 	- added option to automatically activate motion compensation on application startup
 	- added delay for auto activation
@@ -18,6 +19,7 @@ Version 0.2.6
 	
 	Bugfixes
 	- fixed multithreading bug causing ctd in MSFS
+	- fixed performance issue in DCS World
 	
 Version 0.2.5
 
