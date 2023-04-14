@@ -2,18 +2,22 @@ OpenXR-MotionCompensation Changelog
 
 Version 0.2.6
 	Automatic activation
-	- added option to ativate motion compensation on application startup
+	- added option to automatically activate motion compensation on application startup
 	- added delay for auto activation
 	- added audible countdown for auto activation
 
 	Installer
 	- added API layer reordering for Varjo-Foveated
-
-	Input
-	- excluded inputs with additional modifiers (only for artificial keyboard input e.g. joy2key)
+	- updated layer reordering for OpenXR Toolkit (layer name changed)
 	
 	Filter
 	- added ability to modify vertical translational filter strength
+	
+	Input
+	- excluded inputs with additional modifiers (only for artificial keyboard input e.g. joy2key)
+	
+	Bugfixes
+	- fixed multithreading bug causing ctd in MSFS
 	
 Version 0.2.5
 

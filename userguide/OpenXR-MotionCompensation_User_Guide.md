@@ -129,19 +129,21 @@ What you can modify in a configuration file:
   - `save_config` -  write current filter strength and cor offsets to global config file 
   - `save_config_app` -  write current filter strength and cor offsets to application specific config file. Note that values in this file will precedent values in the global config file. 
   - `reload_config` - read in and apply configuration for current app from config files. For technical reasons motion compensation is automatically deactivated and the reference tracker pose is invalidated upon configuration reload.
-
+  - Note that there are some immutable keyboard shortcuts:
+    - `ctrl + shift + alt + i`: logs your current interaction profile, which can be useful when debugging issues with a physical tracker.
+    - `ctrl + shift + alt + i`: logs the current pose of the reference tracker, can also be used for the purpose of troubleshooting. 
 - `debug`: For debugging reasons you can check, if the motion compensation functionality generally works on your system without using tracker input from the motion controllers at all by setting `testrotation` value to `1` and reloading the configuration. You should be able to see the world rotating around you after pressing the activation shortcut.  
 **Beware that this can be a nauseating experience because your eyes suggest that your head is turning in the virtual world, while your inner ear tells your brain otherwise. You can stop motion compensation at any time by pressing the activation shortcut again!** 
 
 ## Using a virtual tracker
 
-To use a virtual tracker set parameter `tracker_type` according to the motion software that is providing the data for motion compensation on your system:
+To use a virtual tracker (as opposed to a physical device) set parameter `tracker_type` according to the motion software that is providing the data for motion compensation on your system:
 - `yaw`: Yaw Game Engine (or Sim Racing Studio when using rotational data provided by Yaw VR or Yaw 2)
-- `srs`: Sim Racing Studio (experimental)
-- `flypt`: FlyPT Mover (experimental)
+- `srs`: Sim Racing Studio, using a Witmotion sensor
+- `flypt`: FlyPT Mover 
 
 ### Calibrate virtual tracker
-To enable OXRMC to correlate translation and rotation of the rig to the virtual space correctly when using a virtual tracker, you have to provide the information where the center of rotation (cor) of your motion rig is positioned and which way is forward. This is done with the following steps:
+To enable OXRMC to correlate translation and rotation of the rig to the virtual space correctly when using a virtual tracker, you have to provide the information where the center of rotation (cor) of your motion rig is positioned and which way is forward. This can be done with the following steps:
 
 0. Calculate, measure or estimate the distance between your headset and the center of rotation of your motion rig in forward/backward, up/down and left/right direction (I was told most 6 dof rigs rotate around the bottom of the seat but your mileage may vary).
 1. Enter the offset values in the config file
@@ -151,7 +153,8 @@ To enable OXRMC to correlate translation and rotation of the rig to the virtual 
 4. put your headset on and face forward (~ direction surge). Potential rotation of the hmd on roll and pitch angle is ignored for the calculation
 5. issue the calibration command by activating the `center` shortcut. You can also do this implicitly by activating motion compensation if you haven't (re)calibrated since last loading of the configuration.
 
-- You may have to invert some of the rotations/translations on output side to get them compensated properly. **For new users it's strongly recommended to use some artificial telemetry (joystriick input, sine wave generator, etc.) and testing one degree of freedom at at time**
+- If you're unable to locate the cor of your rig, try out the method described in the [according troubleshooting section](#virtual-tracker)
+- You may have to invert some of the rotations/translations on output side to get them compensated properly. **For new users it's strongly recommended to use some artificial telemetry (joystick input, sine wave generator, etc.) and testing one degree of freedom at at time**
 - If you're using YawVR Game Engine you can also use the parameters `Head Distance` and `Height` in its Motion Compensation tab to specify the offset of the cor. Head distance is basically equal to `offset_forward` in the configration file. But note that the height parameter is measured upwards from the bottom of your playspace, so you'll need to have that setup correctly in order to use that feature.
 
 ### Saving and the cor location
@@ -215,7 +218,7 @@ Use the [MmfReader App](#mmf-reader) to make sure oxrmc is actually receiving da
 - check center of rotation position
 - activate graphical overlay
 - verify position and orientation of the marker
-If don't have a clue where the cor of your motion rig is supposed to be, you can try this procedure, that should work for most motion rig setups:
+If don't have a clue where the cor of your motion rig is supposed to be, you can try this procedure, that should work for most motion rig setups (you can also find a video of a similar procedure at [YouTube](https://youtu.be/mIIlIlV-B_4)):
 1. Find a way to feed your motion software with artificial rotational telemetry (e.g. Joystick mode in the Setup section of SRS, a sine wave generator for FlyPT Mover or Gamepad / DirectInput plugin for YawVR Game Engine.  
 2. Calibrate your cor (ctrl+del by default) as described in [here](#calibrate-virtual-tracker) and activate motion compenation
 3. Find the right height

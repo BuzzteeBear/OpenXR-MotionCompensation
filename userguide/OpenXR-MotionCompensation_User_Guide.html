@@ -114,7 +114,7 @@ Upon starting an OpenXR application with the API layer active for the first time
 </ul>
 <h3 id="sections-in-configuration-file">Sections in configuration file</h3>
 <ul>
-<li><p><code>startup</code>: You can modify oxrmc's behaviour on application start, e.g. disable a specific feature by setting the corresponding key to 0.</p>
+<li><code>startup</code>: You can modify oxrmc's behaviour on application start, e.g. disable a specific feature by setting the corresponding key to 0.
 <ul>
 <li><code>enabled</code>: you can disable all functionality globally or for a single application. Note that you cannot enable a single application if oxrmc is disabled globally in the default config file. Modifiying this setting requires an applcation restart.</li>
 <li><code>physical_enabled</code>: initialization of physical tracker (motion controller or vive tracker) on startup can be skipped (e.g. if you're using a virtual tracker). Modifiying this setting requires an application restart.</li>
@@ -126,7 +126,7 @@ Upon starting an OpenXR application with the API layer active for the first time
 <li><code>activate_countdown_</code>: enable audible countdown for the last 10 seconds before auto-activation. This is supposed to allow getting to neutral postion and timely centering of in-game view.</li>
 </ul>
 </li>
-<li><p><code>tracker</code>: The following tracker <code>type</code> keys are available:</p>
+<li><code>tracker</code>: The following tracker <code>type</code> keys are available:
 <ul>
 <li><code>controller</code>: use either the left or the right motion controller as reference tracker. Valid options for the key <code>side</code> are <code>left</code> and <code>right</code> (<strong>Note that changing the side or switching between motion controller and vive tracker requires a restart of the vr session</strong>)</li>
 <li><code>vive</code>: use a vive tracker as reference for motion compensation. The key <code>side</code> has to match the role assigned to the tracker. Valid options for that are:
@@ -155,15 +155,14 @@ Upon starting an OpenXR application with the API layer active for the first time
 <li><code>marker_size</code> sets the size of the cor / reference tracker marker displayed in the overlay. The value corresponds to the length of one double cone in cm.</li>
 </ul>
 </li>
-<li><p><code>translational_filter</code> and <code>rotational_filter</code>: set the filtering magnitude (key <code>strength</code> with valid options between <strong>0.0</strong> and <strong>1.0</strong>) number of filtering stages (key <code>order</code>with valid options: <strong>1, 2, 3</strong>). The key <code>vertical_factor</code> is applied to filter strength in vertical/heave direction (Note that the filter strength is multiplied by the factor and the resulting product of strength * vertical_factor is clamped internally between 0.0 and 1.0).</p>
-</li>
-<li><p><code>cache</code>: you can modify th cache used for reverting the motion corrected pose on frame submission:</p>
+<li><code>translational_filter</code> and <code>rotational_filter</code>: set the filtering magnitude (key <code>strength</code> with valid options between <strong>0.0</strong> and <strong>1.0</strong>) number of filtering stages (key <code>order</code>with valid options: <strong>1, 2, 3</strong>). The key <code>vertical_factor</code> is applied to filter strength in vertical/heave direction (Note that the filter strength is multiplied by the factor and the resulting product of strength * vertical_factor is clamped internally between 0.0 and 1.0).</li>
+<li><code>cache</code>: you can modify th cache used for reverting the motion corrected pose on frame submission:
 <ul>
 <li><code>use_eye_cache</code> - choose between calcuating eye poses (0 = default) or use cached eye poses (1, was default up until version 0.1.4). Either one might work better with some games or hmds if you encounter jitter with mc activated. You can also modify this setting (and subsequently save it to config file) during runtime with the corresponding shortcut below.</li>
 <li><code>tolerance</code> - modify the time values are kept in cache for before deletion. This may affect eye calculation as well as cached eye positions.</li>
 </ul>
 </li>
-<li><p><code>shortcuts</code>: can be used to configure shortcuts for different commands (See <a href="#list-of-keyboard-bindings">List of keyboard bindings</a> for valid values):</p>
+<li><code>shortcuts</code>: can be used to configure shortcuts for different commands (See <a href="#list-of-keyboard-bindings">List of keyboard bindings</a> for valid values):
 <ul>
 <li><code>activate</code>- turn motion compensation on or off. Note that this implicitly triggers the calibration action (<code>center</code>) if that hasn't been executed before.</li>
 <li><code>center</code> - recalibrate the neutral reference pose of the tracker</li>
@@ -176,21 +175,26 @@ Upon starting an OpenXR application with the API layer active for the first time
 <li><code>save_config</code> -  write current filter strength and cor offsets to global config file</li>
 <li><code>save_config_app</code> -  write current filter strength and cor offsets to application specific config file. Note that values in this file will precedent values in the global config file.</li>
 <li><code>reload_config</code> - read in and apply configuration for current app from config files. For technical reasons motion compensation is automatically deactivated and the reference tracker pose is invalidated upon configuration reload.</li>
+<li>Note that there are some immutable keyboard shortcuts:
+<ul>
+<li><code>ctrl + shift + alt + i</code>: logs your current interaction profile, which can be useful when debugging issues with a physical tracker.</li>
+<li><code>ctrl + shift + alt + i</code>: logs the current pose of the reference tracker, can also be used for the purpose of troubleshooting.</li>
 </ul>
 </li>
-<li><p><code>debug</code>: For debugging reasons you can check, if the motion compensation functionality generally works on your system without using tracker input from the motion controllers at all by setting <code>testrotation</code> value to <code>1</code> and reloading the configuration. You should be able to see the world rotating around you after pressing the activation shortcut.<br />
-<strong>Beware that this can be a nauseating experience because your eyes suggest that your head is turning in the virtual world, while your inner ear tells your brain otherwise. You can stop motion compensation at any time by pressing the activation shortcut again!</strong></p>
+</ul>
 </li>
+<li><code>debug</code>: For debugging reasons you can check, if the motion compensation functionality generally works on your system without using tracker input from the motion controllers at all by setting <code>testrotation</code> value to <code>1</code> and reloading the configuration. You should be able to see the world rotating around you after pressing the activation shortcut.<br />
+<strong>Beware that this can be a nauseating experience because your eyes suggest that your head is turning in the virtual world, while your inner ear tells your brain otherwise. You can stop motion compensation at any time by pressing the activation shortcut again!</strong></li>
 </ul>
 <h2 id="using-a-virtual-tracker">Using a virtual tracker</h2>
-<p>To use a virtual tracker set parameter <code>tracker_type</code> according to the motion software that is providing the data for motion compensation on your system:</p>
+<p>To use a virtual tracker (as opposed to a physical device) set parameter <code>tracker_type</code> according to the motion software that is providing the data for motion compensation on your system:</p>
 <ul>
 <li><code>yaw</code>: Yaw Game Engine (or Sim Racing Studio when using rotational data provided by Yaw VR or Yaw 2)</li>
-<li><code>srs</code>: Sim Racing Studio (experimental)</li>
-<li><code>flypt</code>: FlyPT Mover (experimental)</li>
+<li><code>srs</code>: Sim Racing Studio, using a Witmotion sensor</li>
+<li><code>flypt</code>: FlyPT Mover</li>
 </ul>
 <h3 id="calibrate-virtual-tracker">Calibrate virtual tracker</h3>
-<p>To enable OXRMC to correlate translation and rotation of the rig to the virtual space correctly when using a virtual tracker, you have to provide the information where the center of rotation (cor) of your motion rig is positioned and which way is forward. This is done with the following steps:</p>
+<p>To enable OXRMC to correlate translation and rotation of the rig to the virtual space correctly when using a virtual tracker, you have to provide the information where the center of rotation (cor) of your motion rig is positioned and which way is forward. This can be done with the following steps:</p>
 <ol start="0">
 <li>Calculate, measure or estimate the distance between your headset and the center of rotation of your motion rig in forward/backward, up/down and left/right direction (I was told most 6 dof rigs rotate around the bottom of the seat but your mileage may vary).</li>
 <li>Enter the offset values in the config file</li>
@@ -201,7 +205,8 @@ Upon starting an OpenXR application with the API layer active for the first time
 <li>issue the calibration command by activating the <code>center</code> shortcut. You can also do this implicitly by activating motion compensation if you haven't (re)calibrated since last loading of the configuration.</li>
 </ol>
 <ul>
-<li>You may have to invert some of the rotations/translations on output side to get them compensated properly. <strong>For new users it's strongly recommended to use some artificial telemetry (joystriick input, sine wave generator, etc.) and testing one degree of freedom at at time</strong></li>
+<li>If you're unable to locate the cor of your rig, try out the method described in the <a href="#virtual-tracker">according troubleshooting section</a></li>
+<li>You may have to invert some of the rotations/translations on output side to get them compensated properly. <strong>For new users it's strongly recommended to use some artificial telemetry (joystick input, sine wave generator, etc.) and testing one degree of freedom at at time</strong></li>
 <li>If you're using YawVR Game Engine you can also use the parameters <code>Head Distance</code> and <code>Height</code> in its Motion Compensation tab to specify the offset of the cor. Head distance is basically equal to <code>offset_forward</code> in the configration file. But note that the height parameter is measured upwards from the bottom of your playspace, so you'll need to have that setup correctly in order to use that feature.</li>
 </ul>
 <h3 id="saving-and-the-cor-location">Saving and the cor location</h3>
@@ -283,7 +288,7 @@ Use the <a href="#mmf-reader">MmfReader App</a> to make sure oxrmc is actually r
 <li>check center of rotation position</li>
 <li>activate graphical overlay</li>
 <li>verify position and orientation of the marker
-If don't have a clue where the cor of your motion rig is supposed to be, you can try this procedure, that should work for most motion rig setups:</li>
+If don't have a clue where the cor of your motion rig is supposed to be, you can try this procedure, that should work for most motion rig setups (you can also find a video of a similar procedure at <a href="https://youtu.be/mIIlIlV-B_4">YouTube</a>):</li>
 </ul>
 <ol>
 <li>Find a way to feed your motion software with artificial rotational telemetry (e.g. Joystick mode in the Setup section of SRS, a sine wave generator for FlyPT Mover or Gamepad / DirectInput plugin for YawVR Game Engine.</li>
