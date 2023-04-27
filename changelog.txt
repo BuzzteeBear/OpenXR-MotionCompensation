@@ -2,7 +2,8 @@ OpenXR-MotionCompensation Changelog
 
 Version 0.2.7
 
-	TBD 
+	Installer
+	- fixed removal of prexisting oxrmc registry keys sharing path prefix
 
 Version 0.2.6
 

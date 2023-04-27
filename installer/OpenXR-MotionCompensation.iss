@@ -177,7 +177,7 @@ begin
     begin
       Name := Names[I];
       if EndsWith('XR_APILAYER_NOVENDOR_motion_compensation.json', Name)
-        AND NOT StartsWith(ExpandConstant('{app}'), Name) then
+        AND NOT StartsWith(ExpandConstant('{app}') + '\XR_APILAYER_NOVENDOR_motion_compensation.json', Name) then
       begin
         if RegDeleteValue(HKLM, Path, Name) then
         begin
