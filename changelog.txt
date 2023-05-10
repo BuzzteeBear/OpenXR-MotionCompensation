@@ -4,6 +4,7 @@ Version 0.2.7
 	
 	Virtual tracker
 	- enabled cor position for games using OpenComposite to be saved and loaded separately
+	- added upside_down = 1 on config file creation for iRacing
 
 	Installer
 	- fixed removal of prexisting oxrmc registry keys sharing path prefix

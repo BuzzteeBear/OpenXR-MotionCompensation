@@ -36,6 +36,27 @@ bool ConfigManager::Init(const std::string& application)
                      m_ApplicationIni.c_str(),
                      LastErrorMsg().c_str());
         }
+
+        // add upside_down = 1 for iRacing
+        if (application.find("iRacing") != std::string::npos)
+        {
+            const auto& upsideDownKey = m_Keys.find(Cfg::UpsideDown);
+            if (upsideDownKey == m_Keys.cend())
+            {
+                ErrorLog("unable to find internal upside_down entry\n");
+            }            
+            else if (!WritePrivateProfileString(upsideDownKey->second.first.c_str(),
+                                                upsideDownKey->second.second.c_str(),
+                                                "1",
+                                                m_ApplicationIni.c_str()) &&
+                     2 != GetLastError())
+            {
+                ErrorLog("%s: unable to create upside_down key for iRacing in %s, error: %s\n",
+                         __FUNCTION__,
+                         m_ApplicationIni.c_str(),
+                         LastErrorMsg().c_str());
+            }
+        }
     }
     const std::string coreIni(motion_compensation_layer::localAppData.string() + "\\" + "OpenXR-MotionCompensation.ini");
     if ((_access(coreIni.c_str(), 0)) != -1)
@@ -103,7 +124,7 @@ bool ConfigManager::GetBool(const Cfg key, bool& val)
             val = stoi(strVal);
             return true;
         }
-        catch (std::exception e)
+        catch (std::exception& e)
         {
             ErrorLog("%s: unable to convert value (%s) for key (%s) to integer: %s\n",
                      __FUNCTION__,
@@ -124,7 +145,7 @@ bool ConfigManager::GetInt(const Cfg key, int& val)
             val = stoi(strVal);
             return true;
         }
-        catch (std::exception e)
+        catch (std::exception& e)
         {
             ErrorLog("%s: unable to convert value (%s) for key (%s) to integer: %s\n",
                      __FUNCTION__,
@@ -145,7 +166,7 @@ bool ConfigManager::GetFloat(const Cfg key, float& val)
             val = stof(strVal);
             return true;
         }
-        catch (std::exception e)
+        catch (std::exception& e)
         {
             ErrorLog("%s: unable to convert value (%s) for key (%s) to double: %s\n",
                      __FUNCTION__,
@@ -180,11 +201,11 @@ bool ConfigManager::GetShortcut(const Cfg key, std::set<int>& val)
         do
         {
             separator = remaining.find_first_of("+");
-            const std::string key = remaining.substr(0, separator);
-            auto it = m_ShortCuts.find(key);
+            const std::string singleKey = remaining.substr(0, separator);
+            auto it = m_ShortCuts.find(singleKey);
             if (it == m_ShortCuts.end())
             {
-                errors += "unable to find virtual key number for: " + key + "\n";
+                errors += "unable to find virtual key number for: " + singleKey + "\n";
             }
             else
             {
@@ -259,7 +280,6 @@ void ConfigManager::WriteConfig(const bool forApp)
                     2 != GetLastError())
                 {
                     error = true;
-                    DWORD err = GetLastError();
                     ErrorLog("%s: unable to write value %s into key %s to section %s in %s, error: %s\n",
                              __FUNCTION__,
                              valueEntry->second.c_str(),
