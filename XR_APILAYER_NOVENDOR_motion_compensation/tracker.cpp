@@ -549,6 +549,7 @@ namespace Tracker
         if (success && !Quaternion::IsNormalized(refPose.orientation))
         {
             ErrorLog("%s: rotation values are invalid in config file\n", __FUNCTION__);
+            Log("you may need to save cor position separately for native OpenXR and OpenComposite\n");
             return false;
         }
 

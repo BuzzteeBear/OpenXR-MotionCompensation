@@ -81,6 +81,7 @@ class ConfigManager
 
   private:
 
+    bool m_UsesOpenComposite{false};
     std::string m_ApplicationIni;
 
     // needs to include all configurable values of enum ConfigKey
@@ -169,6 +170,8 @@ class ConfigManager
                                Cfg::CorB,
                                Cfg::CorC,
                                Cfg::CorD};
+
+    std::set<Cfg> m_CorValues{Cfg::CorX, Cfg::CorY, Cfg::CorZ, Cfg::CorA, Cfg::CorB, Cfg::CorC, Cfg::CorD};
 
     std::map<std::string, int> m_ShortCuts{{"BACK", VK_BACK},
                                            {"TAB", VK_TAB},

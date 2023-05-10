@@ -20,6 +20,7 @@ bool ConfigManager::Init(const std::string& application)
         ErrorLog("unable to find internal enable entry\n");
         return false;
     }
+    m_UsesOpenComposite = application.rfind("OpenComposite", 0) == 0;
     m_ApplicationIni = motion_compensation_layer::localAppData.string() + "\\" + application + ".ini";
     if ((_access(m_ApplicationIni.c_str(), 0)) == -1)
     {
@@ -57,22 +58,17 @@ bool ConfigManager::Init(const std::string& application)
         std::string errors;
         for (const auto& entry : m_Keys)
         {
-            
-            if (0 < GetPrivateProfileString(entry.second.first.c_str(),
-                                            entry.second.second.c_str(),
-                                            nullptr,
-                                            buffer,
-                                            2047,
-                                            m_ApplicationIni.c_str()))
+            const std::string section = entry.second.first;
+            const std::string key =
+                entry.second.second + (m_UsesOpenComposite && m_CorValues.contains(entry.first) ? "_oc" : "");
+
+            if (0 <
+                GetPrivateProfileString(section.c_str(), key.c_str(), nullptr, buffer, 2047, m_ApplicationIni.c_str()))
             {
                 m_Values[entry.first] = buffer;
             }
-            else if ((0 < GetPrivateProfileString(entry.second.first.c_str(),
-                                                  entry.second.second.c_str(),
-                                                  nullptr,
-                                                  buffer,
-                                                  2047,
-                                                  coreIni.c_str())))
+            else if ((0 <
+                      GetPrivateProfileString(section.c_str(), key.c_str(), nullptr, buffer, 2047, coreIni.c_str())))
             {
                 m_Values[entry.first] = buffer;
             }
@@ -250,10 +246,14 @@ void ConfigManager::WriteConfig(const bool forApp)
     {
         if (const auto& keyEntry = m_Keys.find(key); m_Keys.end() != keyEntry)
         {
+            const std::string section = keyEntry->second.first;
+            const std::string keyName =
+                keyEntry->second.second + (m_UsesOpenComposite && m_CorValues.contains(keyEntry->first) ? "_oc" : "");
             if (const auto& valueEntry = m_Values.find(key); m_Values.end() != valueEntry)
             {
-                if (!WritePrivateProfileString(keyEntry->second.first.c_str(),
-                                               keyEntry->second.second.c_str(),
+                
+                if (!WritePrivateProfileString(section.c_str(),
+                                               keyName.c_str(),
                                                valueEntry->second.c_str(),
                                                configFile.c_str()) &&
                     2 != GetLastError())
@@ -263,8 +263,8 @@ void ConfigManager::WriteConfig(const bool forApp)
                     ErrorLog("%s: unable to write value %s into key %s to section %s in %s, error: %s\n",
                              __FUNCTION__,
                              valueEntry->second.c_str(),
-                             keyEntry->second.second.c_str(),
-                             keyEntry->second.first.c_str(),
+                             keyName.c_str(),
+                             section.c_str(),
                              configFile.c_str(),
                              LastErrorMsg().c_str());
                 }
@@ -272,10 +272,7 @@ void ConfigManager::WriteConfig(const bool forApp)
             else
             {
                 error = true;
-                ErrorLog("%s: key not found in value map: %s:%s\n",
-                         __FUNCTION__,
-                         keyEntry->second.first.c_str(),
-                         keyEntry->second.second.c_str());
+                ErrorLog("%s: key not found in value map: %d:%s\n", __FUNCTION__, section.c_str(), keyName.c_str());
             }
         }
         else
