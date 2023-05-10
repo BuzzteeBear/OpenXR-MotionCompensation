@@ -269,7 +269,12 @@ namespace motion_compensation_layer
                                                                           nullptr,
                                                                           XR_REFERENCE_SPACE_TYPE_VIEW,
                                                                           Pose::Identity()};
-                CHECK_XRCMD(xrCreateReferenceSpace(*session, &referenceSpaceCreateInfo, &m_ViewSpace));
+                if (const XrResult refResult =
+                        xrCreateReferenceSpace(*session, &referenceSpaceCreateInfo, &m_ViewSpace);
+                    XR_FAILED(refResult))
+                {
+                    ErrorLog("%s: unable to create reference view space: %d\n", __FUNCTION__, refResult);
+                }
             }
 
             TraceLoggingWrite(g_traceProvider, "xrCreateSession", TLPArg(*session, "Session"));
@@ -584,10 +589,19 @@ namespace motion_compensation_layer
         {
             // suggestion is for tracker input but doesn't include pose -> add it
             XrActionSuggestedBinding newBinding{m_TrackerPoseAction};
-            CHECK_XRCMD(xrStringToPath(GetXrInstance(), path.c_str(), &newBinding.binding));
-            bindings.push_back(newBinding);
-            m_InteractionProfileSuggested = true;
-            Log("Binding %s - %s for tracker action added\n", profile.c_str(), path.c_str());
+            if (const XrResult result = xrStringToPath(GetXrInstance(), path.c_str(), &newBinding.binding);
+                XR_SUCCEEDED(result))
+            {
+                bindings.push_back(newBinding);
+                m_InteractionProfileSuggested = true;
+                Log("Binding %s - %s for tracker action added\n", profile.c_str(), path.c_str());
+            }
+            else
+            {
+                ErrorLog("%s: unable to create XrPath from %s: %d\n", __FUNCTION__, path.c_str(), result);
+            }
+           
+            
         }
 
         bindingProfiles.suggestedBindings = bindings.data();
@@ -625,23 +639,45 @@ namespace motion_compensation_layer
 
             const std::string profile{m_ViveTracker.active ? m_ViveTracker.profile
                                                            : "/interaction_profiles/khr/simple_controller"};
-            CHECK_XRCMD(xrStringToPath(GetXrInstance(), profile.c_str(), &suggestedBindings.interactionProfile));
-
-            const std::string path{
-                (m_ViveTracker.active ? m_ViveTracker.role : "/user/hand/" + GetConfig()->GetControllerSide()) +
-                "/input/grip/pose"};
-            CHECK_XRCMD(xrStringToPath(GetXrInstance(), path.c_str(), &binding.binding));
-
-            suggestedBindings.suggestedBindings = &binding;
-            suggestedBindings.countSuggestedBindings = 1;
-            CHECK_XRCMD(OpenXrApi::xrSuggestInteractionProfileBindings(GetXrInstance(), &suggestedBindings));
-            m_InteractionProfileSuggested = true;
-            Log("suggested %s before action set attachment\n", profile.c_str());
-            TraceLoggingWrite(g_traceProvider,
-                              "OpenXrTracker::xrAttachSessionActionSets",
-                              TLArg(profile.c_str(), "Profile"),
-                              TLPArg(binding.action, "Action"),
-                              TLArg(path.c_str(), "Path"));
+            
+            if (const XrResult profileResult =
+                    xrStringToPath(GetXrInstance(), profile.c_str(), &suggestedBindings.interactionProfile);
+                XR_FAILED(profileResult))
+            {
+                ErrorLog("%s: unable to create XrPath from %s: %d\n", __FUNCTION__, profile.c_str(), profileResult);
+            }
+            else
+            {
+                const std::string path{
+                    (m_ViveTracker.active ? m_ViveTracker.role : "/user/hand/" + GetConfig()->GetControllerSide()) +
+                    "/input/grip/pose"};
+                if (const XrResult pathResult = xrStringToPath(GetXrInstance(), path.c_str(), &binding.binding);
+                    XR_FAILED(pathResult))
+                {
+                    ErrorLog("%s: unable to create XrPath from %s: %d\n", __FUNCTION__, path.c_str(), pathResult);
+                }
+                else
+                {
+                    suggestedBindings.suggestedBindings = &binding;
+                    suggestedBindings.countSuggestedBindings = 1;
+                    if (const XrResult suggestResult =
+                            OpenXrApi::xrSuggestInteractionProfileBindings(GetXrInstance(), &suggestedBindings);
+                        XR_FAILED(suggestResult))
+                    {
+                        ErrorLog("%s: unable to suggest bindings: %d\n", __FUNCTION__, suggestResult);
+                    }
+                    else
+                    {
+                        m_InteractionProfileSuggested = true;
+                        Log("suggested %s before action set attachment\n", profile.c_str());
+                        TraceLoggingWrite(g_traceProvider,
+                                          "OpenXrTracker::xrAttachSessionActionSets",
+                                          TLArg(profile.c_str(), "Profile"),
+                                          TLPArg(binding.action, "Action"),
+                                          TLArg(path.c_str(), "Path"));
+                    }
+                }
+            }           
         }
 
         XrSessionActionSetsAttachInfo chainAttachInfo = *attachInfo;
@@ -754,8 +790,12 @@ namespace motion_compensation_layer
                           TLArg(time, "Time"));
 
         // determine original location
-        CHECK_XRCMD(OpenXrApi::xrLocateSpace(space, baseSpace, time, location));
-
+        const XrResult result = OpenXrApi::xrLocateSpace(space, baseSpace, time, location);
+        if (XR_FAILED(result))
+        {
+            ErrorLog("%s: xrLocateSpace failed: %d\n", __FUNCTION__, result);
+            return result; 
+        }
         if (m_Activated && !m_RecenterInProgress && (isViewSpace(space) || isViewSpace(baseSpace)))
         {
             TraceLoggingWrite(g_traceProvider,
@@ -806,7 +846,7 @@ namespace motion_compensation_layer
                               TLArg(xr::ToString(location->pose).c_str(), "PoseAfter"));
         }
 
-        return XR_SUCCESS;
+        return result;
     }
 
     XrResult OpenXrLayer::xrLocateViews(XrSession session,
@@ -840,14 +880,14 @@ namespace motion_compensation_layer
                           TLPArg(viewLocateInfo->space, "Space"),
                           TLArg(viewCapacityInput, "ViewCapacityInput"));
 
-        CHECK_XRCMD(
-            OpenXrApi::xrLocateViews(session, viewLocateInfo, viewState, viewCapacityInput, viewCountOutput, views));
+        const XrResult result =
+            OpenXrApi::xrLocateViews(session, viewLocateInfo, viewState, viewCapacityInput, viewCountOutput, views);
 
         TraceLoggingWrite(g_traceProvider, "xrLocateViews", TLArg(viewState->viewStateFlags, "ViewStateFlags"));
 
         if (!m_Activated)
         {
-            return XR_SUCCESS;
+            return result;
         }
 
         // store eye poses to avoid recalculation in xrEndFrame?
@@ -867,39 +907,43 @@ namespace motion_compensation_layer
                                                         viewLocateInfo->displayTime,
                                                         m_ViewSpace};
 
-            CHECK_XRCMD(OpenXrApi::xrLocateViews(session,
-                                                 &offsetViewLocateInfo,
-                                                 viewState,
-                                                 viewCapacityInput,
-                                                 viewCountOutput,
-                                                 views));
-            for (uint32_t i = 0; i < *viewCountOutput; i++)
+            if (XR_SUCCEEDED(OpenXrApi::xrLocateViews(session,
+                                                      &offsetViewLocateInfo,
+                                                      viewState,
+                                                      viewCapacityInput,
+                                                      viewCountOutput,
+                                                      views)))
             {
-                m_EyeOffsets.push_back(views[i]);
+                for (uint32_t i = 0; i < *viewCountOutput; i++)
+                {
+                    m_EyeOffsets.push_back(views[i]);
+                }
             }
         }
 
         // manipulate reference space location
         XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
-        CHECK_XRCMD(xrLocateSpace(m_ViewSpace, viewLocateInfo->space, viewLocateInfo->displayTime, &location));
-        for (uint32_t i = 0; i < *viewCountOutput; i++)
+        if (XR_SUCCEEDED(xrLocateSpace(m_ViewSpace, viewLocateInfo->space, viewLocateInfo->displayTime, &location)))
         {
-            TraceLoggingWrite(g_traceProvider, "xrLocateViews", TLArg(xr::ToString(views[i].fov).c_str(), "Fov"));
-            TraceLoggingWrite(g_traceProvider,
-                              "xrLocateViews",
-                              TLArg(i, "Index"),
-                              TLArg(xr::ToString(views[i].pose).c_str(), "PoseBefore"));
+            for (uint32_t i = 0; i < *viewCountOutput; i++)
+            {
+                TraceLoggingWrite(g_traceProvider, "xrLocateViews", TLArg(xr::ToString(views[i].fov).c_str(), "Fov"));
+                TraceLoggingWrite(g_traceProvider,
+                                  "xrLocateViews",
+                                  TLArg(i, "Index"),
+                                  TLArg(xr::ToString(views[i].pose).c_str(), "PoseBefore"));
 
-            // apply manipulation
-            views[i].pose = Pose::Multiply(m_EyeOffsets[i].pose, location.pose);
+                // apply manipulation
+                views[i].pose = Pose::Multiply(m_EyeOffsets[i].pose, location.pose);
 
-            TraceLoggingWrite(g_traceProvider,
-                              "xrLocateViews",
-                              TLArg(i, "Index"),
-                              TLArg(xr::ToString(views[i].pose).c_str(), "PoseAfter"));
+                TraceLoggingWrite(g_traceProvider,
+                                  "xrLocateViews",
+                                  TLArg(i, "Index"),
+                                  TLArg(xr::ToString(views[i].pose).c_str(), "PoseAfter"));
+            }
         }
 
-        return XR_SUCCESS;
+        return result;
     }
 
     XrResult OpenXrLayer::xrSyncActions(XrSession session, const XrActionsSyncInfo* syncInfo)
@@ -1241,16 +1285,15 @@ namespace motion_compensation_layer
     {
         XrPath path;
         const std::string topLevel(m_ViveTracker.active ? m_ViveTracker.role
-                                                            : "/user/hand/" + GetConfig()->GetControllerSide());
-        XrInteractionProfileState profileState{XR_TYPE_INTERACTION_PROFILE_STATE, NULL, XR_NULL_PATH};
-        try
+                                                        : "/user/hand/" + GetConfig()->GetControllerSide());
+        XrInteractionProfileState profileState{XR_TYPE_INTERACTION_PROFILE_STATE, nullptr, XR_NULL_PATH};
+        if (const XrResult result = xrStringToPath(GetXrInstance(), topLevel.c_str(), &path); XR_SUCCEEDED(result))
         {
-            CHECK_XRCMD(xrStringToPath(GetXrInstance(), topLevel.c_str(), &path));
             xrGetCurrentInteractionProfile(m_Session, path, &profileState);
         }
-        catch (std::exception& e)
+        else
         {
-            ErrorLog("%s: encountered exception: %s\n", __FUNCTION__, e.what());
+            ErrorLog("%s: unable to create XrPath from %s: %d\n", __FUNCTION__, topLevel.c_str(), result);
         }
     }
 
@@ -1287,7 +1330,7 @@ namespace motion_compensation_layer
             strcpy_s(actionSetCreateInfo.actionSetName, "general_tracker_set");
             strcpy_s(actionSetCreateInfo.localizedActionSetName, "General Tracker Set");
             actionSetCreateInfo.priority = 0;
-            if (!XR_SUCCEEDED(xrCreateActionSet(GetXrInstance(), &actionSetCreateInfo, &m_ActionSet)))
+            if (XR_FAILED(xrCreateActionSet(GetXrInstance(), &actionSetCreateInfo, &m_ActionSet)))
             {
                 ErrorLog("%s: unable to create action set\n", __FUNCTION__);
             }
@@ -1298,16 +1341,23 @@ namespace motion_compensation_layer
             strcpy_s(actionCreateInfo.actionName, "general_tracker");
             strcpy_s(actionCreateInfo.localizedActionName, "General Tracker");
             actionCreateInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
+            actionCreateInfo.countSubactionPaths = 0;
             XrPath viveRolePath;
             if (m_ViveTracker.active)
             {
-                CHECK_XRCMD(xrStringToPath(GetXrInstance(), m_ViveTracker.role.c_str(), &viveRolePath));
-                actionCreateInfo.countSubactionPaths = 1;
-                actionCreateInfo.subactionPaths = &viveRolePath;
-            }
-            else
-            {
-                actionCreateInfo.countSubactionPaths = 0;
+                if (const XrResult result = xrStringToPath(GetXrInstance(), m_ViveTracker.role.c_str(), &viveRolePath);
+                    XR_FAILED(result))
+                {
+                    ErrorLog("%s: unable to create XrPath from %s: %d\n",
+                             __FUNCTION__,
+                             m_ViveTracker.role.c_str(),
+                             result);
+                }
+                else
+                {
+                    actionCreateInfo.countSubactionPaths = 1;
+                    actionCreateInfo.subactionPaths = &viveRolePath;
+                }
             }
             if (XR_FAILED(xrCreateAction(m_ActionSet, &actionCreateInfo, &m_TrackerPoseAction)))
             {
@@ -1325,10 +1375,21 @@ namespace motion_compensation_layer
         {
             XrActionSpaceCreateInfo actionSpaceCreateInfo{XR_TYPE_ACTION_SPACE_CREATE_INFO, nullptr};
             actionSpaceCreateInfo.action = m_TrackerPoseAction;
-            m_ViveTracker.active
-                ? CHECK_XRCMD(
-                      xrStringToPath(GetXrInstance(), m_ViveTracker.role.c_str(), &actionSpaceCreateInfo.subactionPath))
-                : actionSpaceCreateInfo.subactionPath = XR_NULL_PATH;
+            actionSpaceCreateInfo.subactionPath = XR_NULL_PATH;
+            if (m_ViveTracker.active)
+            {
+                if (const XrResult result = xrStringToPath(GetXrInstance(),
+                                                           m_ViveTracker.role.c_str(),
+                                                           &actionSpaceCreateInfo.subactionPath);
+                    XR_FAILED(result))
+                {
+                    actionSpaceCreateInfo.subactionPath = XR_NULL_PATH;
+                    ErrorLog("%s: unable to create XrPath from %s: %d\n",
+                             __FUNCTION__,
+                             m_ViveTracker.role.c_str(),
+                             result);
+                }
+            }
             actionSpaceCreateInfo.poseInActionSpace = Pose::Identity();
             if (XR_FAILED(GetInstance()->xrCreateActionSpace(m_Session, &actionSpaceCreateInfo, &m_TrackerSpace)))
             {
@@ -1351,7 +1412,7 @@ namespace motion_compensation_layer
             referenceSpaceCreateInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_LOCAL;
             referenceSpaceCreateInfo.poseInReferenceSpace = Pose::Identity();
             TraceLoggingWrite(g_traceProvider, "OpenXrTracker::LazyInit", TLPArg("Executed", "xrCreateReferenceSpaceLocal"));
-            if (!XR_SUCCEEDED(xrCreateReferenceSpace(m_Session, &referenceSpaceCreateInfo, &m_ReferenceSpace)))
+            if (XR_FAILED(xrCreateReferenceSpace(m_Session, &referenceSpaceCreateInfo, &m_ReferenceSpace)))
             {
                 ErrorLog("%s: xrCreateReferenceSpace (local) failed\n", __FUNCTION__);
                 success = false;
@@ -1406,9 +1467,17 @@ namespace motion_compensation_layer
     {
         char buf[XR_MAX_PATH_LENGTH];
         uint32_t count;
-        CHECK_XRCMD(GetInstance()->xrPathToString(GetInstance()->GetXrInstance(), path, sizeof(buf), &count, buf));
         std::string str;
-        str.assign(buf, count - 1);
+        if (const XrResult result =
+                GetInstance()->xrPathToString(GetInstance()->GetXrInstance(), path, sizeof(buf), &count, buf);
+            XR_SUCCEEDED(result))
+        {
+            str.assign(buf, count - 1);
+        }
+        else
+        {
+            ErrorLog("%s: unable to convert XrPath %u to string: %d\n", __FUNCTION__, path, result);
+        }
         return str;
     }
 
@@ -1464,6 +1533,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
     case DLL_THREAD_DETACH:
     case DLL_PROCESS_DETACH:
         break;
+    default: ;
     }
     return TRUE;
 }

@@ -212,8 +212,12 @@ namespace Tracker
                                   "GetControllerPose",
                                   TLPArg(layer->m_ActionSet, "xrSyncActions"),
                                   TLArg(time, "Time"));
-
-                CHECK_XRCMD(GetInstance()->xrSyncActions(session, &syncInfo));
+                if (const XrResult result = GetInstance()->xrSyncActions(session, &syncInfo);
+                    XR_FAILED(result))
+                {
+                    ErrorLog("%s: xrSyncActions failed: %d\n", __FUNCTION__, result);
+                    return false;
+                }
             }
             {
                 XrActionStatePose actionStatePose{XR_TYPE_ACTION_STATE_POSE, nullptr};
@@ -224,7 +228,13 @@ namespace Tracker
                                   "GetControllerPose",
                                   TLPArg(layer->m_TrackerPoseAction, "xrGetActionStatePose"),
                                   TLArg(time, "Time"));
-                CHECK_XRCMD(GetInstance()->xrGetActionStatePose(session, &getActionStateInfo, &actionStatePose));
+                if (const XrResult result =
+                        GetInstance()->xrGetActionStatePose(session, &getActionStateInfo, &actionStatePose);
+                    XR_FAILED(result))
+                {
+                    ErrorLog("%s: xrGetActionStatePose failed: %d\n", __FUNCTION__, result);
+                    return false;
+                }
 
                 if (!actionStatePose.isActive)
                 {
@@ -237,7 +247,13 @@ namespace Tracker
                 }
             }
 
-            CHECK_XRCMD(GetInstance()->xrLocateSpace(layer->m_TrackerSpace, layer->m_ReferenceSpace, time, &location));
+            if (const XrResult result =
+                    GetInstance()->xrLocateSpace(layer->m_TrackerSpace, layer->m_ReferenceSpace, time, &location);
+                XR_FAILED(result))
+            {
+                ErrorLog("%s: xrLocateSpace failed: %d\n", __FUNCTION__, result);
+                return false;
+            }
 
             if (!Pose::IsPoseValid(location.locationFlags))
             {

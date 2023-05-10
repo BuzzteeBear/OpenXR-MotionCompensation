@@ -307,7 +307,11 @@ namespace graphics
 
                     XrSwapchainImageReleaseInfo releaseInfo{XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO, nullptr};
                     swapchainIt->second.delayedRelease = false;
-                    CHECK_XRCMD(layer->OpenXrApi::xrReleaseSwapchainImage(swapchain, &releaseInfo));
+                    if (const XrResult result = layer->OpenXrApi::xrReleaseSwapchainImage(swapchain, &releaseInfo);
+                        XR_FAILED(result))
+                    {
+                        ErrorLog("%s: xrReleaseSwapchainImage failed: %d\n", __FUNCTION__, result);
+                    }
                 }
             }
 
@@ -380,7 +384,11 @@ namespace graphics
 
                 XrSwapchainImageReleaseInfo releaseInfo{XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};
                 swapchain.second.delayedRelease = false;
-                CHECK_XRCMD(GetInstance()->xrReleaseSwapchainImage(swapchain.first, &releaseInfo));
+                if (const XrResult result = GetInstance()->xrReleaseSwapchainImage(swapchain.first, &releaseInfo);
+                    XR_FAILED(result))
+                {
+                    ErrorLog("%s: xrReleaseSwapchainImage failed: %d\n", __FUNCTION__, result);
+                }
             }
         }
     }
