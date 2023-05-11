@@ -40,6 +40,7 @@ UsedUserAreasWarning=no
 Source: "{#SolutionDir}\configuration\{#AppName}.ini"; DestDir: "{localappdata}\{#AppName}"; Flags: onlyifdoesntexist uninsneveruninstall
 Source: "{#SolutionDir}\changelog.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SolutionDir}\userguide\{#AppName}_User_Guide.html"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SolutionDir}\userguide\{#AppName}_User_Guide.html"; DestDir: "{localappdata}\{#AppName}"; Flags: ignoreversion
 Source: "{#SolutionDir}\scripts\Trace_{#AppName}.wprp"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SolutionDir}\bin\x64\Release\XR_APILAYER_NOVENDOR_motion_compensation.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SolutionDir}\XR_APILAYER_NOVENDOR_motion_compensation\XR_APILAYER_NOVENDOR_motion_compensation.json"; DestDir: "{app}"; Flags: ignoreversion
