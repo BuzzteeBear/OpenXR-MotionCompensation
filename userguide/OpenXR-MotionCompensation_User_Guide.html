@@ -62,15 +62,15 @@ To be able to do that, the software needs to be informed on the motion rig movem
 <p>If you are (or know someone) willing and able to support the software development (mostly C++, maybe some GUI stuff later on) side of the project, feel free to contact <strong>@BuzzteeBear</strong> on the Discord server to ask about ways to contribute.</p>
 <p>Donations to the project are very welcome and can be made via <a href="https://www.paypal.com/donate/?hosted_button_id=Q64DT2ADFCBU8">Paypal</a>.<br />
 On explicit user request you can also sponsor the project via <a href="https://github.com/sponsors/BuzzteeBear?o=esb">GitHub Sponsors</a></p>
-<h2 id="installation">Installation</h2>
+<h2 id="install">Install</h2>
 <h3 id="run-installer-executable">Run installer executable</h3>
 <p>Just double click the installation executable called <code>Install_OpenXR-MotionCompensation_&lt;current_version&gt;.exe</code> and follow the instructions.
 A few hints regarding the installation process:</p>
 <ul>
-<li>If you're upgrading from a version prior to 0.2.0, it is recommended to target the installation directory already existing. This will allow the installer to transfer your existing configuration files into the <code>appdata/local/OpenXR-MotionCompensation</code> directory that is used from version 0.2.0 onwards.</li>
-<li>Using a subdirectory of <code>program files</code> as installation target is recommended, especially for compatibility with WMR based headsets.</li>
-<li>Although the installation needs adminstrative privileges make sure to run the installation executable using the windows account you're using to launch your games/Open XR applications. This enables the installer to put the configuraton file(s) into the correct appdata directory.</li>
-<li>If somethimng goes wrong on installation and you don't know what or why, you can check the log file <code>Setup Log &lt;yyyy-mm-dd xxx&gt;.txt</code> that is created in the <code>%TEMP%</code> folder.</li>
+<li>If you're upgrading from a version prior to 0.2.0, it is recommended to target the installation directory already existing. This will allow the installer to transfer your existing configuration files into the <code>appdata/local/OpenXR-MotionCompensation</code> directory that is used from version 0.2.0 onward.</li>
+<li>Using a sub directory of <code>program files</code> as installation target is recommended, especially for compatibility with WMR based headsets.</li>
+<li>Although the installation needs administrative privileges make sure to run the installation executable using the windows account you're using to launch your games/Open XR applications. This enables the installer to put the configuration file(s) into the correct appdata directory.</li>
+<li>If something goes wrong on installation and you don't know what or why, you can check the log file <code>Setup Log &lt;yyyy-mm-dd xxx&gt;.txt</code> that is created in the <code>%TEMP%</code> folder.</li>
 </ul>
 <h3 id="conflict-with-other-openxr-api-layers">Conflict with other OpenXR API layers</h3>
 <p>There may be issues with other OpenXR API layers that are installed on your system. For the most part they can be solved by using the correct order of installation (because that implicitly determines the order in which the layers are loaded).<br />
@@ -95,36 +95,36 @@ According to user feedback following constraints seem to be working:</p>
 <li>Check if the entry <code>XR_APILAYER_NOVENDOR_motion_compensation</code> with version <code>v1</code> exists</li>
 </ul>
 <h3 id="update">Update</h3>
-<p>To get OXRMC udpated, download and run the latest installation executable from <a href="https://github.com/BuzzteeBear/OpenXR-MotionCompensation/releases">Github</a>. If you want to change the installation directory you have to uninstall the previous version first.</p>
-<h3 id="uninstallation">Uninstallation</h3>
-<p>To remove the OpenXR-MotionCompensation layer just use windows settings/control panel as you would do witgh any other application. During uninstallation you can choose to delete your configuration and log files in the appdata directory or to keep them for later use.</p>
+<p>To get OXRMC updated, download and run the latest installation executable from <a href="https://github.com/BuzzteeBear/OpenXR-MotionCompensation/releases">Github</a>. If you want to change the installation directory you have to uninstall the previous version first.</p>
+<h3 id="uninstall">Uninstall</h3>
+<p>To remove the OpenXR-MotionCompensation layer just use windows settings/control panel as you would do with any other application. During de-installation you can choose to delete your configuration and log files in the appdata directory or to keep them for later use.</p>
 <ul>
-<li>If somethimng goes wrong on installation and you don't know what or why, you can check the log file <code>Uninstall Log &lt;yyyy-mm-dd xxx&gt;.txt</code> that is created in the <code>%TEMP%</code> folder.</li>
+<li>If something goes wrong on installation and you don't know what or why, you can check the log file <code>Uninstall Log &lt;yyyy-mm-dd xxx&gt;.txt</code> that is created in the <code>%TEMP%</code> folder.</li>
 </ul>
 <h2 id="configuration">Configuration</h2>
 <p>Configuration files can be found at <code>...\Users\*&lt;Your_Username&gt;*\AppData\Local\OpenXR-MotionCompensation\OpenXR-MotionCompensation.log</code>.
-After intial installtion this directory contains the default configuration file <code>OpenXR-MotionCompensation.ini</code>. You can make changes to that file to configure options you want to be the same for all OpenXR applications.
+After initial installation this directory contains the default configuration file <code>OpenXR-MotionCompensation.ini</code>. You can make changes to that file to configure options you want to be the same for all OpenXR applications.
 Upon starting an OpenXR application with the API layer active for the first time, a configuration file named after the application is created in the same directory. You can use it to copy (partial) sections from the default configuration file whenever you want to make changes only for that application specifically.</p>
 <h3 id="use-of-the-configuration-file">Use of the Configuration file</h3>
 <p>What you can modify in a configuration file:</p>
 <ul>
 <li>the tracker to use for motion compensation</li>
 <li>the strength and the number of filtering stages for both translational and rotational filters</li>
-<li>keyboard inputs (e.g. to activate/deactivate or recalibrate motion compensation during runtime)<br />
+<li>keyboard inputs (e.g. to activate/deactivate or re-calibrate motion compensation during runtime)<br />
 <strong>Note that all keys and values in the configuration file(s) are case sensitive. That means all <a href="#list-of-keyboard-bindings">keyboard shortcuts</a> must only contain capital letters, numbers and/or underscores</strong></li>
 </ul>
 <h3 id="sections-in-configuration-file">Sections in configuration file</h3>
 <ul>
-<li><code>startup</code>: You can modify oxrmc's behaviour on application start, e.g. disable a specific feature by setting the corresponding key to 0.
+<li><code>startup</code>: You can modify oxrmc's behavior on application start, e.g. disable a specific feature by setting the corresponding key to 0.
 <ul>
-<li><code>enabled</code>: you can disable all functionality globally or for a single application. Note that you cannot enable a single application if oxrmc is disabled globally in the default config file. Modifiying this setting requires an applcation restart.</li>
-<li><code>physical_enabled</code>: initialization of physical tracker (motion controller or vive tracker) on startup can be skipped (e.g. if you're using a virtual tracker). Modifiying this setting requires an application restart.</li>
-<li><code>overlay_enabled</code>: enable intitialization of the graphical overlay (for example if it's not required beacuse of using a physical tracker or if the position of the center of rotation is successfully setup and <code>use_cor_pos</code> = 1 is used). Changing this value requires the VR session to be restarted.</li>
-<li><code>physical_early_init</code>: initialize physical tracker as soon instead of as late as possible. May be required in native OpenXR games / sims that do not support motion controllers input (e.g. iRacing). May avoid conflicts with other open xr layers (e.g. eye tracking in OpenXR toolkit). Modifiying this setting requires an applcation restart.</li>
+<li><code>enabled</code>: you can disable all functionality globally or for a single application. Note that you cannot enable a single application if oxrmc is disabled globally in the default config file. Modifying this setting requires an application restart.</li>
+<li><code>physical_enabled</code>: initialization of physical tracker (motion controller or vive tracker) on startup can be skipped (e.g. if you're using a virtual tracker). Modifying this setting requires an application restart.</li>
+<li><code>overlay_enabled</code>: enable initialization of the graphical overlay (for example if it's not required because of using a physical tracker or if the position of the center of rotation is successfully setup and <code>use_cor_pos</code> = 1 is used). Changing this value requires the VR session to be restarted.</li>
+<li><code>physical_early_init</code>: initialize physical tracker as soon instead of as late as possible. May be required in native OpenXR games / sims that do not support motion controllers input (e.g. iRacing). May avoid conflicts with other OpenXR layers (e.g. eye tracking in OpenXR toolkit). Modifying this setting requires an application restart.</li>
 <li><code>upside_down</code>: turn in-game coordinate system upside down by rotating it 180 degrees around the 'forward' axis. Necessary for correct orientation of virtual tracker and motion compensation in some games (automatically set for iRacing). Changing this value requires the VR session to be restarted.</li>
 <li><code>activate</code>: automatically activate motion compensation on application start and configuration reload.</li>
 <li><code>activate_delay</code>: delay auto-activation by specified number of seconds. The required time for successful activation may vary, depending on application and tracker type used.</li>
-<li><code>activate_countdown_</code>: enable audible countdown for the last 10 seconds before auto-activation. This is supposed to allow getting to neutral postion and timely centering of in-game view.</li>
+<li><code>activate_countdown_</code>: enable audible countdown for the last 10 seconds before auto-activation. This is supposed to allow getting to neutral position and timely centering of in-game view.</li>
 </ul>
 </li>
 <li><code>tracker</code>: The following tracker <code>type</code> keys are available:
@@ -148,7 +148,7 @@ Upon starting an OpenXR application with the API layer active for the first time
 </ul>
 </li>
 <li><code>connection_timeout</code> sets the time (in seconds) the tracker needs to be unresponsive before motion compensation is automatically deactivated. Setting a negative value disables automatic deactivation.</li>
-<li><code>connection_check</code> is only relevant for virtual trackers and determines the period (in seconds) for checking wether the memory mapped file used for data input is actually still actively used. Setting a negative value disables the check</li>
+<li><code>connection_check</code> is only relevant for virtual trackers and determines the period (in seconds) for checking whether the memory mapped file used for data input is actually still actively used. Setting a negative value disables the check</li>
 <li><code>srs</code>: use the virtual tracker data provided by SRS motion software when using a Witmotion (or similar?) sensor on the motion rig.</li>
 <li><code>flypt</code> use the virtual tracker data provided by FlyPT Mover.</li>
 <li><code>yaw</code>: use the virtual tracker data provided by Yaw VR and Yaw 2. Either while using SRS or Game Engine.</li>
@@ -158,21 +158,21 @@ Upon starting an OpenXR application with the API layer active for the first time
 </li>
 <li><code>translational_filter</code> and <code>rotational_filter</code>: set the filtering magnitude (key <code>strength</code> with valid options between <strong>0.0</strong> and <strong>1.0</strong>) number of filtering stages (key <code>order</code>with valid options: <strong>1, 2, 3</strong>).<br />
 The key <code>vertical_factor</code> is applied to translational filter strength in vertical/heave direction only (Note that the filter strength is multiplied by the factor and the resulting product of strength * vertical_factor is clamped internally between 0.0 and 1.0).</li>
-<li><code>cache</code>: you can modify th cache used for reverting the motion corrected pose on frame submission:
+<li><code>cache</code>: you can modify the cache used for reverting the motion corrected pose on frame submission:
 <ul>
-<li><code>use_eye_cache</code> - choose between calcuating eye poses (0 = default) or use cached eye poses (1, was default up until version 0.1.4). Either one might work better with some games or hmds if you encounter jitter with mc activated. You can also modify this setting (and subsequently save it to config file) during runtime with the corresponding shortcut below.</li>
+<li><code>use_eye_cache</code> - choose between calculating eye poses (0 = default) or use cached eye poses (1, was default up until version 0.1.4). Either one might work better with some games or hmds if you encounter jitter with mc activated. You can also modify this setting (and subsequently save it to config file) during runtime with the corresponding shortcut below.</li>
 <li><code>tolerance</code> - modify the time values are kept in cache for before deletion. This may affect eye calculation as well as cached eye positions.</li>
 </ul>
 </li>
 <li><code>shortcuts</code>: can be used to configure shortcuts for different commands (See <a href="#list-of-keyboard-bindings">List of keyboard bindings</a> for valid values):
 <ul>
 <li><code>activate</code>- turn motion compensation on or off. Note that this implicitly triggers the calibration action (<code>center</code>) if that hasn't been executed before.</li>
-<li><code>center</code> - recalibrate the neutral reference pose of the tracker</li>
+<li><code>center</code> - re-calibrate the neutral reference pose of the tracker</li>
 <li><code>translation_increase</code>, <code>translation_decrease</code> - modify the strength of the translational filter. Changes made during runtime can be saved by using a save command (see below).</li>
 <li><code>rotation_increase</code>, <code>rotation_decrease</code> = see above, but for rotational filter</li>
 <li><code>offset_forward</code>, <code>offset_back</code>, <code>offset_up</code>, <code>offset_down</code>, <code>offset_right</code>, <code>offset_left</code> - move the center of rotation (cor) for a virtual tracker. The directions are aligned with the forward vector set with the <code>center</code> command. Changes made during runtime can be saved by using a save command (see below).</li>
-<li><code>rotate_right</code>, <code>rotate_left</code> - rotate the aforementioned forward vector aroung the gravitational (yaw-)axis. Note that these changes cannot be saved. Therefore changing the offset position AFTER rotating manually and saving the offset values will result in the cor being a different offset position after relaoding those saved values.</li>
-<li><code>toggle_overlay</code> - (de)activate graphical overlay displaying the reference tracker position(s) (See <a href="#graphical-overlay">Graphical overlay</a> for details).</li>
+<li><code>rotate_right</code>, <code>rotate_left</code> - rotate the aforementioned forward vector around the gravitational (yaw-)axis. Note that these changes cannot be saved. Therefore changing the offset position AFTER rotating manually and saving the offset values will result in the cor being a different offset position after reloading those saved values.</li>
+<li><code>toggle_overlay</code> - (de-)activate graphical overlay displaying the reference tracker position(s) (See <a href="#graphical-overlay">Graphical overlay</a> for details).</li>
 <li><code>toggle_cache</code> - change between calculated and cached eye positions.</li>
 <li><code>save_config</code> -  write current filter strength and cor offsets to global config file</li>
 <li><code>save_config_app</code> -  write current filter strength and cor offsets to application specific config file. Note that values in this file will precedent values in the global config file.</li>
@@ -195,10 +195,10 @@ The key <code>vertical_factor</code> is applied to translational filter strength
 <li><code>srs</code>: Sim Racing Studio, using a Witmotion sensor</li>
 <li><code>flypt</code>: FlyPT Mover</li>
 </ul>
-<h3 id="calibrate-virtual-tracker">Calibrate virtual tracker</h3>
+<h3 id="calibrating-virtual-tracker">Calibrating virtual tracker</h3>
 <p>To enable OXRMC to correlate translation and rotation of the rig to the virtual space correctly when using a virtual tracker, you have to provide the information where the center of rotation (cor) of your motion rig is positioned and which way is forward. This can be done with the following steps:</p>
 <ol start="0">
-<li>Calculate, measure or estimate the distance between your headset and the center of rotation of your motion rig in forward/backward, up/down and left/right direction (I was told most 6 dof rigs rotate around the bottom of the seat but your mileage may vary).</li>
+<li>Calculate, measure or estimate the distance between your headset and the center of rotation of your motion rig in forward/backward, up/down and left/right direction (I was told most 6 dof rigs rotate around the bottom of the seat but your mileage may vary). If you're using a witmotion sensor, please keep in mind that cor position does not (necessarily) coincide with mounting position of the sensor.</li>
 <li>Enter the offset values in the config file</li>
 <li>Start the OpenXR application of your choice</li>
 <li>Bring your motion rig in neutral position</li>
@@ -207,14 +207,15 @@ The key <code>vertical_factor</code> is applied to translational filter strength
 <li>issue the calibration command by activating the <code>center</code> shortcut. You can also do this implicitly by activating motion compensation if you haven't (re)calibrated since last loading of the configuration.</li>
 </ol>
 <ul>
+<li>You can use the tracker marker of the graphical overlay and keyboard shortcuts to adjust the cor position in-game. Make sure to calibrate the tracker first, because the marker tracker just rests at vr play-space origin beforehand. For in-game changes to survive application restart, you have to manually save the configuration.</li>
 <li>If you're unable to locate the cor of your rig, try out the method described in the <a href="#virtual-tracker">according troubleshooting section</a></li>
 <li>You may have to invert some of the rotations/translations on output side to get them compensated properly. <strong>For new users it's strongly recommended to use some artificial telemetry (joystick input, sine wave generator, etc.) and testing one degree of freedom at at time</strong></li>
-<li>If you're using YawVR Game Engine you can also use the parameters <code>Head Distance</code> and <code>Height</code> in its Motion Compensation tab to specify the offset of the cor. Head distance is basically equal to <code>offset_forward</code> in the configration file. But note that the height parameter is measured upwards from the bottom of your playspace, so you'll need to have that setup correctly in order to use that feature.</li>
+<li>If you're using YawVR Game Engine you can also use the parameters <code>Head Distance</code> and <code>Height</code> in its Motion Compensation tab to specify the offset of the cor. Head distance is basically equal to <code>offset_forward</code> in the configration file. But note that the height parameter is measured upwards from the bottom of your play-space, so you'll need to have that setup correctly in order to use that feature.</li>
 </ul>
-<h3 id="saving-and-the-cor-location">Saving and the cor location</h3>
-<p>The current position and orientation of the cor is part of the configuration and can be saved to the (global or app-specific) config file. When your satisfied with the current setting you can set the config key <code>use_cor_pos</code> to <code>1</code>. This causes the cor position to be loaded from the config file when calibrating instead of being determined using the hmd position and the offset values.<br />
-Applications using OpenComposite ususally operate in a different VR playspace than titles supporting native OpenXR. That's why cor position needs to be saved once for all native games and once for all games using OpenComposite.<br />
-<strong>Note that this functionality may not work with all HMD vendors. Initilly setting up the playspace in the VR runtime of your hmd might help to get this working correctly. Rumor has it that some HMDs need to be started/initialized at the exact same location for the playspace coordinates to be consistent in between uses.</strong></p>
+<h3 id="saving-and-reloading-the-cor-location">Saving and reloading the cor location</h3>
+<p>Once you're satisfied with the current setting, the current position and orientation of the cor can be saved to the (global = <code>ctrl + shift + s</code> or app-specific = <code>ctrl + shift + a</code>) config file. You can subsequently set the config key <code>use_cor_pos</code> to <code>1</code>. This causes the cor position to be loaded from the config file when calibrating instead of being determined using the hmd position and the offset values.<br />
+Applications using OpenComposite usually operate in a different VR play-space than titles supporting native OpenXR. That's why cor position needs to be saved once for all native games and once for all games using OpenComposite.<br />
+<strong>Note that this functionality may not work with all HMD vendors. Initially setting up the play-space in the VR runtime of your hmd might help to get this working correctly. Rumor has it that some HMDs need to be started/initialized at the exact same location for the play-space coordinates to be consistent in between uses.</strong></p>
 <h2 id="running-your-application">Running your application</h2>
 <ol>
 <li>make sure your using OpenXR as runtime in the application you wish to use motion compensation in</li>
@@ -222,11 +223,11 @@ Applications using OpenComposite ususally operate in a different VR playspace th
 <li>center the in-app view</li>
 <li>activate the motion controller you configured and mount it on your motion rig</li>
 <li>bring your motion rig to neutral position</li>
-<li>Reset the ingame view if necesary</li>
+<li>Reset the in-game view if necessary</li>
 <li>press the <code>activate</code> shortcut (<strong>CTRL</strong> + <strong>INSERT</strong> by default). This implicitly sets the neutral reference pose for the tracker</li>
 </ol>
 <ul>
-<li>if necessary you can recalibrate the tracker by pressing the <code>center</code> shortcut (<strong>CTRL</strong> + <strong>DEL</strong> by default) while the motion rig is in neutral position</li>
+<li>if necessary you can re-calibrate the tracker by pressing the <code>center</code> shortcut (<strong>CTRL</strong> + <strong>DEL</strong> by default) while the motion rig is in neutral position</li>
 <li>you can increase or decrease the filter strength of translational and rotational filters</li>
 <li>you can modify the cor offset when currently using a virtual tracker</li>
 <li>after modifying filter strength or cor offset for virtual tracker you can save your changes to the default configuration file</li>
@@ -235,7 +236,7 @@ Applications using OpenComposite ususally operate in a different VR playspace th
 <h3 id="graphical-overlay">Graphical overlay</h3>
 <p>You can enable/disable the overlay using the <code>toggle_overlay</code> shortcut. It displays a marker in your headset view for:</p>
 <ul>
-<li>the current neutral position of the reference tracker. <strong>Note that the position of the marker does not represent the cor position prior to calibration</strong>
+<li>the current neutral position of the reference tracker. <strong>Note that the position of the marker does not represent the tracker/cor position before tracker calibration</strong>
 <ul>
 <li>for a virtual tracker the neutral position corresponds to the center of rotation currently configured. The marker uses the following color coding:
 <ul>
@@ -252,7 +253,7 @@ Applications using OpenComposite ususally operate in a different VR playspace th
 <ul>
 <li>cyan instead of blue</li>
 <li>yellow instead of green</li>
-<li>magenta istead of red</li>
+<li>magenta instead of red</li>
 </ul>
 </li>
 </ul>
@@ -262,12 +263,12 @@ Applications using OpenComposite ususally operate in a different VR playspace th
 <li>for a physical tracker: the runtime lost tracking of a motion controller / vive tracker</li>
 <li>for a virtual tracker: the memory mapped file providing data for a virtual tracker is removed by windows due to inactivity of the sender</li>
 </ul>
-<p>After detecting a loss of connection a configurable timeout period is used (<code>connection_timeout</code>), allopwing two possible outcomes:</p>
+<p>After detecting a loss of connection a configurable timeout period is used (<code>connection_timeout</code>), allowing two possible outcomes:</p>
 <ul>
-<li>the connection is reastablished within the timeout period: motion compensation is continued (and the next potential connection loss resets the timeout period)</li>
+<li>the connection is reestablished within the timeout period: motion compensation is continued (and the next potential connection loss resets the timeout period)</li>
 <li>the connection stays lost and motion compensation is automatically deactivated. At that point you get an audible warning about connection loss.
 <ul>
-<li>If you try to reactivate and the tracker is available again, motion compensation is resumed (without the need for tracker recalibration)</li>
+<li>If you try to reactivate and the tracker is available again, motion compensation is resumed (without the need for tracker re-calibration)</li>
 <li>Otherwise, the error feedback is repeated and motion compensation stays deactivated. When using a virtual tracker and having connection problems, you can use the MMF Reader app (see below) to cross check existence and current output values of the memory mapped file used for data exchange.</li>
 </ul>
 </li>
@@ -275,12 +276,12 @@ Applications using OpenComposite ususally operate in a different VR playspace th
 <h2 id="troubleshooting">Troubleshooting</h2>
 <p>Upon activating any shortcut you get audible feedback, corresponding to the performed action (or an error, if something went wrong).
 If you're getting 'error' or no feedback at all, check for error entries (search for keyword 'error') in the log file at <strong>...\Users&lt;Your_Username&gt;\AppData\Local\OpenXR-MotionCompensation\OpenXR-MotionCompensation.log</strong>.</p>
-<h3 id="recentering-in-game-view">Recentering in-game view</h3>
+<h3 id="re-centering-in-game-view">Re-centering in-game view</h3>
 <p>If you recenter the in-app view during a session the reference pose is reset by default. Therefore you should only do that while your motion rig is in neutral position. It is possible (depending on the application) that this automatic recalibration is not triggered, causing the view and reference pose to be out of sync and leading to erroneous motion compensation. You should do the following steps to get this corrected again:</p>
 <ol>
 <li>deactivate motion compensation by pressing the <code>activate</code> shortcut</li>
-<li>bring your motion rig to neutral position. Face forward if yout using a virtual tracker</li>
-<li>recalibrate by pressing the <code>center</code> shortcut</li>
+<li>bring your motion rig to neutral position. Face forward if you using a virtual tracker</li>
+<li>re-calibrate by pressing the <code>center</code> shortcut</li>
 <li>reactivate motion compensation by pressing the <code>activate</code> shortcut</li>
 </ol>
 <h3 id="virtual-tracker">Virtual tracker</h3>
@@ -294,11 +295,11 @@ If don't have a clue where the cor of your motion rig is supposed to be, you can
 </ul>
 <ol>
 <li>Find a way to feed your motion software with artificial rotational telemetry (e.g. Joystick mode in the Setup section of SRS, a sine wave generator for FlyPT Mover or Gamepad / DirectInput plugin for YawVR Game Engine.</li>
-<li>Calibrate your cor (ctrl+del by default) as described in <a href="#calibrate-virtual-tracker">here</a> and activate motion compenation</li>
+<li>Calibrate your cor (ctrl + del by default) as described in <a href="#calibrate-virtual-tracker">here</a> and activate motion compensation</li>
 <li>Find the right height
 <ol>
-<li>start rolling fully to the right while keeping the head still (in reference to the seat) and check if your ingame position is moving.</li>
-<li>if your view is moved to the right, lower your cor position (ctrl+page down), if it's moving left lift it up (ctrl + page up)</li>
+<li>start rolling fully to the right while keeping the head still (in reference to the seat) and check if your in-game position is moving.</li>
+<li>if your view is moved to the right, lower your cor position (ctrl + page down), if it's moving left lift it up (ctrl + page up)</li>
 <li>rinse &amp; repeat until your in-game position does not move when rolling</li>
 </ol>
 </li>
@@ -314,18 +315,18 @@ If don't have a clue where the cor of your motion rig is supposed to be, you can
 <h3 id="physical-tracker">Physical tracker</h3>
 <ul>
 <li>Make sure the tracker/controller doesn't go into standby mode</li>
-<li>Place a lighthouse based tracker to have line of sight to as many basestations as possible</li>
+<li>Place a lighthouse based tracker to have line of sight to as many base-stations as possible</li>
 <li>If you're experiencing tracking issues on strong vibrations (e.g. transducer) on the rig, try to find a better mounting spot or tune vibrations down.</li>
 </ul>
 <p>You can always request help on the <a href="https://discord.gg/BVWugph5XF">Discord server</a></p>
 <ul>
-<li>provide as much <strong>information</strong> as possible about your setup and the isssue you're having, including:
+<li>provide as much <strong>information</strong> as possible about your setup and the issue you're having, including:
 <ul>
 <li>log file</li>
 <li>tracker type</li>
 <li>hmd</li>
 <li>game(s)</li>
-<li>usin OpenComposite o</li>
+<li>using OpenComposite or native OpenXR</li>
 </ul>
 </li>
 </ul>
@@ -340,9 +341,9 @@ If don't have a clue where the cor of your motion rig is supposed to be, you can
 <li>Otherwise the current values are displayed using arc degree as unit for rotations and meter for translations.</li>
 </ul>
 <h3 id="logging">Logging</h3>
-<p>The motion compensation layers logs rudimentary information and errors in a text file located at <strong>...\Users&lt;Your_Username&gt;\AppData\Local\OpenXR-MotionCompensation\OpenXR-MotionCompensation.log</strong>. After unexpected behaviour or a crash you can check that file for abormalities or error reports.</p>
-<p>If you encounter repeatable bugs or crashes you can use the Windows Performance Recorder Profile (WPRP) tracelogging in combination with the configuration contained within <code>scripts\Trace_OpenXR-MotionCompensation.wprp</code> to create a more detailed protocol.</p>
-<p><a href="https://docs.microsoft.com/en-us/windows/win32/tracelogging/trace-logging-portal">Tracelogging</a> can become very useful to investigate user issues.</p>
+<p>The motion compensation layers logs rudimentary information and errors in a text file located at <strong>...\Users&lt;Your_Username&gt;\AppData\Local\OpenXR-MotionCompensation\OpenXR-MotionCompensation.log</strong>. After unexpected behavior or a crash you can check that file for abnormalities or error reports.</p>
+<p>If you encounter repeatable bugs or crashes you can use the Windows Performance Recorder Profile (WPRP) trace-logging in combination with the configuration contained within <code>scripts\Trace_OpenXR-MotionCompensation.wprp</code> to create a more detailed protocol.</p>
+<p><a href="https://docs.microsoft.com/en-us/windows/win32/tracelogging/trace-logging-portal">Trace-logging</a> can become very useful to investigate user issues.</p>
 <p>To capture a trace for the API layer:</p>
 <ul>
 <li>start the OpenXR application</li>
@@ -371,7 +372,7 @@ If don't have a clue where the cor of your motion rig is supposed to be, you can
 </tr>
 <tr>
 <td style="text-align: left;"><code>CTRL</code></td>
-<td style="text-align: left;">ctrl key</td>
+<td style="text-align: left;">control key</td>
 </tr>
 <tr>
 <td style="text-align: left;"><code>ALT</code></td>
@@ -387,11 +388,11 @@ If don't have a clue where the cor of your motion rig is supposed to be, you can
 </tr>
 <tr>
 <td style="text-align: left;"><code>LCTRL</code></td>
-<td style="text-align: left;">left ctrl key</td>
+<td style="text-align: left;">left control key</td>
 </tr>
 <tr>
 <td style="text-align: left;"><code>RCTRL</code></td>
-<td style="text-align: left;">right ctrl key</td>
+<td style="text-align: left;">right control key</td>
 </tr>
 <tr>
 <td style="text-align: left;"><code>LALT</code></td>
@@ -407,7 +408,7 @@ If don't have a clue where the cor of your motion rig is supposed to be, you can
 </tr>
 <tr>
 <td style="text-align: left;"><code>A</code>- <code>Z</code></td>
-<td style="text-align: left;">alphbetical key</td>
+<td style="text-align: left;">alphabetical key</td>
 </tr>
 <tr>
 <td style="text-align: left;"><code>BACKQUOTE</code></td>
@@ -467,7 +468,7 @@ If don't have a clue where the cor of your motion rig is supposed to be, you can
 </tr>
 <tr>
 <td style="text-align: left;"><code>CLR</code></td>
-<td style="text-align: left;">clr key</td>
+<td style="text-align: left;">clear key</td>
 </tr>
 <tr>
 <td style="text-align: left;"><code>RETURN</code></td>
@@ -475,7 +476,7 @@ If don't have a clue where the cor of your motion rig is supposed to be, you can
 </tr>
 <tr>
 <td style="text-align: left;"><code>ESC</code></td>
-<td style="text-align: left;">esc key</td>
+<td style="text-align: left;">escape key</td>
 </tr>
 <tr>
 <td style="text-align: left;"><code>SPACE</code></td>
@@ -499,11 +500,11 @@ If don't have a clue where the cor of your motion rig is supposed to be, you can
 </tr>
 <tr>
 <td style="text-align: left;"><code>INS</code></td>
-<td style="text-align: left;">ins key</td>
+<td style="text-align: left;">insert key</td>
 </tr>
 <tr>
 <td style="text-align: left;"><code>DEL</code></td>
-<td style="text-align: left;">del key</td>
+<td style="text-align: left;">delete key</td>
 </tr>
 <tr>
 <td style="text-align: left;"><code>HOME</code></td>
