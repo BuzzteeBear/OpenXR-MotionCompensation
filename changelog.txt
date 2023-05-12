@@ -11,6 +11,7 @@ Version 0.2.7
 	
 	Bugfixes
 	- fixed ctd in DCS when loading mission with mc activated
+	- fixed ctd in MSFS at startup without hmd / active runtime present
 
 Version 0.2.6
 
