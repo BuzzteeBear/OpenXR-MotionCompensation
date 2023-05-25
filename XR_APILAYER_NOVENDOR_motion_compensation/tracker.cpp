@@ -14,6 +14,173 @@ using namespace xr::math;
 
 namespace Tracker
 {
+    bool ControllerBase::Init()
+    {
+        GetConfig()->GetBool(Cfg::PhysicalEnabled, m_PhysicalEnabled);
+        return true;
+    }
+
+    bool ControllerBase::GetPoseDelta(XrPosef& poseDelta, XrSession session, XrTime time)
+    {
+        // pose already calulated for requested time
+        if (time == m_LastPoseTime)
+        {
+            // already calulated for requested time;
+            poseDelta = m_LastPoseDelta;
+            TraceLoggingWrite(g_traceProvider,
+                              "GetPoseDelta",
+                              TLArg(xr::ToString(m_LastPoseDelta).c_str(), "LastDelta"));
+            return true;
+        }
+        if (m_ResetReferencePose)
+        {
+            m_ResetReferencePose = !ResetReferencePose(session, time);
+        }
+        if (XrPosef curPose{Pose::Identity()}; GetPose(curPose, session, time))
+        {
+            ApplyFilters(curPose);
+
+            // calculate difference toward reference pose
+            poseDelta = Pose::Multiply(Pose::Invert(curPose), m_ReferencePose);
+
+            TraceLoggingWrite(g_traceProvider, "GetPoseDelta", TLArg(xr::ToString(poseDelta).c_str(), "Delta"));
+
+            m_LastPoseTime = time;
+            m_LastPose = curPose;
+            m_LastPoseDelta = poseDelta;
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    bool ControllerBase::ResetReferencePose(XrSession session, XrTime time)
+    {
+        if (XrPosef curPose; GetPose(curPose, session, time))
+        {
+            SetReferencePose(curPose);
+            return true;
+        }
+        else
+        {
+            ErrorLog("%s: unable to get current pose\n", __FUNCTION__);
+            return false;
+        }
+    }
+
+    void ControllerBase::SetReferencePose(const XrPosef& pose)
+    {
+        m_ReferencePose = pose;
+        TraceLoggingWrite(g_traceProvider, "SetReferencePose", TLArg(xr::ToString(pose).c_str(), "ReferencePose"));
+        Log("tracker reference pose set\n");
+    }
+
+    bool ControllerBase::GetControllerPose(XrPosef& trackerPose, XrSession session, XrTime time)
+    {
+        if (!m_PhysicalEnabled)
+        {
+            ErrorLog("physical tracker disabled in config file\n");
+            return false;
+        }
+        if (auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance()))
+        {
+            // Query the latest tracker pose.
+            XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
+            {
+                // TODO: skip xrSyncActions if other actions are active as well?
+                const XrActionsSyncInfo syncInfo{XR_TYPE_ACTIONS_SYNC_INFO, nullptr, 0, nullptr};
+
+                TraceLoggingWrite(g_traceProvider,
+                                  "GetControllerPose",
+                                  TLPArg(layer->m_ActionSet, "xrSyncActions"),
+                                  TLArg(time, "Time"));
+                if (const XrResult result = GetInstance()->xrSyncActions(session, &syncInfo); XR_FAILED(result))
+                {
+                    ErrorLog("%s: xrSyncActions failed: %d\n", __FUNCTION__, result);
+                    return false;
+                }
+            }
+            {
+                XrActionStatePose actionStatePose{XR_TYPE_ACTION_STATE_POSE, nullptr};
+                XrActionStateGetInfo getActionStateInfo{XR_TYPE_ACTION_STATE_GET_INFO, nullptr};
+                getActionStateInfo.action = layer->m_TrackerPoseAction;
+
+                TraceLoggingWrite(g_traceProvider,
+                                  "GetControllerPose",
+                                  TLPArg(layer->m_TrackerPoseAction, "xrGetActionStatePose"),
+                                  TLArg(time, "Time"));
+                if (const XrResult result =
+                        GetInstance()->xrGetActionStatePose(session, &getActionStateInfo, &actionStatePose);
+                    XR_FAILED(result))
+                {
+                    ErrorLog("%s: xrGetActionStatePose failed: %d\n", __FUNCTION__, result);
+                    return false;
+                }
+
+                if (!actionStatePose.isActive)
+                {
+                    if (!m_ConnectionLost)
+                    {
+                        ErrorLog("%s: unable to determine tracker pose - XrActionStatePose not active\n", __FUNCTION__);
+                        m_ConnectionLost = true;
+                    }
+                    return false;
+                }
+            }
+
+            if (const XrResult result =
+                    GetInstance()->xrLocateSpace(layer->m_TrackerSpace, layer->m_ReferenceSpace, time, &location);
+                XR_FAILED(result))
+            {
+                ErrorLog("%s: xrLocateSpace failed: %d\n", __FUNCTION__, result);
+                return false;
+            }
+
+            if (!Pose::IsPoseValid(location.locationFlags))
+            {
+                if (!m_ConnectionLost)
+                {
+                    ErrorLog("%s: unable to determine tracker pose - XrSpaceLocation not valid\n", __FUNCTION__);
+                    m_ConnectionLost = true;
+                }
+                return false;
+            }
+            TraceLoggingWrite(g_traceProvider,
+                              "GetControllerPose",
+                              TLArg(xr::ToString(location.pose).c_str(), "Location"),
+                              TLArg(time, "Time"));
+            m_ConnectionLost = false;
+            trackerPose = location.pose;
+            return true;
+        }
+        else
+        {
+            ErrorLog("%s: unable to cast instance to OpenXrLayer\n", __FUNCTION__);
+            return false;
+        }
+    }
+
+    XrVector3f ControllerBase::GetForwardVector(const XrQuaternionf& quaternion, bool inverted)
+    {
+        XrVector3f forward;
+        StoreXrVector3(
+            &forward,
+            DirectX::XMVector3Rotate(LoadXrVector3(XrVector3f{0.0f, 0.0f, inverted ? 1.0f : -1.0f}), LoadXrQuaternion(quaternion)));
+        forward.y = 0;
+        return Normalize(forward);
+    }
+
+    XrQuaternionf ControllerBase::GetYawRotation(const XrVector3f& forward)
+    {
+        const float yawAngle = atan2f(forward.x, forward.z);
+        XrQuaternionf rotation{};
+        StoreXrQuaternion(&rotation, DirectX::XMQuaternionRotationRollPitchYaw(0.0f, yawAngle, 0.0f));
+        return rotation;
+    }
+
+
     TrackerBase::~TrackerBase()
     {
         delete m_TransFilter;
@@ -22,7 +189,7 @@ namespace Tracker
 
     bool TrackerBase::Init()
     {
-        GetConfig()->GetBool(Cfg::PhysicalEnabled, m_PhysicalEnabled);
+        ControllerBase::Init();
         return LoadFilters();
     }
 
@@ -99,68 +266,14 @@ namespace Tracker
                                                           : Event::Minus);
     }
 
-    void TrackerBase::SetReferencePose(const XrPosef& pose)
-    {
-        m_TransFilter->Reset(pose.position);
-        m_RotFilter->Reset(pose.orientation);
-        m_ReferencePose = pose;
-        m_Calibrated = true;
-        TraceLoggingWrite(g_traceProvider, "SetReferencePose", TLArg(xr::ToString(pose).c_str(), "ReferencePose"));
-        Log("tracker reference pose set\n");
-    }
-
     void TrackerBase::AdjustReferencePose(const XrPosef& pose)
     {
         SetReferencePose(Pose::Multiply(m_ReferencePose, pose));
     }
 
-    XrPosef TrackerBase::GetReferencePose(XrSession session, XrTime time) const
+    XrPosef TrackerBase::GetReferencePose() const
     {
         return m_ReferencePose;
-    }
-
-    bool TrackerBase::GetPoseDelta(XrPosef& poseDelta, XrSession session, XrTime time)
-    {
-        // pose already calulated for requested time or unable to calculate
-        if (time == m_LastPoseTime)
-        {
-            // already calulated for requested time;
-            poseDelta = m_LastPoseDelta;
-            TraceLoggingWrite(g_traceProvider,
-                              "GetPoseDelta",
-                              TLArg(xr::ToString(m_LastPoseDelta).c_str(), "LastDelta"));
-            return true;
-        }
-        if (m_ResetReferencePose)
-        {
-            m_ResetReferencePose = !ResetReferencePose(session, time);
-        }
-        if (XrPosef curPose{Pose::Identity()}; GetPose(curPose, session, time))
-        {
-            // apply translational filter
-            m_TransFilter->Filter(curPose.position);
-
-            // apply rotational filter
-            m_RotFilter->Filter(curPose.orientation);
-
-            TraceLoggingWrite(g_traceProvider,
-                              "GetPoseDelta",
-                              TLArg(xr::ToString(curPose).c_str(), "LocationAfterFilter"),
-                              TLArg(time, "Time"));
-
-            // calculate difference toward reference pose
-            poseDelta = Pose::Multiply(Pose::Invert(curPose), m_ReferencePose);
-
-            TraceLoggingWrite(g_traceProvider, "GetPoseDelta", TLArg(xr::ToString(poseDelta).c_str(), "Delta"));
-
-            m_LastPoseTime = time;
-            m_LastPoseDelta = poseDelta;
-            return true;
-        }
-        else
-        {
-            return false;
-        }
     }
 
     void TrackerBase::LogCurrentTrackerPoses(XrSession session, XrTime time, bool activated)
@@ -193,105 +306,35 @@ namespace Tracker
         }
     }
 
-    bool TrackerBase::GetControllerPose(XrPosef& trackerPose, XrSession session, XrTime time)
+    void TrackerBase::SetReferencePose(const XrPosef& pose)
     {
-        if (!m_PhysicalEnabled)
-        {
-            ErrorLog("physical tracker disabled in config file\n");
-            return false;
-        }
-        if (auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance()))
-        {
-            // Query the latest tracker pose.
-            XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
-            {
-                // TODO: skip xrSyncActions if other actions are active as well?
-                const XrActionsSyncInfo syncInfo{XR_TYPE_ACTIONS_SYNC_INFO, nullptr, 0, nullptr};
-                
-                TraceLoggingWrite(g_traceProvider,
-                                  "GetControllerPose",
-                                  TLPArg(layer->m_ActionSet, "xrSyncActions"),
-                                  TLArg(time, "Time"));
-                if (const XrResult result = GetInstance()->xrSyncActions(session, &syncInfo);
-                    XR_FAILED(result))
-                {
-                    ErrorLog("%s: xrSyncActions failed: %d\n", __FUNCTION__, result);
-                    return false;
-                }
-            }
-            {
-                XrActionStatePose actionStatePose{XR_TYPE_ACTION_STATE_POSE, nullptr};
-                XrActionStateGetInfo getActionStateInfo{XR_TYPE_ACTION_STATE_GET_INFO, nullptr};
-                getActionStateInfo.action = layer->m_TrackerPoseAction;
+        m_TransFilter->Reset(pose.position);
+        m_RotFilter->Reset(pose.orientation);
+        m_Calibrated = true;
+        ControllerBase::SetReferencePose(pose); 
+    }
 
-                TraceLoggingWrite(g_traceProvider,
-                                  "GetControllerPose",
-                                  TLPArg(layer->m_TrackerPoseAction, "xrGetActionStatePose"),
-                                  TLArg(time, "Time"));
-                if (const XrResult result =
-                        GetInstance()->xrGetActionStatePose(session, &getActionStateInfo, &actionStatePose);
-                    XR_FAILED(result))
-                {
-                    ErrorLog("%s: xrGetActionStatePose failed: %d\n", __FUNCTION__, result);
-                    return false;
-                }
+    void TrackerBase::ApplyFilters(XrPosef& pose)
+    {
+        // apply translational filter
+        m_TransFilter->Filter(pose.position);
 
-                if (!actionStatePose.isActive)
-                {
-                    if (!m_ConnectionLost)
-                    {
-                        ErrorLog("%s: unable to determine tracker pose - XrActionStatePose not active\n", __FUNCTION__);
-                        m_ConnectionLost = true;
-                    }
-                    return false;
-                }
-            }
+        // apply rotational filter
+        m_RotFilter->Filter(pose.orientation);
 
-            if (const XrResult result =
-                    GetInstance()->xrLocateSpace(layer->m_TrackerSpace, layer->m_ReferenceSpace, time, &location);
-                XR_FAILED(result))
-            {
-                ErrorLog("%s: xrLocateSpace failed: %d\n", __FUNCTION__, result);
-                return false;
-            }
-
-            if (!Pose::IsPoseValid(location.locationFlags))
-            {
-                if (!m_ConnectionLost)
-                {
-                    ErrorLog("%s: unable to determine tracker pose - XrSpaceLocation not valid\n", __FUNCTION__);
-                    m_ConnectionLost = true;
-                }
-                return false;
-            }
-            TraceLoggingWrite(g_traceProvider,
-                              "GetControllerPose",
-                              TLArg(xr::ToString(location.pose).c_str(), "Location"),
-                              TLArg(time, "Time"));
-            m_ConnectionLost = false;
-            trackerPose = location.pose;
-            return true;
-        }
-        else
-        {
-            ErrorLog("%s: unable to cast instance to OpenXrLayer\n", __FUNCTION__);
-            return false;
-        }
+        TraceLoggingWrite(g_traceProvider,
+                          "ApplyFilters",
+                          TLArg(xr::ToString(pose).c_str(), "LocationAfterFilter"));
     }
 
     bool OpenXrTracker::ResetReferencePose(XrSession session, XrTime time)
     {
-        if (XrPosef curPose; GetPose(curPose, session, time))
+        if (!ControllerBase::ResetReferencePose(session, time))
         {
-            SetReferencePose(curPose);
-            return true;
-        }
-        else
-        {
-            ErrorLog("%s: unable to get current pose\n", __FUNCTION__);
             m_Calibrated = false;
             return false;
         }
+        return true;
     }
 
     bool OpenXrTracker::GetPose(XrPosef& trackerPose, XrSession session, XrTime time)
@@ -301,6 +344,8 @@ namespace Tracker
 
     bool VirtualTracker::Init()
     {
+        m_Manipulator = std::make_unique<CorManipulator>(CorManipulator(this));
+        m_Manipulator->Init();
         bool success{true};
         if(!GetConfig()->GetBool(Cfg::UpsideDown, m_UpsideDown))
         {
@@ -388,32 +433,20 @@ namespace Tracker
                     Pose::IsPoseValid(location.locationFlags))
                 {
                     // project forward and right vector of view onto 'floor plane'
-                    XrVector3f forward;
-                    StoreXrVector3(&forward,
-                                   DirectX::XMVector3Rotate(LoadXrVector3(XrVector3f{0.0f, 0.0f, -1.0f}),
-                                                            LoadXrQuaternion(location.pose.orientation)));
-                    forward.y = 0;
-                    forward = Normalize(forward);
+                    const XrVector3f forward = GetForwardVector(location.pose.orientation);
                     const XrVector3f right{-forward.z, 0.0f, forward.x};
 
-                    float offsetRight = m_OffsetRight;
-                    float offsetDown = m_OffsetDown;
-                    if (m_UpsideDown)
-                    {
-                        offsetRight = -offsetRight;
-                        offsetDown = -offsetDown;
-                    }
-
+                    const float offsetRight = m_UpsideDown ? -m_OffsetRight : m_OffsetRight;
+                    const float offsetDown = m_UpsideDown ? -m_OffsetDown : m_OffsetDown;
+                    
                     // calculate and apply translational offset
                     const XrVector3f offset =
                         m_OffsetForward * forward + offsetRight * right + XrVector3f{0.0f, -offsetDown, 0.0f};
                     location.pose.position = location.pose.position + offset;
 
                     // calculate orientation parallel to floor
-                    const float yawAngle = atan2f(forward.x, forward.z);
-                    StoreXrQuaternion(&location.pose.orientation,
-                                      DirectX::XMQuaternionRotationRollPitchYaw(0.0f, yawAngle, 0.0f));
-
+                    location.pose.orientation = GetYawRotation(forward);
+                    
                     XrPosef refPose = location.pose;
 
                     if (m_DebugMode)
@@ -629,6 +662,14 @@ namespace Tracker
             Log("debug cor mode deactivated\n");
         }
         return success;
+    }
+
+    void VirtualTracker::ApplyCorManipulation(XrSession session, XrTime time)
+    {
+        if (m_Manipulator)
+        {
+            m_Manipulator->ApplyManipulation(session, time);
+        }
     }
 
     bool VirtualTracker::GetPose(XrPosef& trackerPose, const XrSession session, const XrTime time)
@@ -875,6 +916,142 @@ namespace Tracker
         ErrorLog("defaulting to 'controller'\n");
         *tracker = new OpenXrTracker();
     }
+    
+    bool CorManipulator::ApplyManipulation(XrSession session, XrTime time)
+    {
+        if (!m_Initialized)
+        {
+            return false;
+        }
+
+        auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
+        if (!layer)
+        {
+            m_Initialized = false;
+            ErrorLog("%s: unable to cast layer to OpenXrLayer\n", __FUNCTION__);
+            return false;
+        }
+
+        bool manipulated{false};
+        const bool triggerPressed = GetTriggerState(session);
+        if (m_Triggered != triggerPressed)
+        {
+            // apply vibration to acknowledge trigger state change
+            XrHapticVibration vibration{XR_TYPE_HAPTIC_VIBRATION};
+            vibration.amplitude = 0.5;
+            vibration.duration = XR_MIN_HAPTIC_DURATION;
+            vibration.frequency = XR_FREQUENCY_UNSPECIFIED;
+
+            TraceLoggingWrite(g_traceProvider,
+                              "ApplyManipulation",
+                              TLPArg(layer->m_TrackerHapticAction, "xrApplyHapticFeedback"));
+            XrHapticActionInfo hapticActionInfo{XR_TYPE_HAPTIC_ACTION_INFO};
+            hapticActionInfo.action = layer->m_TrackerHapticAction;
+            if (const XrResult result = layer->xrApplyHapticFeedback(session,
+                                                                     &hapticActionInfo,
+                                                                     reinterpret_cast<XrHapticBaseHeader*>(&vibration));
+                XR_FAILED(result))
+            {
+                ErrorLog("%s: xrApplyHapticFeedback failed: %d\n", __FUNCTION__, result);
+            }
+            if (triggerPressed)
+            {
+                ResetReferencePose(session, time);
+            }
+        }
+        if (triggerPressed)
+        {
+            if (XrPosef poseDelta; GetPoseDelta(poseDelta, session, time))
+            {
+                ApplyTranslation();
+                ApplyRotation();
+                manipulated = true;
+            }
+            ResetReferencePose(session, time);
+        }
+        m_Triggered = triggerPressed;
+        return manipulated;
+    }
+
+    bool CorManipulator::GetPose(XrPosef& trackerPose, XrSession session, XrTime time)
+    {
+        return GetControllerPose(trackerPose, session, time);
+    }
+
+    bool CorManipulator::GetTriggerState(XrSession session)
+    {
+        auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
+        if (!layer)
+        {
+            m_Initialized = false;
+            ErrorLog("%s: unable to cast layer to OpenXrLayer\n", __FUNCTION__);
+            return false;
+        }
+        {
+            // sync actions
+            TraceLoggingWrite(g_traceProvider,
+                              "GetTriggerState",
+                              TLPArg(layer->m_ActionSet, "xrSyncActions"));
+            constexpr XrActionsSyncInfo syncInfo{XR_TYPE_ACTIONS_SYNC_INFO, nullptr, 0, nullptr};
+            if (const XrResult result = GetInstance()->xrSyncActions(session, &syncInfo); XR_FAILED(result))
+            {
+                ErrorLog("%s: xrSyncActions failed: %d\n", __FUNCTION__, result);
+                return false;
+            }
+        }
+        {
+            // obtain current action state
+            TraceLoggingWrite(g_traceProvider,
+                              "GetTriggerState",
+                              TLPArg(layer->m_TrackerTriggerAction, "xrGetActionStateBoolean"));
+            XrActionStateGetInfo getInfo{XR_TYPE_ACTION_STATE_GET_INFO};
+            getInfo.action = layer->m_TrackerTriggerAction;
+
+            XrActionStateBoolean triggerValue{XR_TYPE_ACTION_STATE_BOOLEAN};
+            if (const XrResult result = layer->xrGetActionStateBoolean(session, &getInfo, &triggerValue); XR_FAILED(result))
+            {
+                ErrorLog("%s: xrGetActionStateBoolean failed: %d\n", __FUNCTION__, result);
+                return false;
+            }
+            if (!triggerValue.isActive == XR_TRUE)
+            {
+                return false;
+            }
+            const bool triggered = XR_TRUE == triggerValue.currentState;
+            TraceLoggingWrite(g_traceProvider, "GetTriggerState", TLArg(triggered, "State"));
+            return triggered;
+        }
+    }
+
+    void CorManipulator::ApplyTranslation() const
+    {
+        XrPosef corPose = m_Tracker->GetReferencePose();
+        TraceLoggingWrite(g_traceProvider,
+                          "ApplyTranslation",
+                          TLArg(xr::ToString(corPose).c_str(), "Before"),
+                          TLArg(xr::ToString(m_ReferencePose).c_str(), "Reference"),
+                          TLArg(xr::ToString(m_LastPose).c_str(), "Tracker"));
+        const DirectX::XMVECTOR cor = LoadXrVector3(corPose.position);
+        const DirectX::XMVECTOR ref = LoadXrVector3(m_ReferencePose.position);
+        const DirectX::XMVECTOR tracker = LoadXrVector3(m_LastPose.position);
+        StoreXrVector3(&corPose.position,
+                       DirectX::XMVectorAdd(cor, DirectX::XMVectorAdd(tracker, DirectX::XMVectorNegate(ref))));
+        TraceLoggingWrite(g_traceProvider, "ApplyTranslation", TLArg(xr::ToString(corPose).c_str(), "After"));
+        m_Tracker->SetReferencePose(corPose);
+    }
+
+    void CorManipulator::ApplyRotation() const
+    {
+        XrPosef corPose = m_Tracker->GetReferencePose();
+        TraceLoggingWrite(g_traceProvider, "ApplyRotation", TLArg(xr::ToString(corPose).c_str(), "Before"),
+                          TLArg(xr::ToString(m_LastPoseDelta).c_str(), "Delta"));
+        const DirectX::XMVECTOR orientation = LoadXrQuaternion(corPose.orientation);
+        const DirectX::XMVECTOR yawRotation = LoadXrQuaternion(GetYawRotation(GetForwardVector(Pose::Invert(m_LastPoseDelta).orientation, true)));
+        StoreXrQuaternion(&corPose.orientation, DirectX::XMQuaternionMultiply(orientation, yawRotation));
+        TraceLoggingWrite(g_traceProvider, "ApplyRotation", TLArg(xr::ToString(corPose).c_str(), "After"));
+        m_Tracker->SetReferencePose(corPose);
+    }
+
     bool ViveTrackerInfo::Init()
     {
         std::string trackerType;

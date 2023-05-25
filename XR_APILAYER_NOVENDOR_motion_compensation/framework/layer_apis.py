@@ -35,6 +35,8 @@ requested_functions = [
     "xrCreateActionSet",
     "xrCreateActionSpace",
     "xrGetActionStatePose",
+    "xrGetActionStateBoolean",
+    "xrApplyHapticFeedback",
     "xrEnumerateSwapchainFormats",
     "xrEnumerateSwapchainImages",
     "xrDestroyAction",

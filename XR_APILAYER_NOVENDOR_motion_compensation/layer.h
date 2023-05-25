@@ -93,6 +93,8 @@ namespace motion_compensation_layer
 
         XrActionSet m_ActionSet{XR_NULL_HANDLE};
         XrAction m_TrackerPoseAction{XR_NULL_HANDLE};
+        XrAction m_TrackerTriggerAction{XR_NULL_HANDLE};
+        XrAction m_TrackerHapticAction{XR_NULL_HANDLE};
         XrSpace m_TrackerSpace{XR_NULL_HANDLE};
         XrSpace m_ViewSpace{XR_NULL_HANDLE};
         XrSpace m_ReferenceSpace{XR_NULL_HANDLE};
@@ -135,9 +137,9 @@ namespace motion_compensation_layer
                                                                              xr::math::Pose::Identity(),
                                                                              xr::math::Pose::Identity()}};
         std::mutex m_FrameLock;
-        std::unique_ptr<graphics::Overlay> m_Overlay;
-        std::shared_ptr<Input::InputHandler> m_Input;
-        std::unique_ptr<utility::AutoActivator> m_AutoActivator;
+        std::unique_ptr<graphics::Overlay> m_Overlay{};
+        std::shared_ptr<Input::InputHandler> m_Input{};
+        std::unique_ptr<utility::AutoActivator> m_AutoActivator{};
 
         // connection recovery
         XrTime m_RecoveryWait{3000000000}; // 3 sec default timeout

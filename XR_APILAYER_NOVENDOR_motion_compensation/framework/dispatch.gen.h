@@ -340,6 +340,14 @@ namespace LAYER_NAMESPACE
 		PFN_xrGetCurrentInteractionProfile m_xrGetCurrentInteractionProfile{ nullptr };
 
 	public:
+		virtual XrResult xrGetActionStateBoolean(XrSession session, const XrActionStateGetInfo* getInfo, XrActionStateBoolean* state)
+		{
+			return m_xrGetActionStateBoolean(session, getInfo, state);
+		}
+	private:
+		PFN_xrGetActionStateBoolean m_xrGetActionStateBoolean{ nullptr };
+
+	public:
 		virtual XrResult xrGetActionStatePose(XrSession session, const XrActionStateGetInfo* getInfo, XrActionStatePose* state)
 		{
 			return m_xrGetActionStatePose(session, getInfo, state);
@@ -354,6 +362,14 @@ namespace LAYER_NAMESPACE
 		}
 	private:
 		PFN_xrSyncActions m_xrSyncActions{ nullptr };
+
+	public:
+		virtual XrResult xrApplyHapticFeedback(XrSession session, const XrHapticActionInfo* hapticActionInfo, const XrHapticBaseHeader* hapticFeedback)
+		{
+			return m_xrApplyHapticFeedback(session, hapticActionInfo, hapticFeedback);
+		}
+	private:
+		PFN_xrApplyHapticFeedback m_xrApplyHapticFeedback{ nullptr };
 
 
 

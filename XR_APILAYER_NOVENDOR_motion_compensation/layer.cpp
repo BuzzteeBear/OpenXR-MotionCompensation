@@ -560,48 +560,100 @@ namespace motion_compensation_layer
                bindingProfiles.suggestedBindings,
                bindingProfiles.countSuggestedBindings * sizeof(XrActionSuggestedBinding));
 
-        const std::string trackerInput(m_ViveTracker.active
-                                           ? m_ViveTracker.role + "input"
-                                           : "/user/hand/" + GetConfig()->GetControllerSide() + "/input");
-        const std::string path(trackerInput + "/grip/pose");
-        bool isTrackerInput = false;
-        bool bindingOverriden = false;
+        const std::string trackerPath(m_ViveTracker.active
+                                          ? m_ViveTracker.role
+                                          : "/user/hand/" + GetConfig()->GetControllerSide() + "/");
+        const std::string posePath(trackerPath + "input/grip/pose");
+        const std::string triggerPath(m_ViveTracker.active ? "" : trackerPath + "input/trigger/click");
+        const std::string hapticPath(m_ViveTracker.active ? "" : trackerPath + "output/haptic");
+        
+        bool isTrackerPath{false};
+        bool poseBindingOverriden{false};
+        bool triggerBindingOverriden{false};
+        bool hapticBindingOverriden{false};
         for (XrActionSuggestedBinding& curBinding : bindings)
         {
             // find and override tracker pose action
             const std::string bindingPath = getXrPath(curBinding.binding);
-            if (!bindingPath.compare(0, trackerInput.size(), trackerInput))
+            if (!bindingPath.compare(0, trackerPath.size(), trackerPath))
             {
                 // path starts with user/hand/<side>/input
-                isTrackerInput = true;
+                isTrackerPath = true;
 
-                if (getXrPath(curBinding.binding) == path)
+                if (getXrPath(curBinding.binding) == posePath)
                 {
-                    // TODO: find a way to persist original pose action?
                     curBinding.action = m_TrackerPoseAction;
-                    bindingOverriden = true;
+                    poseBindingOverriden = true;
                     m_InteractionProfileSuggested = true;
-                    Log("Binding %s - %s overridden with reference tracker action\n", profile.c_str(), path.c_str());
+                    Log("Binding %s - %s overridden with reference tracker action\n", profile.c_str(), posePath.c_str());
+                }
+                if (getXrPath(curBinding.binding) == triggerPath)
+                {
+                    curBinding.action = m_TrackerTriggerAction;
+                    triggerBindingOverriden = true;
+                    m_InteractionProfileSuggested = true;
+                    Log("Binding %s - %s overridden with trigger action\n",
+                        profile.c_str(),
+                        triggerPath.c_str());
+                }
+                if (getXrPath(curBinding.binding) == hapticPath)
+                {
+                    curBinding.action = m_TrackerHapticAction;
+                    hapticBindingOverriden = true;
+                    m_InteractionProfileSuggested = true;
+                    Log("Binding %s - %s overridden with haptic action\n",
+                        profile.c_str(),
+                        hapticPath.c_str());
                 }
             }
         }
-        if (isTrackerInput && !bindingOverriden)
+        if (isTrackerPath && !poseBindingOverriden)
         {
             // suggestion is for tracker input but doesn't include pose -> add it
             XrActionSuggestedBinding newBinding{m_TrackerPoseAction};
-            if (const XrResult result = xrStringToPath(GetXrInstance(), path.c_str(), &newBinding.binding);
+            if (const XrResult result = xrStringToPath(GetXrInstance(), posePath.c_str(), &newBinding.binding);
                 XR_SUCCEEDED(result))
             {
                 bindings.push_back(newBinding);
                 m_InteractionProfileSuggested = true;
-                Log("Binding %s - %s for tracker action added\n", profile.c_str(), path.c_str());
+                Log("Binding %s - %s for pose action added\n", profile.c_str(), posePath.c_str());
             }
             else
             {
-                ErrorLog("%s: unable to create XrPath from %s: %d\n", __FUNCTION__, path.c_str(), result);
+                ErrorLog("%s: unable to create XrPath from %s: %d\n", __FUNCTION__, posePath.c_str(), result);
             }
-           
-            
+        }
+        if (isTrackerPath && !triggerPath.empty() && !triggerBindingOverriden)
+        {
+            // suggestion is for tracker input but doesn't include trigger -> add it
+            XrActionSuggestedBinding newBinding{m_TrackerTriggerAction};
+            if (const XrResult result = xrStringToPath(GetXrInstance(), triggerPath.c_str(), &newBinding.binding);
+                XR_SUCCEEDED(result))
+            {
+                bindings.push_back(newBinding);
+                m_InteractionProfileSuggested = true;
+                Log("Binding %s - %s for trigger action added\n", profile.c_str(), triggerPath.c_str());
+            }
+            else
+            {
+                ErrorLog("%s: unable to create XrPath from %s: %d\n", __FUNCTION__, triggerPath.c_str(), result);
+            }
+        }
+        if (isTrackerPath && !hapticPath.empty() && !hapticBindingOverriden)
+        {
+            // suggestion is for tracker input but doesn't include pose -> add it
+            XrActionSuggestedBinding newBinding{m_TrackerHapticAction};
+            if (const XrResult result = xrStringToPath(GetXrInstance(), hapticPath.c_str(), &newBinding.binding);
+                XR_SUCCEEDED(result))
+            {
+                bindings.push_back(newBinding);
+                m_InteractionProfileSuggested = true;
+                Log("Binding %s - %s for haptic action added\n", profile.c_str(), hapticPath.c_str());
+            }
+            else
+            {
+                ErrorLog("%s: unable to create XrPath from %s: %d\n", __FUNCTION__, hapticPath.c_str(), result);
+            }
         }
 
         bindingProfiles.suggestedBindings = bindings.data();
@@ -635,7 +687,10 @@ namespace motion_compensation_layer
             // suggest fallback in case application does not suggest any bindings
             XrInteractionProfileSuggestedBinding suggestedBindings{XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING,
                                                                    nullptr};
-            XrActionSuggestedBinding binding{m_TrackerPoseAction};
+            std::vector<XrActionSuggestedBinding> bindings{};
+            XrActionSuggestedBinding poseBinding{m_TrackerPoseAction};
+            XrActionSuggestedBinding triggerBinding{m_TrackerTriggerAction};
+            XrActionSuggestedBinding hapticBinding{m_TrackerHapticAction};
 
             const std::string profile{m_ViveTracker.active ? m_ViveTracker.profile
                                                            : "/interaction_profiles/khr/simple_controller"};
@@ -648,18 +703,54 @@ namespace motion_compensation_layer
             }
             else
             {
-                const std::string path{
+                std::string triggerPath;
+                std::string hapticPath;
+                const std::string posePath{
                     (m_ViveTracker.active ? m_ViveTracker.role : "/user/hand/" + GetConfig()->GetControllerSide()) +
                     "/input/grip/pose"};
-                if (const XrResult pathResult = xrStringToPath(GetXrInstance(), path.c_str(), &binding.binding);
-                    XR_FAILED(pathResult))
+                if (const XrResult poseResult = xrStringToPath(GetXrInstance(), posePath.c_str(), &poseBinding.binding);
+                    XR_FAILED(poseResult))
                 {
-                    ErrorLog("%s: unable to create XrPath from %s: %d\n", __FUNCTION__, path.c_str(), pathResult);
+                    ErrorLog("%s: unable to create XrPath from %s: %d\n", __FUNCTION__, posePath.c_str(), poseResult);
                 }
                 else
                 {
-                    suggestedBindings.suggestedBindings = &binding;
-                    suggestedBindings.countSuggestedBindings = 1;
+                    bindings.push_back(poseBinding);
+
+                    // add trigger and haptic bindings for controller
+                    if (m_ViveTracker.active)
+                    {
+                        triggerPath = "/user/hand/" + GetConfig()->GetControllerSide() +"/input/trigger/click";
+                        if (const XrResult triggerResult =
+                                xrStringToPath(GetXrInstance(), triggerPath.c_str(), &triggerBinding.binding);
+                            XR_FAILED(triggerResult))
+                        {
+                            ErrorLog("%s: unable to create XrPath from %s: %d\n",
+                                     __FUNCTION__,
+                                     triggerPath.c_str(),
+                                     triggerResult);
+                        }
+                        else
+                        {
+                            bindings.push_back(triggerBinding);
+                        }
+                        hapticPath = "/user/hand/" + GetConfig()->GetControllerSide() + "/output/haptic";
+                        if (const XrResult hapticResult =
+                                xrStringToPath(GetXrInstance(), hapticPath.c_str(), &hapticBinding.binding);
+                            XR_FAILED(hapticResult))
+                        {
+                            ErrorLog("%s: unable to create XrPath from %s: %d\n",
+                                     __FUNCTION__,
+                                     hapticPath.c_str(),
+                                     hapticResult);
+                        }
+                        else
+                        {
+                            bindings.push_back(hapticBinding);
+                        }
+                    }
+                    suggestedBindings.suggestedBindings = bindings.data();
+                    suggestedBindings.countSuggestedBindings = static_cast<uint32_t>(bindings.size());
                     if (const XrResult suggestResult =
                             OpenXrApi::xrSuggestInteractionProfileBindings(GetXrInstance(), &suggestedBindings);
                         XR_FAILED(suggestResult))
@@ -673,8 +764,10 @@ namespace motion_compensation_layer
                         TraceLoggingWrite(g_traceProvider,
                                           "OpenXrTracker::xrAttachSessionActionSets",
                                           TLArg(profile.c_str(), "Profile"),
-                                          TLPArg(binding.action, "Action"),
-                                          TLArg(path.c_str(), "Path"));
+                                          TLPArg(poseBinding.action, "Action"),
+                                          TLArg(posePath.c_str(), "PosePath"),
+                                          TLArg(triggerPath.c_str(), "TriggerPath"),
+                                          TLArg(hapticPath.c_str(), "HapticPath"));
                     }
                 }
             }           
@@ -1004,6 +1097,11 @@ namespace motion_compensation_layer
 
             chainSyncInfo.activeActionSets = newActiveActionSets.data();
             chainSyncInfo.countActiveActionSets = nextActionSetSlot;
+
+            TraceLoggingWrite(g_traceProvider,
+                              "xrSyncActions",
+                              TLPArg(trackerActionSet, "ActionSet Attached"),
+                              TLArg(chainSyncInfo.countActiveActionSets, "ActionSet Count"));
         }
         XrResult res = OpenXrApi::xrSyncActions(session, &chainSyncInfo);
         DebugLog("xrSyncAction result = %d, #sets = %d\n", res, chainSyncInfo.countActiveActionSets);
@@ -1079,7 +1177,7 @@ namespace motion_compensation_layer
 
         XrFrameEndInfo chainFrameEndInfo = *frameEndInfo;
        
-        XrPosef referenceTrackerPose = m_Tracker->GetReferencePose(m_Session, chainFrameEndInfo.displayTime);
+        XrPosef referenceTrackerPose = m_Tracker->GetReferencePose();
 
         XrPosef reversedManipulation;
         std::vector<XrPosef> cachedEyePoses;
@@ -1090,6 +1188,10 @@ namespace motion_compensation_layer
             cachedEyePoses =
                 m_UseEyeCache ? m_EyeCache.GetSample(chainFrameEndInfo.displayTime) : std::vector<XrPosef>();
             m_EyeCache.CleanUp(chainFrameEndInfo.displayTime);
+        }
+        else
+        {
+            m_Tracker->ApplyCorManipulation(session, chainFrameEndInfo.displayTime);
         }
         if (m_OverlayEnabled)
         {
@@ -1335,11 +1437,11 @@ namespace motion_compensation_layer
                 ErrorLog("%s: unable to create action set\n", __FUNCTION__);
             }
             TraceLoggingWrite(g_traceProvider,
-                              "OpenXrLayer::CreateTrackerAction",
-                              TLPArg(m_ActionSet, "xrCreateActionSet"));
+                              "CreateTrackerAction",
+                              TLPArg(m_ActionSet, "ActionSet"));
             XrActionCreateInfo actionCreateInfo{XR_TYPE_ACTION_CREATE_INFO, nullptr};
-            strcpy_s(actionCreateInfo.actionName, "general_tracker");
-            strcpy_s(actionCreateInfo.localizedActionName, "General Tracker");
+            strcpy_s(actionCreateInfo.actionName, "tracker_pose");
+            strcpy_s(actionCreateInfo.localizedActionName, "Tracker Pose");
             actionCreateInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
             actionCreateInfo.countSubactionPaths = 0;
             XrPath viveRolePath;
@@ -1359,13 +1461,35 @@ namespace motion_compensation_layer
                     actionCreateInfo.subactionPaths = &viveRolePath;
                 }
             }
+            
             if (XR_FAILED(xrCreateAction(m_ActionSet, &actionCreateInfo, &m_TrackerPoseAction)))
             {
-                ErrorLog("%s: unable to create action\n", __FUNCTION__);
+                ErrorLog("%s: unable to create pose action\n", __FUNCTION__);
             }
             TraceLoggingWrite(g_traceProvider,
-                              "OpenXrLayer::CreateTrackerAction",
-                              TLPArg(m_TrackerPoseAction, "xrCreateAction"));
+                              "CreateTrackerAction",
+                              TLPArg(m_TrackerPoseAction, "PoseAction"));
+            if (!m_ViveTracker.active)
+            {
+                TraceLoggingWrite(g_traceProvider,
+                                  "CreateTrackerAction",
+                                  TLPArg(m_TrackerTriggerAction, "TriggerAction"),
+                                  TLPArg(m_TrackerHapticAction, "HapticAction"));
+                strcpy_s(actionCreateInfo.actionName, "tracker_trigger");
+                strcpy_s(actionCreateInfo.localizedActionName, "Tracker Trigger");
+                actionCreateInfo.actionType = XR_ACTION_TYPE_BOOLEAN_INPUT;
+                if (XR_FAILED(xrCreateAction(m_ActionSet, &actionCreateInfo, &m_TrackerTriggerAction)))
+                {
+                    ErrorLog("%s: unable to create trigger action\n", __FUNCTION__);
+                }
+                strcpy_s(actionCreateInfo.actionName, "tracker_haptic");
+                strcpy_s(actionCreateInfo.localizedActionName, "Tracker Haptic");
+                actionCreateInfo.actionType = XR_ACTION_TYPE_VIBRATION_OUTPUT;
+                if (XR_FAILED(xrCreateAction(m_ActionSet, &actionCreateInfo, &m_TrackerHapticAction)))
+                {
+                    ErrorLog("%s: unable to create trigger action\n", __FUNCTION__);
+                }
+            }
         }
     }
 

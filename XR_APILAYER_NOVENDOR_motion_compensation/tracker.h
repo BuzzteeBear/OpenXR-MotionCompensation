@@ -6,39 +6,57 @@
 
 namespace Tracker
 {
-    class TrackerBase
+    class ControllerBase
     {
       public:
-        virtual ~TrackerBase();
-
+        virtual ~ControllerBase() = default;
         virtual bool Init();
-        virtual bool LazyInit(XrTime time);
-        void ModifyFilterStrength(bool trans, bool increase);
-        virtual bool ResetReferencePose(XrSession session, XrTime time) = 0;
-        void AdjustReferencePose(const XrPosef& pose);
-        XrPosef GetReferencePose(XrSession session, XrTime time) const;
         bool GetPoseDelta(XrPosef& poseDelta, XrSession session, XrTime time);
-        void LogCurrentTrackerPoses(XrSession session, XrTime time, bool activated);
-        bool m_SkipLazyInit{false};
-        bool m_Calibrated{false};
+        virtual bool ResetReferencePose(XrSession session, XrTime time);
+
         bool m_ResetReferencePose{false};
-       
-        XrPosef m_LastPoseDelta{xr::math::Pose::Identity()};
 
       protected:
-        void SetReferencePose(const XrPosef& pose);
+        virtual void SetReferencePose(const XrPosef& pose);
         virtual bool GetPose(XrPosef& trackerPose, XrSession session, XrTime time) = 0;
         virtual bool GetControllerPose(XrPosef& trackerPose, XrSession session, XrTime time);
+        static XrVector3f GetForwardVector(const XrQuaternionf& quaternion, bool inverted = false);
+        static XrQuaternionf GetYawRotation(const XrVector3f& forward);
 
         XrPosef m_ReferencePose{xr::math::Pose::Identity()};
+        XrPosef m_LastPoseDelta{xr::math::Pose::Identity()};
+        XrPosef m_LastPose{xr::math::Pose::Identity()};
 
+    private:
+        virtual void ApplyFilters(XrPosef& trackerPose){};
+
+        bool m_PhysicalEnabled{false};
+        bool m_ConnectionLost{false};
+        XrTime m_LastPoseTime{0};
+    };
+   
+    class TrackerBase : public ControllerBase
+    {
+      public:
+        ~TrackerBase() override;
+        bool Init() override;
+        virtual bool LazyInit(XrTime time);
+        void ModifyFilterStrength(bool trans, bool increase);
+        void AdjustReferencePose(const XrPosef& pose);
+        XrPosef GetReferencePose() const;
+        void SetReferencePose(const XrPosef& pose) override;
+        void LogCurrentTrackerPoses(XrSession session, XrTime time, bool activated);
+        virtual void ApplyCorManipulation(XrSession session, XrTime time){};
+
+        bool m_SkipLazyInit{false};
+        bool m_Calibrated{false};
+       
+      protected:
+        void ApplyFilters(XrPosef& trackerPose) override;
 
       private:
         bool LoadFilters();
 
-        bool m_ConnectionLost{false};
-        bool m_PhysicalEnabled{false};
-        XrTime m_LastPoseTime{0};
         float m_TransStrength{0.0f};
         float m_RotStrength{0.0f};
         Filter::FilterBase<XrVector3f>* m_TransFilter = nullptr;
@@ -48,25 +66,28 @@ namespace Tracker
     class OpenXrTracker : public TrackerBase
     {
       public:
-        virtual bool ResetReferencePose(XrSession session, XrTime time) override;
+       bool ResetReferencePose(XrSession session, XrTime time) override;
 
       protected:
-        virtual bool GetPose(XrPosef& trackerPose, XrSession session, XrTime time) override;
+        bool GetPose(XrPosef& trackerPose, XrSession session, XrTime time) override;
     };
+
+    class CorManipulator;
 
     class VirtualTracker : public TrackerBase
     {
       public:
-        virtual bool Init() override;
-        virtual bool LazyInit(XrTime time) override;
-        virtual bool ResetReferencePose(XrSession session, XrTime time) override;
+        bool Init() override;
+        bool LazyInit(XrTime time) override;
+        bool ResetReferencePose(XrSession session, XrTime time) override;
         bool ChangeOffset(XrVector3f modification);
         bool ChangeRotation(bool right);
         void SaveReferencePose(XrTime time) const;
         bool ToggleDebugMode(XrSession session, XrTime time);
+        void ApplyCorManipulation(XrSession session, XrTime time) override;
 
       protected:
-        virtual bool GetPose(XrPosef& trackerPose, XrSession session, XrTime time) override;
+        bool GetPose(XrPosef& trackerPose, XrSession session, XrTime time) override;
         virtual bool GetVirtualPose(XrPosef& trackerPose, XrSession session, XrTime time) = 0;
 
         std::string m_Filename;
@@ -78,6 +99,7 @@ namespace Tracker
       private:
         bool LoadReferencePose(XrSession session, XrTime time);
 
+        std::unique_ptr<CorManipulator> m_Manipulator{};
         bool m_DebugMode{false}, m_LoadPoseFromFile{false};
         XrPosef m_OriginalRefPose{xr::math::Pose::Identity()};
     };
@@ -90,10 +112,10 @@ namespace Tracker
         {
             m_Filename = "Local\\YawVRGEFile";
         }
-        virtual bool ResetReferencePose(XrSession session, XrTime time) override;
+        bool ResetReferencePose(XrSession session, XrTime time) override;
 
       protected:
-        virtual bool GetVirtualPose(XrPosef& trackerPose, XrSession session, XrTime time) override;
+        bool GetVirtualPose(XrPosef& trackerPose, XrSession session, XrTime time) override;
 
       private:
         struct YawData
@@ -142,10 +164,30 @@ namespace Tracker
             m_IsSrs = true;
         }
     };
+
+    class CorManipulator : public ControllerBase
+    {
+      public:
+        explicit CorManipulator(TrackerBase* tracker) : m_Tracker(tracker){};
+        bool ApplyManipulation(XrSession session, XrTime time);
+
+      protected:
+        bool GetPose(XrPosef& trackerPose, XrSession session, XrTime time) override;
+
+      private:
+        bool GetTriggerState(XrSession session);
+        void ApplyRotation() const;
+        void ApplyTranslation() const;
+
+        TrackerBase* m_Tracker{nullptr};
+        bool m_Initialized{true};
+        bool m_Triggered{false};
+    };
     
     struct ViveTrackerInfo
     {
         bool Init();
+
         bool active{false};
         std::string role;
         const std::string profile{"/interaction_profiles/htc/vive_tracker_htcx"};
