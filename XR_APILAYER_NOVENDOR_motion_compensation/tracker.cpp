@@ -105,11 +105,11 @@ namespace Tracker
             {
                 XrActionStatePose actionStatePose{XR_TYPE_ACTION_STATE_POSE, nullptr};
                 XrActionStateGetInfo getActionStateInfo{XR_TYPE_ACTION_STATE_GET_INFO, nullptr};
-                getActionStateInfo.action = layer->m_TrackerPoseAction;
+                getActionStateInfo.action = layer->m_PoseAction;
 
                 TraceLoggingWrite(g_traceProvider,
                                   "GetControllerPose",
-                                  TLPArg(layer->m_TrackerPoseAction, "xrGetActionStatePose"),
+                                  TLPArg(layer->m_PoseAction, "xrGetActionStatePose"),
                                   TLArg(time, "Time"));
                 if (const XrResult result =
                         GetInstance()->xrGetActionStatePose(session, &getActionStateInfo, &actionStatePose);
@@ -446,19 +446,8 @@ namespace Tracker
 
                     // calculate orientation parallel to floor
                     location.pose.orientation = GetYawRotation(forward);
-                    
-                    XrPosef refPose = location.pose;
-
-                    if (m_DebugMode)
-                    {
-                        // manipulate ref pose orientation to match motion controller
-                        m_OriginalRefPose = refPose;
-                        if (XrPosef controllerPose; GetControllerPose(controllerPose, session, time))
-                        {
-                            refPose.orientation = controllerPose.orientation;
-                        }
-                    }
-                    TrackerBase::SetReferencePose(refPose);
+                   
+                    TrackerBase::SetReferencePose(location.pose);
                 }
                 else
                 {
@@ -479,14 +468,6 @@ namespace Tracker
 
     bool VirtualTracker::ChangeOffset(XrVector3f modification)
     {
-        if (m_DebugMode)
-        {
-            ErrorLog("%s: unable to change offset while cor debug mode is active\n", __FUNCTION__);
-            return false;
-        }
-
-       
-
         m_OffsetForward += modification.z;
         GetConfig()->SetValue(Cfg::TrackerOffsetForward, m_OffsetForward * 100.0f);
 
@@ -518,12 +499,7 @@ namespace Tracker
 
     bool VirtualTracker::ChangeRotation(const bool right)
     {
-        if (m_DebugMode)
-        {
-            ErrorLog("%s: unable to change offset while cor debug mode is active\n", __FUNCTION__);
-            return false;
-        }
-        XrPosef adjustment{Pose::Identity()};
+       XrPosef adjustment{Pose::Identity()};
         const float direction = (right ? -1.0f : 1.0f) * (m_UpsideDown ? -1.0f : 1.0f);
         StoreXrQuaternion(&adjustment.orientation,
                           DirectX::XMQuaternionRotationRollPitchYaw(0.0f, direction * angleToRadian, 0.0f));
@@ -609,57 +585,7 @@ namespace Tracker
             TraceLoggingWrite(g_traceProvider,
                               "LoadReferencePose",
                               TLArg(xr::ToString(refPose).c_str(), "ReferencePose"));
-            if (m_DebugMode)
-            {
-                // manipulate ref pose orientation to match motion controller
-                m_OriginalRefPose = refPose;
-                if (XrPosef controllerPose; GetControllerPose(controllerPose, session, time))
-                {
-                    refPose.orientation = controllerPose.orientation;
-                    TraceLoggingWrite(g_traceProvider,
-                                      "LoadReferencePose",
-                                      TLArg(xr::ToString(refPose).c_str(), "DebugPose"));
-                }
-            }
             SetReferencePose(refPose);    
-        }
-        return success;
-    }
-
-    bool VirtualTracker::ToggleDebugMode(XrSession session, XrTime time)
-    {
-        bool success = true;
-        if (!m_DebugMode)
-        {
-            if (!m_Calibrated)
-            {
-                success = ResetReferencePose(session, time);
-            }
-            if (success)
-            {
-                // manipulate ref pose orientation to match motion controller
-                if (XrPosef controllerPose; GetControllerPose(controllerPose, session, time))
-                {
-                    m_OriginalRefPose = m_ReferencePose;
-                    m_ReferencePose.orientation = controllerPose.orientation;
-                    SetReferencePose(m_ReferencePose);
-                    m_DebugMode = true;
-                    GetAudioOut()->Execute(Event::DebugOn);
-                    Log("debug cor mode activated\n");
-                }
-                else
-                {
-                    ErrorLog("unable to activate cor debug mode\n");
-                    success = false;
-                }
-            }
-        }
-        else
-        {
-            SetReferencePose(m_OriginalRefPose);
-            m_DebugMode = false;
-            GetAudioOut()->Execute(Event::DebugOff);
-            Log("debug cor mode deactivated\n");
         }
         return success;
     }
@@ -674,27 +600,7 @@ namespace Tracker
 
     bool VirtualTracker::GetPose(XrPosef& trackerPose, const XrSession session, const XrTime time)
     {
-        bool success{true};
-
-        if (!m_DebugMode)
-        {
-            success = GetVirtualPose(trackerPose, session, time);
-        }
-        else
-        {
-            if (GetControllerPose(trackerPose, session, time))
-            {
-                // remove translation towards reference pose
-                StoreXrVector3(&trackerPose.position,
-                               DirectX::XMVector3Rotate(LoadXrVector3(m_ReferencePose.position),
-                                                        LoadXrQuaternion(m_ReferencePose.orientation)));
-            }
-            else
-            {
-                success = false;
-            }
-        }
-        return success;
+        return GetVirtualPose(trackerPose, session, time);
     }
     
     bool YawTracker::ResetReferencePose(XrSession session, XrTime time)
@@ -917,11 +823,11 @@ namespace Tracker
         *tracker = new OpenXrTracker();
     }
     
-    bool CorManipulator::ApplyManipulation(XrSession session, XrTime time)
+    void CorManipulator::ApplyManipulation(XrSession session, XrTime time)
     {
         if (!m_Initialized)
         {
-            return false;
+            return;
         }
 
         auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
@@ -929,24 +835,27 @@ namespace Tracker
         {
             m_Initialized = false;
             ErrorLog("%s: unable to cast layer to OpenXrLayer\n", __FUNCTION__);
-            return false;
+            return;
         }
+        
+        bool movePressed{false};
+        bool positionPressed{false};
+        GetButtonState(session, movePressed, positionPressed);
 
-        bool manipulated{false};
-        const bool triggerPressed = GetTriggerState(session);
-        if (m_Triggered != triggerPressed)
+        // apply vibration to acknowledge button state change
+        if ((positionPressed && !m_PositionActive) ||  movePressed != m_MoveActive)
         {
-            // apply vibration to acknowledge trigger state change
+            
             XrHapticVibration vibration{XR_TYPE_HAPTIC_VIBRATION};
-            vibration.amplitude = 0.5;
+            vibration.amplitude = 0.75;
             vibration.duration = XR_MIN_HAPTIC_DURATION;
             vibration.frequency = XR_FREQUENCY_UNSPECIFIED;
 
             TraceLoggingWrite(g_traceProvider,
                               "ApplyManipulation",
-                              TLPArg(layer->m_TrackerHapticAction, "xrApplyHapticFeedback"));
+                              TLPArg(layer->m_HapticAction, "xrApplyHapticFeedback"));
             XrHapticActionInfo hapticActionInfo{XR_TYPE_HAPTIC_ACTION_INFO};
-            hapticActionInfo.action = layer->m_TrackerHapticAction;
+            hapticActionInfo.action = layer->m_HapticAction;
             if (const XrResult result = layer->xrApplyHapticFeedback(session,
                                                                      &hapticActionInfo,
                                                                      reinterpret_cast<XrHapticBaseHeader*>(&vibration));
@@ -954,23 +863,35 @@ namespace Tracker
             {
                 ErrorLog("%s: xrApplyHapticFeedback failed: %d\n", __FUNCTION__, result);
             }
-            if (triggerPressed)
-            {
-                ResetReferencePose(session, time);
-            }
         }
-        if (triggerPressed)
+        // reset reference pose on move activation
+        if (!positionPressed && movePressed && !m_MoveActive)
+        {
+            ResetReferencePose(session, time);
+        }
+        // apply actual manipulation
+        if (movePressed || positionPressed)
         {
             if (XrPosef poseDelta; GetPoseDelta(poseDelta, session, time))
             {
-                ApplyTranslation();
-                ApplyRotation();
-                manipulated = true;
+                if (positionPressed)
+                {
+                    if (!m_PositionActive)
+                    {
+                        ApplyPosition();
+                    }
+                }
+                else
+                {
+                    ApplyTranslation();
+                    ApplyRotation();
+                    ResetReferencePose(session, time);
+                }
             }
-            ResetReferencePose(session, time);
+            
         }
-        m_Triggered = triggerPressed;
-        return manipulated;
+        m_PositionActive = positionPressed;
+        m_MoveActive = !positionPressed && movePressed;
     }
 
     bool CorManipulator::GetPose(XrPosef& trackerPose, XrSession session, XrTime time)
@@ -978,14 +899,14 @@ namespace Tracker
         return GetControllerPose(trackerPose, session, time);
     }
 
-    bool CorManipulator::GetTriggerState(XrSession session)
+    void CorManipulator::GetButtonState(XrSession session, bool& moveButton, bool& positionButton)
     {
         auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
         if (!layer)
         {
             m_Initialized = false;
             ErrorLog("%s: unable to cast layer to OpenXrLayer\n", __FUNCTION__);
-            return false;
+            return;
         }
         {
             // sync actions
@@ -996,31 +917,61 @@ namespace Tracker
             if (const XrResult result = GetInstance()->xrSyncActions(session, &syncInfo); XR_FAILED(result))
             {
                 ErrorLog("%s: xrSyncActions failed: %d\n", __FUNCTION__, result);
-                return false;
+                return;
             }
         }
         {
             // obtain current action state
             TraceLoggingWrite(g_traceProvider,
                               "GetTriggerState",
-                              TLPArg(layer->m_TrackerTriggerAction, "xrGetActionStateBoolean"));
-            XrActionStateGetInfo getInfo{XR_TYPE_ACTION_STATE_GET_INFO};
-            getInfo.action = layer->m_TrackerTriggerAction;
+                              TLPArg(layer->m_MoveAction, "xrGetActionStateBoolean"));
+            XrActionStateGetInfo moveInfo{XR_TYPE_ACTION_STATE_GET_INFO};
+            moveInfo.action = layer->m_MoveAction;
 
-            XrActionStateBoolean triggerValue{XR_TYPE_ACTION_STATE_BOOLEAN};
-            if (const XrResult result = layer->xrGetActionStateBoolean(session, &getInfo, &triggerValue); XR_FAILED(result))
+            XrActionStateBoolean moveButtonState{XR_TYPE_ACTION_STATE_BOOLEAN};
+            if (const XrResult result = layer->xrGetActionStateBoolean(session, &moveInfo, &moveButtonState); XR_FAILED(result))
             {
                 ErrorLog("%s: xrGetActionStateBoolean failed: %d\n", __FUNCTION__, result);
-                return false;
+                return;
             }
-            if (!triggerValue.isActive == XR_TRUE)
+            if (moveButtonState.isActive == XR_TRUE)
             {
-                return false;
+                moveButton = XR_TRUE == moveButtonState.currentState;
+                TraceLoggingWrite(g_traceProvider, "GetButtonState", TLArg(moveButton, "MoveState"));
             }
-            const bool triggered = XR_TRUE == triggerValue.currentState;
-            TraceLoggingWrite(g_traceProvider, "GetTriggerState", TLArg(triggered, "State"));
-            return triggered;
+
+            TraceLoggingWrite(g_traceProvider,
+                              "GetTriggerState",
+                              TLPArg(layer->m_PositionAction, "xrGetActionStateBoolean"));
+            XrActionStateGetInfo positionInfo{XR_TYPE_ACTION_STATE_GET_INFO};
+            positionInfo.action = layer->m_PositionAction;
+
+            XrActionStateBoolean positionButtonState{XR_TYPE_ACTION_STATE_BOOLEAN};
+            if (const XrResult result = layer->xrGetActionStateBoolean(session, &positionInfo, &positionButtonState);
+                XR_FAILED(result))
+            {
+                ErrorLog("%s: xrGetActionStateBoolean failed: %d\n", __FUNCTION__, result);
+                return;
+            }
+            if (positionButtonState.isActive == XR_TRUE)
+            {
+                positionButton = XR_TRUE == positionButtonState.currentState;
+                TraceLoggingWrite(g_traceProvider, "GetButtonState", TLArg(positionButton, "PositionState"));
+            }
         }
+    }
+
+    void CorManipulator::ApplyPosition() const
+    {
+        XrPosef corPose = m_Tracker->GetReferencePose();
+        TraceLoggingWrite(g_traceProvider,
+                          "ApplyPosition",
+                          TLArg(xr::ToString(corPose).c_str(), "Before"),
+                          TLArg(xr::ToString(m_LastPose).c_str(), "Tracker Pose"));
+        corPose.position = m_LastPose.position;
+        corPose.orientation = GetYawRotation(GetForwardVector(m_LastPose.orientation, false));
+        TraceLoggingWrite(g_traceProvider, "ApplyPosition", TLArg(xr::ToString(corPose).c_str(), "After"));
+        m_Tracker->SetReferencePose(corPose);
     }
 
     void CorManipulator::ApplyTranslation() const

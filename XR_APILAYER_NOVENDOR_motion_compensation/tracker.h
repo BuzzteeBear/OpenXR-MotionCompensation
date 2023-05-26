@@ -100,8 +100,7 @@ namespace Tracker
         bool LoadReferencePose(XrSession session, XrTime time);
 
         std::unique_ptr<CorManipulator> m_Manipulator{};
-        bool m_DebugMode{false}, m_LoadPoseFromFile{false};
-        XrPosef m_OriginalRefPose{xr::math::Pose::Identity()};
+        bool m_LoadPoseFromFile{false};
     };
 
     class YawTracker : public VirtualTracker
@@ -169,19 +168,21 @@ namespace Tracker
     {
       public:
         explicit CorManipulator(TrackerBase* tracker) : m_Tracker(tracker){};
-        bool ApplyManipulation(XrSession session, XrTime time);
+        void ApplyManipulation(XrSession session, XrTime time);
 
       protected:
         bool GetPose(XrPosef& trackerPose, XrSession session, XrTime time) override;
 
       private:
-        bool GetTriggerState(XrSession session);
+        void GetButtonState(XrSession session, bool& moveButton, bool& positionButton);
+        void ApplyPosition() const;
         void ApplyRotation() const;
         void ApplyTranslation() const;
 
         TrackerBase* m_Tracker{nullptr};
         bool m_Initialized{true};
-        bool m_Triggered{false};
+        bool m_MoveActive{false};
+        bool m_PositionActive{false};
     };
     
     struct ViveTrackerInfo

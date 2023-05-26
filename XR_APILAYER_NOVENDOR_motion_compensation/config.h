@@ -55,7 +55,6 @@ enum class Cfg
     KeySaveConfig,
     KeySaveConfigApp,
     KeyReloadConfig,
-    KeyDebugCor,
     TestRotation,
     InteractionProfile,
     CurrentTrackerPose
@@ -70,6 +69,7 @@ class ConfigManager
     bool GetFloat(Cfg key, float& val);
     bool GetString(Cfg key, std::string& val);
     bool GetShortcut(Cfg key, std::set<int>& val);
+    bool IsVirtualTracker();
     std::string GetControllerSide();
 
     void SetValue(Cfg key, bool val);
@@ -148,8 +148,6 @@ class ConfigManager
         {Cfg::KeyOverlay, {"shortcuts", "toggle_overlay"}},
 
         {Cfg::KeyCache, {"shortcuts", "toggle_cache"}},
-
-        {Cfg::KeyDebugCor, {"shortcuts", "cor_debug_mode"}},
 
         {Cfg::KeySaveConfig, {"shortcuts", "save_config"}},
         {Cfg::KeySaveConfigApp, {"shortcuts", "save_config_app"}},

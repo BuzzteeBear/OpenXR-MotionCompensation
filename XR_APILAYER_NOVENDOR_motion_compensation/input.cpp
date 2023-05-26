@@ -18,11 +18,25 @@ namespace Input
     bool KeyboardInput::Init()
     {
         bool success = true;
-        const std::set<Cfg> activities{
-            Cfg::KeyActivate, Cfg::KeyCenter,     Cfg::KeyTransInc,      Cfg::KeyTransDec,     Cfg::KeyRotInc,
-            Cfg::KeyRotDec,   Cfg::KeyOffForward, Cfg::KeyOffBack,       Cfg::KeyOffUp,        Cfg::KeyOffDown,
-            Cfg::KeyOffRight, Cfg::KeyOffLeft,    Cfg::KeyRotRight,      Cfg::KeyRotLeft,      Cfg::KeyOverlay,
-            Cfg::KeyCache,    Cfg::KeySaveConfig, Cfg::KeySaveConfigApp, Cfg::KeyReloadConfig, Cfg::KeyDebugCor};
+        const std::set<Cfg> activities{Cfg::KeyActivate,
+                                       Cfg::KeyCenter,
+                                       Cfg::KeyTransInc,
+                                       Cfg::KeyTransDec,
+                                       Cfg::KeyRotInc,
+                                       Cfg::KeyRotDec,
+                                       Cfg::KeyOffForward,
+                                       Cfg::KeyOffBack,
+                                       Cfg::KeyOffUp,
+                                       Cfg::KeyOffDown,
+                                       Cfg::KeyOffRight,
+                                       Cfg::KeyOffLeft,
+                                       Cfg::KeyRotRight,
+                                       Cfg::KeyRotLeft,
+                                       Cfg::KeyOverlay,
+                                       Cfg::KeyCache,
+                                       Cfg::KeySaveConfig,
+                                       Cfg::KeySaveConfigApp,
+                                       Cfg::KeyReloadConfig};
         const std::set<int> modifiers{VK_CONTROL, VK_SHIFT, VK_MENU};
         std::string errors;
 
@@ -132,10 +146,6 @@ namespace Input
         if (m_Input.GetKeyState(Cfg::KeyReloadConfig, isRepeat) && !isRepeat)
         {
             ReloadConfig();
-        }
-        if (m_Input.GetKeyState(Cfg::KeyDebugCor, isRepeat) && !isRepeat)
-        {
-            ToggleCorDebug(time);
         }
         if (m_Input.GetKeyState(Cfg::InteractionProfile, isRepeat) && !isRepeat)
         {
@@ -296,47 +306,41 @@ namespace Input
     void InputHandler::ChangeOffset(const Direction dir) const
     {
         bool success = true;
-        std::string trackerType;
-        if (GetConfig()->GetString(Cfg::TrackerType, trackerType))
+
+        if (GetConfig()->IsVirtualTracker())
         {
-            if ("yaw" == trackerType || "srs" == trackerType || "flypt" == trackerType)
+            if (auto* tracker = reinterpret_cast<Tracker::VirtualTracker*>(m_Layer->m_Tracker))
             {
-                if (auto* tracker = reinterpret_cast<Tracker::VirtualTracker*>(m_Layer->m_Tracker))
+                if (Direction::RotLeft != dir && Direction::RotRight != dir)
                 {
-                    if (Direction::RotLeft != dir && Direction::RotRight != dir)
-                    {
-                        const XrVector3f direction{Direction::Left == dir    ? 0.01f
-                                                   : Direction::Right == dir ? -0.01f
-                                                                             : 0.0f,
-                                                   Direction::Up == dir     ? 0.01f
-                                                   : Direction::Down == dir ? -0.01f
-                                                                            : 0.0f,
-                                                   Direction::Fwd == dir    ? 0.01f
-                                                   : Direction::Back == dir ? -0.01f
-                                                                            : 0.0f};
-                        success = tracker->ChangeOffset(direction);
-                    }
-                    else
-                    {
-                        success = tracker->ChangeRotation(Direction::RotRight == dir);
-                    }
+                    const XrVector3f direction{Direction::Left == dir    ? 0.01f
+                                               : Direction::Right == dir ? -0.01f
+                                                                         : 0.0f,
+                                               Direction::Up == dir     ? 0.01f
+                                               : Direction::Down == dir ? -0.01f
+                                                                        : 0.0f,
+                                               Direction::Fwd == dir    ? 0.01f
+                                               : Direction::Back == dir ? -0.01f
+                                                                        : 0.0f};
+                    success = tracker->ChangeOffset(direction);
                 }
                 else
                 {
-                    ErrorLog("unable to cast tracker to VirtualTracker pointer\n");
-                    success = false;
+                    success = tracker->ChangeRotation(Direction::RotRight == dir);
                 }
             }
             else
             {
-                ErrorLog("unable to modify offset, wrong type of tracker: %s\n", trackerType.c_str());
+                ErrorLog("unable to cast tracker to VirtualTracker pointer\n");
                 success = false;
             }
         }
         else
         {
+            ErrorLog("unable to modify offset, wrong type of tracker\n");
             success = false;
         }
+
         GetAudioOut()->Execute(!success                    ? Event::Error
                                : Direction::Up == dir      ? Event::Up
                                : Direction::Down == dir    ? Event::Down
@@ -374,56 +378,32 @@ namespace Input
 
     void InputHandler::SaveConfig(XrTime time, bool forApp) const
     {
-        std::string trackerType;
-        if (GetConfig()->GetString(Cfg::TrackerType, trackerType))
+        if (GetConfig()->IsVirtualTracker())
         {
-            if ("yaw" == trackerType || "srs" == trackerType || "flypt" == trackerType)
+            if (Tracker::VirtualTracker* tracker = reinterpret_cast<Tracker::VirtualTracker*>(m_Layer->m_Tracker))
             {
-                Tracker::VirtualTracker* tracker = reinterpret_cast<Tracker::VirtualTracker*>(m_Layer->m_Tracker);
-                if (tracker)
-                {
-                    tracker->SaveReferencePose(time);
-                }
-                else
-                {
-                    ErrorLog("unable to cast tracker to VirtualTracker pointer\n");
-                }
+                tracker->SaveReferencePose(time);
+            }
+            else
+            {
+                ErrorLog("unable to cast tracker to VirtualTracker pointer\n");
             }
         }
         GetConfig()->WriteConfig(forApp);
     }
 
-    void InputHandler::ToggleCorDebug(const XrTime time) const
+    std::string ButtonPath::GetSubPath(const std::string& profile, bool first)
     {
-        bool success = true;
-        std::string trackerType;
-        if (GetConfig()->GetString(Cfg::TrackerType, trackerType))
+        std::string path;
+        if (const auto buttons = m_Mapping.find(profile); buttons != m_Mapping.end())
         {
-            if ("yaw" == trackerType || "srs" == trackerType || "flypt" == trackerType)
-            {
-                if (auto* tracker = reinterpret_cast<Tracker::VirtualTracker*>(m_Layer->m_Tracker))
-                {
-                    success = tracker->ToggleDebugMode(m_Layer->m_Session, time);
-                }
-                else
-                {
-                    ErrorLog("unable to cast tracker to VirtualTracker pointer\n");
-                    success = false;
-                }
-            }
-            else
-            {
-                ErrorLog("unable to activate cor debug mode, wrong type of tracker: %s\n", trackerType.c_str());
-                success = false;
-            }
+            path = first ? buttons->second.first : buttons->second.second;
         }
         else
         {
-            success = false;
+            ErrorLog("%s: no button mapping found for profile: %s", __FUNCTION__, profile);
         }
-        if (!success)
-        {
-            GetAudioOut()->Execute(Event::Error);
-        }
+        return path;
     }
+
 } // namespace Input

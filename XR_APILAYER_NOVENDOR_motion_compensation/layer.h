@@ -92,9 +92,10 @@ namespace motion_compensation_layer
         void RequestCurrentInteractionProfile();
 
         XrActionSet m_ActionSet{XR_NULL_HANDLE};
-        XrAction m_TrackerPoseAction{XR_NULL_HANDLE};
-        XrAction m_TrackerTriggerAction{XR_NULL_HANDLE};
-        XrAction m_TrackerHapticAction{XR_NULL_HANDLE};
+        XrAction m_PoseAction{XR_NULL_HANDLE};
+        XrAction m_MoveAction{XR_NULL_HANDLE};
+        XrAction m_PositionAction{XR_NULL_HANDLE};
+        XrAction m_HapticAction{XR_NULL_HANDLE};
         XrSpace m_TrackerSpace{XR_NULL_HANDLE};
         XrSpace m_ViewSpace{XR_NULL_HANDLE};
         XrSpace m_ReferenceSpace{XR_NULL_HANDLE};
@@ -131,6 +132,7 @@ namespace motion_compensation_layer
         XrViewConfigurationType m_ViewConfigType{XR_VIEW_CONFIGURATION_TYPE_MAX_ENUM};
         Tracker::TrackerBase* m_Tracker{nullptr};
         Tracker::ViveTrackerInfo m_ViveTracker;
+        Input::ButtonPath m_ButtonPath;
         utility::Cache<XrPosef> m_PoseCache{xr::math::Pose::Identity()};
         utility::Cache<std::vector<XrPosef>> m_EyeCache{std::vector<XrPosef>{xr::math::Pose::Identity(),
                                                                              xr::math::Pose::Identity(),
