@@ -151,9 +151,9 @@ To enable OXRMC to correlate translation and rotation of the rig to the virtual 
 2. Start the OpenXR application of your choice
 3. Bring your motion rig in neutral position
 3. Sit in your rig 
-4. put your headset on and face forward (~ direction surge). Potential rotation of the hmd on roll and pitch angle is ignored for the calculation
+4. put your headset on and face forward (~ direction surge). Potential rotation of the hmd on roll and pitch axis is ignored for the calculation
 5. issue the calibration command by activating the `center` shortcut. You can also do this implicitly by activating motion compensation if you haven't (re)calibrated since last loading of the configuration.
-- You can use the tracker marker of the graphical overlay and keyboard shortcuts to adjust the cor position in-game. Make sure to calibrate the tracker first, because the marker tracker just rests at vr play-space origin beforehand. For in-game changes to survive application restart, you have to manually save the configuration.
+- You can use the tracker marker of the graphical overlay and keyboard shortcuts (or the left motion controller, see further below) to adjust the cor position in-game. Make sure to calibrate the tracker first, because the marker tracker just rests at vr play-space origin beforehand. For in-game changes to survive application restart, you have to manually save the configuration.
 - If you're unable to locate the cor of your rig, try out the method described in the [according troubleshooting section](#virtual-tracker)
 - You may have to invert some of the rotations/translations on output side to get them compensated properly. **For new users it's strongly recommended to use some artificial telemetry (joystick input, sine wave generator, etc.) and testing one degree of freedom at at time**
 - If you're using YawVR Game Engine you can also use the parameters `Head Distance` and `Height` in its Motion Compensation tab to specify the offset of the cor. Head distance is basically equal to `offset_forward` in the configration file. But note that the height parameter is measured upwards from the bottom of your play-space, so you'll need to have that setup correctly in order to use that feature.
@@ -161,8 +161,17 @@ To enable OXRMC to correlate translation and rotation of the rig to the virtual 
 ### Saving and reloading the cor location
 Once you're satisfied with the current setting, the current position and orientation of the cor can be saved to the (global = `ctrl + shift + s` or app-specific = `ctrl + shift + a`) config file. You can subsequently set the config key `use_cor_pos` to `1`. This causes the cor position to be loaded from the config file when calibrating instead of being determined using the hmd position and the offset values.  
 Applications using OpenComposite usually operate in a different VR play-space than titles supporting native OpenXR. That's why cor position needs to be saved once for all native games and once for all games using OpenComposite.  
-**Note that this functionality may not work with all HMD vendors. Initially setting up the play-space in the VR runtime of your hmd might help to get this working correctly. Rumor has it that some HMDs need to be started/initialized at the exact same location for the play-space coordinates to be consistent in between uses.**
+**Note that this functionality may not work with all HMD vendors. Setting up the play-space in the VR runtime of your hmd (before first use) might help to get this working correctly. Rumor has it that some HMDs need to be started/initialized at the exact same location for the play-space coordinates to be consistent in between uses.**
 
+### Adjusting cor location using a motion controller
+You can use (only) the left motion controller to move the cor position in virtual space. Make sure to activate the graphical overlay (`ctrl + d` by default) to see the cor marker in game. 
+- Press and hold the trigger button to 'grab' and move the cor marker, this way you can make it reach positions that are obstructed in the real world.
+- While pressing the trigger:
+  - moving the controller left/right, up/down, or forward/backward is pushing the cor marker in the same direction
+  - rotating the controller on the yaw axis is adjusting the cor marker accordingly. Rotation of the motion controller on pitch or roll axis are ignored.
+- Press the menu button (or button 'a' on a valve index controller) to have the cor location snap to the current controller position 
+
+In contrast to using the keyboard shortcuts, modification with the motion controller will not affect the offset values. To reuse the adjusted position, you need to save and use `use_cor_pos = 1` as described above.
 ## Running your application
 1. make sure your using OpenXR as runtime in the application you wish to use motion compensation in
 2. start application
