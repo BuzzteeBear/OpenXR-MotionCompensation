@@ -25,20 +25,16 @@
 
 namespace
 {
-    // Quick and dirty API helper
-    template <class T, class... Types>
-    inline constexpr bool is_any_of_v = std::disjunction_v<std::is_same<T, Types>...>;
-
-    template <typename E>
-    inline constexpr auto to_integral(E e) -> typename std::underlying_type_t<E>
-    {
-        return static_cast<std::underlying_type_t<E>>(e);
-    }
+   
 
 } // namespace
 
 namespace graphics
 {
+    // Quick and dirty API helper
+    template <class T, class... Types>
+    inline constexpr bool is_any_of_v = std::disjunction_v<std::is_same<T, Types>...>;
+
     constexpr uint32_t ViewCount = 2;
 
     enum class Api

@@ -47,12 +47,12 @@ namespace graphics
 
     struct SwapchainImages
     {
-        std::vector<std::shared_ptr<graphics::ITexture>> chain;
+        std::vector<std::shared_ptr<graphics::ITexture>> chain{};
     };
 
     struct SwapchainState
     {
-        std::vector<SwapchainImages> images;
+        std::vector<SwapchainImages> images{};
         uint32_t acquiredImageIndex{0};
         bool delayedRelease{false};
     };
@@ -64,7 +64,7 @@ namespace graphics
         void CreateSession(const XrSessionCreateInfo* createInfo, XrSession* session, const std::string& runtimeName);
         void DestroySession();
         void CreateSwapchain(XrSession session, const XrSwapchainCreateInfo* createInfo, XrSwapchain* swapchain);
-        void DestroySwapchain(const XrSwapchain swapchain);
+        void DestroySwapchain(XrSwapchain swapchain);
         XrResult AcquireSwapchainImage(XrSwapchain swapchain,
                                        const XrSwapchainImageAcquireInfo* acquireInfo,
                                        uint32_t* index);
@@ -90,10 +90,10 @@ namespace graphics
         static std::vector<unsigned short> CreateIndices(size_t amount);
 
         bool m_OverlayActive{false};
-        std::shared_ptr<graphics::IDevice> m_GraphicsDevice;
-        std::map<XrSwapchain, graphics::SwapchainState> m_Swapchains;
-        std::unordered_map<XrSwapchain, std::shared_ptr<ITexture>> m_OwnDepthBuffers;
-        std::shared_ptr<graphics::ISimpleMesh> m_MeshRGB, m_MeshCMY;
+        std::shared_ptr<graphics::IDevice> m_GraphicsDevice{};
+        std::map<XrSwapchain, graphics::SwapchainState> m_Swapchains{};
+        std::unordered_map<XrSwapchain, std::shared_ptr<ITexture>> m_OwnDepthBuffers{};
+        std::shared_ptr<graphics::ISimpleMesh> m_MeshRGB{}, m_MeshCMY{};
         XrVector3f m_MarkerSize{0.1f, 0.1f, 0.1f};
     };
 } // namespace graphics

@@ -48,31 +48,4 @@ namespace graphics::shader
     {
         CompileShader(code.data(), code.size(), entryPoint, blob, nullptr, nullptr, target);
     }
-
-    namespace
-    {
-        template <typename T>
-        inline std::string toStr(T value)
-        {
-            return std::to_string(value);
-        }
-
-        template <>
-        inline std::string toStr<bool>(bool value)
-        {
-            return value ? "1" : "0";
-        }
-
-        template <>
-        inline std::string toStr<std::string>(std::string value)
-        {
-            return value;
-        }
-
-        template <>
-        inline std::string toStr<const char*>(const char* value)
-        {
-            return value;
-        }
-    } // namespace
 } // namespace utility::shader

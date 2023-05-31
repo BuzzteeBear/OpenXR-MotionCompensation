@@ -43,7 +43,7 @@ namespace Tracker
         virtual bool LazyInit(XrTime time);
         void ModifyFilterStrength(bool trans, bool increase);
         void AdjustReferencePose(const XrPosef& pose);
-        XrPosef GetReferencePose() const;
+        [[nodiscard]] XrPosef GetReferencePose() const;
         void SetReferencePose(const XrPosef& pose) override;
         void LogCurrentTrackerPoses(XrSession session, XrTime time, bool activated);
         virtual void ApplyCorManipulation(XrSession session, XrTime time){};
@@ -63,7 +63,7 @@ namespace Tracker
         Filter::FilterBase<XrQuaternionf>* m_RotFilter = nullptr;
     };
 
-    class OpenXrTracker : public TrackerBase
+    class OpenXrTracker final : public TrackerBase
     {
       public:
        bool ResetReferencePose(XrSession session, XrTime time) override;
@@ -83,7 +83,6 @@ namespace Tracker
         bool ChangeOffset(XrVector3f modification);
         bool ChangeRotation(bool right);
         void SaveReferencePose(XrTime time) const;
-        bool ToggleDebugMode(XrSession session, XrTime time);
         void ApplyCorManipulation(XrSession session, XrTime time) override;
 
       protected:
@@ -103,9 +102,8 @@ namespace Tracker
         bool m_LoadPoseFromFile{false};
     };
 
-    class YawTracker : public VirtualTracker
+    class YawTracker final : public VirtualTracker
     {
-      public:
       public:
         YawTracker()
         {
@@ -128,7 +126,7 @@ namespace Tracker
     class SixDofTracker : public VirtualTracker
     {
       protected:
-        virtual bool GetVirtualPose(XrPosef& trackerPose, XrSession session, XrTime time) override;
+        bool GetVirtualPose(XrPosef& trackerPose, XrSession session, XrTime time) override;
        
         bool m_IsSrs{false};
 
@@ -144,7 +142,7 @@ namespace Tracker
         };
     };
 
-    class FlyPtTracker : public SixDofTracker
+    class FlyPtTracker final : public SixDofTracker
     {
       public:
         FlyPtTracker()
@@ -154,7 +152,7 @@ namespace Tracker
         }
     };
 
-    class SrsTracker : public SixDofTracker
+    class SrsTracker final : public SixDofTracker
     {
       public:
         SrsTracker()

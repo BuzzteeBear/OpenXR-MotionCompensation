@@ -22,10 +22,10 @@ namespace Tracker
 
     bool ControllerBase::GetPoseDelta(XrPosef& poseDelta, XrSession session, XrTime time)
     {
-        // pose already calulated for requested time
+        // pose already calculated for requested time
         if (time == m_LastPoseTime)
         {
-            // already calulated for requested time;
+            // already calculated for requested time;
             poseDelta = m_LastPoseDelta;
             TraceLoggingWrite(g_traceProvider,
                               "GetPoseDelta",
@@ -90,7 +90,7 @@ namespace Tracker
             XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
             {
                 // TODO: skip xrSyncActions if other actions are active as well?
-                const XrActionsSyncInfo syncInfo{XR_TYPE_ACTIONS_SYNC_INFO, nullptr, 0, nullptr};
+                constexpr XrActionsSyncInfo syncInfo{XR_TYPE_ACTIONS_SYNC_INFO, nullptr, 0, nullptr};
 
                 TraceLoggingWrite(g_traceProvider,
                                   "GetControllerPose",
@@ -493,7 +493,7 @@ namespace Tracker
         m_ReferencePose = Pose::Multiply(adjustment, m_ReferencePose);
         TraceLoggingWrite(g_traceProvider,
                           "ChangeOffset",
-                          TLArg(xr::ToString(m_ReferencePose).c_str(), "ReferencePose"));
+                          TLArg(xr::ToString(this->m_ReferencePose).c_str(), "ReferencePose"));
         return true;
     }
 
@@ -512,7 +512,6 @@ namespace Tracker
     {
         if (m_Calibrated)
         {
-            XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
             auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
             if (!layer)
             {
@@ -967,7 +966,7 @@ namespace Tracker
         TraceLoggingWrite(g_traceProvider,
                           "ApplyPosition",
                           TLArg(xr::ToString(corPose).c_str(), "Before"),
-                          TLArg(xr::ToString(m_LastPose).c_str(), "Tracker Pose"));
+                          TLArg(xr::ToString(this->m_LastPose).c_str(), "Tracker Pose"));
         corPose.position = m_LastPose.position;
         corPose.orientation = GetYawRotation(GetForwardVector(m_LastPose.orientation, false));
         TraceLoggingWrite(g_traceProvider, "ApplyPosition", TLArg(xr::ToString(corPose).c_str(), "After"));
@@ -980,8 +979,8 @@ namespace Tracker
         TraceLoggingWrite(g_traceProvider,
                           "ApplyTranslation",
                           TLArg(xr::ToString(corPose).c_str(), "Before"),
-                          TLArg(xr::ToString(m_ReferencePose).c_str(), "Reference"),
-                          TLArg(xr::ToString(m_LastPose).c_str(), "Tracker"));
+                          TLArg(xr::ToString(this->m_ReferencePose).c_str(), "Reference"),
+                          TLArg(xr::ToString(this->m_LastPose).c_str(), "Tracker"));
         const DirectX::XMVECTOR cor = LoadXrVector3(corPose.position);
         const DirectX::XMVECTOR ref = LoadXrVector3(m_ReferencePose.position);
         const DirectX::XMVECTOR tracker = LoadXrVector3(m_LastPose.position);
@@ -995,7 +994,7 @@ namespace Tracker
     {
         XrPosef corPose = m_Tracker->GetReferencePose();
         TraceLoggingWrite(g_traceProvider, "ApplyRotation", TLArg(xr::ToString(corPose).c_str(), "Before"),
-                          TLArg(xr::ToString(m_LastPoseDelta).c_str(), "Delta"));
+                          TLArg(xr::ToString(this->m_LastPoseDelta).c_str(), "Delta"));
         const DirectX::XMVECTOR orientation = LoadXrQuaternion(corPose.orientation);
         const DirectX::XMVECTOR yawRotation = LoadXrQuaternion(GetYawRotation(GetForwardVector(Pose::Invert(m_LastPoseDelta).orientation, true)));
         StoreXrQuaternion(&corPose.orientation, DirectX::XMQuaternionMultiply(orientation, yawRotation));

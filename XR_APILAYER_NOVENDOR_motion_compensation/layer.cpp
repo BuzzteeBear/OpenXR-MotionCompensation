@@ -132,12 +132,8 @@ namespace motion_compensation_layer
             if (GetConfig()->GetFloat(Cfg::TrackerTimeout, timeout))
             {
                 m_RecoveryWait = static_cast<XrTime>(timeout * 1000000000.0);
-                Log("tracker timeout is set to %.3f ms\n", m_RecoveryWait / 1000000.0);
             }
-            else
-            {
-                ErrorLog("%s: defaulting to tracker timeout of %.3f ms\n", __FUNCTION__,  m_RecoveryWait / 1000000.0);
-            }
+            Log("tracker timeout is set to %.3f ms\n", static_cast<double>(m_RecoveryWait) / 1000000.0);
 
             float cacheTolerance{2.0};
             GetConfig()->GetFloat(Cfg::CacheTolerance, cacheTolerance);
@@ -264,7 +260,7 @@ namespace motion_compensation_layer
                     LazyInit(0);
                 }
 
-                const XrReferenceSpaceCreateInfo referenceSpaceCreateInfo{XR_TYPE_REFERENCE_SPACE_CREATE_INFO,
+                constexpr XrReferenceSpaceCreateInfo referenceSpaceCreateInfo{XR_TYPE_REFERENCE_SPACE_CREATE_INFO,
                                                                           nullptr,
                                                                           XR_REFERENCE_SPACE_TYPE_VIEW,
                                                                           Pose::Identity()};
@@ -534,7 +530,7 @@ namespace motion_compensation_layer
 
         if (m_ActionSetAttached)
         {
-            // detach and recreate actionset and trackerspace
+            // detach and recreate action set and tracker space
             if (XR_NULL_HANDLE != m_ActionSet)
             {
                 GetInstance()->xrDestroyActionSet(m_ActionSet);
@@ -1139,7 +1135,7 @@ namespace motion_compensation_layer
                               TLPArg(trackerActionSet, "ActionSet Attached"),
                               TLArg(chainSyncInfo.countActiveActionSets, "ActionSet Count"));
         }
-        XrResult res = OpenXrApi::xrSyncActions(session, &chainSyncInfo);
+        const XrResult res = OpenXrApi::xrSyncActions(session, &chainSyncInfo);
         DebugLog("xrSyncAction result = %d, #sets = %d\n", res, chainSyncInfo.countActiveActionSets);
         return res;
     }
@@ -1191,7 +1187,7 @@ namespace motion_compensation_layer
             return XR_ERROR_VALIDATION_FAILURE;
         }
 
-        DebugLog("xrEndframe(%u)\n", frameEndInfo->displayTime);
+        DebugLog("xrEndFrame(%u)\n", frameEndInfo->displayTime);
         TraceLoggingWrite(g_traceProvider,
                           "xrEndFrame",
                           TLPArg(session, "Session"),
@@ -1596,7 +1592,7 @@ namespace motion_compensation_layer
             TraceLoggingWrite(g_traceProvider,
                               "OpenXrTracker::LazyInit",
                               TLPArg("Executed", "xrCreateReferenceSpaceStage"));
-            if (!XR_SUCCEEDED(xrCreateReferenceSpace(m_Session, &referenceSpaceCreateInfo, &m_StageSpace)))
+            if (XR_FAILED(xrCreateReferenceSpace(m_Session, &referenceSpaceCreateInfo, &m_StageSpace)))
             {
                 ErrorLog("%s: xrCreateReferenceSpace (stage) failed\n", __FUNCTION__);
             }
@@ -1654,7 +1650,7 @@ namespace motion_compensation_layer
 
         // determine rotation angle
         const int64_t milliseconds = ((time - m_TestRotStart) / 1000000) % 10000;
-        float angle = static_cast<float>(M_PI) * 0.0002f * milliseconds;
+        float angle = static_cast<float>(M_PI) * 0.0002f * static_cast<float>(milliseconds);
         if (reverse)
         {
             angle = -angle;

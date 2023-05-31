@@ -40,7 +40,7 @@ namespace Input
         const std::set<int> modifiers{VK_CONTROL, VK_SHIFT, VK_MENU};
         std::string errors;
 
-        // undocumented / uncofigurable shoprtcuts:
+        // undocumented / immutable shortcuts:
         m_ShortCuts[Cfg::InteractionProfile] = {{VK_CONTROL, VK_SHIFT, VK_MENU, 0x49}, {}}; // ctrl+shift+alt+i
         m_ShortCuts[Cfg::CurrentTrackerPose] = {{VK_CONTROL, VK_SHIFT, VK_MENU, 0x54}, {}}; // ctrl+shift+alt+t
 
@@ -305,7 +305,7 @@ namespace Input
 
     void InputHandler::ChangeOffset(const Direction dir) const
     {
-        bool success = true;
+        bool success;
 
         if (GetConfig()->IsVirtualTracker())
         {
@@ -380,7 +380,7 @@ namespace Input
     {
         if (GetConfig()->IsVirtualTracker())
         {
-            if (Tracker::VirtualTracker* tracker = reinterpret_cast<Tracker::VirtualTracker*>(m_Layer->m_Tracker))
+            if (const auto tracker = reinterpret_cast<Tracker::VirtualTracker*>(m_Layer->m_Tracker))
             {
                 tracker->SaveReferencePose(time);
             }

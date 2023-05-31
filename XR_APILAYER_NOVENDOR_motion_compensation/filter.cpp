@@ -13,7 +13,7 @@ namespace Filter
     {
         GetConfig()->GetFloat(Cfg::TransVerticalFactor, m_VerticalFactor);
         m_VerticalFactor = std::max(0.0f, m_VerticalFactor);
-        SetStrength(m_Strength);
+        SingleEmaFilter::SetStrength(m_Strength);
     }
 
     XrVector3f SingleEmaFilter::EmaFunction(const XrVector3f current, const XrVector3f stored) const

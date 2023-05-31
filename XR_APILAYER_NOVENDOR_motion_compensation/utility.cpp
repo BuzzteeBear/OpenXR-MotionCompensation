@@ -63,7 +63,7 @@ namespace utility
         {
             ErrorLog("%s: defaulting to mmf connection refresh interval of %.3f ms\n",
                      __FUNCTION__,
-                     m_Check / 1000000.0);
+                     static_cast<double>(m_Check) / 1000000.0);
         }
     }
 
@@ -92,7 +92,6 @@ namespace utility
             }
             else
             {
-                DWORD err = GetLastError();
                 ErrorLog("unable to map view of mmf %s: %s\n", m_Name.c_str(), LastErrorMsg().c_str());
                 lock.unlock();
                 Close();
@@ -127,7 +126,7 @@ namespace utility
             {
                 memcpy(buffer, m_View, size);
             }
-            catch (std::exception e)
+            catch (std::exception& e)
             {
                 ErrorLog("%s: unable to read from mmf %s: %s\n", __FUNCTION__, m_Name.c_str(), e.what());
                 // reset mmf connection

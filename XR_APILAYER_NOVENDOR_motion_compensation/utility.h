@@ -46,7 +46,7 @@ namespace utility
 
             TraceLoggingWrite(LAYER_NAMESPACE::log::g_traceProvider, "GetSample", TLArg(time, "Time"));
 
-            LAYER_NAMESPACE::log::DebugLog("GetSample(%s): %u\n", typeid(Sample).name(), time);
+            LAYER_NAMESPACE::log::DebugLog("GetSample(%s): %u\n", m_SampleType.c_str(), time);
 
             auto it = m_Cache.lower_bound(time);
             const bool itIsEnd = m_Cache.end() == it;
@@ -57,11 +57,11 @@ namespace utility
                     // exact entry found
                     TraceLoggingWrite(LAYER_NAMESPACE::log::g_traceProvider,
                                       "GetSample_Found",
-                                      TLArg(typeid(Sample).name(), "Type"),
+                                      TLArg(m_SampleType.c_str(), "Type"),
                                       TLArg("Exact", "Match"),
                                       TLArg(it->first, "Time"));
 
-                    LAYER_NAMESPACE::log::DebugLog("GetSample(%s): exact match found\n", typeid(Sample).name());
+                    LAYER_NAMESPACE::log::DebugLog("GetSample(%s): exact match found\n", m_SampleType.c_str());
 
                     return it->second;
                 }
@@ -70,11 +70,11 @@ namespace utility
                     // succeeding entry is within tolerance
                     TraceLoggingWrite(LAYER_NAMESPACE::log::g_traceProvider,
                                       "GetSample_Found",
-                                      TLArg(typeid(Sample).name(), "Type"),
+                                      TLArg(m_SampleType.c_str(), "Type"),
                                       TLArg("Later", "Match"),
                                       TLArg(it->first, "Time"));
                     LAYER_NAMESPACE::log::DebugLog("GetSample(%s): later match found %u\n",
-                                                   typeid(Sample).name(),
+                                                   m_SampleType.c_str(),
                                                    it->first);
 
                     return it->second;
@@ -84,24 +84,24 @@ namespace utility
             if (!itIsBegin)
             {
                 auto lowerIt = it;
-                lowerIt--;
+                --lowerIt;
                 if (lowerIt->first >= time - m_Tolerance)
                 {
                     // preceding entry is within tolerance
                     TraceLoggingWrite(LAYER_NAMESPACE::log::g_traceProvider,
                                       "GetSample_Found",
-                                      TLArg(typeid(Sample).name(), "Type"),
+                                      TLArg(m_SampleType.c_str(), "Type"),
                                       TLArg("Earlier", "Match"),
                                       TLArg(lowerIt->first, "Time"));
                     LAYER_NAMESPACE::log::DebugLog("GetSample(%s): earlier match found: %u\n",
-                                                   typeid(Sample).name(),
+                                                   m_SampleType.c_str(),
                                                    lowerIt->first);
 
                     return lowerIt->second;
                 }
             }
             LAYER_NAMESPACE::log::ErrorLog("GetSample(%s) unable to find sample %u+-%.3fms\n",
-                                           typeid(Sample).name(),
+                                           m_SampleType.c_str(),
                                            time,
                                            m_Tolerance / 1000000.0);
             if (!itIsEnd)
@@ -109,12 +109,12 @@ namespace utility
                 if (!itIsBegin)
                 {
                     auto lowerIt = it;
-                    lowerIt--;
+                    --lowerIt;
                     // both entries are valid -> select better match
                     auto returnIt = (time - lowerIt->first < it->first - time ? lowerIt : it);
                     TraceLoggingWrite(LAYER_NAMESPACE::log::g_traceProvider,
                                       "GetSample_Failed",
-                                      TLArg(typeid(Sample).name(), "Type"),
+                                      TLArg(m_SampleType.c_str(), "Type"),
                                       TLArg("Estimated Both", "Match"),
                                       TLArg(it->first, "Time"));
                     LAYER_NAMESPACE::log::ErrorLog("Using best match: t = %u \n", returnIt->first);
@@ -125,7 +125,7 @@ namespace utility
 
                 TraceLoggingWrite(LAYER_NAMESPACE::log::g_traceProvider,
                                   "GetSample_Found",
-                                  TLArg(typeid(Sample).name(), "Type"),
+                                  TLArg(m_SampleType.c_str(), "Type"),
                                   TLArg("Estimated Earlier", "Match"),
                                   TLArg(it->first, "Time"));
                 LAYER_NAMESPACE::log::ErrorLog("Using best match: t = %u \n", it->first);
@@ -134,12 +134,12 @@ namespace utility
             if (!itIsBegin)
             {
                 auto lowerIt = it;
-                lowerIt--;
+                --lowerIt;
                 // lower entry is last in cache-> use it
                 LAYER_NAMESPACE::log::ErrorLog("Using best match: t = %u \n", lowerIt->first);
                 TraceLoggingWrite(LAYER_NAMESPACE::log::g_traceProvider,
                                   "GetSample_Failed",
-                                  TLArg(typeid(Sample).name(), "Type"),
+                                  TLArg(m_SampleType.c_str(), "Type"),
                                   TLArg("Estimated Earlier", "Type"),
                                   TLArg(lowerIt->first, "Time"));
                 return lowerIt->second;
@@ -158,7 +158,7 @@ namespace utility
             auto it = m_Cache.lower_bound(time - m_Tolerance);
             if (m_Cache.begin() != it)
             {
-                it--;
+                --it;
                 if (m_Cache.end() != it && m_Cache.begin() != it)
                 {
                     m_Cache.erase(m_Cache.begin(), it);
@@ -171,6 +171,7 @@ namespace utility
         mutable std::mutex m_Mutex;
         Sample m_Fallback;
         XrTime m_Tolerance{2000000};
+        std::string m_SampleType{typeid(Sample).name()};
     };
 
     class Mmf
