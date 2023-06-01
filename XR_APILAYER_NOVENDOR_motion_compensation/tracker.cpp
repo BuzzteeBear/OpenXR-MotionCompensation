@@ -172,11 +172,11 @@ namespace Tracker
         return Normalize(forward);
     }
 
-    XrQuaternionf ControllerBase::GetYawRotation(const XrVector3f& forward)
+    XrQuaternionf ControllerBase::GetYawRotation(const XrVector3f& forward, float yawAdjustment)
     {
         const float yawAngle = atan2f(forward.x, forward.z);
         XrQuaternionf rotation{};
-        StoreXrQuaternion(&rotation, DirectX::XMQuaternionRotationRollPitchYaw(0.0f, yawAngle, 0.0f));
+        StoreXrQuaternion(&rotation, DirectX::XMQuaternionRotationRollPitchYaw(0.0f, yawAngle + yawAdjustment, 0.0f));
         return rotation;
     }
 
@@ -380,6 +380,16 @@ namespace Tracker
         {
             success = false;
         }
+        if (GetConfig()->GetFloat(Cfg::TrackerOffsetYaw, value))
+        {
+            m_OffsetYaw = value * angleToRadian;
+            Log("offset yaw = %f °\n", value);
+        }
+        else
+        {
+            success = false;
+        }
+
         if (GetConfig()->GetBool(Cfg::UseCorPos, m_LoadPoseFromFile))
         {
             Log("center of rotation is %s read from config file\n", m_LoadPoseFromFile ? "" : "not");
@@ -445,7 +455,7 @@ namespace Tracker
                     location.pose.position = location.pose.position + offset;
 
                     // calculate orientation parallel to floor
-                    location.pose.orientation = GetYawRotation(forward);
+                    location.pose.orientation = GetYawRotation(forward, m_OffsetYaw);
                    
                     TrackerBase::SetReferencePose(location.pose);
                 }
@@ -468,13 +478,17 @@ namespace Tracker
 
     bool VirtualTracker::ChangeOffset(XrVector3f modification)
     {
-        m_OffsetForward += modification.z;
+        const XrVector3f relativeToHmd{cosf(m_OffsetYaw) * modification.x + sinf(m_OffsetYaw) * modification.z,
+                                       modification.y,
+                                       cosf(m_OffsetYaw) * modification.z - sinf(m_OffsetYaw) * modification.x};
+
+        m_OffsetForward += relativeToHmd.z;
         GetConfig()->SetValue(Cfg::TrackerOffsetForward, m_OffsetForward * 100.0f);
 
-        m_OffsetDown -= modification.y;
+        m_OffsetDown -= relativeToHmd.y;
         GetConfig()->SetValue(Cfg::TrackerOffsetDown, m_OffsetDown * 100.0f);
 
-        m_OffsetRight -= modification.x;
+        m_OffsetRight -= relativeToHmd.x;
         GetConfig()->SetValue(Cfg::TrackerOffsetRight, m_OffsetRight * 100.0f);
 
         
@@ -497,13 +511,16 @@ namespace Tracker
         return true;
     }
 
-    bool VirtualTracker::ChangeRotation(const bool right)
+    bool VirtualTracker::ChangeRotation(float radian)
     {
        XrPosef adjustment{Pose::Identity()};
-        const float direction = (right ? -1.0f : 1.0f) * (m_UpsideDown ? -1.0f : 1.0f);
+        const float direction = radian * (m_UpsideDown ? -1.0f : 1.0f);
+        m_OffsetYaw += direction;
+        const float yawAngle = m_OffsetYaw / angleToRadian;
+        GetConfig()->SetValue(Cfg::TrackerOffsetYaw, yawAngle);
         StoreXrQuaternion(&adjustment.orientation,
-                          DirectX::XMQuaternionRotationRollPitchYaw(0.0f, direction * angleToRadian, 0.0f));
-        Log("cor orientation rotated to the %s\n", right ? "right" : "left");
+                          DirectX::XMQuaternionRotationRollPitchYaw(0.0f, direction , 0.0f));
+        Log("cor orientation rotated right by %0.3f to %0.3f °\n", radian / angleToRadian, yawAngle);
         SetReferencePose(Pose::Multiply(adjustment, m_ReferencePose));
         return true;
     }
@@ -968,7 +985,7 @@ namespace Tracker
                           TLArg(xr::ToString(corPose).c_str(), "Before"),
                           TLArg(xr::ToString(this->m_LastPose).c_str(), "Tracker Pose"));
         corPose.position = m_LastPose.position;
-        corPose.orientation = GetYawRotation(GetForwardVector(m_LastPose.orientation, false));
+        corPose.orientation = GetYawRotation(GetForwardVector(m_LastPose.orientation, false), 0.0f);
         TraceLoggingWrite(g_traceProvider, "ApplyPosition", TLArg(xr::ToString(corPose).c_str(), "After"));
         m_Tracker->SetReferencePose(corPose);
     }
@@ -996,7 +1013,7 @@ namespace Tracker
         TraceLoggingWrite(g_traceProvider, "ApplyRotation", TLArg(xr::ToString(corPose).c_str(), "Before"),
                           TLArg(xr::ToString(this->m_LastPoseDelta).c_str(), "Delta"));
         const DirectX::XMVECTOR orientation = LoadXrQuaternion(corPose.orientation);
-        const DirectX::XMVECTOR yawRotation = LoadXrQuaternion(GetYawRotation(GetForwardVector(Pose::Invert(m_LastPoseDelta).orientation, true)));
+        const DirectX::XMVECTOR yawRotation = LoadXrQuaternion(GetYawRotation(GetForwardVector(Pose::Invert(m_LastPoseDelta).orientation, true), 0.0f));
         StoreXrQuaternion(&corPose.orientation, DirectX::XMQuaternionMultiply(orientation, yawRotation));
         TraceLoggingWrite(g_traceProvider, "ApplyRotation", TLArg(xr::ToString(corPose).c_str(), "After"));
         m_Tracker->SetReferencePose(corPose);

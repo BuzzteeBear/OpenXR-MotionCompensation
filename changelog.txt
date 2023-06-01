@@ -5,6 +5,7 @@ Version 0.2.7
 	Virtual tracker
 	- enabled use of a motion controller to manipulate cor position
 	- enabled cor position for games using OpenComposite to be saved and loaded separately
+	- added rotational offset (yaw) for cor positioning
 	- added upside_down = 1 on config file creation for iRacing
 
 	Installer

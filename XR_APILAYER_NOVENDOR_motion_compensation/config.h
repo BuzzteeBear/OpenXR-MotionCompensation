@@ -19,6 +19,7 @@ enum class Cfg
     TrackerOffsetForward,
     TrackerOffsetDown,
     TrackerOffsetRight,
+    TrackerOffsetYaw,
     UseYawGeOffset,
     CorX,
     CorY,
@@ -104,6 +105,7 @@ class ConfigManager
         {Cfg::TrackerOffsetForward, {"tracker", "offset_forward"}},
         {Cfg::TrackerOffsetDown, {"tracker", "offset_down"}},
         {Cfg::TrackerOffsetRight, {"tracker", "offset_right"}},
+        {Cfg::TrackerOffsetYaw, {"tracker", "offset_yaw_angle"}},
 
         {Cfg::UseYawGeOffset, {"tracker", "use_yaw_ge_offset"}},
 
@@ -160,6 +162,7 @@ class ConfigManager
                                Cfg::TrackerOffsetForward,
                                Cfg::TrackerOffsetDown,
                                Cfg::TrackerOffsetRight,
+                               Cfg::TrackerOffsetYaw,
                                Cfg::CacheUseEye,
                                Cfg::CorX,
                                Cfg::CorY,

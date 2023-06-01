@@ -326,7 +326,8 @@ namespace Input
                 }
                 else
                 {
-                    success = tracker->ChangeRotation(Direction::RotRight == dir);
+                    success = tracker->ChangeRotation(Direction::RotRight == dir ? -Tracker::angleToRadian
+                                                                                 : Tracker::angleToRadian);
                 }
             }
             else

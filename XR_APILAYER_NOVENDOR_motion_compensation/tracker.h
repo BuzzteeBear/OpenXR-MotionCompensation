@@ -21,7 +21,7 @@ namespace Tracker
         virtual bool GetPose(XrPosef& trackerPose, XrSession session, XrTime time) = 0;
         virtual bool GetControllerPose(XrPosef& trackerPose, XrSession session, XrTime time);
         static XrVector3f GetForwardVector(const XrQuaternionf& quaternion, bool inverted = false);
-        static XrQuaternionf GetYawRotation(const XrVector3f& forward);
+        static XrQuaternionf GetYawRotation(const XrVector3f& forward, float yawAdjustment);
 
         XrPosef m_ReferencePose{xr::math::Pose::Identity()};
         XrPosef m_LastPoseDelta{xr::math::Pose::Identity()};
@@ -81,7 +81,7 @@ namespace Tracker
         bool LazyInit(XrTime time) override;
         bool ResetReferencePose(XrSession session, XrTime time) override;
         bool ChangeOffset(XrVector3f modification);
-        bool ChangeRotation(bool right);
+        bool ChangeRotation(float radian);
         void SaveReferencePose(XrTime time) const;
         void ApplyCorManipulation(XrSession session, XrTime time) override;
 
@@ -91,7 +91,7 @@ namespace Tracker
 
         std::string m_Filename;
         utility::Mmf m_Mmf;
-        float m_OffsetForward{0.0f}, m_OffsetDown{0.0f}, m_OffsetRight{0.0f};
+        float m_OffsetForward{0.0f}, m_OffsetDown{0.0f}, m_OffsetRight{0.0f}, m_OffsetYaw{0.0f};
         bool m_UpsideDown{false};
         
 
