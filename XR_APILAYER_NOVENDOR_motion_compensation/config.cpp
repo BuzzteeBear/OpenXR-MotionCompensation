@@ -225,9 +225,21 @@ bool ConfigManager::GetShortcut(const Cfg key, std::set<int>& val)
     }
     return true;
 }
+bool ConfigManager::IsVirtualTracker()
+{
+    std::string type;
+    GetString(Cfg::TrackerType, type);
+    return "srs" == type || "flypt" == type || "yaw" == type;
+}
+
 std::string ConfigManager::GetControllerSide()
 {
     std::string side{"left"};
+    if (IsVirtualTracker())
+    {
+        // default to left controller for virtual trackers
+        return side; 
+    }
     if (!GetString(Cfg::TrackerSide, side))
     {
         ErrorLog("%s: unable to determine controller side. Defaulting to %s\n", __FUNCTION__, side.c_str());
@@ -301,7 +313,7 @@ void ConfigManager::WriteConfig(const bool forApp)
             ErrorLog("%s: key not found in key map: %d\n", __FUNCTION__, key);
         }
     }
-    Log("current configuration %ssaved to %s\n", error ? "could not be " : "", m_ApplicationIni.c_str());
+    Log("current configuration %saved to %s\n", error ? "could not be " : "", m_ApplicationIni.c_str());
     GetAudioOut()->Execute(!error ? Feedback::Event::Save : Feedback::Event::Error);
 }
 

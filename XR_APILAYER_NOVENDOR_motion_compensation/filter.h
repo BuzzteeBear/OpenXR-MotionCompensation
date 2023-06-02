@@ -41,10 +41,10 @@ namespace Filter
     class SingleEmaFilter : public FilterBase<XrVector3f>
     {
       public:
-        explicit SingleEmaFilter(const float strength);
-        virtual float SetStrength(float strength) override;
-        virtual void ApplyFilter(XrVector3f& location) override;
-        virtual void Reset(const XrVector3f& location) override;
+        explicit SingleEmaFilter(float strength);
+        float SetStrength(float strength) override;
+        void ApplyFilter(XrVector3f& location) override;
+        void Reset(const XrVector3f& location) override;
 
       protected:
         XrVector3f m_Alpha{1.0f - m_Strength, 1.0f - m_Strength, 1.0f - m_Strength};
@@ -59,8 +59,8 @@ namespace Filter
     {
       public:
         explicit DoubleEmaFilter(const float strength) : SingleEmaFilter(strength){};
-        virtual void ApplyFilter(XrVector3f& location) override;
-        virtual void Reset(const XrVector3f& location) override;
+        void ApplyFilter(XrVector3f& location) override;
+        void Reset(const XrVector3f& location) override;
 
       protected:
         XrVector3f m_EmaEma{0, 0, 0};
@@ -70,8 +70,8 @@ namespace Filter
     {
       public:
         explicit TripleEmaFilter(const float strength) : DoubleEmaFilter(strength){};
-        virtual void ApplyFilter(XrVector3f& location) override;
-        virtual void Reset(const XrVector3f& location) override;
+        void ApplyFilter(XrVector3f& location) override;
+        void Reset(const XrVector3f& location) override;
 
       protected:
         XrVector3f m_EmaEmaEma{0, 0, 0};
@@ -82,8 +82,8 @@ namespace Filter
     {
       public:
         explicit SingleSlerpFilter(const float strength) : FilterBase(strength){};
-        virtual void ApplyFilter(XrQuaternionf& rotation) override;
-        virtual void Reset(const XrQuaternionf& rotation) override;
+        void ApplyFilter(XrQuaternionf& rotation) override;
+        void Reset(const XrQuaternionf& rotation) override;
 
       protected:
         XrQuaternionf m_FirstStage = xr::math::Quaternion::Identity();
@@ -92,9 +92,9 @@ namespace Filter
     class DoubleSlerpFilter : public SingleSlerpFilter
     {
       public:
-        DoubleSlerpFilter(const float strength) : SingleSlerpFilter(strength){};
-        virtual void ApplyFilter(XrQuaternionf& rotation) override;
-        virtual void Reset(const XrQuaternionf& rotation) override;
+        explicit DoubleSlerpFilter(const float strength) : SingleSlerpFilter(strength){};
+        void ApplyFilter(XrQuaternionf& rotation) override;
+        void Reset(const XrQuaternionf& rotation) override;
 
       protected:
         XrQuaternionf m_SecondStage = xr::math::Quaternion::Identity();
@@ -103,9 +103,9 @@ namespace Filter
     class TripleSlerpFilter : public DoubleSlerpFilter
     {
       public:
-        TripleSlerpFilter(const float strength) : DoubleSlerpFilter(strength){};
-        virtual void ApplyFilter(XrQuaternionf& rotation) override;
-        virtual void Reset(const XrQuaternionf& rotation) override;
+        explicit TripleSlerpFilter(const float strength) : DoubleSlerpFilter(strength){};
+        void ApplyFilter(XrQuaternionf& rotation) override;
+        void Reset(const XrQuaternionf& rotation) override;
 
       protected:
         XrQuaternionf m_ThirdStage = xr::math::Quaternion::Identity();

@@ -19,6 +19,7 @@ enum class Cfg
     TrackerOffsetForward,
     TrackerOffsetDown,
     TrackerOffsetRight,
+    TrackerOffsetYaw,
     UseYawGeOffset,
     CorX,
     CorY,
@@ -55,7 +56,6 @@ enum class Cfg
     KeySaveConfig,
     KeySaveConfigApp,
     KeyReloadConfig,
-    KeyDebugCor,
     TestRotation,
     InteractionProfile,
     CurrentTrackerPose
@@ -70,6 +70,7 @@ class ConfigManager
     bool GetFloat(Cfg key, float& val);
     bool GetString(Cfg key, std::string& val);
     bool GetShortcut(Cfg key, std::set<int>& val);
+    bool IsVirtualTracker();
     std::string GetControllerSide();
 
     void SetValue(Cfg key, bool val);
@@ -104,6 +105,7 @@ class ConfigManager
         {Cfg::TrackerOffsetForward, {"tracker", "offset_forward"}},
         {Cfg::TrackerOffsetDown, {"tracker", "offset_down"}},
         {Cfg::TrackerOffsetRight, {"tracker", "offset_right"}},
+        {Cfg::TrackerOffsetYaw, {"tracker", "offset_yaw_angle"}},
 
         {Cfg::UseYawGeOffset, {"tracker", "use_yaw_ge_offset"}},
 
@@ -149,8 +151,6 @@ class ConfigManager
 
         {Cfg::KeyCache, {"shortcuts", "toggle_cache"}},
 
-        {Cfg::KeyDebugCor, {"shortcuts", "cor_debug_mode"}},
-
         {Cfg::KeySaveConfig, {"shortcuts", "save_config"}},
         {Cfg::KeySaveConfigApp, {"shortcuts", "save_config_app"}},
         {Cfg::KeyReloadConfig, {"shortcuts", "reload_config"}},
@@ -162,6 +162,7 @@ class ConfigManager
                                Cfg::TrackerOffsetForward,
                                Cfg::TrackerOffsetDown,
                                Cfg::TrackerOffsetRight,
+                               Cfg::TrackerOffsetYaw,
                                Cfg::CacheUseEye,
                                Cfg::CorX,
                                Cfg::CorY,

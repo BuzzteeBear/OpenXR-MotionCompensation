@@ -12,7 +12,7 @@ When using a motion rig in combination with a VR headset (hmd) he movement of th
 Motion compensation reduces or ideally removes that effect by locking the in-game world to the pose of the motion rig.
 This software aims to provide an API layer for motion compensation to be used with applications and hmds supporting the OpenXR standard.  
 To be able to do that, the software needs to be informed on the motion rig movement / position. This can be achieved using a tracker, which is either a physical object attached to the motion rig and tracked by the VR runtime (e.g. a motion controller or a vive puck) or a virtual tracker using data from the motion software driving the motion rig. 
- 
+
 
 Limitations:
 
@@ -90,29 +90,33 @@ What you can modify in a configuration file:
   - `activate`: automatically activate motion compensation on application start and configuration reload.
   - `activate_delay`: delay auto-activation by specified number of seconds. The required time for successful activation may vary, depending on application and tracker type used.
   - `activate_countdown_`: enable audible countdown for the last 10 seconds before auto-activation. This is supposed to allow getting to neutral position and timely centering of in-game view.
-- `tracker`: The following tracker `type` keys are available:
-  - `controller`: use either the left or the right motion controller as reference tracker. Valid options for the key `side` are `left` and `right` (**Note that changing the side or switching between motion controller and vive tracker requires a restart of the vr session**)
-  - `vive`: use a vive tracker as reference for motion compensation. The key `side` has to match the role assigned to the tracker. Valid options for that are:
-    - `handheld_object` - which hand (left, right, any) doesn't matter. Having more than one active vive tracker assigned to that role may lead to conflicts, though.
-    - `left_foot`
-    - `right_foot`
-    - `left_shoulder`
-    - `right_shoulder`
-    - `left_elbow`
-    - `right_elbow`
-    - `left_knee`
-    - `right_knee`
-    - `waist`
-    - `chest`
-    - `camera`
-    - `keyboard`.
+- `tracker`: 
+  - The following tracker `type` keys are available:
+    - `controller`: use either the left or the right motion controller as reference tracker. Valid options for the key `side` are `left` and `right` (**Note that changing the side or switching between motion controller and vive tracker requires a restart of the vr session**)
+    - `vive`: use a vive tracker as reference for motion compensation. The key `side` has to match the role assigned to the tracker. Valid options for that are:
+      - `handheld_object` - which hand (left, right, any) doesn't matter. Having more than one active vive tracker assigned to that role may lead to conflicts, though.
+      - `left_foot`
+      - `right_foot`
+      - `left_shoulder`
+      - `right_shoulder`
+      - `left_elbow`
+      - `right_elbow`
+      - `left_knee`
+      - `right_knee`
+      - `waist`
+      - `chest`
+      - `camera`
+      - `keyboard`.
+    - `srs`: use the virtual tracker data provided by SRS motion software when using a Witmotion (or similar?) sensor on the motion rig.
+    - `flypt` use the virtual tracker data provided by FlyPT Mover.
+    - `yaw`: use the virtual tracker data provided by Yaw VR and Yaw 2. Either while using SRS or Game Engine.
+  - the keys `offset_...`, `use_cor_pos` and `cor_...` are used to handle the configuration of the center of rotation (cor) for all available virtual trackers.
+    - offset values are meant to be modified to specify how far away the cor is in terms of up/down, forward/backward left/right, and up/down direction relative to your headset. The yaw angle defines a counterclockwise rotation of the forward vector after positioning of the cor on calibration.
+    - `use_cor_pos` can be enabled to reuse the exact cor position within vr playspace for the next sessions, independent of offset values and hmd position at calibration time.
+    - values starting with `cor_` are not meant for manual editing in the config file but are instead populated on saving the current configuration.  
+  - `marker_size` sets the size of the cor / reference tracker marker displayed in the overlay. The value corresponds to the length of one double cone in cm.
   - `connection_timeout` sets the time (in seconds) the tracker needs to be unresponsive before motion compensation is automatically deactivated. Setting a negative value disables automatic deactivation.
   - `connection_check` is only relevant for virtual trackers and determines the period (in seconds) for checking whether the memory mapped file used for data input is actually still actively used. Setting a negative value disables the check
-  - `srs`: use the virtual tracker data provided by SRS motion software when using a Witmotion (or similar?) sensor on the motion rig.
-  - `flypt` use the virtual tracker data provided by FlyPT Mover.
-  - `yaw`: use the virtual tracker data provided by Yaw VR and Yaw 2. Either while using SRS or Game Engine.
-  - the keys `offset_...`, `use_cor_pos` and `cor_...` are used to handle the configuration of the center of rotation (cor) for all available virtual trackers.
-  - `marker_size` sets the size of the cor / reference tracker marker displayed in the overlay. The value corresponds to the length of one double cone in cm.
 - `translational_filter` and `rotational_filter`: set the filtering magnitude (key `strength` with valid options between **0.0** and **1.0**) number of filtering stages (key `order`with valid options: **1, 2, 3**).  
   The key `vertical_factor` is applied to translational filter strength in vertical/heave direction only (Note that the filter strength is multiplied by the factor and the resulting product of strength * vertical_factor is clamped internally between 0.0 and 1.0).
 - `cache`: you can modify the cache used for reverting the motion corrected pose on frame submission:
@@ -151,9 +155,9 @@ To enable OXRMC to correlate translation and rotation of the rig to the virtual 
 2. Start the OpenXR application of your choice
 3. Bring your motion rig in neutral position
 3. Sit in your rig 
-4. put your headset on and face forward (~ direction surge). Potential rotation of the hmd on roll and pitch angle is ignored for the calculation
+4. put your headset on and face forward (~ direction surge). Potential rotation of the hmd on roll and pitch axis is ignored for the calculation
 5. issue the calibration command by activating the `center` shortcut. You can also do this implicitly by activating motion compensation if you haven't (re)calibrated since last loading of the configuration.
-- You can use the tracker marker of the graphical overlay and keyboard shortcuts to adjust the cor position in-game. Make sure to calibrate the tracker first, because the marker tracker just rests at vr play-space origin beforehand. For in-game changes to survive application restart, you have to manually save the configuration.
+- You can use the tracker marker of the graphical overlay and keyboard shortcuts (or the left motion controller, see further below) to adjust the cor position in-game. Make sure to calibrate the tracker first, because the marker tracker just rests at vr play-space origin beforehand. For in-game changes to survive application restart, you have to manually save the configuration.
 - If you're unable to locate the cor of your rig, try out the method described in the [according troubleshooting section](#virtual-tracker)
 - You may have to invert some of the rotations/translations on output side to get them compensated properly. **For new users it's strongly recommended to use some artificial telemetry (joystick input, sine wave generator, etc.) and testing one degree of freedom at at time**
 - If you're using YawVR Game Engine you can also use the parameters `Head Distance` and `Height` in its Motion Compensation tab to specify the offset of the cor. Head distance is basically equal to `offset_forward` in the configration file. But note that the height parameter is measured upwards from the bottom of your play-space, so you'll need to have that setup correctly in order to use that feature.
@@ -161,7 +165,16 @@ To enable OXRMC to correlate translation and rotation of the rig to the virtual 
 ### Saving and reloading the cor location
 Once you're satisfied with the current setting, the current position and orientation of the cor can be saved to the (global = `ctrl + shift + s` or app-specific = `ctrl + shift + a`) config file. You can subsequently set the config key `use_cor_pos` to `1`. This causes the cor position to be loaded from the config file when calibrating instead of being determined using the hmd position and the offset values.  
 Applications using OpenComposite usually operate in a different VR play-space than titles supporting native OpenXR. That's why cor position needs to be saved once for all native games and once for all games using OpenComposite.  
-**Note that this functionality may not work with all HMD vendors. Initially setting up the play-space in the VR runtime of your hmd might help to get this working correctly. Rumor has it that some HMDs need to be started/initialized at the exact same location for the play-space coordinates to be consistent in between uses.**
+**Note that this functionality may not work with all HMD vendors. Setting up the play-space in the VR runtime of your hmd (before first use) might help to get this working correctly. Rumor has it that some HMDs need to be started/initialized at the exact same location for the play-space coordinates to be consistent in between uses.**
+
+### Adjusting cor location using a motion controller
+You can use (only) the left motion controller to move the cor position in virtual space. The virtual tracker has to be calibrated and motion compensation needs to be deactivated. Make sure to activate the graphical overlay (`ctrl + d` by default) to see the cor marker in game. 
+- press and hold the trigger button to 'grab' and move the cor marker, this way you can make it reach positions that are obstructed in the real world.
+- while pressing the trigger:
+  - moving the controller left/right, up/down, or forward/backward is pushing the cor marker in the same direction
+  - rotating the controller on the yaw axis is adjusting the cor marker accordingly. Rotation of the motion controller on pitch or roll axis are ignored.
+- press the menu button (or button 'a' on a valve index controller) to have the cor location snap to the current controller position. While this button is pressed, you cannot move the cor using the trigger.
+- in order for the adjusted position to persist for upcoming sessions, save the configuration.
 
 ## Running your application
 1. make sure your using OpenXR as runtime in the application you wish to use motion compensation in
@@ -192,7 +205,7 @@ You can enable/disable the overlay using the `toggle_overlay` shortcut. It displ
   - magenta instead of red
  
 ### Connection Loss
-OXRMC can detect if a reference tracker isn't available anymore, if: 
+OXRMC can detect wether a reference tracker isn't available anymore if: 
 - for a physical tracker: the runtime lost tracking of a motion controller / vive tracker 
 - for a virtual tracker: the memory mapped file providing data for a virtual tracker is removed by windows due to inactivity of the sender  
 

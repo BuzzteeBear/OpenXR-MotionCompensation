@@ -285,7 +285,7 @@ namespace graphics
         }
     }
 
-    void Overlay::DestroySwapchain(const XrSwapchain swapchain)
+    void Overlay::DestroySwapchain(XrSwapchain swapchain)
     {
         m_OwnDepthBuffers.erase(swapchain);
         m_Swapchains.erase(swapchain);

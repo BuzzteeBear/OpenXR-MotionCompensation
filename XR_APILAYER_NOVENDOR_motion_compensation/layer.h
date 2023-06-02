@@ -92,7 +92,10 @@ namespace motion_compensation_layer
         void RequestCurrentInteractionProfile();
 
         XrActionSet m_ActionSet{XR_NULL_HANDLE};
-        XrAction m_TrackerPoseAction{XR_NULL_HANDLE};
+        XrAction m_PoseAction{XR_NULL_HANDLE};
+        XrAction m_MoveAction{XR_NULL_HANDLE};
+        XrAction m_PositionAction{XR_NULL_HANDLE};
+        XrAction m_HapticAction{XR_NULL_HANDLE};
         XrSpace m_TrackerSpace{XR_NULL_HANDLE};
         XrSpace m_ViewSpace{XR_NULL_HANDLE};
         XrSpace m_ReferenceSpace{XR_NULL_HANDLE};
@@ -129,15 +132,16 @@ namespace motion_compensation_layer
         XrViewConfigurationType m_ViewConfigType{XR_VIEW_CONFIGURATION_TYPE_MAX_ENUM};
         Tracker::TrackerBase* m_Tracker{nullptr};
         Tracker::ViveTrackerInfo m_ViveTracker;
+        Input::ButtonPath m_ButtonPath;
         utility::Cache<XrPosef> m_PoseCache{xr::math::Pose::Identity()};
         utility::Cache<std::vector<XrPosef>> m_EyeCache{std::vector<XrPosef>{xr::math::Pose::Identity(),
                                                                              xr::math::Pose::Identity(),
                                                                              xr::math::Pose::Identity(),
                                                                              xr::math::Pose::Identity()}};
         std::mutex m_FrameLock;
-        std::unique_ptr<graphics::Overlay> m_Overlay;
-        std::shared_ptr<Input::InputHandler> m_Input;
-        std::unique_ptr<utility::AutoActivator> m_AutoActivator;
+        std::unique_ptr<graphics::Overlay> m_Overlay{};
+        std::shared_ptr<Input::InputHandler> m_Input{};
+        std::unique_ptr<utility::AutoActivator> m_AutoActivator{};
 
         // connection recovery
         XrTime m_RecoveryWait{3000000000}; // 3 sec default timeout

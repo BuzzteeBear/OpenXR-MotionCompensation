@@ -692,9 +692,17 @@ namespace LAYER_NAMESPACE
 		{
 			throw new std::runtime_error("Failed to resolve xrSuggestInteractionProfileBindings");
 		}
+		if (XR_FAILED(m_xrGetInstanceProcAddr(m_instance, "xrGetActionStateBoolean", reinterpret_cast<PFN_xrVoidFunction*>(&m_xrGetActionStateBoolean))))
+		{
+			throw new std::runtime_error("Failed to resolve xrGetActionStateBoolean");
+		}
 		if (XR_FAILED(m_xrGetInstanceProcAddr(m_instance, "xrGetActionStatePose", reinterpret_cast<PFN_xrVoidFunction*>(&m_xrGetActionStatePose))))
 		{
 			throw new std::runtime_error("Failed to resolve xrGetActionStatePose");
+		}
+		if (XR_FAILED(m_xrGetInstanceProcAddr(m_instance, "xrApplyHapticFeedback", reinterpret_cast<PFN_xrVoidFunction*>(&m_xrApplyHapticFeedback))))
+		{
+			throw new std::runtime_error("Failed to resolve xrApplyHapticFeedback");
 		}
 		m_applicationName = createInfo->applicationInfo.applicationName;
 		return XR_SUCCESS;
