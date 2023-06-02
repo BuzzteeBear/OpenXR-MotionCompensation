@@ -4,7 +4,10 @@ Version 0.2.7
 	
 	Virtual tracker
 	- enabled use of a motion controller to manipulate cor position
-	- enabled cor position for games using OpenComposite to be saved and loaded separately
+	- enabled cor position for games using OpenComposite to be saved and loaded separately:
+	  to continue to use cor position after update for games using OpenComposite reset is required (either in game or copy/paste in config file(s))
+	- inverted pitch axis for SRS/Witmotion sensor to match OVRMC:
+	  Use inversion switch in motion compensation menu of SRS to match new behavior
 	- added rotational offset (yaw) for cor positioning
 	- added upside_down = 1 on config file creation for iRacing
 

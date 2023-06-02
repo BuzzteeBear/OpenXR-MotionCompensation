@@ -778,10 +778,10 @@ namespace Tracker
         }
 
         StoreXrQuaternion(&rigPose.orientation,
-                          DirectX::XMQuaternionRotationRollPitchYaw(static_cast<float>(data.pitch) * -angleToRadian,
-                                                                    static_cast<float>(data.yaw) * angleToRadian,
-                                                                    static_cast<float>(data.roll) *
-                                                                        (m_IsSrs ? -angleToRadian : angleToRadian)));
+                          DirectX::XMQuaternionRotationRollPitchYaw(
+                              static_cast<float>(data.pitch) * (m_IsSrs ? angleToRadian : -angleToRadian),
+                              static_cast<float>(data.yaw) * angleToRadian,
+                              static_cast<float>(data.roll) * (m_IsSrs ? -angleToRadian : angleToRadian)));
         rigPose.position = XrVector3f{static_cast<float>(data.sway) / -1000.0f,
                                       static_cast<float>(data.heave) / 1000.0f,
                                       static_cast<float>(data.surge) / 1000.0f};
@@ -810,7 +810,7 @@ namespace Tracker
 
         if ((movePressed || positionPressed) && !m_Tracker->m_Calibrated)
         {
-            ErrorLog("%s: unable to modify cor position before tracker calibration is executed", __FUNCTION__);
+            ErrorLog("%s: unable to modify cor position before tracker calibration is executed\n", __FUNCTION__);
             GetAudioOut()->Execute(Event::Error);
             return;
         }
