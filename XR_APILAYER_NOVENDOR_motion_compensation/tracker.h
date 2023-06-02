@@ -22,6 +22,7 @@ namespace Tracker
         virtual bool GetControllerPose(XrPosef& trackerPose, XrSession session, XrTime time);
         static XrVector3f GetForwardVector(const XrQuaternionf& quaternion, bool inverted = false);
         static XrQuaternionf GetYawRotation(const XrVector3f& forward, float yawAdjustment);
+        static float GetYawAngle(const XrVector3f& forward);
 
         XrPosef m_ReferencePose{xr::math::Pose::Identity()};
         XrPosef m_LastPoseDelta{xr::math::Pose::Identity()};
@@ -83,6 +84,7 @@ namespace Tracker
         bool ChangeOffset(XrVector3f modification);
         bool ChangeRotation(float radian);
         void SaveReferencePose(XrTime time) const;
+        void LogOffsetValues() const;
         void ApplyCorManipulation(XrSession session, XrTime time) override;
 
       protected:
@@ -165,7 +167,7 @@ namespace Tracker
     class CorManipulator : public ControllerBase
     {
       public:
-        explicit CorManipulator(TrackerBase* tracker) : m_Tracker(tracker){};
+        explicit CorManipulator(VirtualTracker* tracker) : m_Tracker(tracker){};
         void ApplyManipulation(XrSession session, XrTime time);
 
       protected:
@@ -177,7 +179,7 @@ namespace Tracker
         void ApplyRotation() const;
         void ApplyTranslation() const;
 
-        TrackerBase* m_Tracker{nullptr};
+        VirtualTracker* m_Tracker{nullptr};
         bool m_Initialized{true};
         bool m_MoveActive{false};
         bool m_PositionActive{false};
@@ -192,7 +194,8 @@ namespace Tracker
         const std::string profile{"/interaction_profiles/htc/vive_tracker_htcx"};
     };
 
-    constexpr float angleToRadian{static_cast<float>(M_PI) / 180.0f};
+    constexpr float floatPi{static_cast<float>(M_PI)};
+    constexpr float angleToRadian{floatPi / 180.0f};
 
     void GetTracker(TrackerBase** tracker);
 } // namespace Tracker

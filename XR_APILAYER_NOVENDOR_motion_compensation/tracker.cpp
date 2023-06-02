@@ -174,12 +174,16 @@ namespace Tracker
 
     XrQuaternionf ControllerBase::GetYawRotation(const XrVector3f& forward, float yawAdjustment)
     {
-        const float yawAngle = atan2f(forward.x, forward.z);
         XrQuaternionf rotation{};
-        StoreXrQuaternion(&rotation, DirectX::XMQuaternionRotationRollPitchYaw(0.0f, yawAngle + yawAdjustment, 0.0f));
+        StoreXrQuaternion(&rotation,
+                          DirectX::XMQuaternionRotationRollPitchYaw(0.0f, GetYawAngle(forward) + yawAdjustment, 0.0f));
         return rotation;
     }
 
+    float ControllerBase::GetYawAngle(const XrVector3f& forward)
+    {
+        return atan2f(forward.x, forward.z);
+    }
 
     TrackerBase::~TrackerBase()
     {
@@ -356,7 +360,6 @@ namespace Tracker
         if (GetConfig()->GetFloat(Cfg::TrackerOffsetForward, value))
         {
             m_OffsetForward = value / 100.0f;
-            Log("offset forward = %f cm\n", value);
         }
         else
         {
@@ -365,7 +368,6 @@ namespace Tracker
         if (GetConfig()->GetFloat(Cfg::TrackerOffsetDown, value))
         {
             m_OffsetDown = value / 100.0f;
-            Log("offset down = %f cm\n", value);
         }
         else
         {
@@ -374,7 +376,6 @@ namespace Tracker
         if (GetConfig()->GetFloat(Cfg::TrackerOffsetRight, value))
         {
             m_OffsetRight = value / 100.0f;
-            Log("offset right = %f cm\n", value);
         }
         else
         {
@@ -382,13 +383,13 @@ namespace Tracker
         }
         if (GetConfig()->GetFloat(Cfg::TrackerOffsetYaw, value))
         {
-            m_OffsetYaw = value * angleToRadian;
-            Log("offset yaw = %f °\n", value);
+            m_OffsetYaw = fmod(value * angleToRadian + floatPi, 2.0f * floatPi) - floatPi;
         }
         else
         {
             success = false;
         }
+        LogOffsetValues();
 
         if (GetConfig()->GetBool(Cfg::UseCorPos, m_LoadPoseFromFile))
         {
@@ -478,24 +479,31 @@ namespace Tracker
 
     bool VirtualTracker::ChangeOffset(XrVector3f modification)
     {
+        TraceLoggingWrite(g_traceProvider,
+                          "ChangeOffset",
+                          TLArg(modification.z, "Fwd Modification"),
+                          TLArg(-modification.y, "Down Modification"),
+                          TLArg(-modification.x, "Right Modification"));
         const XrVector3f relativeToHmd{cosf(m_OffsetYaw) * modification.x + sinf(m_OffsetYaw) * modification.z,
                                        modification.y,
                                        cosf(m_OffsetYaw) * modification.z - sinf(m_OffsetYaw) * modification.x};
-
+        TraceLoggingWrite(g_traceProvider,
+                          "ChangeOffset",
+                          TLArg(m_OffsetYaw, "Yaw Radian"),
+                          TLArg(relativeToHmd.z, "Fwd Relative"),
+                          TLArg(-relativeToHmd.x, "Right Relative"));
         m_OffsetForward += relativeToHmd.z;
-        GetConfig()->SetValue(Cfg::TrackerOffsetForward, m_OffsetForward * 100.0f);
-
         m_OffsetDown -= relativeToHmd.y;
-        GetConfig()->SetValue(Cfg::TrackerOffsetDown, m_OffsetDown * 100.0f);
-
         m_OffsetRight -= relativeToHmd.x;
+        GetConfig()->SetValue(Cfg::TrackerOffsetForward, m_OffsetForward * 100.0f);
+        GetConfig()->SetValue(Cfg::TrackerOffsetDown, m_OffsetDown * 100.0f);
         GetConfig()->SetValue(Cfg::TrackerOffsetRight, m_OffsetRight * 100.0f);
 
-        
-        Log("offset modified, new values: forward: %f, down: %f, right: %f\n",
-            m_OffsetForward,
-            m_OffsetDown,
-            m_OffsetRight);
+        TraceLoggingWrite(g_traceProvider,
+                          "ChangeOffset",
+                          TLArg(m_OffsetForward, "OffsetForward"),
+                          TLArg(m_OffsetDown, "OffsetDown"),
+                          TLArg(m_OffsetRight, "OffsetForward"));
 
         if (m_UpsideDown)
         {
@@ -513,14 +521,21 @@ namespace Tracker
 
     bool VirtualTracker::ChangeRotation(float radian)
     {
-       XrPosef adjustment{Pose::Identity()};
+        TraceLoggingWrite(g_traceProvider, "ChangeOffset", TLArg(m_OffsetYaw, "Old Angle"), TLArg(radian, "Radian"));
+        XrPosef adjustment{Pose::Identity()};
         const float direction = radian * (m_UpsideDown ? -1.0f : 1.0f);
         m_OffsetYaw += direction;
+        // restrict to +- pi
+        m_OffsetYaw = fmod(m_OffsetYaw + floatPi, 2.0f * floatPi) - floatPi;
         const float yawAngle = m_OffsetYaw / angleToRadian;
         GetConfig()->SetValue(Cfg::TrackerOffsetYaw, yawAngle);
         StoreXrQuaternion(&adjustment.orientation,
                           DirectX::XMQuaternionRotationRollPitchYaw(0.0f, direction , 0.0f));
-        Log("cor orientation rotated right by %0.3f to %0.3f °\n", radian / angleToRadian, yawAngle);
+        TraceLoggingWrite(g_traceProvider,
+                          "ChangeOffset",
+                          TLArg(m_OffsetYaw, "New Angle"),
+                          TLArg(direction, "Direction"),
+                          TLArg(yawAngle, "Angle"));
         SetReferencePose(Pose::Multiply(adjustment, m_ReferencePose));
         return true;
     }
@@ -604,6 +619,11 @@ namespace Tracker
             SetReferencePose(refPose);    
         }
         return success;
+    }
+
+    void VirtualTracker::LogOffsetValues() const
+    {
+        Log("offset values: forward = %.3f m, down = %.3f m, right = %.3f m, yaw = %.3f deg,   \n", m_OffsetForward, m_OffsetDown, m_OffsetRight, m_OffsetYaw / angleToRadian);
     }
 
     void VirtualTracker::ApplyCorManipulation(XrSession session, XrTime time)
@@ -769,75 +789,6 @@ namespace Tracker
         trackerPose = Pose::Multiply(rigPose, m_ReferencePose);
         return true;
     }
-
-    void GetTracker(TrackerBase** tracker)
-    {
-        const TrackerBase* previousTracker = *tracker;
-        std::string trackerType;
-        if (GetConfig()->GetString(Cfg::TrackerType, trackerType))
-        {
-            if ("yaw" == trackerType)
-            {
-                Log("using Yaw Game Engine memory mapped file as tracker\n");
-
-                delete previousTracker;
-
-                *tracker = new YawTracker();
-                return;
-            }
-            if ("srs" == trackerType)
-            {
-                Log("using SRS memory mapped file as tracker\n");
-
-                delete previousTracker;
-
-                *tracker = new SrsTracker();
-                return;
-            }
-            if ("flypt" == trackerType)
-            {
-                Log("using FlyPT Mover memory mapped file as tracker\n");
-
-                delete previousTracker;
-
-                *tracker = new FlyPtTracker();
-                return;
-            }
-            if ("controller" == trackerType)
-            {
-                Log("using motion controller as tracker\n");
-
-                delete previousTracker;
-
-                *tracker = new OpenXrTracker();
-                return;
-            }
-            if ("vive" == trackerType)
-            {
-                Log("using vive tracker as tracker\n");
-
-                delete previousTracker;
-
-                *tracker = new OpenXrTracker();
-                return;
-            }
-            else
-            {
-                ErrorLog("unknown tracker type: %s\n", trackerType.c_str());
-            }
-        }
-        else
-        {
-            ErrorLog("unable to determine tracker type\n");
-        }
-        if (previousTracker)
-        {
-            ErrorLog("retaining previous tracker type\n");
-            return;
-        }
-        ErrorLog("defaulting to 'controller'\n");
-        *tracker = new OpenXrTracker();
-    }
     
     void CorManipulator::ApplyManipulation(XrSession session, XrTime time)
     {
@@ -854,14 +805,19 @@ namespace Tracker
             return;
         }
         
-        bool movePressed{false};
-        bool positionPressed{false};
+        bool movePressed{false}, positionPressed{false};
         GetButtonState(session, movePressed, positionPressed);
+
+        if ((movePressed || positionPressed) && !m_Tracker->m_Calibrated)
+        {
+            ErrorLog("%s: unable to modify cor position before tracker calibration is executed", __FUNCTION__);
+            GetAudioOut()->Execute(Event::Error);
+            return;
+        }
 
         // apply vibration to acknowledge button state change
         if ((positionPressed && !m_PositionActive) ||  movePressed != m_MoveActive)
         {
-            
             XrHapticVibration vibration{XR_TYPE_HAPTIC_VIBRATION};
             vibration.amplitude = 0.75;
             vibration.duration = XR_MIN_HAPTIC_DURATION;
@@ -880,10 +836,20 @@ namespace Tracker
                 ErrorLog("%s: xrApplyHapticFeedback failed: %d\n", __FUNCTION__, result);
             }
         }
-        // reset reference pose on move activation
-        if (!positionPressed && movePressed && !m_MoveActive)
+
+        
+        if (!positionPressed) 
         {
-            ResetReferencePose(session, time);
+            // reset reference pose on move activation
+            if (movePressed && !m_MoveActive)
+            {
+                ResetReferencePose(session, time);
+            }
+            // log new offset values on move deactivation
+            if (!movePressed && m_MoveActive)
+            {
+                m_Tracker->LogOffsetValues();
+            }
         }
         // apply actual manipulation
         if (movePressed || positionPressed)
@@ -895,6 +861,7 @@ namespace Tracker
                     if (!m_PositionActive)
                     {
                         ApplyPosition();
+                        m_Tracker->LogOffsetValues();
                     }
                 }
                 else
@@ -979,44 +946,60 @@ namespace Tracker
 
     void CorManipulator::ApplyPosition() const
     {
-        XrPosef corPose = m_Tracker->GetReferencePose();
+        const XrPosef corPose = m_Tracker->GetReferencePose();
         TraceLoggingWrite(g_traceProvider,
                           "ApplyPosition",
                           TLArg(xr::ToString(corPose).c_str(), "Before"),
-                          TLArg(xr::ToString(this->m_LastPose).c_str(), "Tracker Pose"));
-        corPose.position = m_LastPose.position;
-        corPose.orientation = GetYawRotation(GetForwardVector(m_LastPose.orientation, false), 0.0f);
-        TraceLoggingWrite(g_traceProvider, "ApplyPosition", TLArg(xr::ToString(corPose).c_str(), "After"));
-        m_Tracker->SetReferencePose(corPose);
+                          TLArg(xr::ToString(this->m_LastPose).c_str(), "Tracker"));
+
+        const auto [relativeOrientation, relativePosition] = Pose::Multiply(m_LastPose, Pose::Invert(corPose));
+        m_Tracker->ChangeOffset(relativePosition);
+        const float angleDelta = GetYawAngle(GetForwardVector(m_LastPose.orientation, false)) -
+                           GetYawAngle(GetForwardVector(corPose.orientation, true));
+        m_Tracker->ChangeRotation(angleDelta);
+
+        TraceLoggingWrite(g_traceProvider,
+                          "ApplyPosition",
+                          TLArg(xr::ToString(this->m_Tracker->GetReferencePose()).c_str(), "After"));
     }
 
     void CorManipulator::ApplyTranslation() const
     {
-        XrPosef corPose = m_Tracker->GetReferencePose();
+        const XrPosef corPose = m_Tracker->GetReferencePose();
         TraceLoggingWrite(g_traceProvider,
                           "ApplyTranslation",
                           TLArg(xr::ToString(corPose).c_str(), "Before"),
                           TLArg(xr::ToString(this->m_ReferencePose).c_str(), "Reference"),
                           TLArg(xr::ToString(this->m_LastPose).c_str(), "Tracker"));
-        const DirectX::XMVECTOR cor = LoadXrVector3(corPose.position);
+
+        const DirectX::XMVECTOR rot = LoadXrQuaternion(corPose.orientation);
         const DirectX::XMVECTOR ref = LoadXrVector3(m_ReferencePose.position);
-        const DirectX::XMVECTOR tracker = LoadXrVector3(m_LastPose.position);
-        StoreXrVector3(&corPose.position,
-                       DirectX::XMVectorAdd(cor, DirectX::XMVectorAdd(tracker, DirectX::XMVectorNegate(ref))));
-        TraceLoggingWrite(g_traceProvider, "ApplyTranslation", TLArg(xr::ToString(corPose).c_str(), "After"));
-        m_Tracker->SetReferencePose(corPose);
+        const DirectX::XMVECTOR current = LoadXrVector3(m_LastPose.position);
+        XrVector3f relativeTranslation;
+        StoreXrVector3(
+            &relativeTranslation,
+            DirectX::XMVector3InverseRotate(DirectX::XMVectorAdd(current, DirectX::XMVectorNegate(ref)), rot));
+        m_Tracker->ChangeOffset(relativeTranslation);
+
+        TraceLoggingWrite(g_traceProvider,
+                          "ApplyTranslation",
+                          TLArg(xr::ToString(m_Tracker->GetReferencePose()).c_str(), "After"));
     }
 
     void CorManipulator::ApplyRotation() const
     {
-        XrPosef corPose = m_Tracker->GetReferencePose();
-        TraceLoggingWrite(g_traceProvider, "ApplyRotation", TLArg(xr::ToString(corPose).c_str(), "Before"),
+        TraceLoggingWrite(g_traceProvider,
+                          "ApplyRotation",
+                          TLArg(xr::ToString(m_Tracker->GetReferencePose()).c_str(), "Before"),
                           TLArg(xr::ToString(this->m_LastPoseDelta).c_str(), "Delta"));
-        const DirectX::XMVECTOR orientation = LoadXrQuaternion(corPose.orientation);
-        const DirectX::XMVECTOR yawRotation = LoadXrQuaternion(GetYawRotation(GetForwardVector(Pose::Invert(m_LastPoseDelta).orientation, true), 0.0f));
-        StoreXrQuaternion(&corPose.orientation, DirectX::XMQuaternionMultiply(orientation, yawRotation));
-        TraceLoggingWrite(g_traceProvider, "ApplyRotation", TLArg(xr::ToString(corPose).c_str(), "After"));
-        m_Tracker->SetReferencePose(corPose);
+
+        const float yawAngle = - GetYawAngle(GetForwardVector(m_LastPoseDelta.orientation, true));
+        m_Tracker->ChangeRotation(yawAngle);
+       
+        TraceLoggingWrite(g_traceProvider,
+                          "ApplyRotation",
+                          TLArg(xr::ToString(m_Tracker->GetReferencePose()).c_str(), "After"),
+                          TLArg(yawAngle, "Angle Delta"));
     }
 
     bool ViveTrackerInfo::Init()
@@ -1045,5 +1028,74 @@ namespace Tracker
             active = true;
         }
         return true;
+    }
+
+    void GetTracker(TrackerBase** tracker)
+    {
+        const TrackerBase* previousTracker = *tracker;
+        std::string trackerType;
+        if (GetConfig()->GetString(Cfg::TrackerType, trackerType))
+        {
+            if ("yaw" == trackerType)
+            {
+                Log("using Yaw Game Engine memory mapped file as tracker\n");
+
+                delete previousTracker;
+
+                *tracker = new YawTracker();
+                return;
+            }
+            if ("srs" == trackerType)
+            {
+                Log("using SRS memory mapped file as tracker\n");
+
+                delete previousTracker;
+
+                *tracker = new SrsTracker();
+                return;
+            }
+            if ("flypt" == trackerType)
+            {
+                Log("using FlyPT Mover memory mapped file as tracker\n");
+
+                delete previousTracker;
+
+                *tracker = new FlyPtTracker();
+                return;
+            }
+            if ("controller" == trackerType)
+            {
+                Log("using motion controller as tracker\n");
+
+                delete previousTracker;
+
+                *tracker = new OpenXrTracker();
+                return;
+            }
+            if ("vive" == trackerType)
+            {
+                Log("using vive tracker as tracker\n");
+
+                delete previousTracker;
+
+                *tracker = new OpenXrTracker();
+                return;
+            }
+            else
+            {
+                ErrorLog("unknown tracker type: %s\n", trackerType.c_str());
+            }
+        }
+        else
+        {
+            ErrorLog("unable to determine tracker type\n");
+        }
+        if (previousTracker)
+        {
+            ErrorLog("retaining previous tracker type\n");
+            return;
+        }
+        ErrorLog("defaulting to 'controller'\n");
+        *tracker = new OpenXrTracker();
     }
 } // namespace Tracker

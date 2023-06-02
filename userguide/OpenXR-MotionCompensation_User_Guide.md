@@ -12,7 +12,7 @@ When using a motion rig in combination with a VR headset (hmd) he movement of th
 Motion compensation reduces or ideally removes that effect by locking the in-game world to the pose of the motion rig.
 This software aims to provide an API layer for motion compensation to be used with applications and hmds supporting the OpenXR standard.  
 To be able to do that, the software needs to be informed on the motion rig movement / position. This can be achieved using a tracker, which is either a physical object attached to the motion rig and tracked by the VR runtime (e.g. a motion controller or a vive puck) or a virtual tracker using data from the motion software driving the motion rig. 
- 
+
 
 Limitations:
 
@@ -168,14 +168,14 @@ Applications using OpenComposite usually operate in a different VR play-space th
 **Note that this functionality may not work with all HMD vendors. Setting up the play-space in the VR runtime of your hmd (before first use) might help to get this working correctly. Rumor has it that some HMDs need to be started/initialized at the exact same location for the play-space coordinates to be consistent in between uses.**
 
 ### Adjusting cor location using a motion controller
-You can use (only) the left motion controller to move the cor position in virtual space. Make sure to activate the graphical overlay (`ctrl + d` by default) to see the cor marker in game. 
-- Press and hold the trigger button to 'grab' and move the cor marker, this way you can make it reach positions that are obstructed in the real world.
-- While pressing the trigger:
+You can use (only) the left motion controller to move the cor position in virtual space. The virtual tracker has to be calibrated and motion compensation needs to be deactivated. Make sure to activate the graphical overlay (`ctrl + d` by default) to see the cor marker in game. 
+- press and hold the trigger button to 'grab' and move the cor marker, this way you can make it reach positions that are obstructed in the real world.
+- while pressing the trigger:
   - moving the controller left/right, up/down, or forward/backward is pushing the cor marker in the same direction
   - rotating the controller on the yaw axis is adjusting the cor marker accordingly. Rotation of the motion controller on pitch or roll axis are ignored.
-- Press the menu button (or button 'a' on a valve index controller) to have the cor location snap to the current controller position 
+- press the menu button (or button 'a' on a valve index controller) to have the cor location snap to the current controller position. While this button is pressed, you cannot move the cor using the trigger.
+- in order for the adjusted position to persist for upcoming sessions, save the configuration.
 
-In contrast to using the keyboard shortcuts, modification with the motion controller will not affect the offset values. To reuse the adjusted position, you need to save and use `use_cor_pos = 1` as described above.
 ## Running your application
 1. make sure your using OpenXR as runtime in the application you wish to use motion compensation in
 2. start application
@@ -205,7 +205,7 @@ You can enable/disable the overlay using the `toggle_overlay` shortcut. It displ
   - magenta instead of red
  
 ### Connection Loss
-OXRMC can detect if a reference tracker isn't available anymore, if: 
+OXRMC can detect wether a reference tracker isn't available anymore if: 
 - for a physical tracker: the runtime lost tracking of a motion controller / vive tracker 
 - for a virtual tracker: the memory mapped file providing data for a virtual tracker is removed by windows due to inactivity of the sender  
 

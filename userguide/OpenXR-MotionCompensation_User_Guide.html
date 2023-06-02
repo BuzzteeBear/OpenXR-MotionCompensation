@@ -227,18 +227,18 @@ The key <code>vertical_factor</code> is applied to translational filter strength
 Applications using OpenComposite usually operate in a different VR play-space than titles supporting native OpenXR. That's why cor position needs to be saved once for all native games and once for all games using OpenComposite.<br />
 <strong>Note that this functionality may not work with all HMD vendors. Setting up the play-space in the VR runtime of your hmd (before first use) might help to get this working correctly. Rumor has it that some HMDs need to be started/initialized at the exact same location for the play-space coordinates to be consistent in between uses.</strong></p>
 <h3 id="adjusting-cor-location-using-a-motion-controller">Adjusting cor location using a motion controller</h3>
-<p>You can use (only) the left motion controller to move the cor position in virtual space. Make sure to activate the graphical overlay (<code>ctrl + d</code> by default) to see the cor marker in game.</p>
+<p>You can use (only) the left motion controller to move the cor position in virtual space. The virtual tracker has to be calibrated and motion compensation needs to be deactivated. Make sure to activate the graphical overlay (<code>ctrl + d</code> by default) to see the cor marker in game.</p>
 <ul>
-<li>Press and hold the trigger button to 'grab' and move the cor marker, this way you can make it reach positions that are obstructed in the real world.</li>
-<li>While pressing the trigger:
+<li>press and hold the trigger button to 'grab' and move the cor marker, this way you can make it reach positions that are obstructed in the real world.</li>
+<li>while pressing the trigger:
 <ul>
 <li>moving the controller left/right, up/down, or forward/backward is pushing the cor marker in the same direction</li>
 <li>rotating the controller on the yaw axis is adjusting the cor marker accordingly. Rotation of the motion controller on pitch or roll axis are ignored.</li>
 </ul>
 </li>
-<li>Press the menu button (or button 'a' on a valve index controller) to have the cor location snap to the current controller position</li>
+<li>press the menu button (or button 'a' on a valve index controller) to have the cor location snap to the current controller position. While this button is pressed, you cannot move the cor using the trigger.</li>
+<li>in order for the adjusted position to persist for upcoming sessions, save the configuration.</li>
 </ul>
-<p>In contrast to using the keyboard shortcuts, modification with the motion controller will not affect the offset values. To reuse the adjusted position, you need to save and use <code>use_cor_pos = 1</code> as described above.</p>
 <h2 id="running-your-application">Running your application</h2>
 <ol>
 <li>make sure your using OpenXR as runtime in the application you wish to use motion compensation in</li>
@@ -281,7 +281,7 @@ Applications using OpenComposite usually operate in a different VR play-space th
 </li>
 </ul>
 <h3 id="connection-loss">Connection Loss</h3>
-<p>OXRMC can detect if a reference tracker isn't available anymore, if:</p>
+<p>OXRMC can detect wether a reference tracker isn't available anymore if:</p>
 <ul>
 <li>for a physical tracker: the runtime lost tracking of a motion controller / vive tracker</li>
 <li>for a virtual tracker: the memory mapped file providing data for a virtual tracker is removed by windows due to inactivity of the sender</li>
