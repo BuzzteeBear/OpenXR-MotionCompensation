@@ -109,7 +109,7 @@ namespace motion_compensation_layer
         bool CreateTrackerActions(const std::string& caller);
         void DestroyTrackerActions(const std::string& caller);
         bool AttachActionSet(const std::string& caller);
-        void SuggestInteractionProfiles();
+        void SuggestInteractionProfiles(const std::string& caller);
         bool LazyInit(XrTime time);
 
         static std::string getXrPath(XrPath path);
@@ -126,6 +126,7 @@ namespace motion_compensation_layer
         bool m_ActionSpaceCreated{false};
         bool m_ActionSetAttached{false};
         bool m_InteractionProfileSuggested{false};
+        bool m_SimpleProfileSuggested{false};
         bool m_Initialized{true};
         bool m_Activated{false};
         bool m_UseEyeCache{false};

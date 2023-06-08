@@ -528,6 +528,14 @@ namespace motion_compensation_layer
             CreateTrackerActions("xrSuggestInteractionProfileBindings");
         }
 
+        if (!m_ViveTracker.active && !m_SimpleProfileSuggested &&
+            profile != "/interaction_profiles/khr/simple_controller")
+        {
+            // suggest simple profile bindings as fallback
+            SuggestInteractionProfiles("xrSuggestInteractionProfileBindings");
+        }
+
+
         XrInteractionProfileSuggestedBinding bindingProfiles = *suggestedBindings;
         std::vector<XrActionSuggestedBinding> bindings{};
 
@@ -675,7 +683,7 @@ namespace motion_compensation_layer
                               TLPArg(attachInfo->actionSets[i], "ActionSet"));
         }
 
-        SuggestInteractionProfiles();
+        SuggestInteractionProfiles("xrSuggestInteractionProfileBindings");
 
         XrSessionActionSetsAttachInfo chainAttachInfo = *attachInfo;
         std::vector<XrActionSet> newActionSets;
@@ -1476,8 +1484,11 @@ namespace motion_compensation_layer
         return success;
     }
 
-    void OpenXrLayer::SuggestInteractionProfiles()
+    void OpenXrLayer::SuggestInteractionProfiles(const std::string& caller)
     {
+        DebugLog("SuggestInteractionProfiles %s\n", caller.c_str());
+        TraceLoggingWrite(g_traceProvider, "SuggestInteractionProfiles", TLPArg(caller.c_str(), "Called by"));
+
         CreateTrackerActions("SuggestInteractionProfiles");
 
         if (!m_InteractionProfileSuggested)
@@ -1575,9 +1586,11 @@ namespace motion_compensation_layer
                     else
                     {
                         m_InteractionProfileSuggested = true;
-                        Log("suggested %s before action set attachment\n", profile.c_str());
+                        m_SimpleProfileSuggested = true;
+                        Log("suggested %s as fallback\n", profile.c_str());
                         TraceLoggingWrite(g_traceProvider,
                                           "xrAttachSessionActionSets",
+                                          TLArg(caller.c_str(), "Called by"),
                                           TLArg(profile.c_str(), "Profile"),
                                           TLPArg(poseBinding.action, "Action"),
                                           TLArg(posePath.c_str(), "PosePath"),
