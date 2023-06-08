@@ -106,8 +106,10 @@ namespace motion_compensation_layer
         bool isSessionHandled(XrSession session) const;
         bool isViewSpace(XrSpace space) const;
         [[nodiscard]] uint32_t GetNumViews() const;
-        void CreateTrackerAction();
-        void CreateTrackerActionSpace();
+        bool CreateTrackerActions(const std::string& caller);
+        void DestroyTrackerActions(const std::string& caller);
+        bool AttachActionSet(const std::string& caller);
+        void SuggestInteractionProfiles();
         bool LazyInit(XrTime time);
 
         static std::string getXrPath(XrPath path);
@@ -120,6 +122,8 @@ namespace motion_compensation_layer
         bool m_Enabled{false};
         bool m_PhysicalEnabled{false};
         bool m_OverlayEnabled{false};
+        bool m_ActionsCreated{false};
+        bool m_ActionSpaceCreated{false};
         bool m_ActionSetAttached{false};
         bool m_InteractionProfileSuggested{false};
         bool m_Initialized{true};

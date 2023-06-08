@@ -393,16 +393,16 @@ namespace Input
         GetConfig()->WriteConfig(forApp);
     }
 
-    std::string ButtonPath::GetSubPath(const std::string& profile, bool first)
+    std::string ButtonPath::GetSubPath(const std::string& profile, int index)
     {
         std::string path;
-        if (const auto buttons = m_Mapping.find(profile); buttons != m_Mapping.end())
+        if (const auto buttons = m_Mapping.find(profile); buttons != m_Mapping.end() && buttons->second.size() > index)
         {
-            path = first ? buttons->second.first : buttons->second.second;
+            path = buttons->second.at(index);
         }
         else
         {
-            ErrorLog("%s: no button mapping found for profile: %s", __FUNCTION__, profile);
+            ErrorLog("%s: no button mapping (%d) found for profile: %s\n", __FUNCTION__, index, profile.c_str());
         }
         return path;
     }

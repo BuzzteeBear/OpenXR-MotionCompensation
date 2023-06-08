@@ -808,13 +808,6 @@ namespace Tracker
         bool movePressed{false}, positionPressed{false};
         GetButtonState(session, movePressed, positionPressed);
 
-        if ((movePressed || positionPressed) && !m_Tracker->m_Calibrated)
-        {
-            ErrorLog("%s: unable to modify cor position before tracker calibration is executed\n", __FUNCTION__);
-            GetAudioOut()->Execute(Event::Error);
-            return;
-        }
-
         // apply vibration to acknowledge button state change
         if ((positionPressed && !m_PositionActive) ||  movePressed != m_MoveActive)
         {
