@@ -54,6 +54,8 @@ namespace LAYER_NAMESPACE {
             return XR_ERROR_INITIALIZATION_FAILED;
         }
 
+       
+
         // Dump the other layers.
         {
             auto info = apiLayerInfo->nextInfo;
@@ -67,8 +69,19 @@ namespace LAYER_NAMESPACE {
         std::vector<std::string> blockedExtensions;
         std::vector<std::string> implicitExtensions;
 
-        // request extension for usage of vive trackers
-        implicitExtensions.push_back(XR_HTCX_VIVE_TRACKER_INTERACTION_EXTENSION_NAME);
+        // request extension for usage of vive tracker
+        std::string type;
+        GetConfig()->Init("");
+        if (GetConfig()->GetString(Cfg::TrackerType, type) && "vive" == type)
+        {
+            implicitExtensions.push_back(XR_HTCX_VIVE_TRACKER_INTERACTION_EXTENSION_NAME);
+        }
+        else
+        {
+            Log("extension %s not requested for tracker type: %s\n",
+                XR_HTCX_VIVE_TRACKER_INTERACTION_EXTENSION_NAME,
+                type.c_str());
+        }
  
         // Only request implicit extensions that are supported.
         //

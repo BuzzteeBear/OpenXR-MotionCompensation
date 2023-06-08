@@ -22,7 +22,7 @@ bool ConfigManager::Init(const std::string& application)
     }
     m_UsesOpenComposite = application.rfind("OpenComposite", 0) == 0;
     m_ApplicationIni = motion_compensation_layer::localAppData.string() + "\\" + application + ".ini";
-    if ((_access(m_ApplicationIni.c_str(), 0)) == -1)
+    if (!application.empty() && _access(m_ApplicationIni.c_str(), 0) == -1)
     {
 
         if (!WritePrivateProfileString(enabledKey->second.first.c_str(),
