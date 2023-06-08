@@ -21,7 +21,7 @@ Version 0.2.7
 	- fixed vive tracker extension request causing issue on Varjo hmds, even when other tracker type is selected 
 	
 	Known issues
-	- Assetto Corsa Competizione may only work with vive tracker if it's deactivated on game launch (tested on Varjo Base)
+	- Assetto Corsa Competizione may only work with vive tracker if it is deactivated on game launch (tested on Varjo Base)
 	- Overlay not working properly when using Varjo-Foveated API layer (marker gets transparent in focus area)
 
 Version 0.2.6
