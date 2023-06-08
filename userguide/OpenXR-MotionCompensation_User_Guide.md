@@ -278,7 +278,7 @@ To capture a trace for the API layer:
 
 - start the OpenXR application
 - Open a command line prompt or powershell in administrator mode and in a folder where you have write permissions
-- Begin recording a trace with the command: `wpr -start path\to\Trace_OpenXR-MotionCompensation.wprp -filemode`
+- Begin recording a trace with the command: `wpr -start "C:\Program Files\OpenXR-MotionCompensation\Trace_OpenXR-MotionCompensation.wprp" -filemode`
 - Leave that command prompt open
 - Reproduce the crash/issue
 - Back to the command prompt, finish the recording with: `wpr -stop arbitrary_name_of_file.etl`
