@@ -4,12 +4,12 @@ Version 0.2.7
 	
 	Virtual tracker
 	- enabled use of a motion controller to manipulate cor position
-	- enabled cor position for games using OpenComposite to be saved and loaded separately:
-	  to continue to use cor position after update for games using OpenComposite reset is required (either in game or copy/paste in config file(s))
-	- inverted pitch axis for SRS/Witmotion sensor to match OVRMC:
-	  Use inversion switch in motion compensation menu of SRS to match new behavior
-	- added rotational offset (yaw) for cor positioning
-	- added upside_down = 1 on config file creation for iRacing
+	- OpenComposite: added separate set of cor position values to be saved and loaded:
+	  to continue to use saved cor position after update, reset for games using OC is required (either in game or copy/paste in config file(s))
+	- SRS/Witmotion sensor: inverted pitch axis to match OVRMC:
+	  Use inversion switch within motion compensation menu of SRS to match new behavior
+	- added rotational offset (yaw) for cor positioning (applied after positioning)
+	- added upside_down = 1 automatically on config file creation for iRacing
 
 	Installer
 	- fixed removal of prexisting oxrmc registry keys sharing path prefix
@@ -17,6 +17,12 @@ Version 0.2.7
 	Bugfixes
 	- fixed ctd in DCS when loading mission with mc activated
 	- fixed ctd in MSFS at startup without hmd / active runtime present
+	- fixed default motion controller support in DCS
+	- fixed vive tracker extension request causing issue on Varjo hmds, even when other tracker type is selected 
+	
+	Known issues
+	- Assetto Corsa Competizione may only work with vive tracker if it's deactivated on game launch (tested on Varjo Base)
+	- Overlay not working properly when using Varjo-Foveated API layer (marker gets transparent in focus area)
 
 Version 0.2.6
 
