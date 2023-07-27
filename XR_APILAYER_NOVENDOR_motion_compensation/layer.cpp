@@ -118,6 +118,19 @@ namespace motion_compensation_layer
             {
                 Log("initialization of physical tracker disabled in config file\n");
             }
+            else
+            {
+                m_SubActionPath = "/user/hand/" + GetConfig()->GetControllerSide();
+                if (const XrResult pathResult =
+                        xrStringToPath(GetXrInstance(), m_SubActionPath.c_str(), &m_XrSubActionPath);
+                    XR_FAILED(result))
+                {
+                    ErrorLog("%s: unable to create XrPath for sub action path %s: %d\n",
+                             __FUNCTION__,
+                             m_SubActionPath.c_str(),
+                             pathResult);
+                }
+            }
 
             // initialize audio feedback
             GetAudioOut()->Init();
@@ -546,7 +559,7 @@ namespace motion_compensation_layer
 
         const bool isVirtual = GetConfig()->IsVirtualTracker();
         const std::string trackerPath(
-            (m_ViveTracker.active ? m_ViveTracker.role : "/user/hand/" + GetConfig()->GetControllerSide()) + "/");
+            (m_ViveTracker.active ? m_ViveTracker.role : m_SubActionPath) + "/");
         const std::string posePath(trackerPath + "input/grip/pose");
         const std::string movePath(isVirtual ? trackerPath + m_ButtonPath.GetSubPath(profile, 0) : "");
         const std::string positionPath(isVirtual ? trackerPath + m_ButtonPath.GetSubPath(profile, 1) : "");
@@ -1279,32 +1292,37 @@ namespace motion_compensation_layer
 
     void OpenXrLayer::RequestCurrentInteractionProfile()
     {
-        XrPath path;
-        const std::string topLevel(m_ViveTracker.active ? m_ViveTracker.role
-                                                        : "/user/hand/" + GetConfig()->GetControllerSide());
-        XrInteractionProfileState profileState{XR_TYPE_INTERACTION_PROFILE_STATE, nullptr, XR_NULL_PATH};
-        if (const XrResult result = xrStringToPath(GetXrInstance(), topLevel.c_str(), &path); XR_SUCCEEDED(result))
+        std::string topLevel = m_SubActionPath;
+        XrPath path = m_XrSubActionPath;
+        if (m_ViveTracker.active)
         {
-            if (const XrResult interactionResult = xrGetCurrentInteractionProfile(m_Session, path, &profileState);
-                XR_SUCCEEDED(interactionResult))
+            topLevel = m_ViveTracker.role;
+            if (const XrResult result = xrStringToPath(GetXrInstance(), topLevel.c_str(), &path);
+                XR_FAILED(result))
             {
-                Log("current interaction profile for %s: %s\n",
-                    topLevel.c_str(),
-                    XR_NULL_PATH != profileState.interactionProfile
-                        ? getXrPath(profileState.interactionProfile).c_str()
-                        : "XR_NULL_PATH");
-            }
-            else
-            {
-                ErrorLog("%s: unable get current interaction profile for %s: %d\n",
+                ErrorLog("%s: unable to create XrPath for vive tracker sub action path %s: %d\n",
                          __FUNCTION__,
-                         topLevel.c_str(),
-                         interactionResult);
+                         m_ViveTracker.role.c_str(),
+                         result);
+                return;
             }
+        }
+       
+        XrInteractionProfileState profileState{XR_TYPE_INTERACTION_PROFILE_STATE, nullptr, XR_NULL_PATH};
+        if (const XrResult interactionResult = xrGetCurrentInteractionProfile(m_Session, path, &profileState);
+            XR_SUCCEEDED(interactionResult))
+        {
+            Log("current interaction profile for %s: %s\n",
+                topLevel.c_str(),
+                XR_NULL_PATH != profileState.interactionProfile ? getXrPath(profileState.interactionProfile).c_str()
+                                                                : "XR_NULL_PATH");
         }
         else
         {
-            ErrorLog("%s: unable to create XrPath from %s: %d\n", __FUNCTION__, topLevel.c_str(), result);
+            ErrorLog("%s: unable get current interaction profile for %s: %d\n",
+                     __FUNCTION__,
+                     topLevel.c_str(),
+                     interactionResult);
         }
     }
 
@@ -1338,10 +1356,10 @@ namespace motion_compensation_layer
         bool success = true;
         if (m_PhysicalEnabled)
         {
-            XrPath viveRolePath;
+            XrPath subActionPath = m_XrSubActionPath;
             if (m_ViveTracker.active)
             {
-                if (const XrResult result = xrStringToPath(GetXrInstance(), m_ViveTracker.role.c_str(), &viveRolePath);
+                if (const XrResult result = xrStringToPath(GetXrInstance(), m_ViveTracker.role.c_str(), &subActionPath);
                     XR_FAILED(result))
                 {
                     ErrorLog("%s: unable to create XrPath from %s: %d\n",
@@ -1369,12 +1387,8 @@ namespace motion_compensation_layer
                 strcpy_s(actionCreateInfo.actionName, "tracker_pose");
                 strcpy_s(actionCreateInfo.localizedActionName, "Tracker Pose");
                 actionCreateInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
-                actionCreateInfo.countSubactionPaths = 0;
-                if (m_ViveTracker.active && success)
-                {
-                    actionCreateInfo.countSubactionPaths = 1;
-                    actionCreateInfo.subactionPaths = &viveRolePath;
-                }
+                actionCreateInfo.countSubactionPaths = 1;
+                actionCreateInfo.subactionPaths = &subActionPath;
 
                 if (XR_FAILED(xrCreateAction(m_ActionSet, &actionCreateInfo, &m_PoseAction)))
                 {
@@ -1416,11 +1430,7 @@ namespace motion_compensation_layer
                 DebugLog("CreateTrackerActionSpace %s\n", caller.c_str());
                 XrActionSpaceCreateInfo actionSpaceCreateInfo{XR_TYPE_ACTION_SPACE_CREATE_INFO, nullptr};
                 actionSpaceCreateInfo.action = m_PoseAction;
-                actionSpaceCreateInfo.subactionPath = XR_NULL_PATH;
-                if (m_ViveTracker.active && success)
-                {
-                    actionSpaceCreateInfo.subactionPath = viveRolePath;
-                }
+                actionSpaceCreateInfo.subactionPath = subActionPath;
                 actionSpaceCreateInfo.poseInActionSpace = Pose::Identity();
                 if (XR_FAILED(GetInstance()->xrCreateActionSpace(m_Session, &actionSpaceCreateInfo, &m_TrackerSpace)))
                 {
@@ -1516,8 +1526,7 @@ namespace motion_compensation_layer
                 std::string movePath;
                 std::string positionPath;
                 std::string hapticPath;
-                const std::string trackerPath =
-                    (m_ViveTracker.active ? m_ViveTracker.role : "/user/hand/" + GetConfig()->GetControllerSide()) + "/";
+                const std::string trackerPath = (m_ViveTracker.active ? m_ViveTracker.role : m_SubActionPath) + "/";
                 const std::string posePath{trackerPath + "input/grip/pose"};
                 if (const XrResult poseResult = xrStringToPath(GetXrInstance(), posePath.c_str(), &poseBinding.binding);
                     XR_FAILED(poseResult))

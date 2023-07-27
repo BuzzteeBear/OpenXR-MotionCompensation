@@ -521,7 +521,7 @@ namespace Tracker
 
     bool VirtualTracker::ChangeRotation(float radian)
     {
-        TraceLoggingWrite(g_traceProvider, "ChangeOffset", TLArg(m_OffsetYaw, "Old Angle"), TLArg(radian, "Radian"));
+        TraceLoggingWrite(g_traceProvider, "ChangeRotation", TLArg(m_OffsetYaw, "Old Angle"), TLArg(radian, "Radian"));
         XrPosef adjustment{Pose::Identity()};
         const float direction = radian * (m_UpsideDown ? -1.0f : 1.0f);
         m_OffsetYaw += direction;
@@ -532,7 +532,7 @@ namespace Tracker
         StoreXrQuaternion(&adjustment.orientation,
                           DirectX::XMQuaternionRotationRollPitchYaw(0.0f, direction , 0.0f));
         TraceLoggingWrite(g_traceProvider,
-                          "ChangeOffset",
+                          "ChangeRotation",
                           TLArg(m_OffsetYaw, "New Angle"),
                           TLArg(direction, "Direction"),
                           TLArg(yawAngle, "Angle"));

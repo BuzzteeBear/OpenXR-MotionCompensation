@@ -132,6 +132,8 @@ namespace motion_compensation_layer
         bool m_UseEyeCache{false};
         bool m_VarjoPollWorkaround{false};
         std::string m_Application;
+        std::string m_SubActionPath;
+        XrPath m_XrSubActionPath{XR_NULL_PATH};
         std::set<XrSpace> m_ViewSpaces{};
         std::vector<XrView> m_EyeOffsets{};
         XrViewConfigurationType m_ViewConfigType{XR_VIEW_CONFIGURATION_TYPE_MAX_ENUM};
