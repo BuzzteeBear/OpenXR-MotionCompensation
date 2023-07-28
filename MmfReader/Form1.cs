@@ -14,7 +14,7 @@ namespace MmfReader
             WorkerArguments arguments = new WorkerArguments
             {
                 Index = Program.curIndex,
-                Interval = 100
+                Interval = 20
             };
             backgroundWorker1.RunWorkerAsync(arguments);
         }
@@ -57,11 +57,12 @@ namespace MmfReader
                 labelSurgeVal.Text = result.Data.surge.ToString("F3");
                 labelSwayVal.Text = result.Data.sway.ToString("F3");
                 labelHeaveVal.Text = result.Data.heave.ToString("F3");
+                Program.writer.WriteToFile(result.Data);
             }
             WorkerArguments arguments = new WorkerArguments
             {
                 Index = Program.curIndex,
-                Interval = 100
+                Interval = 20
             };
             backgroundWorker1.RunWorkerAsync(arguments);
         }
@@ -69,6 +70,26 @@ namespace MmfReader
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
             Program.curIndex = comboBox1.SelectedIndex;
+        }
+
+        private void checkBox1_CheckStateChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void checkBox1_CheckedChanged(object sender, EventArgs e)
+        {
+            if (checkBox1.Checked)
+            {
+                if(!Program.writer.OpenFile(textBox1.Text))
+                {
+                    checkBox1.Checked = false;
+                }
+            }
+            else
+            {
+                Program.writer.CloseFile();
+            }
         }
     }
 }

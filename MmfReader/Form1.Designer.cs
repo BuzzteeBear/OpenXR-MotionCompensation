@@ -53,6 +53,9 @@ namespace MmfReader
             this.labelPitchUnit = new System.Windows.Forms.Label();
             this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
             this.tableLayoutPanel2 = new System.Windows.Forms.TableLayoutPanel();
+            this.checkBox1 = new System.Windows.Forms.CheckBox();
+            this.textBox1 = new System.Windows.Forms.TextBox();
+            this.label1 = new System.Windows.Forms.Label();
             this.tableLayoutPanel1.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
             this.SuspendLayout();
@@ -333,12 +336,46 @@ namespace MmfReader
             this.tableLayoutPanel2.Size = new System.Drawing.Size(171, 307);
             this.tableLayoutPanel2.TabIndex = 20;
             // 
+            // checkBox1
+            // 
+            this.checkBox1.AutoSize = true;
+            this.checkBox1.Font = new System.Drawing.Font("Microsoft Sans Serif", 12.14286F);
+            this.checkBox1.Location = new System.Drawing.Point(69, 443);
+            this.checkBox1.Name = "checkBox1";
+            this.checkBox1.Size = new System.Drawing.Size(158, 37);
+            this.checkBox1.TabIndex = 21;
+            this.checkBox1.Text = "Log Data";
+            this.checkBox1.UseVisualStyleBackColor = true;
+            this.checkBox1.CheckedChanged += new System.EventHandler(this.checkBox1_CheckedChanged);
+            // 
+            // textBox1
+            // 
+            this.textBox1.Font = new System.Drawing.Font("Microsoft Sans Serif", 12.14286F);
+            this.textBox1.Location = new System.Drawing.Point(240, 443);
+            this.textBox1.Name = "textBox1";
+            this.textBox1.Size = new System.Drawing.Size(450, 40);
+            this.textBox1.TabIndex = 22;
+            this.textBox1.Text = "MmfData";
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Font = new System.Drawing.Font("Microsoft Sans Serif", 12.14286F);
+            this.label1.Location = new System.Drawing.Point(696, 444);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(82, 33);
+            this.label1.TabIndex = 23;
+            this.label1.Text = ".CSV";
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(11F, 24F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.SystemColors.Desktop;
-            this.ClientSize = new System.Drawing.Size(803, 429);
+            this.ClientSize = new System.Drawing.Size(807, 518);
+            this.Controls.Add(this.label1);
+            this.Controls.Add(this.textBox1);
+            this.Controls.Add(this.checkBox1);
             this.Controls.Add(this.tableLayoutPanel2);
             this.Controls.Add(this.tableLayoutPanel1);
             this.Controls.Add(this.labelHeaveUnit);
@@ -395,6 +432,9 @@ namespace MmfReader
         private System.Windows.Forms.Label labelPitchUnit;
         private System.Windows.Forms.TableLayoutPanel tableLayoutPanel1;
         private System.Windows.Forms.TableLayoutPanel tableLayoutPanel2;
+        private System.Windows.Forms.CheckBox checkBox1;
+        private System.Windows.Forms.TextBox textBox1;
+        private System.Windows.Forms.Label label1;
     }
 }
 

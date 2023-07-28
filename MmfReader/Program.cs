@@ -1,7 +1,9 @@
 using System;
+using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using System.Globalization;
 
 namespace MmfReader
 {
@@ -73,6 +75,7 @@ namespace MmfReader
         }
 
         public static int curIndex = 0;
+        public static CsvWriter writer = new();
     }
 
     class WorkerArguments
@@ -99,5 +102,55 @@ namespace MmfReader
         public float autoX, autoY;
     };
 
+    public class CsvWriter: IDisposable
+    {
+        StreamWriter writer = null;
+        int counter = 0;
 
+        public bool OpenFile(string fileName)
+        {
+            bool success = false;
+            if ("" != fileName)
+            {
+                try
+                {
+                    string fullPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + @"\OpenXR-MotionCompensation\" + fileName + ".CSV";
+                    writer = new StreamWriter(fullPath);
+                    writer.WriteLine("count;timestamp;sway;surge;heave;yaw;roll;pitch");
+                    writer.Flush();
+                    counter = 0;
+                    success = true;
+                }
+                catch (Exception)
+                { }
+            }
+            return success;
+        }
+        public void WriteToFile(MmfData data)
+        {
+            if (null != writer)
+            {
+                DateTime localDate = DateTime.Now;
+                var line = string.Format("{0};{1};{2};{3};{4};{5};{6};{7}", counter++, localDate.ToString("MM/dd/yyyy hh:mm:ss.fff tt"), data.sway, data.surge, data.heave, data.yaw, data.pitch, data.roll);
+                writer.WriteLine(line);
+                writer.Flush();
+            }
+        }
+        public void CloseFile()
+        {
+            if (null != writer)
+            {
+                writer.Close();
+                writer = null;
+            }
+        }
+
+        public void Dispose()
+        {
+            if (null != writer)
+            {
+                writer.Close();
+            }    
+        }
+    }
 }
