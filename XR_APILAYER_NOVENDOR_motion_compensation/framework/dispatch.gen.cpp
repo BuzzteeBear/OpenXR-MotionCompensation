@@ -28,13 +28,9 @@
 #include "dispatch.h"
 #include "log.h"
 
-#ifndef LAYER_NAMESPACE
-#error Must define LAYER_NAMESPACE
-#endif
+using namespace openxr_api_layer::log;
 
-using namespace LAYER_NAMESPACE::log;
-
-namespace LAYER_NAMESPACE
+namespace openxr_api_layer
 {
 
 	// Auto-generated wrappers for the requested APIs.
@@ -46,7 +42,7 @@ namespace LAYER_NAMESPACE
 		XrResult result;
 		try
 		{
-			result = LAYER_NAMESPACE::GetInstance()->xrPollEvent(instance, eventData);
+			result = openxr_api_layer::GetInstance()->xrPollEvent(instance, eventData);
 		}
 		catch (std::exception exc)
 		{
@@ -70,7 +66,7 @@ namespace LAYER_NAMESPACE
 		XrResult result;
 		try
 		{
-			result = LAYER_NAMESPACE::GetInstance()->xrGetSystem(instance, getInfo, systemId);
+			result = openxr_api_layer::GetInstance()->xrGetSystem(instance, getInfo, systemId);
 		}
 		catch (std::exception exc)
 		{
@@ -94,7 +90,7 @@ namespace LAYER_NAMESPACE
 		XrResult result;
 		try
 		{
-			result = LAYER_NAMESPACE::GetInstance()->xrCreateSession(instance, createInfo, session);
+			result = openxr_api_layer::GetInstance()->xrCreateSession(instance, createInfo, session);
 		}
 		catch (std::exception exc)
 		{
@@ -118,7 +114,7 @@ namespace LAYER_NAMESPACE
 		XrResult result;
 		try
 		{
-			result = LAYER_NAMESPACE::GetInstance()->xrDestroySession(session);
+			result = openxr_api_layer::GetInstance()->xrDestroySession(session);
 		}
 		catch (std::exception exc)
 		{
@@ -142,7 +138,7 @@ namespace LAYER_NAMESPACE
 		XrResult result;
 		try
 		{
-			result = LAYER_NAMESPACE::GetInstance()->xrCreateReferenceSpace(session, createInfo, space);
+			result = openxr_api_layer::GetInstance()->xrCreateReferenceSpace(session, createInfo, space);
 		}
 		catch (std::exception exc)
 		{
@@ -166,7 +162,7 @@ namespace LAYER_NAMESPACE
 		XrResult result;
 		try
 		{
-			result = LAYER_NAMESPACE::GetInstance()->xrLocateSpace(space, baseSpace, time, location);
+			result = openxr_api_layer::GetInstance()->xrLocateSpace(space, baseSpace, time, location);
 		}
 		catch (std::exception exc)
 		{
@@ -190,7 +186,7 @@ namespace LAYER_NAMESPACE
 		XrResult result;
 		try
 		{
-			result = LAYER_NAMESPACE::GetInstance()->xrCreateSwapchain(session, createInfo, swapchain);
+			result = openxr_api_layer::GetInstance()->xrCreateSwapchain(session, createInfo, swapchain);
 		}
 		catch (std::exception exc)
 		{
@@ -214,7 +210,7 @@ namespace LAYER_NAMESPACE
 		XrResult result;
 		try
 		{
-			result = LAYER_NAMESPACE::GetInstance()->xrDestroySwapchain(swapchain);
+			result = openxr_api_layer::GetInstance()->xrDestroySwapchain(swapchain);
 		}
 		catch (std::exception exc)
 		{
@@ -238,7 +234,7 @@ namespace LAYER_NAMESPACE
 		XrResult result;
 		try
 		{
-			result = LAYER_NAMESPACE::GetInstance()->xrAcquireSwapchainImage(swapchain, acquireInfo, index);
+			result = openxr_api_layer::GetInstance()->xrAcquireSwapchainImage(swapchain, acquireInfo, index);
 		}
 		catch (std::exception exc)
 		{
@@ -262,7 +258,7 @@ namespace LAYER_NAMESPACE
 		XrResult result;
 		try
 		{
-			result = LAYER_NAMESPACE::GetInstance()->xrWaitSwapchainImage(swapchain, waitInfo);
+			result = openxr_api_layer::GetInstance()->xrWaitSwapchainImage(swapchain, waitInfo);
 		}
 		catch (std::exception exc)
 		{
@@ -286,7 +282,7 @@ namespace LAYER_NAMESPACE
 		XrResult result;
 		try
 		{
-			result = LAYER_NAMESPACE::GetInstance()->xrReleaseSwapchainImage(swapchain, releaseInfo);
+			result = openxr_api_layer::GetInstance()->xrReleaseSwapchainImage(swapchain, releaseInfo);
 		}
 		catch (std::exception exc)
 		{
@@ -310,7 +306,7 @@ namespace LAYER_NAMESPACE
 		XrResult result;
 		try
 		{
-			result = LAYER_NAMESPACE::GetInstance()->xrBeginSession(session, beginInfo);
+			result = openxr_api_layer::GetInstance()->xrBeginSession(session, beginInfo);
 		}
 		catch (std::exception exc)
 		{
@@ -334,7 +330,7 @@ namespace LAYER_NAMESPACE
 		XrResult result;
 		try
 		{
-			result = LAYER_NAMESPACE::GetInstance()->xrEndSession(session);
+			result = openxr_api_layer::GetInstance()->xrEndSession(session);
 		}
 		catch (std::exception exc)
 		{
@@ -358,7 +354,7 @@ namespace LAYER_NAMESPACE
 		XrResult result;
 		try
 		{
-			result = LAYER_NAMESPACE::GetInstance()->xrBeginFrame(session, frameBeginInfo);
+			result = openxr_api_layer::GetInstance()->xrBeginFrame(session, frameBeginInfo);
 		}
 		catch (std::exception exc)
 		{
@@ -382,7 +378,7 @@ namespace LAYER_NAMESPACE
 		XrResult result;
 		try
 		{
-			result = LAYER_NAMESPACE::GetInstance()->xrEndFrame(session, frameEndInfo);
+			result = openxr_api_layer::GetInstance()->xrEndFrame(session, frameEndInfo);
 		}
 		catch (std::exception exc)
 		{
@@ -406,7 +402,7 @@ namespace LAYER_NAMESPACE
 		XrResult result;
 		try
 		{
-			result = LAYER_NAMESPACE::GetInstance()->xrLocateViews(session, viewLocateInfo, viewState, viewCapacityInput, viewCountOutput, views);
+			result = openxr_api_layer::GetInstance()->xrLocateViews(session, viewLocateInfo, viewState, viewCapacityInput, viewCountOutput, views);
 		}
 		catch (std::exception exc)
 		{
@@ -430,7 +426,7 @@ namespace LAYER_NAMESPACE
 		XrResult result;
 		try
 		{
-			result = LAYER_NAMESPACE::GetInstance()->xrSuggestInteractionProfileBindings(instance, suggestedBindings);
+			result = openxr_api_layer::GetInstance()->xrSuggestInteractionProfileBindings(instance, suggestedBindings);
 		}
 		catch (std::exception exc)
 		{
@@ -454,7 +450,7 @@ namespace LAYER_NAMESPACE
 		XrResult result;
 		try
 		{
-			result = LAYER_NAMESPACE::GetInstance()->xrAttachSessionActionSets(session, attachInfo);
+			result = openxr_api_layer::GetInstance()->xrAttachSessionActionSets(session, attachInfo);
 		}
 		catch (std::exception exc)
 		{
@@ -478,7 +474,7 @@ namespace LAYER_NAMESPACE
 		XrResult result;
 		try
 		{
-			result = LAYER_NAMESPACE::GetInstance()->xrGetCurrentInteractionProfile(session, topLevelUserPath, interactionProfile);
+			result = openxr_api_layer::GetInstance()->xrGetCurrentInteractionProfile(session, topLevelUserPath, interactionProfile);
 		}
 		catch (std::exception exc)
 		{
@@ -502,7 +498,7 @@ namespace LAYER_NAMESPACE
 		XrResult result;
 		try
 		{
-			result = LAYER_NAMESPACE::GetInstance()->xrSyncActions(session, syncInfo);
+			result = openxr_api_layer::GetInstance()->xrSyncActions(session, syncInfo);
 		}
 		catch (std::exception exc)
 		{
@@ -530,107 +526,107 @@ namespace LAYER_NAMESPACE
 		if (apiName == "xrDestroyInstance")
 		{
 			m_xrDestroyInstance = reinterpret_cast<PFN_xrDestroyInstance>(*function);
-			*function = reinterpret_cast<PFN_xrVoidFunction>(LAYER_NAMESPACE::xrDestroyInstance);
+			*function = reinterpret_cast<PFN_xrVoidFunction>(openxr_api_layer::xrDestroyInstance);
 		}
 		else if (apiName == "xrPollEvent")
 		{
 			m_xrPollEvent = reinterpret_cast<PFN_xrPollEvent>(*function);
-			*function = reinterpret_cast<PFN_xrVoidFunction>(LAYER_NAMESPACE::xrPollEvent);
+			*function = reinterpret_cast<PFN_xrVoidFunction>(openxr_api_layer::xrPollEvent);
 		}
 		else if (apiName == "xrGetSystem")
 		{
 			m_xrGetSystem = reinterpret_cast<PFN_xrGetSystem>(*function);
-			*function = reinterpret_cast<PFN_xrVoidFunction>(LAYER_NAMESPACE::xrGetSystem);
+			*function = reinterpret_cast<PFN_xrVoidFunction>(openxr_api_layer::xrGetSystem);
 		}
 		else if (apiName == "xrCreateSession")
 		{
 			m_xrCreateSession = reinterpret_cast<PFN_xrCreateSession>(*function);
-			*function = reinterpret_cast<PFN_xrVoidFunction>(LAYER_NAMESPACE::xrCreateSession);
+			*function = reinterpret_cast<PFN_xrVoidFunction>(openxr_api_layer::xrCreateSession);
 		}
 		else if (apiName == "xrDestroySession")
 		{
 			m_xrDestroySession = reinterpret_cast<PFN_xrDestroySession>(*function);
-			*function = reinterpret_cast<PFN_xrVoidFunction>(LAYER_NAMESPACE::xrDestroySession);
+			*function = reinterpret_cast<PFN_xrVoidFunction>(openxr_api_layer::xrDestroySession);
 		}
 		else if (apiName == "xrCreateReferenceSpace")
 		{
 			m_xrCreateReferenceSpace = reinterpret_cast<PFN_xrCreateReferenceSpace>(*function);
-			*function = reinterpret_cast<PFN_xrVoidFunction>(LAYER_NAMESPACE::xrCreateReferenceSpace);
+			*function = reinterpret_cast<PFN_xrVoidFunction>(openxr_api_layer::xrCreateReferenceSpace);
 		}
 		else if (apiName == "xrLocateSpace")
 		{
 			m_xrLocateSpace = reinterpret_cast<PFN_xrLocateSpace>(*function);
-			*function = reinterpret_cast<PFN_xrVoidFunction>(LAYER_NAMESPACE::xrLocateSpace);
+			*function = reinterpret_cast<PFN_xrVoidFunction>(openxr_api_layer::xrLocateSpace);
 		}
 		else if (apiName == "xrCreateSwapchain")
 		{
 			m_xrCreateSwapchain = reinterpret_cast<PFN_xrCreateSwapchain>(*function);
-			*function = reinterpret_cast<PFN_xrVoidFunction>(LAYER_NAMESPACE::xrCreateSwapchain);
+			*function = reinterpret_cast<PFN_xrVoidFunction>(openxr_api_layer::xrCreateSwapchain);
 		}
 		else if (apiName == "xrDestroySwapchain")
 		{
 			m_xrDestroySwapchain = reinterpret_cast<PFN_xrDestroySwapchain>(*function);
-			*function = reinterpret_cast<PFN_xrVoidFunction>(LAYER_NAMESPACE::xrDestroySwapchain);
+			*function = reinterpret_cast<PFN_xrVoidFunction>(openxr_api_layer::xrDestroySwapchain);
 		}
 		else if (apiName == "xrAcquireSwapchainImage")
 		{
 			m_xrAcquireSwapchainImage = reinterpret_cast<PFN_xrAcquireSwapchainImage>(*function);
-			*function = reinterpret_cast<PFN_xrVoidFunction>(LAYER_NAMESPACE::xrAcquireSwapchainImage);
+			*function = reinterpret_cast<PFN_xrVoidFunction>(openxr_api_layer::xrAcquireSwapchainImage);
 		}
 		else if (apiName == "xrWaitSwapchainImage")
 		{
 			m_xrWaitSwapchainImage = reinterpret_cast<PFN_xrWaitSwapchainImage>(*function);
-			*function = reinterpret_cast<PFN_xrVoidFunction>(LAYER_NAMESPACE::xrWaitSwapchainImage);
+			*function = reinterpret_cast<PFN_xrVoidFunction>(openxr_api_layer::xrWaitSwapchainImage);
 		}
 		else if (apiName == "xrReleaseSwapchainImage")
 		{
 			m_xrReleaseSwapchainImage = reinterpret_cast<PFN_xrReleaseSwapchainImage>(*function);
-			*function = reinterpret_cast<PFN_xrVoidFunction>(LAYER_NAMESPACE::xrReleaseSwapchainImage);
+			*function = reinterpret_cast<PFN_xrVoidFunction>(openxr_api_layer::xrReleaseSwapchainImage);
 		}
 		else if (apiName == "xrBeginSession")
 		{
 			m_xrBeginSession = reinterpret_cast<PFN_xrBeginSession>(*function);
-			*function = reinterpret_cast<PFN_xrVoidFunction>(LAYER_NAMESPACE::xrBeginSession);
+			*function = reinterpret_cast<PFN_xrVoidFunction>(openxr_api_layer::xrBeginSession);
 		}
 		else if (apiName == "xrEndSession")
 		{
 			m_xrEndSession = reinterpret_cast<PFN_xrEndSession>(*function);
-			*function = reinterpret_cast<PFN_xrVoidFunction>(LAYER_NAMESPACE::xrEndSession);
+			*function = reinterpret_cast<PFN_xrVoidFunction>(openxr_api_layer::xrEndSession);
 		}
 		else if (apiName == "xrBeginFrame")
 		{
 			m_xrBeginFrame = reinterpret_cast<PFN_xrBeginFrame>(*function);
-			*function = reinterpret_cast<PFN_xrVoidFunction>(LAYER_NAMESPACE::xrBeginFrame);
+			*function = reinterpret_cast<PFN_xrVoidFunction>(openxr_api_layer::xrBeginFrame);
 		}
 		else if (apiName == "xrEndFrame")
 		{
 			m_xrEndFrame = reinterpret_cast<PFN_xrEndFrame>(*function);
-			*function = reinterpret_cast<PFN_xrVoidFunction>(LAYER_NAMESPACE::xrEndFrame);
+			*function = reinterpret_cast<PFN_xrVoidFunction>(openxr_api_layer::xrEndFrame);
 		}
 		else if (apiName == "xrLocateViews")
 		{
 			m_xrLocateViews = reinterpret_cast<PFN_xrLocateViews>(*function);
-			*function = reinterpret_cast<PFN_xrVoidFunction>(LAYER_NAMESPACE::xrLocateViews);
+			*function = reinterpret_cast<PFN_xrVoidFunction>(openxr_api_layer::xrLocateViews);
 		}
 		else if (apiName == "xrSuggestInteractionProfileBindings")
 		{
 			m_xrSuggestInteractionProfileBindings = reinterpret_cast<PFN_xrSuggestInteractionProfileBindings>(*function);
-			*function = reinterpret_cast<PFN_xrVoidFunction>(LAYER_NAMESPACE::xrSuggestInteractionProfileBindings);
+			*function = reinterpret_cast<PFN_xrVoidFunction>(openxr_api_layer::xrSuggestInteractionProfileBindings);
 		}
 		else if (apiName == "xrAttachSessionActionSets")
 		{
 			m_xrAttachSessionActionSets = reinterpret_cast<PFN_xrAttachSessionActionSets>(*function);
-			*function = reinterpret_cast<PFN_xrVoidFunction>(LAYER_NAMESPACE::xrAttachSessionActionSets);
+			*function = reinterpret_cast<PFN_xrVoidFunction>(openxr_api_layer::xrAttachSessionActionSets);
 		}
 		else if (apiName == "xrGetCurrentInteractionProfile")
 		{
 			m_xrGetCurrentInteractionProfile = reinterpret_cast<PFN_xrGetCurrentInteractionProfile>(*function);
-			*function = reinterpret_cast<PFN_xrVoidFunction>(LAYER_NAMESPACE::xrGetCurrentInteractionProfile);
+			*function = reinterpret_cast<PFN_xrVoidFunction>(openxr_api_layer::xrGetCurrentInteractionProfile);
 		}
 		else if (apiName == "xrSyncActions")
 		{
 			m_xrSyncActions = reinterpret_cast<PFN_xrSyncActions>(*function);
-			*function = reinterpret_cast<PFN_xrVoidFunction>(LAYER_NAMESPACE::xrSyncActions);
+			*function = reinterpret_cast<PFN_xrVoidFunction>(openxr_api_layer::xrSyncActions);
 		}
 
 
@@ -708,5 +704,5 @@ namespace LAYER_NAMESPACE
 		return XR_SUCCESS;
 	}
 
-} // namespace LAYER_NAMESPACE
+} // namespace openxr_api_layer
 

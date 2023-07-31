@@ -4,7 +4,7 @@
 
 #include "config.h"
 
-namespace motion_compensation_layer
+namespace openxr_api_layer
 {
     class OpenXrLayer;
 }
@@ -39,7 +39,7 @@ namespace Input
             RotLeft
         };
       public:
-        explicit InputHandler(motion_compensation_layer::OpenXrLayer* layer);
+        explicit InputHandler(openxr_api_layer::OpenXrLayer* layer);
         bool Init();
         void HandleKeyboardInput(XrTime time);
         void ToggleActive(XrTime time) const;
@@ -51,7 +51,7 @@ namespace Input
         void SaveConfig(XrTime time, bool forApp) const;
 
       private:
-        motion_compensation_layer::OpenXrLayer* m_Layer;
+        openxr_api_layer::OpenXrLayer* m_Layer;
         KeyboardInput m_Input;
     };
 

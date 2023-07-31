@@ -26,336 +26,54 @@
 #include "overlay.h"
 #include "layer.h"
 #include "feedback.h"
-#include "shader_utilities.h"
-#include "d3dcommon.h"
+#include "graphics.h"
 #include <log.h>
 
-using namespace motion_compensation_layer;
-using namespace motion_compensation_layer::log;
+using namespace openxr_api_layer;
+using namespace openxr_api_layer::log;
 
-namespace graphics
+namespace openxr_api_layer::graphics
 {
+    Overlay::Overlay(const XrInstanceCreateInfo& instanceInfo,
+                     XrInstance instance,
+                     PFN_xrGetInstanceProcAddr xrGetInstanceProcAddr)
+    {
+        m_compositionFrameworkFactory =
+            createCompositionFrameworkFactory(instanceInfo, instance, xrGetInstanceProcAddr, CompositionApi::D3D11);
+    }
+
+    void Overlay::CreateSession(const XrSessionCreateInfo* createInfo, XrSession session)
+    {
+        m_Initialized = true;
+        m_compositionFrameworkFactory->CreateSession(createInfo, session);
+        m_compositionFrameworkFactory->CreateSession(createInfo, session);
+        if (const ICompositionFramework* composition = m_compositionFrameworkFactory->getCompositionFramework(session))
+        {
+            std::vector<SimpleMeshVertex> vertices = CreateMarker(true);
+            std::vector<uint16_t> indices = CreateIndices(vertices.size());
+            m_MeshRGB = composition->getCompositionDevice()->createSimpleMesh(vertices, indices, "RGB Mesh");
+            vertices = CreateMarker(false);
+            m_MeshCMY = composition->getCompositionDevice()->createSimpleMesh(vertices, indices, "CMY Mesh");
+        }
+        else
+        {
+            ErrorLog("%s: unable to retrieve composition framework\n", __FUNCTION__);
+            m_Initialized = false;
+        }
+    }
+
+    void Overlay::DestroySession(XrSession session) const
+    {
+        // TODO: clean up used directx resources
+        m_compositionFrameworkFactory->DestroySession(session);
+    }
+
     void Overlay::SetMarkerSize()
     {
         float scaling{0.1f};
         GetConfig()->GetFloat(Cfg::MarkerSize, scaling);
         scaling /= 100.f;
         m_MarkerSize = {scaling, scaling, scaling};
-    }
-
-    void Overlay::CreateSession(const XrSessionCreateInfo* createInfo,
-                                XrSession* session,
-                                const std::string& runtimeName)
-    {
-        m_Initialized = true;
-        m_OwnDepthBuffers.clear();
-        SetMarkerSize();
-
-        if (auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance()))
-        {
-            try
-            {
-                // Get the graphics device.
-                const auto* entry = static_cast<const XrBaseInStructure*>(createInfo->next);
-                while (entry)
-                {
-                    if (entry->type == XR_TYPE_GRAPHICS_BINDING_D3D11_KHR)
-                    {
-                        TraceLoggingWrite(g_traceProvider, "UseD3D11");
-
-                        const auto* d3dBindings =
-                            reinterpret_cast<const XrGraphicsBindingD3D11KHR*>(entry);
-                        m_GraphicsDevice = graphics::WrapD3D11Device(d3dBindings->device);
-                        break;
-                    }
-                    else if (entry->type == XR_TYPE_GRAPHICS_BINDING_D3D12_KHR)
-                    {
-                        TraceLoggingWrite(g_traceProvider, "UseD3D12");
-
-                        const auto* d3dBindings =
-                            reinterpret_cast<const XrGraphicsBindingD3D12KHR*>(entry);
-                        m_GraphicsDevice =
-                            graphics::WrapD3D12Device(d3dBindings->device, d3dBindings->queue);
-                        break;
-                    }
-
-                    entry = entry->next;
-                }
-
-                if (m_GraphicsDevice)
-                {
-                    std::vector<graphics::SimpleMeshVertex> vertices = CreateMarker(true);
-                    std::vector<uint16_t> indices = CreateIndices(vertices.size());
-                    m_MeshRGB = m_GraphicsDevice->createSimpleMesh(vertices, indices, "RGB Mesh");
-                    vertices = CreateMarker(false);
-                    m_MeshCMY = m_GraphicsDevice->createSimpleMesh(vertices, indices, "CMY Mesh");
-                    
-                    if (m_GraphicsDevice->getApi() != graphics::Api::D3D11 &&
-                        m_GraphicsDevice->getApi() != graphics::Api::D3D12)
-                    {
-                        throw std::runtime_error("Unsupported graphics runtime");
-                    }
-                }
-                else
-                {
-                    Log("Unsupported graphics runtime.\n");
-                }
-            }
-            catch (std::exception& e)
-            {
-                ErrorLog("%s: encountered exception: %s\n", __FUNCTION__, e.what());
-                m_Initialized = false;
-            }
-        }
-        else
-        {
-            ErrorLog("%s: unable to cast instance to OpenXrLayer\n", __FUNCTION__);
-            m_Initialized = false;
-        }
-    }
-
-    void Overlay::DestroySession()
-    {
-        if (m_GraphicsDevice)
-        {
-            m_GraphicsDevice->flushContext(true);
-        }
-        m_Swapchains.clear();
-        m_OwnDepthBuffers.clear();
-        m_MeshRGB.reset();
-        m_MeshCMY.reset();
-        if (m_GraphicsDevice)
-        {
-            m_GraphicsDevice->shutdown();
-        }
-        m_GraphicsDevice.reset();
-        // A good check to ensure there are no resources leak is to confirm that the graphics device is
-        // destroyed _before_ we see this message.
-        // eg:
-        // 2022-01-01 17:15:35 -0800: D3D11Device destroyed
-        // 2022-01-01 17:15:35 -0800: Session destroyed
-        // If the order is reversed or the Device is destructed missing, then it means that we are not cleaning
-        // up the resources properly.
-        Log("Session destroyed\n");
-    }
-
-    void Overlay::CreateSwapchain(XrSession session, const XrSwapchainCreateInfo* createInfo, XrSwapchain* swapchain)
-    {
-        if (auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance()))
-        {
-            // Identify the swapchains of interest for our processing chain.
-            if (createInfo->usageFlags &
-                (XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT | XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT))
-            {
-                try
-                {
-                    uint32_t imageCount;
-                    CHECK_XRCMD(layer->xrEnumerateSwapchainImages(*swapchain, 0, &imageCount, nullptr));
-
-                    graphics::SwapchainState swapchainState;
-                    int64_t overrideFormat = 0;
-                    if (m_GraphicsDevice->getApi() == graphics::Api::D3D11)
-                    {
-                        std::vector<XrSwapchainImageD3D11KHR> d3dImages(imageCount,
-                                                                        {XR_TYPE_SWAPCHAIN_IMAGE_D3D11_KHR});
-                        CHECK_XRCMD(layer->OpenXrApi::xrEnumerateSwapchainImages(
-                            *swapchain,
-                            imageCount,
-                            &imageCount,
-                            reinterpret_cast<XrSwapchainImageBaseHeader*>(d3dImages.data())));
-
-                        // Dump the descriptor for the first texture returned by the runtime for debug purposes.
-                        {
-                            D3D11_TEXTURE2D_DESC desc;
-                            d3dImages[0].texture->GetDesc(&desc);
-                            TraceLoggingWrite(g_traceProvider,
-                                              "RuntimeSwapchain",
-                                              TLArg(desc.Width, "Width"),
-                                              TLArg(desc.Height, "Height"),
-                                              TLArg(desc.ArraySize, "ArraySize"),
-                                              TLArg(desc.MipLevels, "MipCount"),
-                                              TLArg(desc.SampleDesc.Count, "SampleCount"),
-                                              TLArg((int)desc.Format, "Format"),
-                                              TLArg((int)desc.Usage, "Usage"),
-                                              TLArg(desc.BindFlags, "BindFlags"),
-                                              TLArg(desc.CPUAccessFlags, "CPUAccessFlags"),
-                                              TLArg(desc.MiscFlags, "MiscFlags"));
-
-                            // Make sure to create the app texture typeless.
-                            overrideFormat = (int64_t)desc.Format;
-                        }
-
-                        for (uint32_t i = 0; i < imageCount; i++)
-                        {
-                            graphics::SwapchainImages images;
-
-                            // Store the runtime images into the state (last entry in the processing chain).
-                            images.chain.push_back(
-                                graphics::WrapD3D11Texture(m_GraphicsDevice,
-                                                           *createInfo,
-                                                           d3dImages[i].texture,
-                                                           fmt::format("Runtime swapchain {} TEX2D", i)));
-
-                            swapchainState.images.push_back(std::move(images));
-                        }
-                    }
-                    else if (m_GraphicsDevice->getApi() == graphics::Api::D3D12)
-                    {
-                        std::vector<XrSwapchainImageD3D12KHR> d3dImages(imageCount,
-                                                                        {XR_TYPE_SWAPCHAIN_IMAGE_D3D12_KHR});
-                        CHECK_XRCMD(layer->OpenXrApi::xrEnumerateSwapchainImages(
-                            *swapchain,
-                            imageCount,
-                            &imageCount,
-                            reinterpret_cast<XrSwapchainImageBaseHeader*>(d3dImages.data())));
-
-                        // Dump the descriptor for the first texture returned by the runtime for debug purposes.
-                        {
-                            const auto& desc = d3dImages[0].texture->GetDesc();
-                            TraceLoggingWrite(g_traceProvider,
-                                              "RuntimeSwapchain",
-                                              TLArg(desc.Width, "Width"),
-                                              TLArg(desc.Height, "Height"),
-                                              TLArg(desc.DepthOrArraySize, "ArraySize"),
-                                              TLArg(desc.MipLevels, "MipCount"),
-                                              TLArg(desc.SampleDesc.Count, "SampleCount"),
-                                              TLArg((int)desc.Format, "Format"),
-                                              TLArg((int)desc.Flags, "Flags"));
-
-                            // Make sure to create the app texture typeless.
-                            overrideFormat = (int64_t)desc.Format;
-                        }
-
-                        for (uint32_t i = 0; i < imageCount; i++)
-                        {
-                            graphics::SwapchainImages images;
-
-                            D3D12_RESOURCE_STATES initialState = D3D12_RESOURCE_STATE_COMMON;
-                            if ((createInfo->usageFlags & XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT))
-                            {
-                                initialState = D3D12_RESOURCE_STATE_RENDER_TARGET;
-                            }
-                            else if ((createInfo->usageFlags & XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT))
-                            {
-                                initialState = D3D12_RESOURCE_STATE_DEPTH_WRITE;
-                            }
-
-                            // Store the runtime images into the state (last entry in the processing chain).
-                            images.chain.push_back(
-                                graphics::WrapD3D12Texture(m_GraphicsDevice,
-                                                           *createInfo,
-                                                           d3dImages[i].texture,
-                                                           fmt::format("Runtime swapchain {} TEX2D", i)));
-
-                            swapchainState.images.push_back(std::move(images));
-                        }
-                    }
-                    else
-                    {
-                        throw std::runtime_error("Unsupported graphics runtime");
-                    }
-
-                    if (!m_OwnDepthBuffers.contains(*swapchain))
-                    {
-                        XrSwapchainCreateInfo depthInfo = *createInfo;
-                        depthInfo.usageFlags = XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-
-                        std::shared_ptr<ITexture> texture = m_GraphicsDevice->createTexture(
-                            depthInfo,
-                            fmt::format("depth buffer {}", reinterpret_cast<long long>(*swapchain)),
-                            DXGI_FORMAT_D32_FLOAT);
-                        m_OwnDepthBuffers.insert_or_assign(*swapchain, texture);
-                    }
-
-                    m_Swapchains.insert_or_assign(*swapchain, swapchainState);
-
-                    TraceLoggingWrite(g_traceProvider, "xrCreateSwapchain", TLPArg(*swapchain, "Swapchain"));
-                }
-                catch (std::exception& e)
-                {
-                    ErrorLog("%s: encountered exception: %s\n", __FUNCTION__, e.what());
-                    m_Initialized = false;
-                }
-            }
-        }
-        else
-        {
-            ErrorLog("%s: unable to cast instance to OpenXrLayer\n", __FUNCTION__);
-            m_Initialized = false;
-        }
-    }
-
-    void Overlay::DestroySwapchain(XrSwapchain swapchain)
-    {
-        m_OwnDepthBuffers.erase(swapchain);
-        m_Swapchains.erase(swapchain);
-    }
-
-    XrResult Overlay::AcquireSwapchainImage(XrSwapchain swapchain,
-                                                  const XrSwapchainImageAcquireInfo* acquireInfo,
-                                                  uint32_t* index)
-    {
-        if (auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance()))
-        {
-            const auto swapchainIt = m_Swapchains.find(swapchain);
-            if (swapchainIt != m_Swapchains.end())
-            {
-                // Perform the release now in case it was delayed.
-                if (swapchainIt->second.delayedRelease)
-                {
-                    TraceLoggingWrite(g_traceProvider, "ForcedSwapchainRelease", TLPArg(swapchain, "Swapchain"));
-
-                    XrSwapchainImageReleaseInfo releaseInfo{XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO, nullptr};
-                    swapchainIt->second.delayedRelease = false;
-                    if (const XrResult result = layer->OpenXrApi::xrReleaseSwapchainImage(swapchain, &releaseInfo);
-                        XR_FAILED(result))
-                    {
-                        ErrorLog("%s: xrReleaseSwapchainImage failed: %d\n", __FUNCTION__, result);
-                    }
-                }
-            }
-
-            const XrResult result = layer->OpenXrApi::xrAcquireSwapchainImage(swapchain, acquireInfo, index);
-            if (XR_SUCCEEDED(result))
-            {
-                // Record the index so we know which texture to use in xrEndFrame().
-                if (swapchainIt != m_Swapchains.end())
-                {
-                    swapchainIt->second.acquiredImageIndex = *index;
-                }
-
-                TraceLoggingWrite(g_traceProvider, "xrAcquireSwapchainImage", TLArg(*index, "Index"));
-            }
-
-            return result;
-        }
-        else
-        {
-            ErrorLog("%s: unable to cast instance to OpenXrLayer\n", __FUNCTION__);
-            return XR_ERROR_INSTANCE_LOST;
-        }
-
-    }
-
-    XrResult Overlay::ReleaseSwapchainImage(XrSwapchain swapchain, const XrSwapchainImageReleaseInfo* releaseInfo)
-    {
-        if (auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance()))
-        {
-            const auto swapchainIt = m_Swapchains.find(swapchain);
-            if (swapchainIt != m_Swapchains.end())
-            {
-                // Perform a delayed release: we still need to write to the swapchain in our xrEndFrame()!
-                swapchainIt->second.delayedRelease = true;
-                return XR_SUCCESS;
-            }
-
-            return layer->OpenXrApi::xrReleaseSwapchainImage(swapchain, releaseInfo);
-        }
-        else
-        {
-            ErrorLog("%s: unable to cast instance to OpenXrLayer\n", __FUNCTION__);
-            return XR_ERROR_INSTANCE_LOST;
-        }
     }
 
     bool Overlay::ToggleOverlay()
@@ -372,144 +90,175 @@ namespace graphics
         return true;
     }
 
-    void Overlay::BeginFrameBefore()
-    {
-        // Release the swapchain images. Some runtimes don't seem to look cross-frame releasing and this can happen
-        // when a frame is discarded.
-        for (auto& swapchain : m_Swapchains)
-        {
-            if (swapchain.second.delayedRelease)
-            {
-                TraceLoggingWrite(g_traceProvider, "ForcedSwapchainRelease", TLPArg(swapchain.first, "Swapchain"));
-
-                XrSwapchainImageReleaseInfo releaseInfo{XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};
-                swapchain.second.delayedRelease = false;
-                if (const XrResult result = GetInstance()->xrReleaseSwapchainImage(swapchain.first, &releaseInfo);
-                    XR_FAILED(result))
-                {
-                    ErrorLog("%s: xrReleaseSwapchainImage failed: %d\n", __FUNCTION__, result);
-                }
-            }
-        }
-    }
-
-    void Overlay::BeginFrameAfter()
-    {
-        if (m_GraphicsDevice)
-        {
-            // With D3D12, we want to make sure the query is enqueued now.
-            if (m_GraphicsDevice->getApi() == graphics::Api::D3D12)
-            {
-                m_GraphicsDevice->flushContext();
-            }
-        }
-    }
-
-    void Overlay::DrawOverlay(const XrFrameEndInfo* chainFrameEndInfo,
+    void Overlay::DrawOverlay(XrSession session,
+                              XrFrameEndInfo* chainFrameEndInfo,
                               const XrPosef& referenceTrackerPose,
                               const XrPosef& reversedManipulation,
                               bool mcActivated)
     {
-        if (auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance()))
+        if (m_Initialized && m_OverlayActive)
         {
             try
             {
-                if (m_OverlayActive && m_GraphicsDevice)
+                m_BaseLayerVector =
+                    std::vector(chainFrameEndInfo->layers, chainFrameEndInfo->layers + chainFrameEndInfo->layerCount);
+                XrCompositionLayerProjection const* lastProjectionLayer{};
+                for (auto layer : m_BaseLayerVector)
                 {
-                    m_GraphicsDevice->saveContext();
-                    m_GraphicsDevice->unsetRenderTargets();
-
-                    std::shared_ptr<graphics::ITexture> textureForOverlay[graphics::ViewCount]{};
-                    uint32_t sliceForOverlay[graphics::ViewCount]{};
-                    std::shared_ptr<graphics::ITexture> depthForOverlay[graphics::ViewCount]{};
-                    xr::math::ViewProjection viewForOverlay[graphics::ViewCount]{};
-                    XrRect2Di viewportForOverlay[graphics::ViewCount];
-
-                    std::vector<XrCompositionLayerProjection> layerProjectionAllocator;
-                    std::vector<std::array<XrCompositionLayerProjectionView, 2>> layerProjectionViewsAllocator;
-
-                    for (uint32_t i = 0; i < chainFrameEndInfo->layerCount; i++)
+                    if (XR_TYPE_COMPOSITION_LAYER_PROJECTION == layer->type)
                     {
-                        if (chainFrameEndInfo->layers[i]->type == XR_TYPE_COMPOSITION_LAYER_PROJECTION)
-                        {
-                            const auto* proj =
-                                reinterpret_cast<const XrCompositionLayerProjection*>(chainFrameEndInfo->layers[i]);
-                            for (uint32_t eye = 0; eye < graphics::ViewCount; eye++)
-                            {
-                                const XrCompositionLayerProjectionView& view = proj->views[eye];
-
-                                auto swapchainIt = m_Swapchains.find(view.subImage.swapchain);
-                                if (swapchainIt == m_Swapchains.end())
-                                {
-                                    throw std::runtime_error("Swapchain is not registered");
-                                }
-                                auto& swapchainState = swapchainIt->second;
-                                auto& swapchainImages = swapchainState.images[swapchainState.acquiredImageIndex];
-
-                                xr::math::NearFar nearFar{0.001f, 100.f};
-                                textureForOverlay[eye] = swapchainImages.chain.back();
-                                sliceForOverlay[eye] = view.subImage.imageArrayIndex;
-                                auto ownDepthBufferIt = m_OwnDepthBuffers.find(swapchainIt->first);
-                                depthForOverlay[eye] =
-                                    ownDepthBufferIt != m_OwnDepthBuffers.cend() ? ownDepthBufferIt->second : nullptr;
-                                viewForOverlay[eye].Pose = view.pose;
-                                viewForOverlay[eye].Fov = view.fov;
-                                viewForOverlay[eye].NearFar = nearFar;
-                                viewportForOverlay[eye] = view.subImage.imageRect;
-                            }
-                        }
+                        lastProjectionLayer = reinterpret_cast<const XrCompositionLayerProjection*>(layer);
                     }
-
-                    if (textureForOverlay[0])
+                }
+                if (lastProjectionLayer)
+                {
+                    if (ICompositionFramework* composition =
+                            m_compositionFrameworkFactory->getCompositionFramework(session))
                     {
-                        const bool useVPRT =
-                            textureForOverlay[1] == textureForOverlay[0] && sliceForOverlay[0] != sliceForOverlay[1];
+                        auto deviceDx11 = composition->getCompositionDevice();
 
-                        // render the tracker pose(s)
-                        for (uint32_t eye = 0; eye < graphics::ViewCount; eye++)
+                        ID3D11Device* const device = composition->getCompositionDevice()->getNativeDevice<D3D11>();
+
+                        ID3D11DeviceContext* const context =
+                            composition->getCompositionDevice()->getNativeContext<D3D11>();
+                        // draw marker
+
+                        // acquire last projection layer data
+                        auto viewsForMarker = new std::vector<XrCompositionLayerProjectionView>{};
+                        for (uint32_t eye = 0; eye < lastProjectionLayer->viewCount; eye++)
                         {
-                            m_GraphicsDevice->setRenderTargets(
-                                1,
-                                &textureForOverlay[eye],
-                                useVPRT ? reinterpret_cast<int32_t*>(&sliceForOverlay[eye]) : nullptr,
-                                &viewportForOverlay[eye],
-                                depthForOverlay[eye],
-                                useVPRT ? eye : -1);
-                            m_GraphicsDevice->setViewProjection(viewForOverlay[eye]);
-                            m_GraphicsDevice->clearDepth(1.f);
+                            auto lastView = lastProjectionLayer->views[eye];
+                            XrCompositionLayerProjectionView view{lastView.type,
+                                                                  nullptr,
+                                                                  lastView.pose,
+                                                                  lastView.fov,
+                                                                  lastView.subImage};
+                            viewsForMarker->push_back(view);
+                        }
+                        m_CreatedViews.push_back(viewsForMarker);
 
+                        for (size_t eye = 0; eye < viewsForMarker->size(); ++eye)
+                        {
+                            auto& view = (*viewsForMarker)[eye];
+                            const XrRect2Di* viewPort = &view.subImage.imageRect;
+
+                            if (m_MarkerSwapchains.size() <= eye)
+                            {
+                                // create swapchain for marker
+                                XrSwapchainCreateInfo markerInfo{
+                                    XR_TYPE_SWAPCHAIN_CREATE_INFO,
+                                    nullptr,
+                                    0,
+                                    XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT,
+                                    composition->getPreferredSwapchainFormatOnApplicationDevice(
+                                        XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT),
+                                    1,
+                                    static_cast<uint32_t>(viewPort->extent.width),
+                                    static_cast<uint32_t>(viewPort->extent.height),
+                                    1,
+                                    1,
+                                    1};
+                                m_MarkerSwapchains.push_back(
+                                    composition->createSwapchain(markerInfo,
+                                                                 SwapchainMode::Write | SwapchainMode::Submit));
+
+                                // create depth texture
+                                markerInfo.usageFlags = XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+                                markerInfo.format = DXGI_FORMAT_D32_FLOAT;
+                                m_MarkerDepthTextures.push_back(
+                                    composition->getCompositionDevice()->createTexture(markerInfo));
+                            }
+
+                            auto markerImage = m_MarkerSwapchains[eye]->acquireImage();
+                            ID3D11Texture2D* const rgbTexture =
+                                markerImage->getTextureForWrite()->getNativeTexture<D3D11>();
+
+                            const XrSwapchainCreateInfo& markerSwapchainCreateInfo =
+                                m_MarkerSwapchains[eye]->getInfoOnCompositionDevice();
+
+                            // create ephemeral render target view for the drawing.
+                            auto renderTargetView = std::make_unique<ComPtr<ID3D11RenderTargetView>>();
+
+                            D3D11_RENDER_TARGET_VIEW_DESC rtvDesc{};
+                            rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+                            rtvDesc.Format = static_cast<DXGI_FORMAT>(markerSwapchainCreateInfo.format);
+                            rtvDesc.Texture2DArray.ArraySize = 1;
+                            rtvDesc.Texture2DArray.FirstArraySlice = -1;
+                            rtvDesc.Texture2D.MipSlice = D3D11CalcSubresource(0, 0, 1);
+                            CHECK_HRCMD(device->CreateRenderTargetView(rgbTexture, &rtvDesc, set(*renderTargetView)));
+
+                            // create ephemeral depth stencil view for depth testing / occlusion.
+                            auto depthStencilView = std::make_unique<ComPtr<ID3D11DepthStencilView>>();
+                            D3D11_DEPTH_STENCIL_VIEW_DESC depthDesc{};
+                            depthDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+                            depthDesc.Format = DXGI_FORMAT_D32_FLOAT;
+                            depthDesc.Texture2DArray.ArraySize = 1;
+                            depthDesc.Texture2DArray.FirstArraySlice = -1;
+                            depthDesc.Texture2D.MipSlice = D3D11CalcSubresource(0, 0, 1);
+                            CHECK_HRCMD(
+                                device->CreateDepthStencilView(m_MarkerDepthTextures[eye]->getNativeTexture<D3D11>(),
+                                                               &depthDesc,
+                                                               set(*depthStencilView)));
+
+                            context->OMSetRenderTargets(1, renderTargetView->GetAddressOf(), get(*depthStencilView));
+
+                            // clear render target
+                            constexpr float background[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+                            context->ClearRenderTargetView(renderTargetView->Get(), background);
+
+                            // clear depth buffer
+                            context->ClearDepthStencilView(get(*depthStencilView), D3D11_CLEAR_DEPTH, 1.f, 0);
+
+                            // take over view projection
+                            xr::math::ViewProjection viewProjection{};
+                            viewProjection.Pose = view.pose;
+                            viewProjection.Fov = view.fov;
+                            viewProjection.NearFar = xr::math::NearFar{0.001f, 100.f};
+                            deviceDx11->setViewProjection(viewProjection);
+
+                            // set viewport to match resolution
+                            D3D11_VIEWPORT viewport{};
+                            viewport.TopLeftX = static_cast<float>(viewPort->offset.x);
+                            viewport.TopLeftY = static_cast<float>(viewPort->offset.y);
+                            viewport.Width = static_cast<float>(viewPort->extent.width);
+                            viewport.Height = static_cast<float>(viewPort->extent.height);
+                            viewport.MaxDepth = 1.0f;
+                            context->RSSetViewports(1, &viewport);
+
+                            // draw reference pose marker
+                            XrPosef referencePose =
+                                mcActivated ? xr::math::Pose::Multiply(referenceTrackerPose,
+                                                                       xr::math::Pose::Invert(reversedManipulation))
+                                            : referenceTrackerPose;
+                            deviceDx11->draw(m_MeshRGB, referencePose, m_MarkerSize);
+
+                            // draw tracker marker
                             if (mcActivated)
                             {
-                                m_GraphicsDevice->draw(
-                                    m_MeshRGB,
-                                    xr::math::Pose::Multiply(referenceTrackerPose,
-                                                             xr::math::Pose::Invert(reversedManipulation)),
-                                    m_MarkerSize);
+                                deviceDx11->draw(m_MeshCMY, referenceTrackerPose, m_MarkerSize);
                             }
 
-                            m_GraphicsDevice->draw(mcActivated ? m_MeshCMY : m_MeshRGB,
-                                                   referenceTrackerPose,
-                                                   m_MarkerSize);
+                            ID3D11RenderTargetView* nullRTV = nullptr;
+                            context->OMSetRenderTargets(1, &nullRTV, nullptr);
+
+                            m_MarkerSwapchains[eye]->releaseImage();
+                            m_MarkerSwapchains[eye]->commitLastReleasedImage();
+
+                            view.subImage = m_MarkerSwapchains[eye]->getSubImage();
                         }
 
-                        m_GraphicsDevice->unsetRenderTargets();
-                    }
-                    m_GraphicsDevice->restoreContext();
-                    m_GraphicsDevice->flushContext(false, true);
-                }
+                        m_CreatedProjectionLayer = new XrCompositionLayerProjection{
+                            XR_TYPE_COMPOSITION_LAYER_PROJECTION,
+                            nullptr,
+                            lastProjectionLayer->layerFlags | XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT,
+                            lastProjectionLayer->space,
+                            lastProjectionLayer->viewCount,
+                            viewsForMarker->data()};
 
-                // Release the swapchain images now, as we are really done this time.
-                for (auto& swapchain : m_Swapchains)
-                {
-                    if (swapchain.second.delayedRelease)
-                    {
-                        TraceLoggingWrite(g_traceProvider,
-                                          "DelayedSwapchainRelease",
-                                          TLPArg(swapchain.first, "Swapchain"));
-
-                        XrSwapchainImageReleaseInfo releaseInfo{XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};
-                        swapchain.second.delayedRelease = false;
-                        CHECK_XRCMD(layer->OpenXrApi::xrReleaseSwapchainImage(swapchain.first, &releaseInfo));
+                        m_BaseLayerVector.push_back(
+                            reinterpret_cast<XrCompositionLayerBaseHeader*>(m_CreatedProjectionLayer));
+                        chainFrameEndInfo->layerCount = static_cast<uint32_t>(m_BaseLayerVector.size());
+                        chainFrameEndInfo->layers = m_BaseLayerVector.data();
                     }
                 }
             }
@@ -519,10 +268,21 @@ namespace graphics
                 m_Initialized = false;
             }
         }
-        else
+    }
+
+    void Overlay::DeleteResources()
+    {
+        if (m_CreatedProjectionLayer)
         {
-            ErrorLog("%s: unable to cast instance to OpenXrLayer\n", __FUNCTION__);
+            delete m_CreatedProjectionLayer;
+            m_CreatedProjectionLayer = nullptr;
         }
+        for (const auto view : m_CreatedViews)
+        {
+            delete view;
+        }
+        m_CreatedViews.clear();
+        m_BaseLayerVector.clear();
     }
 
     std::vector<SimpleMeshVertex> Overlay::CreateMarker(bool rgb)
@@ -539,17 +299,17 @@ namespace graphics
         // up
         std::vector<SimpleMeshVertex> top = CreateConeMesh({0.f, upsideDown ? -1.f : 1.f, 0.f},
                                                            {0.f, upsideDown ? -0.375f : 0.375f, 0.125f},
-                                                            {0.f, 0.f, 0.f},
-                                                            rgb ? DarkBlue : DarkCyan,
-                                                            rgb ? Blue : Cyan,
-                                                            rgb ? LightBlue : LightCyan);
+                                                           {0.f, 0.f, 0.f},
+                                                           rgb ? DarkBlue : DarkCyan,
+                                                           rgb ? Blue : Cyan,
+                                                           rgb ? LightBlue : LightCyan);
         // forward
         vertices.insert(vertices.end(), top.begin(), top.end());
         std::vector<SimpleMeshVertex> front = CreateConeMesh({0.f, 0.f, 1.f},
-                                                           {0.125f, 0.f, 0.375f},
-                                                           {0.f, 0.f, 0.f},
-                                                           rgb ? DarkGreen : DarkYellow,
-                                                           rgb ? Green : Yellow,
+                                                             {0.125f, 0.f, 0.375f},
+                                                             {0.f, 0.f, 0.f},
+                                                             rgb ? DarkGreen : DarkYellow,
+                                                             rgb ? Green : Yellow,
                                                              rgb ? LightGreen : LightYellow);
         vertices.insert(vertices.end(), front.begin(), front.end());
         return vertices;
@@ -565,26 +325,27 @@ namespace graphics
         std::vector<SimpleMeshVertex> vertices;
         const DirectX::XMVECTOR dxTop = xr::math::LoadXrVector3(top);
         const DirectX::XMVECTOR dxOffset = xr::math::LoadXrVector3(offset);
-        XrVector3f xrTop;;
-        xr::math::StoreXrVector3(&xrTop, DirectX::XMVectorAdd(dxTop, dxOffset));float angleIncrement = DirectX::XM_2PI / 32.f;
-        xr::math::StoreXrVector3(&xrTop, DirectX::XMVectorAdd(dxTop, dxOffset));angleIncrement = DirectX::XM_2PI / 32.f;
-        DirectX::XMVECTOR rotation = DirectX::XMQuaternionRotationAxis(dxTop, angleIncrement);
+        XrVector3f xrTop;
+        ;
+        xr::math::StoreXrVector3(&xrTop, DirectX::XMVectorAdd(dxTop, dxOffset));
+        constexpr float angleIncrement = DirectX::XM_2PI / 32.f;
+        xr::math::StoreXrVector3(&xrTop, DirectX::XMVectorAdd(dxTop, dxOffset));
+        const DirectX::XMVECTOR rotation = DirectX::XMQuaternionRotationAxis(dxTop, angleIncrement);
         DirectX::XMVECTOR side1 = xr::math::LoadXrVector3(side);
         XrVector3f xrSide0, xrSide1;
         for (int i = 0; i < 32; i++)
         {
-            DirectX::XMVECTOR side0 = side1;
+            const DirectX::XMVECTOR side0 = side1;
             side1 = DirectX::XMVector3Rotate(side0, rotation);
             xr::math::StoreXrVector3(&xrSide0, DirectX::XMVectorAdd(side0, dxOffset));
             xr::math::StoreXrVector3(&xrSide1, DirectX::XMVectorAdd(side1, dxOffset));
-            //xr::math::Pose::Multiply DirectX::XMVECTOR side1 = base;
-  
+
             // bottom
             vertices.push_back({offset, bottomColor});
             vertices.push_back({xrSide0, sideColor});
             vertices.push_back({xrSide1, sideColor});
 
-            // top 
+            // top
             vertices.push_back({xrTop, topColor});
             vertices.push_back({xrSide1, sideColor});
             vertices.push_back({xrSide0, sideColor});
@@ -592,91 +353,13 @@ namespace graphics
         return vertices;
     }
 
-    std::vector<unsigned short> Overlay::CreateIndices(size_t amount)
+    std::vector<uint16_t> Overlay::CreateIndices(size_t amount)
     {
-        std::vector<unsigned short> indices;
-        for (unsigned short i = 0; i < amount; i++)
+        std::vector<uint16_t> indices;
+        for (unsigned short i = 0; i < static_cast<uint16_t>(amount); i++)
         {
             indices.push_back(i);
         }
         return indices;
     }
-
-    namespace shader
-    {
-        void CompileShader(const std::filesystem::path& shaderFile,
-                           const char* entryPoint,
-                           ID3DBlob** blob,
-                           const D3D_SHADER_MACRO* defines /*= nullptr*/,
-                           ID3DInclude* includes /* = nullptr*/,
-                           const char* target /* = "cs_5_0"*/)
-        {
-            DWORD flags =
-                D3DCOMPILE_PACK_MATRIX_COLUMN_MAJOR | D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_WARNINGS_ARE_ERRORS;
-#ifdef _DEBUG
-            flags |= D3DCOMPILE_SKIP_OPTIMIZATION | D3DCOMPILE_DEBUG;
-#else
-            flags |= D3DCOMPILE_OPTIMIZATION_LEVEL3;
-#endif
-            if (!includes)
-            {
-                includes = D3D_COMPILE_STANDARD_FILE_INCLUDE;
-            }
-
-            ComPtr<ID3DBlob> cdErrorBlob;
-            const HRESULT hr = D3DCompileFromFile(shaderFile.c_str(),
-                                                  defines,
-                                                  includes,
-                                                  entryPoint,
-                                                  target,
-                                                  flags,
-                                                  0,
-                                                  blob,
-                                                  &cdErrorBlob);
-
-            if (FAILED(hr))
-            {
-                if (cdErrorBlob)
-                {
-                    Log("%s\n", (char*)cdErrorBlob->GetBufferPointer());
-                }
-                CHECK_HRESULT(hr, "Failed to compile shader file");
-            }
-        }
-
-        void CompileShader(const void* data,
-                           size_t size,
-                           const char* entryPoint,
-                           ID3DBlob** blob,
-                           const D3D_SHADER_MACRO* defines /*= nullptr*/,
-                           ID3DInclude* includes /* = nullptr*/,
-                           const char* target /* = "cs_5_0"*/)
-        {
-            DWORD flags =
-                D3DCOMPILE_PACK_MATRIX_COLUMN_MAJOR | D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_WARNINGS_ARE_ERRORS;
-#ifdef _DEBUG
-            flags |= D3DCOMPILE_SKIP_OPTIMIZATION | D3DCOMPILE_DEBUG;
-#else
-            flags |= D3DCOMPILE_OPTIMIZATION_LEVEL3;
-#endif
-            if (!includes)
-            {
-                // TODO: pSourceName must be a file name to derive relative paths from.
-                includes = D3D_COMPILE_STANDARD_FILE_INCLUDE;
-            }
-
-            ComPtr<ID3DBlob> cdErrorBlob;
-            const HRESULT hr =
-                D3DCompile(data, size, nullptr, defines, includes, entryPoint, target, flags, 0, blob, &cdErrorBlob);
-
-            if (FAILED(hr))
-            {
-                if (cdErrorBlob)
-                {
-                    Log("%s\n", (char*)cdErrorBlob->GetBufferPointer());
-                }
-                CHECK_HRESULT(hr, "Failed to compile shader");
-            }
-        }
-    } // namespace shader
-} // namespace graphics
+} // namespace openxr_api_layer::graphics

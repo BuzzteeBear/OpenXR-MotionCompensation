@@ -27,11 +27,7 @@
 #include "dispatch.h"
 #include "log.h"
 
-#ifndef LAYER_NAMESPACE
-#error Must define LAYER_NAMESPACE
-#endif
-
-namespace LAYER_NAMESPACE {
+namespace openxr_api_layer {
     // The handle of the dll
     HMODULE dllModule;
 
@@ -45,10 +41,10 @@ namespace LAYER_NAMESPACE {
         // The file logger.
         std::ofstream logStream;
     } // namespace log
-} // namespace LAYER_NAMESPACE
+} // namespace openxr_api_layer
 
-using namespace LAYER_NAMESPACE;
-using namespace LAYER_NAMESPACE::log;
+using namespace openxr_api_layer;
+using namespace openxr_api_layer::log;
 
 extern "C" {
 

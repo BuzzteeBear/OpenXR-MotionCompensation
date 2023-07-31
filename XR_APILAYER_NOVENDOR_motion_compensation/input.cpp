@@ -10,7 +10,7 @@
 
 namespace Input
 {
-    using namespace motion_compensation_layer;
+    using namespace openxr_api_layer;
     using namespace log;
     using namespace Feedback;
 
@@ -162,7 +162,7 @@ namespace Input
         const auto it = m_ShortCuts.find(key);
         if (it == m_ShortCuts.end())
         {
-            motion_compensation_layer::log::ErrorLog("%s(%d): unable to find key\n", __FUNCTION__, key);
+            openxr_api_layer::log::ErrorLog("%s(%d): unable to find key\n", __FUNCTION__, key);
             return false;
         }
         return UpdateKeyState(it->second.first, it->second.second, isRepeat);

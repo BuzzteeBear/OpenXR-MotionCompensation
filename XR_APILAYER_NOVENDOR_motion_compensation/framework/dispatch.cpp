@@ -27,13 +27,10 @@
 #include "dispatch.h"
 #include "log.h"
 
-#ifndef LAYER_NAMESPACE
-#error Must define LAYER_NAMESPACE
-#endif
 
-using namespace LAYER_NAMESPACE::log;
+using namespace openxr_api_layer::log;
 
-namespace LAYER_NAMESPACE {
+namespace openxr_api_layer {
 
     // Entry point for creating the layer.
     XrResult xrCreateApiLayerInstance(const XrInstanceCreateInfo* const instanceCreateInfo,
@@ -178,13 +175,13 @@ namespace LAYER_NAMESPACE {
             apiLayerInfo->nextInfo->nextCreateApiLayerInstance(&chainInstanceCreateInfo, &chainApiLayerInfo, instance);
         if (result == XR_SUCCESS) {
             // Create our layer.
-            LAYER_NAMESPACE::GetInstance()->SetGetInstanceProcAddr(apiLayerInfo->nextInfo->nextGetInstanceProcAddr,
+            openxr_api_layer::GetInstance()->SetGetInstanceProcAddr(apiLayerInfo->nextInfo->nextGetInstanceProcAddr,
                                                                    *instance);
-            LAYER_NAMESPACE::GetInstance()->SetGrantedExtensions(implicitExtensions);
+            openxr_api_layer::GetInstance()->SetGrantedExtensions(implicitExtensions);
 
             // Forward the xrCreateInstance() call to the layer.
             try {
-                result = LAYER_NAMESPACE::GetInstance()->xrCreateInstance(instanceCreateInfo);
+                result = openxr_api_layer::GetInstance()->xrCreateInstance(instanceCreateInfo);
             } catch (std::runtime_error exc) {
                 TraceLoggingWrite(g_traceProvider, "xrCreateInstance_Error", TLArg(exc.what(), "Error"));
                 ErrorLog("xrCreateInstance: %s\n", exc.what());
@@ -217,9 +214,9 @@ namespace LAYER_NAMESPACE {
 
         XrResult result;
         try {
-            result = LAYER_NAMESPACE::GetInstance()->xrDestroyInstance(instance);
+            result = openxr_api_layer::GetInstance()->xrDestroyInstance(instance);
             if (XR_SUCCEEDED(result)) {
-                LAYER_NAMESPACE::ResetInstance();
+                openxr_api_layer::ResetInstance();
             }
         } catch (std::runtime_error exc) {
             TraceLoggingWrite(g_traceProvider, "xrDestroyInstance_Error", TLArg(exc.what(), "Error"));
@@ -241,7 +238,7 @@ namespace LAYER_NAMESPACE {
 
         XrResult result;
         try {
-            result = LAYER_NAMESPACE::GetInstance()->xrGetInstanceProcAddr(instance, name, function);
+            result = openxr_api_layer::GetInstance()->xrGetInstanceProcAddr(instance, name, function);
         } catch (std::runtime_error exc) {
             TraceLoggingWrite(g_traceProvider, "xrGetInstanceProcAddr_Error", TLArg(exc.what(), "Error"));
             ErrorLog("xrGetInstanceProcAddr: %s\n", exc.what());
@@ -253,4 +250,4 @@ namespace LAYER_NAMESPACE {
         return result;
     }
 
-} // namespace LAYER_NAMESPACE
+} // namespace openxr_api_layer

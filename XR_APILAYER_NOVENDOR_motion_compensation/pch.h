@@ -38,6 +38,7 @@
 #include <vector>
 #include <set>
 #include <map>
+#include <deque>
 #define _USE_MATH_DEFINES
 #include <cmath>
 
@@ -77,12 +78,14 @@ using Microsoft::WRL::ComPtr;
 // OpenXR loader interfaces.
 #include <loader_interfaces.h>
 
-// OpenXR utilities.
+// OpenXR/DirectX utilities.
 #include <XrError.h>
 #include <XrMath.h>
 #include <XrSide.h>
 #include <XrStereoView.h>
 #include <XrToString.h>
+#include <DirectXCollision.h>
+#include <DirectXTex.h>
 
 // FMT formatter.
 #include <fmt/format.h>

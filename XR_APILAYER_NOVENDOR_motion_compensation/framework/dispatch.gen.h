@@ -23,11 +23,7 @@
 
 #pragma once
 
-#ifndef LAYER_NAMESPACE
-#error Must define LAYER_NAMESPACE
-#endif
-
-namespace LAYER_NAMESPACE
+namespace openxr_api_layer
 {
 
 	class OpenXrApi
@@ -375,5 +371,5 @@ namespace LAYER_NAMESPACE
 
 	};
 
-} // namespace LAYER_NAMESPACE
+} // namespace openxr_api_layer
 

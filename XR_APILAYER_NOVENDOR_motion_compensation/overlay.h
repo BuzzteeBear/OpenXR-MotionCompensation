@@ -21,9 +21,9 @@
 // SOFTWARE.
 
 #pragma once
-#include "interfaces.h"
+#include "graphics.h"
 
-namespace graphics
+namespace openxr_api_layer::graphics
 {
     // Colors
     constexpr XrVector3f Red{1.f, 0.f, 0.f};
@@ -47,7 +47,7 @@ namespace graphics
 
     struct SwapchainImages
     {
-        std::vector<std::shared_ptr<graphics::ITexture>> chain{};
+        std::vector<std::shared_ptr<IGraphicsTexture>> chain{};
     };
 
     struct SwapchainState
@@ -60,23 +60,20 @@ namespace graphics
     class Overlay
     {
       public:
+        Overlay(const XrInstanceCreateInfo& instanceInfo,
+                XrInstance instance,
+                PFN_xrGetInstanceProcAddr xrGetInstanceProcAddr);
+        void CreateSession(const XrSessionCreateInfo* createInfo, XrSession session);
+        void DestroySession(XrSession session) const;
         void SetMarkerSize();
-        void CreateSession(const XrSessionCreateInfo* createInfo, XrSession* session, const std::string& runtimeName);
-        void DestroySession();
-        void CreateSwapchain(XrSession session, const XrSwapchainCreateInfo* createInfo, XrSwapchain* swapchain);
-        void DestroySwapchain(XrSwapchain swapchain);
-        XrResult AcquireSwapchainImage(XrSwapchain swapchain,
-                                       const XrSwapchainImageAcquireInfo* acquireInfo,
-                                       uint32_t* index);
-        XrResult ReleaseSwapchainImage(XrSwapchain swapchain, const XrSwapchainImageReleaseInfo* releaseInfo);
         bool ToggleOverlay();
-        void BeginFrameBefore();
-        void BeginFrameAfter();
-        void DrawOverlay(const XrFrameEndInfo* chainFrameEndInfo,
+        void DrawOverlay(XrSession session,
+                         XrFrameEndInfo* chainFrameEndInfo,
                          const XrPosef& referenceTrackerPose,
                          const XrPosef& reversedManipulation,
                          bool mcActivated);
-        
+        void DeleteResources();
+
         bool m_Initialized{false};
 
       private:
@@ -90,10 +87,13 @@ namespace graphics
         static std::vector<unsigned short> CreateIndices(size_t amount);
 
         bool m_OverlayActive{false};
-        std::shared_ptr<graphics::IDevice> m_GraphicsDevice{};
-        std::map<XrSwapchain, graphics::SwapchainState> m_Swapchains{};
-        std::unordered_map<XrSwapchain, std::shared_ptr<ITexture>> m_OwnDepthBuffers{};
         std::shared_ptr<graphics::ISimpleMesh> m_MeshRGB{}, m_MeshCMY{};
         XrVector3f m_MarkerSize{0.1f, 0.1f, 0.1f};
+        std::shared_ptr<graphics::ICompositionFrameworkFactory> m_compositionFrameworkFactory{};
+        std::vector<std::shared_ptr<graphics::ISwapchain>> m_MarkerSwapchains{};
+        std::vector<std::shared_ptr<graphics::IGraphicsTexture>> m_MarkerDepthTextures{};
+        std::vector<std::vector<XrCompositionLayerProjectionView>*> m_CreatedViews{};
+        XrCompositionLayerProjection* m_CreatedProjectionLayer{};
+        std::vector<const XrCompositionLayerBaseHeader*> m_BaseLayerVector{};
     };
-} // namespace graphics
+} // namespace openxr_api_layer::graphics

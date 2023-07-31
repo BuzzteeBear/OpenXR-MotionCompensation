@@ -27,7 +27,7 @@ namespace {
     uint32_t g_globalErrorCount = 0;
 } // namespace
 
-namespace LAYER_NAMESPACE::log {
+namespace openxr_api_layer::log {
     extern std::ofstream logStream;
 
     // {40633bc2-ca4a-4c13-88b6-7a55ed74e061}
@@ -91,4 +91,4 @@ namespace LAYER_NAMESPACE::log {
 #endif
     }
 
-} // namespace LAYER_NAMESPACE::log
+} // namespace openxr_api_layer::log

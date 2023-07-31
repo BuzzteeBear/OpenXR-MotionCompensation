@@ -31,10 +31,10 @@
 #include <util.h>
 
 
-using namespace motion_compensation_layer::log;
+using namespace openxr_api_layer::log;
 using namespace Feedback;
 using namespace xr::math;
-namespace motion_compensation_layer
+namespace openxr_api_layer
 {
     OpenXrLayer::~OpenXrLayer()
     {
@@ -46,6 +46,10 @@ namespace motion_compensation_layer
         if (m_Enabled)
         {
             Log("xrDestroyInstance\n");
+        }
+        if (m_Overlay)
+        {
+            m_Overlay.reset();
         }
         return OpenXrApi::xrDestroyInstance(instance);
     }
@@ -170,6 +174,18 @@ namespace motion_compensation_layer
             m_Initialized = false;
         }
 
+        // enable / disable graphical overlay initialization
+        GetConfig()->GetBool(Cfg::OverlayEnabled, m_OverlayEnabled);
+        if (m_OverlayEnabled)
+        {
+            m_Overlay = std::make_unique<graphics::Overlay>(
+                graphics::Overlay(*createInfo, GetXrInstance(), m_xrGetInstanceProcAddr));
+        }
+        else
+        {
+            Log("graphical overlay disabled in config file\n");
+        }
+
         // initialize auto activator
         m_AutoActivator = std::make_unique<utility::AutoActivator>(utility::AutoActivator(m_Input));
 
@@ -241,24 +257,17 @@ namespace motion_compensation_layer
                           TLPArg(instance, "Instance"),
                           TLArg((int)createInfo->systemId, "SystemId"),
                           TLArg(createInfo->createFlags, "CreateFlags"));
-        const XrResult result = OpenXrApi::xrCreateSession(instance, createInfo, session);
+
+        const XrResult result =  OpenXrApi::xrCreateSession(instance, createInfo, session);
         if (XR_SUCCEEDED(result))
         {
             if (isSystemHandled(createInfo->systemId))
             {
-                // enable / disable graphical overlay initialization
-                GetConfig()->GetBool(Cfg::OverlayEnabled, m_OverlayEnabled);
-                if (m_OverlayEnabled)
-                {
-                    m_Overlay = std::make_unique<graphics::Overlay>(graphics::Overlay());
-                    m_Overlay->CreateSession(createInfo, session, m_RuntimeName);
-                }
-                else
-                {
-                    Log("initialization of graphical overlay disabled in config file\n");
-                }
-                
                 m_Session = *session;
+                if (m_Overlay)
+                {
+                    m_Overlay->CreateSession(createInfo, m_Session);
+                }
 
                 if (bool earlyPhysicalInit; m_PhysicalEnabled &&
                                             GetConfig()->GetBool(Cfg::PhysicalEarly, earlyPhysicalInit) &&
@@ -333,161 +342,13 @@ namespace motion_compensation_layer
             m_ActionSpaceCreated = false;
             Log("xrDestroySession\n");
             TraceLoggingWrite(g_traceProvider, "xrDestroySession", TLPArg(session, "Session"));
+            if (m_Overlay)
+            {
+                m_Overlay->DestroySession(session);
+            }
         }
         const XrResult result = OpenXrApi::xrDestroySession(session);
-
-        if (m_Enabled && m_OverlayEnabled)
-        {
-            m_Overlay->DestroySession();
-        }
-        m_Overlay.reset();
-
         return result;
-    }
-
-    XrResult OpenXrLayer::xrCreateSwapchain(XrSession session,
-                               const XrSwapchainCreateInfo* createInfo,
-                               XrSwapchain* swapchain)
-    {
-        if (!m_Enabled || !m_OverlayEnabled)
-        {
-            return OpenXrApi::xrCreateSwapchain(session, createInfo, swapchain);
-        }
-
-        DebugLog("xrCreateSwapchain\n");
-        if (createInfo->type != XR_TYPE_SWAPCHAIN_CREATE_INFO)
-        {
-            return XR_ERROR_VALIDATION_FAILURE;
-        }
-
-        TraceLoggingWrite(g_traceProvider,
-                          "xrCreateSwapchain",
-                          TLPArg(session, "Session"),
-                          TLArg(createInfo->arraySize, "ArraySize"),
-                          TLArg(createInfo->width, "Width"),
-                          TLArg(createInfo->height, "Height"),
-                          TLArg(createInfo->createFlags, "CreateFlags"),
-                          TLArg(createInfo->format, "Format"),
-                          TLArg(createInfo->faceCount, "FaceCount"),
-                          TLArg(createInfo->mipCount, "MipCount"),
-                          TLArg(createInfo->sampleCount, "SampleCount"),
-                          TLArg(createInfo->usageFlags, "UsageFlags"));
-
-        if (!isSessionHandled(session) || !m_Overlay->m_Initialized)
-        {
-            return OpenXrApi::xrCreateSwapchain(session, createInfo, swapchain);
-        }
-        Log("Creating swapchain with dimensions=%ux%u, arraySize=%u, mipCount=%u, sampleCount=%u, format=%d, "
-            "usage=0x%x\n",
-            createInfo->width,
-            createInfo->height,
-            createInfo->arraySize,
-            createInfo->mipCount,
-            createInfo->sampleCount,
-            createInfo->format,
-            createInfo->usageFlags);
-
-        const XrResult result = OpenXrApi::xrCreateSwapchain(session, createInfo, swapchain);
-        if (XR_SUCCEEDED(result))
-        {
-            m_Overlay->CreateSwapchain(session, createInfo, swapchain);
-        }
-        return result;
-    }
-
-    XrResult OpenXrLayer::xrDestroySwapchain(XrSwapchain swapchain)
-    {
-        if (!m_Enabled || !m_OverlayEnabled)
-        {
-            return OpenXrApi::xrDestroySwapchain(swapchain);
-        }
-
-        DebugLog("xrDestroySwapchain\n");
-        TraceLoggingWrite(g_traceProvider, "xrDestroySwapchain", TLPArg(swapchain, "Swapchain"));
-
-        std::unique_lock lock(m_FrameLock);
-
-        const XrResult result = OpenXrApi::xrDestroySwapchain(swapchain);
-        if (XR_SUCCEEDED(result))
-        {
-            m_Overlay->DestroySwapchain(swapchain);
-        }
-
-        return result;
-    }
-
-    XrResult OpenXrLayer::xrWaitSwapchainImage(XrSwapchain swapchain, const XrSwapchainImageWaitInfo* waitInfo)
-    {
-        if (!m_Enabled || !m_OverlayEnabled)
-        {
-            return OpenXrApi::xrWaitSwapchainImage(swapchain, waitInfo);
-        }
-
-        DebugLog("xrWaitSwapchainImage\n");
-        if (waitInfo->type != XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO)
-        {
-            return XR_ERROR_VALIDATION_FAILURE;
-        }
-
-        TraceLoggingWrite(g_traceProvider,
-                          "xrWaitSwapchainImage",
-                          TLPArg(swapchain, "Swapchain"),
-                          TLArg(waitInfo->timeout));
-
-        // We remove the timeout causing issues with OpenComposite.
-        XrSwapchainImageWaitInfo chainWaitInfo = *waitInfo;
-        if (m_Enabled)
-        {
-            chainWaitInfo.timeout = XR_INFINITE_DURATION;
-        }
-        return OpenXrApi::xrWaitSwapchainImage(swapchain, &chainWaitInfo);
-    }
-
-    XrResult OpenXrLayer::xrAcquireSwapchainImage(XrSwapchain swapchain,
-                                     const XrSwapchainImageAcquireInfo* acquireInfo,
-                                     uint32_t* index)
-    {
-        if (!m_Enabled || !m_OverlayEnabled)
-        {
-            return OpenXrApi::xrAcquireSwapchainImage(swapchain, acquireInfo, index);
-        }
-
-        DebugLog("xrAcquireSwapchainImage\n");
-        if (acquireInfo && acquireInfo->type != XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO)
-        {
-            return XR_ERROR_VALIDATION_FAILURE;
-        }
-
-        TraceLoggingWrite(g_traceProvider, "xrAcquireSwapchainImage", TLPArg(swapchain, "Swapchain"));
-
-        if (!m_Overlay->m_Initialized)
-        {
-            return OpenXrApi::xrAcquireSwapchainImage(swapchain, acquireInfo, index);
-        }
-
-        return m_Overlay->AcquireSwapchainImage(swapchain, acquireInfo, index);
-    }
-
-    XrResult OpenXrLayer::xrReleaseSwapchainImage(XrSwapchain swapchain, const XrSwapchainImageReleaseInfo* releaseInfo)
-    {
-        if (!m_Enabled || !m_OverlayEnabled)
-        {
-            return OpenXrApi::xrReleaseSwapchainImage(swapchain, releaseInfo);
-        }
-
-        DebugLog("xrReleaseSwapchainImage\n");
-        if (releaseInfo && releaseInfo->type != XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO)
-        {
-            return XR_ERROR_VALIDATION_FAILURE;
-        }
-
-        TraceLoggingWrite(g_traceProvider, "xrReleaseSwapchainImage", TLPArg(swapchain, "Swapchain"));
-
-        if (!m_Overlay->m_Initialized)
-        {
-            return OpenXrApi::xrReleaseSwapchainImage(swapchain, releaseInfo);
-        }
-        return m_Overlay->ReleaseSwapchainImage(swapchain, releaseInfo);
     }
 
     XrResult OpenXrLayer::xrGetCurrentInteractionProfile(XrSession session,
@@ -1038,16 +899,7 @@ namespace motion_compensation_layer
 
         TraceLoggingWrite(g_traceProvider, "xrBeginFrame", TLPArg(session, "Session"));
 
-        m_Overlay->BeginFrameBefore();
-
-        const XrResult result = OpenXrApi::xrBeginFrame(session, frameBeginInfo);
-
-        if (XR_SUCCEEDED(result) && isSessionHandled(session))
-        {
-            m_Overlay->BeginFrameAfter();
-        }
-
-        return result;
+        return OpenXrApi::xrBeginFrame(session, frameBeginInfo);
     }
 
     XrResult OpenXrLayer::xrEndFrame(XrSession session, const XrFrameEndInfo* frameEndInfo)
@@ -1100,15 +952,25 @@ namespace motion_compensation_layer
         {
             m_Tracker->ApplyCorManipulation(session, chainFrameEndInfo.displayTime);
         }
+
         if (m_OverlayEnabled)
         {
-            m_Overlay->DrawOverlay(&chainFrameEndInfo, referenceTrackerPose, reversedManipulation, m_Activated);
+            m_Overlay->DrawOverlay(session,
+                                   &chainFrameEndInfo,
+                                   referenceTrackerPose,
+                                   reversedManipulation,
+                                   m_Activated);
         }
 
         if (!m_Activated)
         {
             m_Input->HandleKeyboardInput(chainFrameEndInfo.displayTime);
-            return OpenXrApi::xrEndFrame(session, &chainFrameEndInfo);
+            XrResult result =  OpenXrApi::xrEndFrame(session, &chainFrameEndInfo);
+            if (m_OverlayEnabled)
+            {
+                m_Overlay->DeleteResources();
+            }
+            return result;
         }
 
         std::vector<const XrCompositionLayerBaseHeader*> resetLayers{};
@@ -1236,6 +1098,10 @@ namespace motion_compensation_layer
         XrResult result = OpenXrApi::xrEndFrame(session, &resetFrameEndInfo);
 
         // clean up memory
+        if (m_Overlay)
+        {
+            m_Overlay->DeleteResources();
+        }
         for (auto projection : resetProjectionLayers)
         {
             delete projection;
@@ -1718,14 +1584,14 @@ namespace motion_compensation_layer
         g_instance.reset();
     }
 
-} // namespace motion_compensation_layer
+} // namespace openxr_api_layer
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved)
 {
     switch (ul_reason_for_call)
     {
     case DLL_PROCESS_ATTACH:
-        TraceLoggingRegister(motion_compensation_layer::log::g_traceProvider);
+        TraceLoggingRegister(openxr_api_layer::log::g_traceProvider);
         break;
 
     case DLL_THREAD_ATTACH:

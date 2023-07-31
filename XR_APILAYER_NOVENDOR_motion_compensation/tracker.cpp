@@ -7,7 +7,7 @@
 #include <log.h>
 #include <util.h>
 
-using namespace motion_compensation_layer;
+using namespace openxr_api_layer;
 using namespace log;
 using namespace Feedback;
 using namespace xr::math;

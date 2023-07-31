@@ -9,7 +9,7 @@
 #include <log.h>
 #include <playsoundapi.h>
 
-using namespace motion_compensation_layer::log;
+using namespace openxr_api_layer::log;
 namespace Feedback
 {
     bool AudioOut::Init()
@@ -49,7 +49,7 @@ namespace Feedback
         if (m_SoundResources.end() != soundResource)
         {
             if (!PlaySound(nullptr, 0, 0) || !PlaySound(MAKEINTRESOURCE(soundResource->second),
-                                                        motion_compensation_layer::dllModule,
+                                                        openxr_api_layer::dllModule,
                                                         SND_RESOURCE | SND_ASYNC))
 
             {
@@ -70,7 +70,7 @@ namespace Feedback
     {
         if (seconds > 0 && seconds <= 10 &&
             (!PlaySound(nullptr, 0, 0) || !PlaySound(MAKEINTRESOURCE(COUNT0_WAV + seconds),
-                                                     motion_compensation_layer::dllModule,
+                                                     openxr_api_layer::dllModule,
                                                      SND_RESOURCE | SND_ASYNC)))
         {
             ErrorLog("%s: unable to play sound (%d : % d): %s\n",

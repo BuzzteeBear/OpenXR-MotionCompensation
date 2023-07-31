@@ -8,7 +8,8 @@
 #include "utility.h"
 #include <log.h>
 
-using namespace motion_compensation_layer::log;
+using namespace openxr_api_layer;
+using namespace log;
 using namespace utility;
 
 bool ConfigManager::Init(const std::string& application)
@@ -21,7 +22,7 @@ bool ConfigManager::Init(const std::string& application)
         return false;
     }
     m_UsesOpenComposite = application.rfind("OpenComposite", 0) == 0;
-    m_ApplicationIni = motion_compensation_layer::localAppData.string() + "\\" + application + ".ini";
+    m_ApplicationIni = localAppData.string() + "\\" + application + ".ini";
     if (!application.empty() && _access(m_ApplicationIni.c_str(), 0) == -1)
     {
 
@@ -58,7 +59,7 @@ bool ConfigManager::Init(const std::string& application)
             }
         }
     }
-    const std::string coreIni(motion_compensation_layer::localAppData.string() + "\\" + "OpenXR-MotionCompensation.ini");
+    const std::string coreIni(localAppData.string() + "\\" + "OpenXR-MotionCompensation.ini");
     if ((_access(coreIni.c_str(), 0)) != -1)
     {
         // check global deactivation flag
@@ -274,7 +275,7 @@ void ConfigManager::WriteConfig(const bool forApp)
     bool error{false};
     const std::string configFile =
         forApp ? m_ApplicationIni
-               : motion_compensation_layer::localAppData.string() + "\\" + "OpenXR-MotionCompensation.ini";
+               : localAppData.string() + "\\" + "OpenXR-MotionCompensation.ini";
     for (const auto key : m_KeysToSave)
     {
         if (const auto& keyEntry = m_Keys.find(key); m_Keys.end() != keyEntry)

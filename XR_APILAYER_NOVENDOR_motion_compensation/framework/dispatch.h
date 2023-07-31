@@ -22,11 +22,7 @@
 
 #pragma once
 
-#ifndef LAYER_NAMESPACE
-#error Must define LAYER_NAMESPACE
-#endif
-
-namespace LAYER_NAMESPACE {
+namespace openxr_api_layer {
 
     XrResult xrGetInstanceProcAddr(XrInstance instance,
                                    const char* name,
@@ -36,4 +32,4 @@ namespace LAYER_NAMESPACE {
                                       const struct XrApiLayerCreateInfo* apiLayerInfo,
                                       XrInstance* instance);
 
-} // namespace LAYER_NAMESPACE
+} // namespace openxr_api_layer

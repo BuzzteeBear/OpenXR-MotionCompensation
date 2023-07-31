@@ -44,9 +44,9 @@ namespace utility
         {
             std::unique_lock lock(m_Mutex);
 
-            TraceLoggingWrite(LAYER_NAMESPACE::log::g_traceProvider, "GetSample", TLArg(time, "Time"));
+            TraceLoggingWrite(openxr_api_layer::log::g_traceProvider, "GetSample", TLArg(time, "Time"));
 
-            LAYER_NAMESPACE::log::DebugLog("GetSample(%s): %u\n", m_SampleType.c_str(), time);
+            openxr_api_layer::log::DebugLog("GetSample(%s): %u\n", m_SampleType.c_str(), time);
 
             auto it = m_Cache.lower_bound(time);
             const bool itIsEnd = m_Cache.end() == it;
@@ -55,25 +55,25 @@ namespace utility
                 if (it->first == time)
                 {
                     // exact entry found
-                    TraceLoggingWrite(LAYER_NAMESPACE::log::g_traceProvider,
+                    TraceLoggingWrite(openxr_api_layer::log::g_traceProvider,
                                       "GetSample_Found",
                                       TLArg(m_SampleType.c_str(), "Type"),
                                       TLArg("Exact", "Match"),
                                       TLArg(it->first, "Time"));
 
-                    LAYER_NAMESPACE::log::DebugLog("GetSample(%s): exact match found\n", m_SampleType.c_str());
+                    openxr_api_layer::log::DebugLog("GetSample(%s): exact match found\n", m_SampleType.c_str());
 
                     return it->second;
                 }
                 else if (it->first <= time + m_Tolerance)
                 {
                     // succeeding entry is within tolerance
-                    TraceLoggingWrite(LAYER_NAMESPACE::log::g_traceProvider,
+                    TraceLoggingWrite(openxr_api_layer::log::g_traceProvider,
                                       "GetSample_Found",
                                       TLArg(m_SampleType.c_str(), "Type"),
                                       TLArg("Later", "Match"),
                                       TLArg(it->first, "Time"));
-                    LAYER_NAMESPACE::log::DebugLog("GetSample(%s): later match found %u\n",
+                    openxr_api_layer::log::DebugLog("GetSample(%s): later match found %u\n",
                                                    m_SampleType.c_str(),
                                                    it->first);
 
@@ -88,19 +88,19 @@ namespace utility
                 if (lowerIt->first >= time - m_Tolerance)
                 {
                     // preceding entry is within tolerance
-                    TraceLoggingWrite(LAYER_NAMESPACE::log::g_traceProvider,
+                    TraceLoggingWrite(openxr_api_layer::log::g_traceProvider,
                                       "GetSample_Found",
                                       TLArg(m_SampleType.c_str(), "Type"),
                                       TLArg("Earlier", "Match"),
                                       TLArg(lowerIt->first, "Time"));
-                    LAYER_NAMESPACE::log::DebugLog("GetSample(%s): earlier match found: %u\n",
+                    openxr_api_layer::log::DebugLog("GetSample(%s): earlier match found: %u\n",
                                                    m_SampleType.c_str(),
                                                    lowerIt->first);
 
                     return lowerIt->second;
                 }
             }
-            LAYER_NAMESPACE::log::ErrorLog("GetSample(%s) unable to find sample %u+-%.3fms\n",
+            openxr_api_layer::log::ErrorLog("GetSample(%s) unable to find sample %u+-%.3fms\n",
                                            m_SampleType.c_str(),
                                            time,
                                            m_Tolerance / 1000000.0);
@@ -112,23 +112,23 @@ namespace utility
                     --lowerIt;
                     // both entries are valid -> select better match
                     auto returnIt = (time - lowerIt->first < it->first - time ? lowerIt : it);
-                    TraceLoggingWrite(LAYER_NAMESPACE::log::g_traceProvider,
+                    TraceLoggingWrite(openxr_api_layer::log::g_traceProvider,
                                       "GetSample_Failed",
                                       TLArg(m_SampleType.c_str(), "Type"),
                                       TLArg("Estimated Both", "Match"),
                                       TLArg(it->first, "Time"));
-                    LAYER_NAMESPACE::log::ErrorLog("Using best match: t = %u \n", returnIt->first);
+                    openxr_api_layer::log::ErrorLog("Using best match: t = %u \n", returnIt->first);
 
                     return returnIt->second;
                 }
                 // higher entry is first in cache -> use it
 
-                TraceLoggingWrite(LAYER_NAMESPACE::log::g_traceProvider,
+                TraceLoggingWrite(openxr_api_layer::log::g_traceProvider,
                                   "GetSample_Found",
                                   TLArg(m_SampleType.c_str(), "Type"),
                                   TLArg("Estimated Earlier", "Match"),
                                   TLArg(it->first, "Time"));
-                LAYER_NAMESPACE::log::ErrorLog("Using best match: t = %u \n", it->first);
+                openxr_api_layer::log::ErrorLog("Using best match: t = %u \n", it->first);
                 return it->second;
             }
             if (!itIsBegin)
@@ -136,8 +136,8 @@ namespace utility
                 auto lowerIt = it;
                 --lowerIt;
                 // lower entry is last in cache-> use it
-                LAYER_NAMESPACE::log::ErrorLog("Using best match: t = %u \n", lowerIt->first);
-                TraceLoggingWrite(LAYER_NAMESPACE::log::g_traceProvider,
+                openxr_api_layer::log::ErrorLog("Using best match: t = %u \n", lowerIt->first);
+                TraceLoggingWrite(openxr_api_layer::log::g_traceProvider,
                                   "GetSample_Failed",
                                   TLArg(m_SampleType.c_str(), "Type"),
                                   TLArg("Estimated Earlier", "Type"),
@@ -145,8 +145,8 @@ namespace utility
                 return lowerIt->second;
             }
             // cache is empty -> return fallback
-            LAYER_NAMESPACE::log::ErrorLog("Using fallback!!!\n", time);
-            TraceLoggingWrite(LAYER_NAMESPACE::log::g_traceProvider, "GetSample_Failed", TLArg("Fallback", "Type"));
+            openxr_api_layer::log::ErrorLog("Using fallback!!!\n", time);
+            TraceLoggingWrite(openxr_api_layer::log::g_traceProvider, "GetSample_Failed", TLArg("Fallback", "Type"));
             return m_Fallback;
         }
 
@@ -194,6 +194,43 @@ namespace utility
         bool m_ConnectionLost{false};
         std::mutex m_MmfLock;
     };
+
+    struct ITimer
+    {
+        virtual ~ITimer() = default;
+
+        virtual void start() = 0;
+        virtual void stop() = 0;
+
+        virtual uint64_t query() const = 0;
+    };
+
+    std::shared_ptr<ITimer> createTimer();
+
+    static inline bool startsWith(const std::string& str, const std::string& substr)
+    {
+        return str.find(substr) == 0;
+    }
+
+    static inline bool endsWith(const std::string& str, const std::string& substr)
+    {
+        const auto pos = str.find(substr);
+        return pos != std::string::npos && pos == str.size() - substr.size();
+    }
+
+    // Both ray and quadCenter poses must be located using the same base space.
+    bool hitTest(const XrPosef& ray, const XrPosef& quadCenter, const XrExtent2Df& quadSize, XrPosef& hitPose);
+
+    // Get UV coordinates for a point on quad.
+    XrVector2f getUVCoordinates(const XrVector3f& point, const XrPosef& quadCenter, const XrExtent2Df& quadSize);
+    static inline POINT getUVCoordinates(const XrVector3f& point,
+                                         const XrPosef& quadCenter,
+                                         const XrExtent2Df& quadSize,
+                                         const XrExtent2Di& quadPixelSize)
+    {
+        const XrVector2f uv = getUVCoordinates(point, quadCenter, quadSize);
+        return {static_cast<LONG>(uv.x * quadPixelSize.width), static_cast<LONG>(uv.y * quadPixelSize.height)};
+    }
 
     std::string LastErrorMsg();
 

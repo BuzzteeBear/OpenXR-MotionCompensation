@@ -27,7 +27,7 @@
 #include "tracker.h"
 #include "overlay.h"
 
-namespace motion_compensation_layer
+namespace openxr_api_layer
 {
     // The handle of the dll
     extern HMODULE dllModule;
@@ -40,14 +40,13 @@ namespace motion_compensation_layer
     const std::string LayerName = "XR_APILAYER_NOVENDOR_motion_compensation";
     const std::string VersionString = std::string(VERSION_STRING) + " (" + VERSION_NUMBER + ")";
 
-    class OpenXrLayer : public motion_compensation_layer::OpenXrApi
+    class OpenXrLayer : public openxr_api_layer::OpenXrApi
     {
       public:
         OpenXrLayer() = default;
 
         virtual ~OpenXrLayer() override;
         XrResult xrDestroyInstance(XrInstance instance) override;
-
         XrResult xrCreateInstance(const XrInstanceCreateInfo* createInfo) override;
         XrResult xrGetSystem(XrInstance instance, const XrSystemGetInfo* getInfo, XrSystemId* systemId) override;
         XrResult xrPollEvent(XrInstance instance, XrEventDataBuffer* eventData) override;
@@ -57,17 +56,6 @@ namespace motion_compensation_layer
         XrResult xrBeginSession(XrSession session, const XrSessionBeginInfo* beginInfo) override;
         XrResult xrEndSession(XrSession session) override;
         XrResult xrDestroySession(XrSession session) override;
-        XrResult xrCreateSwapchain(XrSession session,
-                                   const XrSwapchainCreateInfo* createInfo,
-                                   XrSwapchain* swapchain) override;
-        XrResult xrDestroySwapchain(XrSwapchain swapchain) override;
-        XrResult xrWaitSwapchainImage(XrSwapchain swapchain,
-                                                   const XrSwapchainImageWaitInfo* waitInfo) override;
-        XrResult xrAcquireSwapchainImage(XrSwapchain swapchain,
-                                         const XrSwapchainImageAcquireInfo* acquireInfo,
-                                         uint32_t* index) override;
-        XrResult xrReleaseSwapchainImage(XrSwapchain swapchain,
-                                         const XrSwapchainImageReleaseInfo* releaseInfo) override;
         XrResult xrGetCurrentInteractionProfile(XrSession session,
                                                 XrPath topLevelUserPath,
                                                 XrInteractionProfileState* interactionProfile) override;
@@ -172,4 +160,4 @@ namespace motion_compensation_layer
     // A function to reset (delete) the singleton.
     void ResetInstance();
 
-} // namespace motion_compensation_layer
+} // namespace openxr_api_layer
