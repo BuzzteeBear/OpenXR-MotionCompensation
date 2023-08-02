@@ -1,5 +1,18 @@
 OpenXR-MotionCompensation Changelog
 
+Version 0.2.8
+	
+	Graphical overlay
+	- improved stability/compatibility
+	- internal refactoring
+	- prepared for (potential) use of in-game menu
+
+	Motion Controller Initialization
+	- improved interaction profile path suggestion
+
+	MmfReader
+	- added ability to write values to csv file
+
 Version 0.2.7
 	
 	Virtual tracker
