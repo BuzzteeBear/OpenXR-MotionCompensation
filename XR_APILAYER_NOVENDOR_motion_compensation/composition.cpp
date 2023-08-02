@@ -425,7 +425,7 @@ namespace
 
         uint32_t getLength() const override
         {
-            return (uint32_t)m_images.size();
+            return static_cast<uint32_t>(m_images.size());
         }
 
         XrSwapchain getSwapchainHandle() const override
@@ -799,7 +799,7 @@ namespace
             TraceLoggingWriteStop(local, "CompositionFramework_Create", TLXArg(this, "CompositionFramework"));
         }
 
-        ~CompositionFramework()
+        ~CompositionFramework() override
         {
             TraceLocalActivity(local);
             TraceLoggingWriteStart(local, "CompositionFramework_Destroy", TLXArg(m_session, "Session"));
@@ -812,11 +812,15 @@ namespace
             auto device = m_compositionDevice->getNativeDevice<D3D11>();
              
             auto debugDev = std::make_unique<ComPtr<ID3D11Debug>>();
-            device->QueryInterface(IID_PPV_ARGS(debugDev->ReleaseAndGetAddressOf()));
-            debugDev->Get()->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL);
+            CHECK_HRCMD(device->QueryInterface(IID_PPV_ARGS(debugDev->ReleaseAndGetAddressOf())));
 
             auto dxgiDebugDev = std::make_unique<ComPtr<IDXGIDebug>>();
-            HRESULT hr = DXGIGetDebugInterface1(0, IID_PPV_ARGS(dxgiDebugDev->ReleaseAndGetAddressOf()));
+            CHECK_HRCMD(DXGIGetDebugInterface1(0, IID_PPV_ARGS(dxgiDebugDev->ReleaseAndGetAddressOf())));
+
+            m_compositionDevice.reset();
+            m_applicationDevice.reset();
+
+            debugDev->Get()->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL);
             dxgiDebugDev->Get()->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_ALL);
 #endif
 
@@ -1085,9 +1089,6 @@ namespace
 
         std::mutex m_sessionsMutex;
         std::unordered_map<XrSession, std::unique_ptr<CompositionFramework>> m_sessions;
-
-        PFN_xrCreateSession xrCreateSession{nullptr};
-        PFN_xrDestroySession xrDestroySession{nullptr};
 
         static inline std::mutex factoryMutex;
         static inline CompositionFrameworkFactory* factory{nullptr};

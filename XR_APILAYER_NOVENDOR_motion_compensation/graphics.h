@@ -291,6 +291,8 @@ float4 psMain(VSOutput input) : SV_TARGET {
         virtual void draw(std::shared_ptr<ISimpleMesh> mesh,
                           const XrPosef& pose,
                           XrVector3f scaling = {1.0f, 1.0f, 1.0f}) = 0;
+        virtual void UnsetDrawResources() const = 0;
+
 
         virtual GenericFormat translateToGenericFormat(int64_t format) const = 0;
         virtual int64_t translateFromGenericFormat(GenericFormat format) const = 0;

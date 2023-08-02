@@ -555,8 +555,13 @@ namespace {
             ErrorLog("%s: function not implemented!", __FUNCTION__);
         }
 
+        void UnsetDrawResources() const override
+        {
+            ErrorLog("%s: function not implemented!", __FUNCTION__);
+        }
+
         GenericFormat translateToGenericFormat(int64_t format) const override {
-            return (DXGI_FORMAT)format;
+            return static_cast<DXGI_FORMAT>(format);
         }
 
         int64_t translateFromGenericFormat(GenericFormat format) const override {

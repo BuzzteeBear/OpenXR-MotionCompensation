@@ -178,8 +178,8 @@ namespace openxr_api_layer
         GetConfig()->GetBool(Cfg::OverlayEnabled, m_OverlayEnabled);
         if (m_OverlayEnabled)
         {
-            m_Overlay = std::make_unique<graphics::Overlay>(
-                graphics::Overlay(*createInfo, GetXrInstance(), m_xrGetInstanceProcAddr));
+            m_Overlay = std::make_unique<graphics::Overlay>();
+            m_Overlay->Init(*createInfo, GetXrInstance(), m_xrGetInstanceProcAddr);  
         }
         else
         {

@@ -34,18 +34,18 @@ using namespace openxr_api_layer::log;
 
 namespace openxr_api_layer::graphics
 {
-    Overlay::Overlay(const XrInstanceCreateInfo& instanceInfo,
-                     XrInstance instance,
-                     PFN_xrGetInstanceProcAddr xrGetInstanceProcAddr)
+    void Overlay::Init(const XrInstanceCreateInfo& instanceInfo,
+                       XrInstance instance,
+                       PFN_xrGetInstanceProcAddr xrGetInstanceProcAddr)
     {
         m_compositionFrameworkFactory =
             createCompositionFrameworkFactory(instanceInfo, instance, xrGetInstanceProcAddr, CompositionApi::D3D11);
+        m_Initialized = true;
     }
 
     void Overlay::CreateSession(const XrSessionCreateInfo* createInfo, XrSession session)
     {
-        m_Initialized = true;
-        m_compositionFrameworkFactory->CreateSession(createInfo, session);
+        std::unique_lock lock(m_DrawMutex);
         m_compositionFrameworkFactory->CreateSession(createInfo, session);
         if (const ICompositionFramework* composition = m_compositionFrameworkFactory->getCompositionFramework(session))
         {
@@ -62,9 +62,14 @@ namespace openxr_api_layer::graphics
         }
     }
 
-    void Overlay::DestroySession(XrSession session) const
+    void Overlay::DestroySession(XrSession session)
     {
-        // TODO: clean up used directx resources
+        std::unique_lock lock(m_DrawMutex);
+        DeleteResources();
+        m_MarkerSwapchains.clear();
+        m_MarkerDepthTextures.clear();
+        m_MeshRGB.reset();
+        m_MeshCMY.reset();
         m_compositionFrameworkFactory->DestroySession(session);
     }
 
@@ -98,6 +103,7 @@ namespace openxr_api_layer::graphics
     {
         if (m_Initialized && m_OverlayActive)
         {
+            std::unique_lock lock(m_DrawMutex);
             try
             {
                 m_BaseLayerVector =
@@ -115,7 +121,7 @@ namespace openxr_api_layer::graphics
                     if (ICompositionFramework* composition =
                             m_compositionFrameworkFactory->getCompositionFramework(session))
                     {
-                        auto deviceDx11 = composition->getCompositionDevice();
+                        auto graphicsDevice = composition->getCompositionDevice();
 
                         ID3D11Device* const device = composition->getCompositionDevice()->getNativeDevice<D3D11>();
 
@@ -177,7 +183,7 @@ namespace openxr_api_layer::graphics
                                 m_MarkerSwapchains[eye]->getInfoOnCompositionDevice();
 
                             // create ephemeral render target view for the drawing.
-                            auto renderTargetView = std::make_unique<ComPtr<ID3D11RenderTargetView>>();
+                            auto renderTargetView = ComPtr<ID3D11RenderTargetView>();
 
                             D3D11_RENDER_TARGET_VIEW_DESC rtvDesc{};
                             rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
@@ -185,10 +191,10 @@ namespace openxr_api_layer::graphics
                             rtvDesc.Texture2DArray.ArraySize = 1;
                             rtvDesc.Texture2DArray.FirstArraySlice = -1;
                             rtvDesc.Texture2D.MipSlice = D3D11CalcSubresource(0, 0, 1);
-                            CHECK_HRCMD(device->CreateRenderTargetView(rgbTexture, &rtvDesc, set(*renderTargetView)));
+                            CHECK_HRCMD(device->CreateRenderTargetView(rgbTexture, &rtvDesc, set(renderTargetView)));
 
                             // create ephemeral depth stencil view for depth testing / occlusion.
-                            auto depthStencilView = std::make_unique<ComPtr<ID3D11DepthStencilView>>();
+                            auto depthStencilView = ComPtr<ID3D11DepthStencilView>();
                             D3D11_DEPTH_STENCIL_VIEW_DESC depthDesc{};
                             depthDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
                             depthDesc.Format = DXGI_FORMAT_D32_FLOAT;
@@ -198,23 +204,23 @@ namespace openxr_api_layer::graphics
                             CHECK_HRCMD(
                                 device->CreateDepthStencilView(m_MarkerDepthTextures[eye]->getNativeTexture<D3D11>(),
                                                                &depthDesc,
-                                                               set(*depthStencilView)));
+                                                               set(depthStencilView)));
 
-                            context->OMSetRenderTargets(1, renderTargetView->GetAddressOf(), get(*depthStencilView));
+                            context->OMSetRenderTargets(1, renderTargetView.GetAddressOf(), get(depthStencilView));
 
                             // clear render target
                             constexpr float background[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-                            context->ClearRenderTargetView(renderTargetView->Get(), background);
+                            context->ClearRenderTargetView(renderTargetView.Get(), background);
 
                             // clear depth buffer
-                            context->ClearDepthStencilView(get(*depthStencilView), D3D11_CLEAR_DEPTH, 1.f, 0);
+                            context->ClearDepthStencilView(depthStencilView.Get(), D3D11_CLEAR_DEPTH, 1.f, 0);
 
                             // take over view projection
                             xr::math::ViewProjection viewProjection{};
                             viewProjection.Pose = view.pose;
                             viewProjection.Fov = view.fov;
                             viewProjection.NearFar = xr::math::NearFar{0.001f, 100.f};
-                            deviceDx11->setViewProjection(viewProjection);
+                            graphicsDevice->setViewProjection(viewProjection);
 
                             // set viewport to match resolution
                             D3D11_VIEWPORT viewport{};
@@ -230,22 +236,21 @@ namespace openxr_api_layer::graphics
                                 mcActivated ? xr::math::Pose::Multiply(referenceTrackerPose,
                                                                        xr::math::Pose::Invert(reversedManipulation))
                                             : referenceTrackerPose;
-                            deviceDx11->draw(m_MeshRGB, referencePose, m_MarkerSize);
+                            graphicsDevice->draw(m_MeshRGB, referencePose, m_MarkerSize);
 
                             // draw tracker marker
                             if (mcActivated)
                             {
-                                deviceDx11->draw(m_MeshCMY, referenceTrackerPose, m_MarkerSize);
+                                graphicsDevice->draw(m_MeshCMY, referenceTrackerPose, m_MarkerSize);
                             }
-
-                            ID3D11RenderTargetView* nullRTV = nullptr;
-                            context->OMSetRenderTargets(1, &nullRTV, nullptr);
 
                             m_MarkerSwapchains[eye]->releaseImage();
                             m_MarkerSwapchains[eye]->commitLastReleasedImage();
 
                             view.subImage = m_MarkerSwapchains[eye]->getSubImage();
                         }
+
+                        graphicsDevice->UnsetDrawResources();
 
                         m_CreatedProjectionLayer = new XrCompositionLayerProjection{
                             XR_TYPE_COMPOSITION_LAYER_PROJECTION,

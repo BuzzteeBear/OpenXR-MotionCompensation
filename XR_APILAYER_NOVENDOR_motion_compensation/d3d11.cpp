@@ -468,7 +468,7 @@ namespace
     class D3D11Buffer : public IShaderBuffer
     {
       public:
-        D3D11Buffer(std::shared_ptr<IGraphicsDevice> device, D3D11_BUFFER_DESC bufferDesc, ID3D11Buffer* buffer)
+        D3D11Buffer(IGraphicsDevice* device, D3D11_BUFFER_DESC bufferDesc, ID3D11Buffer* buffer)
             : m_device(device), m_bufferDesc(bufferDesc), m_buffer(buffer)
         {}
 
@@ -501,7 +501,7 @@ namespace
         }
 
       private:
-        const std::shared_ptr<IGraphicsDevice> m_device;
+        const IGraphicsDevice* m_device;
         const ComPtr<ID3D11Buffer> m_buffer;
         const D3D11_BUFFER_DESC m_bufferDesc;
     };
@@ -536,7 +536,7 @@ namespace
         mutable struct D3D11::MeshData m_meshData;
     };
 
-    struct D3D11GraphicsDevice : IGraphicsDevice, public std::enable_shared_from_this<D3D11GraphicsDevice>
+    struct D3D11GraphicsDevice : IGraphicsDevice
     {
         D3D11GraphicsDevice(ID3D11Device* device) : m_device(device)
         {
@@ -572,6 +572,16 @@ namespace
         {
             TraceLocalActivity(local);
             TraceLoggingWriteStart(local, "D3D11GraphicsDevice_Destroy", TLPArg(this, "Device"));
+            m_deviceForFencesAndNtHandles.Reset();
+            m_DepthNoStencilTest.Reset();
+            m_meshVertexShader.Reset();
+            m_meshPixelShader.Reset();
+            m_meshInputLayout.Reset();
+            m_meshViewProjectionBuffer.reset();
+            m_meshModelBuffer.reset();
+            m_context->ClearState();
+            m_context->Flush();
+            m_context.Reset();
             TraceLoggingWriteStop(local, "D3D11GraphicsDevice_Destroy");
         }
 
@@ -732,7 +742,7 @@ namespace
 
             SetDebugName(get(buffer), debugName);
 
-            return std::make_shared<D3D11Buffer>(shared_from_this(), desc, get(buffer));
+            return std::make_shared<D3D11Buffer>(this, desc, get(buffer));
         }
 
         std::shared_ptr<ISimpleMesh> createSimpleMesh(std::vector<SimpleMeshVertex>& vertices,
@@ -820,6 +830,24 @@ namespace
 
                 m_context->DrawIndexedInstanced(meshData->numIndices, 1, 0, 0, 0);
             }
+        }
+
+        void UnsetDrawResources() const override
+        {
+            m_context->VSSetConstantBuffers(0, 0, nullptr);
+            m_context->VSSetShader(nullptr, nullptr, 0);
+            m_context->PSSetShader(nullptr, nullptr, 0);
+            m_context->GSSetShader(nullptr, nullptr, 0);
+
+            m_context->IASetVertexBuffers(0, 0, nullptr, nullptr, nullptr);
+            m_context->IASetIndexBuffer(nullptr, DXGI_FORMAT_R16_UINT, 0);
+            m_context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_UNDEFINED);
+            m_context->IASetInputLayout(nullptr);
+
+            m_context->OMSetDepthStencilState(nullptr, 0);
+            m_context->RSSetViewports(0, nullptr);
+            ID3D11RenderTargetView* nullRTV[]{nullptr};
+            m_context->OMSetRenderTargets(1, nullRTV, nullptr);
         }
 
         void copyTexture(IGraphicsTexture* from, IGraphicsTexture* to) override
@@ -914,8 +942,7 @@ namespace
                 SetDebugName(get(m_meshPixelShader), "SimpleMesh PS");
             }
             {
-                D3D11_DEPTH_STENCIL_DESC desc;
-                ZeroMemory(&desc, sizeof(desc));
+                D3D11_DEPTH_STENCIL_DESC desc{};
                 desc.DepthEnable = true;
                 desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
                 desc.DepthFunc = D3D11_COMPARISON_LESS;
