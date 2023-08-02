@@ -48,9 +48,9 @@ namespace Feedback
         const auto soundResource = m_SoundResources.find(feedback);
         if (m_SoundResources.end() != soundResource)
         {
-            if (!PlaySound(nullptr, 0, 0) || !PlaySound(MAKEINTRESOURCE(soundResource->second),
-                                                        openxr_api_layer::dllModule,
-                                                        SND_RESOURCE | SND_ASYNC))
+            if (!PlaySound(nullptr, nullptr, 0) || !PlaySound(MAKEINTRESOURCE(soundResource->second),
+                                                              openxr_api_layer::dllModule,
+                                                              SND_RESOURCE | SND_ASYNC))
 
             {
                 ErrorLog("%s: unable to play sound (%d : % d): %s\n",
@@ -69,7 +69,7 @@ namespace Feedback
     void AudioOut::CountDown(const int seconds)
     {
         if (seconds > 0 && seconds <= 10 &&
-            (!PlaySound(nullptr, 0, 0) || !PlaySound(MAKEINTRESOURCE(COUNT0_WAV + seconds),
+            (!PlaySound(nullptr, nullptr, 0) || !PlaySound(MAKEINTRESOURCE(COUNT0_WAV + static_cast<uint64_t>(seconds)),
                                                      openxr_api_layer::dllModule,
                                                      SND_RESOURCE | SND_ASYNC)))
         {
