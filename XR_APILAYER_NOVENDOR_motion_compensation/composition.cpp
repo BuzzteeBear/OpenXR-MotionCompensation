@@ -752,10 +752,8 @@ namespace
             CHECK_XRCMD(xrGetInstanceProperties(instance, &instanceProperties));
             const std::string_view runtimeName(instanceProperties.runtimeName);
 #ifdef XR_USE_GRAPHICS_API_D3D12
-            if (runtimeName.find("Windows Mixed Reality") == std::string::npos &&
-                m_applicationDevice->getApi() == Api::D3D12)
+            if (m_applicationDevice->getApi() == Api::D3D12)
             {
-                // Quirk: only WMR seems to implement a full D3D12 compositor. Other runtimes seem to use D3D11 and
                 // despite of D3D12 textures having the shareable flag, they are not shareable with D3D11.
                 m_overrideShareable = false;
             }
