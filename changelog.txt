@@ -1,17 +1,20 @@
 OpenXR-MotionCompensation Changelog
 
 Version 0.2.8
+	Motion controller interaction
+	- added ability to compensate controller position
+	- improved interaction profile path suggestion
 	
 	Graphical overlay
 	- improved stability/compatibility
 	- internal refactoring
 	- prepared for (potential) use of in-game menu
 
-	Motion Controller Initialization
-	- improved interaction profile path suggestion
-
 	MmfReader
 	- added ability to write values to csv file
+	
+	Known issues
+	- motion controller compensation doesn't work properly in MSFS main menu (controller movement gets blocked)*
 
 Version 0.2.7
 	

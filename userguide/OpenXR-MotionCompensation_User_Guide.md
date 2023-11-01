@@ -89,7 +89,8 @@ What you can modify in a configuration file:
   - `upside_down`: turn in-game coordinate system upside down by rotating it 180 degrees around the 'forward' axis. Necessary for correct orientation of virtual tracker and motion compensation in some games (automatically set for iRacing). Changing this value requires the VR session to be restarted.
   - `activate`: automatically activate motion compensation on application start and configuration reload.
   - `activate_delay`: delay auto-activation by specified number of seconds. The required time for successful activation may vary, depending on application and tracker type used.
-  - `activate_countdown_`: enable audible countdown for the last 10 seconds before auto-activation. This is supposed to allow getting to neutral position and timely centering of in-game view.
+  - `activate_countdown`: enable audible countdown for the last 10 seconds before auto-activation. This is supposed to allow getting to neutral position and timely centering of in-game view.
+  - `compensate_controllers`: enable motion compensation for motion controllers (that are not used as reference trackers). Note that enabling this feature will disable cor manipulation via motion controller. Changing this value requires the application top be restarted.
 - `tracker`: 
   - The following tracker `type` keys are available:
     - `controller`: use either the left or the right motion controller as reference tracker. Valid options for the key `side` are `left` and `right` (**Note that changing the side or switching between motion controller and vive tracker requires a restart of the vr session**)

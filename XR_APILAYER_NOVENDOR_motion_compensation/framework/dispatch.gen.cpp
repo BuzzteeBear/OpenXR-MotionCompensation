@@ -155,6 +155,30 @@ namespace openxr_api_layer
 		return result;
 	}
 
+	XrResult xrCreateActionSpace(XrSession session, const XrActionSpaceCreateInfo* createInfo, XrSpace* space)
+	{
+		TraceLoggingWrite(g_traceProvider, "xrCreateActionSpace");
+
+		XrResult result;
+		try
+		{
+			result = openxr_api_layer::GetInstance()->xrCreateActionSpace(session, createInfo, space);
+		}
+		catch (std::exception exc)
+		{
+			TraceLoggingWrite(g_traceProvider, "xrCreateActionSpace_Error", TLArg(exc.what(), "Error"));
+			ErrorLog("xrCreateActionSpace: %s\n", exc.what());
+			result = XR_ERROR_RUNTIME_FAILURE;
+		}
+
+		TraceLoggingWrite(g_traceProvider, "xrCreateActionSpace_Result", TLArg(xr::ToCString(result), "Result"));
+		if (XR_FAILED(result)) {
+			ErrorLog("xrCreateActionSpace failed with %s\n", xr::ToCString(result));
+		}
+
+		return result;
+	}
+
 	XrResult xrLocateSpace(XrSpace space, XrSpace baseSpace, XrTime time, XrSpaceLocation* location)
 	{
 		TraceLoggingWrite(g_traceProvider, "xrLocateSpace");
@@ -553,6 +577,11 @@ namespace openxr_api_layer
 			m_xrCreateReferenceSpace = reinterpret_cast<PFN_xrCreateReferenceSpace>(*function);
 			*function = reinterpret_cast<PFN_xrVoidFunction>(openxr_api_layer::xrCreateReferenceSpace);
 		}
+		else if (apiName == "xrCreateActionSpace")
+		{
+			m_xrCreateActionSpace = reinterpret_cast<PFN_xrCreateActionSpace>(*function);
+			*function = reinterpret_cast<PFN_xrVoidFunction>(openxr_api_layer::xrCreateActionSpace);
+		}
 		else if (apiName == "xrLocateSpace")
 		{
 			m_xrLocateSpace = reinterpret_cast<PFN_xrLocateSpace>(*function);
@@ -643,10 +672,6 @@ namespace openxr_api_layer
 		if (XR_FAILED(m_xrGetInstanceProcAddr(m_instance, "xrGetSystemProperties", reinterpret_cast<PFN_xrVoidFunction*>(&m_xrGetSystemProperties))))
 		{
 			throw new std::runtime_error("Failed to resolve xrGetSystemProperties");
-		}
-		if (XR_FAILED(m_xrGetInstanceProcAddr(m_instance, "xrCreateActionSpace", reinterpret_cast<PFN_xrVoidFunction*>(&m_xrCreateActionSpace))))
-		{
-			throw new std::runtime_error("Failed to resolve xrCreateActionSpace");
 		}
 		if (XR_FAILED(m_xrGetInstanceProcAddr(m_instance, "xrDestroySpace", reinterpret_cast<PFN_xrVoidFunction*>(&m_xrDestroySpace))))
 		{

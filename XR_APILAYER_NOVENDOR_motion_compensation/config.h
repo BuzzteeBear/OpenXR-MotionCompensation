@@ -12,6 +12,7 @@ enum class Cfg
     AutoActive,
     AutoActiveDelay,
     AutoActiveCountdown,
+    CompensateControllers,
     TrackerType,
     TrackerSide,
     TrackerTimeout,
@@ -95,6 +96,7 @@ class ConfigManager
         {Cfg::AutoActive, {"startup", "activate"}},
         {Cfg::AutoActiveDelay, {"startup", "activate_delay"}},
         {Cfg::AutoActiveCountdown, {"startup", "activate_countdown"}},
+        {Cfg::CompensateControllers, {"startup", "compensate_controllers"}},
 
         {Cfg::TrackerType, {"tracker", "type"}},
         {Cfg::TrackerSide, {"tracker", "side"}},

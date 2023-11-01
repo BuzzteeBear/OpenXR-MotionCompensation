@@ -15,6 +15,7 @@ namespace Tracker
         virtual bool ResetReferencePose(XrSession session, XrTime time);
 
         bool m_ResetReferencePose{false};
+        bool m_XrSyncCalled{false};
 
       protected:
         virtual void SetReferencePose(const XrPosef& pose);

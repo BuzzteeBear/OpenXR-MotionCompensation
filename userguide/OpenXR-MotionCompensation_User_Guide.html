@@ -124,7 +124,8 @@ Upon starting an OpenXR application with the API layer active for the first time
 <li><code>upside_down</code>: turn in-game coordinate system upside down by rotating it 180 degrees around the 'forward' axis. Necessary for correct orientation of virtual tracker and motion compensation in some games (automatically set for iRacing). Changing this value requires the VR session to be restarted.</li>
 <li><code>activate</code>: automatically activate motion compensation on application start and configuration reload.</li>
 <li><code>activate_delay</code>: delay auto-activation by specified number of seconds. The required time for successful activation may vary, depending on application and tracker type used.</li>
-<li><code>activate_countdown_</code>: enable audible countdown for the last 10 seconds before auto-activation. This is supposed to allow getting to neutral position and timely centering of in-game view.</li>
+<li><code>activate_countdown</code>: enable audible countdown for the last 10 seconds before auto-activation. This is supposed to allow getting to neutral position and timely centering of in-game view.</li>
+<li><code>compensate_controllers</code>: enable motion compensation for motion controllers (that are not used as reference trackers). Note that enabling this feature will disable cor manipulation via motion controller. Changing this value requires the application top be restarted.</li>
 </ul>
 </li>
 <li><code>tracker</code>:

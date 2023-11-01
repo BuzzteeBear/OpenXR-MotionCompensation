@@ -116,25 +116,42 @@ namespace openxr_api_layer
                 return result;
             }
 
+            if (!m_ViveTracker.Init())
+            {
+                m_Initialized = false;
+            }
+
             // enable / disable physical tracker initialization
             GetConfig()->GetBool(Cfg::PhysicalEnabled, m_PhysicalEnabled);
+            GetConfig()->GetBool(Cfg::CompensateControllers, m_CompensateControllers);
             if (!m_PhysicalEnabled)
             {
                 Log("initialization of physical tracker disabled in config file\n");
             }
             else
             {
-                m_SubActionPath = "/user/hand/" + GetConfig()->GetControllerSide();
-                if (const XrResult pathResult =
-                        xrStringToPath(GetXrInstance(), m_SubActionPath.c_str(), &m_XrSubActionPath);
-                    XR_FAILED(result))
+                if (m_CompensateControllers)
                 {
-                    ErrorLog("%s: unable to create XrPath for sub action path %s: %d\n",
-                             __FUNCTION__,
-                             m_SubActionPath.c_str(),
-                             pathResult);
+                    Log("compensation of motion controllers is active\n");
+                    m_SuppressInteraction = GetConfig()->IsVirtualTracker();
+                }
+                if (!m_SuppressInteraction)
+                {
+                    m_SubActionPath =
+                        m_ViveTracker.active ? m_ViveTracker.role : "/user/hand/" + GetConfig()->GetControllerSide();
+                    if (const XrResult pathResult =
+                            xrStringToPath(GetXrInstance(), m_SubActionPath.c_str(), &m_XrSubActionPath);
+                        XR_FAILED(result))
+                    {
+                        ErrorLog("%s: unable to create XrPath for sub action path %s: %d\n",
+                                 __FUNCTION__,
+                                 m_SubActionPath.c_str(),
+                                 pathResult);
+                        m_SuppressInteraction = true;
+                    }
                 }
             }
+
 
             // initialize audio feedback
             GetAudioOut()->Init();
@@ -162,7 +179,7 @@ namespace openxr_api_layer
 
         // initialize tracker
         Tracker::GetTracker(&m_Tracker);
-        if (!m_Tracker->Init() || !m_ViveTracker.Init())
+        if (!m_Tracker->Init())
         {
             m_Initialized = false;
         }
@@ -334,14 +351,16 @@ namespace openxr_api_layer
     {
         if (m_Enabled)
         {
+            Log("xrDestroySession\n");
+            TraceLoggingWrite(g_traceProvider, "xrDestroySession", TLPArg(session, "Session"));
             if (XR_NULL_HANDLE != m_TrackerSpace)
             {
                 GetInstance()->xrDestroySpace(m_TrackerSpace);
                 m_TrackerSpace = XR_NULL_HANDLE;
             }
             m_ActionSpaceCreated = false;
-            Log("xrDestroySession\n");
-            TraceLoggingWrite(g_traceProvider, "xrDestroySession", TLPArg(session, "Session"));
+            m_ViewSpaces.clear();
+            m_ActionSpaces.clear();
             if (m_Overlay)
             {
                 m_Overlay->DestroySession(session);
@@ -363,7 +382,7 @@ namespace openxr_api_layer
     OpenXrLayer::xrSuggestInteractionProfileBindings(XrInstance instance,
                                                      const XrInteractionProfileSuggestedBinding* suggestedBindings)
     {
-        if (!m_Enabled || !m_PhysicalEnabled)
+        if (!m_Enabled || !m_PhysicalEnabled || m_SuppressInteraction)
         {
             return OpenXrApi::xrSuggestInteractionProfileBindings(instance, suggestedBindings);
         }
@@ -402,14 +421,6 @@ namespace openxr_api_layer
             CreateTrackerActions("xrSuggestInteractionProfileBindings");
         }
 
-        if (!m_ViveTracker.active && !m_SimpleProfileSuggested &&
-            profile != "/interaction_profiles/khr/simple_controller")
-        {
-            // suggest simple profile bindings as fallback
-            SuggestInteractionProfiles("xrSuggestInteractionProfileBindings");
-        }
-
-
         XrInteractionProfileSuggestedBinding bindingProfiles = *suggestedBindings;
         std::vector<XrActionSuggestedBinding> bindings{};
 
@@ -419,8 +430,7 @@ namespace openxr_api_layer
                bindingProfiles.countSuggestedBindings * sizeof(XrActionSuggestedBinding));
 
         const bool isVirtual = GetConfig()->IsVirtualTracker();
-        const std::string trackerPath(
-            (m_ViveTracker.active ? m_ViveTracker.role : m_SubActionPath) + "/");
+        const std::string trackerPath(m_SubActionPath + "/");
         const std::string posePath(trackerPath + "input/grip/pose");
         const std::string movePath(isVirtual ? trackerPath + m_ButtonPath.GetSubPath(profile, 0) : "");
         const std::string positionPath(isVirtual ? trackerPath + m_ButtonPath.GetSubPath(profile, 1) : "");
@@ -538,7 +548,7 @@ namespace openxr_api_layer
 
     XrResult OpenXrLayer::xrAttachSessionActionSets(XrSession session, const XrSessionActionSetsAttachInfo* attachInfo)
     {
-        if (!m_Enabled || !m_PhysicalEnabled)
+        if (!m_Enabled || !m_PhysicalEnabled || m_SuppressInteraction)
         {
             return OpenXrApi::xrAttachSessionActionSets(session, attachInfo);
         }
@@ -557,7 +567,7 @@ namespace openxr_api_layer
                               TLPArg(attachInfo->actionSets[i], "ActionSet"));
         }
 
-        SuggestInteractionProfiles("xrSuggestInteractionProfileBindings");
+        SuggestInteractionProfiles("xrAttachSessionActionSets");
 
         XrSessionActionSetsAttachInfo chainAttachInfo = *attachInfo;
         std::vector<XrActionSet> newActionSets;
@@ -649,6 +659,37 @@ namespace openxr_api_layer
         return result;
     }
 
+    XrResult OpenXrLayer::xrCreateActionSpace(XrSession session,
+                                              const XrActionSpaceCreateInfo* createInfo,
+                                              XrSpace* space)
+    {
+        const XrResult result = OpenXrApi::xrCreateActionSpace(session, createInfo, space);
+        if (!m_Enabled)
+        {
+            return result;
+        }
+        const std::string subActionPath{!createInfo->subactionPath ? "null" : getXrPath(createInfo->subactionPath)};
+        TraceLoggingWrite(g_traceProvider,
+                          "xrCreateReferenceSpace",
+                          TLPArg(session, "Session"),
+                          TLPArg(*space, "Space"),
+                          TLArg(subActionPath.c_str(), "SubactionPath"));
+        Log("creation of action space detected: %u, sub action path: %s\n", *space, subActionPath.c_str());
+        if (m_CompensateControllers)
+        {
+            if (isCompensationRequired(createInfo))
+            {
+                Log("added action space for motion controller compensation: %u\n", *space);
+                m_ActionSpaces.insert(*space);
+            }
+            else
+            {
+                Log("ignored action space for motion controller compensation: %u\n", *space);
+            }
+        }
+        return result;
+    }
+
     XrResult OpenXrLayer::xrLocateSpace(XrSpace space, XrSpace baseSpace, XrTime time, XrSpaceLocation* location)
     {
         if (!m_Enabled)
@@ -675,7 +716,10 @@ namespace openxr_api_layer
             ErrorLog("%s: xrLocateSpace failed: %d\n", __FUNCTION__, result);
             return result; 
         }
-        if (m_Activated && !m_RecenterInProgress && (isViewSpace(space) || isViewSpace(baseSpace)))
+        const bool compensateSpace = isViewSpace(space) || (m_CompensateControllers && isActionSpace(space));
+        const bool compensateBaseSpace =
+            isViewSpace(baseSpace) || (m_CompensateControllers && isActionSpace(baseSpace));
+        if (m_Activated && !m_RecenterInProgress && (compensateSpace || compensateBaseSpace))
         {
             TraceLoggingWrite(g_traceProvider,
                               "xrLocateSpace",
@@ -683,19 +727,16 @@ namespace openxr_api_layer
                               TLArg(location->locationFlags, "LocationFlags"));
 
             // manipulate pose using tracker
-            const bool spaceIsViewSpace = isViewSpace(space);
-            const bool baseSpaceIsViewSpace = isViewSpace(baseSpace);
-
             XrPosef trackerDelta = Pose::Identity();
             if (!m_TestRotation ? m_Tracker->GetPoseDelta(trackerDelta, m_Session, time)
                                 : TestRotation(&trackerDelta, time, false))
             {
                 m_RecoveryStart = 0;
-                if (spaceIsViewSpace && !baseSpaceIsViewSpace)
+                if (compensateSpace && !compensateBaseSpace)
                 {
                     location->pose = Pose::Multiply(location->pose, trackerDelta);
                 }
-                if (baseSpaceIsViewSpace && !spaceIsViewSpace)
+                if (compensateBaseSpace && !compensateSpace)
                 {
                     // TODO: verify calculation
                     location->pose = Pose::Multiply(location->pose, Pose::Invert(trackerDelta));
@@ -827,7 +868,7 @@ namespace openxr_api_layer
 
     XrResult OpenXrLayer::xrSyncActions(XrSession session, const XrActionsSyncInfo* syncInfo)
     {
-        if (!m_Enabled || !m_PhysicalEnabled)
+        if (!m_Enabled || !m_PhysicalEnabled || m_SuppressInteraction)
         {
             return OpenXrApi::xrSyncActions(session, syncInfo);
         }
@@ -873,12 +914,13 @@ namespace openxr_api_layer
         }
         const XrResult res = OpenXrApi::xrSyncActions(session, &chainSyncInfo);
         DebugLog("xrSyncAction result = %d, #sets = %d\n", res, chainSyncInfo.countActiveActionSets);
+        m_Tracker->m_XrSyncCalled = true;
         return res;
     }
 
     XrResult OpenXrLayer::xrBeginFrame(XrSession session, const XrFrameBeginInfo* frameBeginInfo)
     {
-        if (m_VarjoPollWorkaround && m_Enabled && m_PhysicalEnabled)
+        if (m_VarjoPollWorkaround && m_Enabled && m_PhysicalEnabled && !m_SuppressInteraction)
         {
             // call xrPollEvent (if the app hasn't already) to acquire focus
             XrEventDataBuffer buf{XR_TYPE_EVENT_DATA_BUFFER};
@@ -1097,6 +1139,8 @@ namespace openxr_api_layer
 
         XrResult result = OpenXrApi::xrEndFrame(session, &resetFrameEndInfo);
 
+        m_Tracker->m_XrSyncCalled = false;
+
         // clean up memory
         if (m_Overlay)
         {
@@ -1158,28 +1202,13 @@ namespace openxr_api_layer
 
     void OpenXrLayer::RequestCurrentInteractionProfile()
     {
-        std::string topLevel = m_SubActionPath;
-        XrPath path = m_XrSubActionPath;
-        if (m_ViveTracker.active)
-        {
-            topLevel = m_ViveTracker.role;
-            if (const XrResult result = xrStringToPath(GetXrInstance(), topLevel.c_str(), &path);
-                XR_FAILED(result))
-            {
-                ErrorLog("%s: unable to create XrPath for vive tracker sub action path %s: %d\n",
-                         __FUNCTION__,
-                         m_ViveTracker.role.c_str(),
-                         result);
-                return;
-            }
-        }
-       
         XrInteractionProfileState profileState{XR_TYPE_INTERACTION_PROFILE_STATE, nullptr, XR_NULL_PATH};
-        if (const XrResult interactionResult = xrGetCurrentInteractionProfile(m_Session, path, &profileState);
+        if (const XrResult interactionResult =
+                xrGetCurrentInteractionProfile(m_Session, m_XrSubActionPath, &profileState);
             XR_SUCCEEDED(interactionResult))
         {
             Log("current interaction profile for %s: %s\n",
-                topLevel.c_str(),
+                m_SubActionPath.c_str(),
                 XR_NULL_PATH != profileState.interactionProfile ? getXrPath(profileState.interactionProfile).c_str()
                                                                 : "XR_NULL_PATH");
         }
@@ -1187,7 +1216,7 @@ namespace openxr_api_layer
         {
             ErrorLog("%s: unable get current interaction profile for %s: %d\n",
                      __FUNCTION__,
-                     topLevel.c_str(),
+                     m_SubActionPath.c_str(),
                      interactionResult);
         }
     }
@@ -1208,6 +1237,21 @@ namespace openxr_api_layer
         return m_ViewSpaces.contains(space);
     }
 
+    bool OpenXrLayer::isActionSpace(XrSpace space) const
+    {
+        return m_ActionSpaces.contains(space);
+    }
+
+    bool OpenXrLayer::isCompensationRequired(const XrActionSpaceCreateInfo* createInfo) const
+    {
+        if (!createInfo->subactionPath)
+        {
+            return true;
+        }
+        const std::string subActionPath = getXrPath(createInfo->subactionPath); 
+        return subActionPath != m_SubActionPath;
+    }
+
     uint32_t OpenXrLayer::GetNumViews() const
     {
         return XR_VIEW_CONFIGURATION_TYPE_PRIMARY_MONO == m_ViewConfigType                                ? 1
@@ -1220,22 +1264,8 @@ namespace openxr_api_layer
     bool OpenXrLayer::CreateTrackerActions(const std::string& caller)
     {
         bool success = true;
-        if (m_PhysicalEnabled)
+        if (m_PhysicalEnabled && !m_SuppressInteraction)
         {
-            XrPath subActionPath = m_XrSubActionPath;
-            if (m_ViveTracker.active)
-            {
-                if (const XrResult result = xrStringToPath(GetXrInstance(), m_ViveTracker.role.c_str(), &subActionPath);
-                    XR_FAILED(result))
-                {
-                    ErrorLog("%s: unable to create XrPath from %s: %d\n",
-                             __FUNCTION__,
-                             m_ViveTracker.role.c_str(),
-                             result);
-                    success = false;
-                }
-            }
-
             if (!m_ActionsCreated)
             {
                 DebugLog("CreateTrackerActionSet %s\n", caller.c_str());
@@ -1254,7 +1284,7 @@ namespace openxr_api_layer
                 strcpy_s(actionCreateInfo.localizedActionName, "Tracker Pose");
                 actionCreateInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
                 actionCreateInfo.countSubactionPaths = 1;
-                actionCreateInfo.subactionPaths = &subActionPath;
+                actionCreateInfo.subactionPaths = &m_XrSubActionPath;
 
                 if (XR_FAILED(xrCreateAction(m_ActionSet, &actionCreateInfo, &m_PoseAction)))
                 {
@@ -1296,7 +1326,7 @@ namespace openxr_api_layer
                 DebugLog("CreateTrackerActionSpace %s\n", caller.c_str());
                 XrActionSpaceCreateInfo actionSpaceCreateInfo{XR_TYPE_ACTION_SPACE_CREATE_INFO, nullptr};
                 actionSpaceCreateInfo.action = m_PoseAction;
-                actionSpaceCreateInfo.subactionPath = subActionPath;
+                actionSpaceCreateInfo.subactionPath = m_XrSubActionPath;
                 actionSpaceCreateInfo.poseInActionSpace = Pose::Identity();
                 if (XR_FAILED(GetInstance()->xrCreateActionSpace(m_Session, &actionSpaceCreateInfo, &m_TrackerSpace)))
                 {
@@ -1343,7 +1373,7 @@ namespace openxr_api_layer
     bool OpenXrLayer::AttachActionSet(const std::string& caller)
     {
         bool success{true};
-        if (m_PhysicalEnabled && !m_ActionSetAttached)
+        if (m_PhysicalEnabled && !m_SuppressInteraction && !m_ActionSetAttached)
         {
             TraceLoggingWrite(g_traceProvider, "AttachActionSet", TLPArg(caller.c_str(), "Called by"));
             constexpr XrSessionActionSetsAttachInfo actionSetAttachInfo{XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO};
@@ -1367,7 +1397,7 @@ namespace openxr_api_layer
 
         CreateTrackerActions("SuggestInteractionProfiles");
 
-        if (!m_InteractionProfileSuggested)
+        if (!m_InteractionProfileSuggested && !m_SuppressInteraction)
         {
             // suggest fallback in case application does not suggest any bindings
             XrInteractionProfileSuggestedBinding suggestedBindings{XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING,
@@ -1392,7 +1422,7 @@ namespace openxr_api_layer
                 std::string movePath;
                 std::string positionPath;
                 std::string hapticPath;
-                const std::string trackerPath = (m_ViveTracker.active ? m_ViveTracker.role : m_SubActionPath) + "/";
+                const std::string trackerPath(m_SubActionPath + "/");
                 const std::string posePath{trackerPath + "input/grip/pose"};
                 if (const XrResult poseResult = xrStringToPath(GetXrInstance(), posePath.c_str(), &poseBinding.binding);
                     XR_FAILED(poseResult))

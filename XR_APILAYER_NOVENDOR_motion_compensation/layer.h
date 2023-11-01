@@ -66,6 +66,9 @@ namespace openxr_api_layer
         XrResult xrCreateReferenceSpace(XrSession session,
                                         const XrReferenceSpaceCreateInfo* createInfo,
                                         XrSpace* space) override;
+        XrResult xrCreateActionSpace(XrSession session,
+                                     const XrActionSpaceCreateInfo* createInfo,
+                                     XrSpace* space) override;
         XrResult xrLocateSpace(XrSpace space, XrSpace baseSpace, XrTime time, XrSpaceLocation* location) override;
         XrResult xrLocateViews(XrSession session,
                                const XrViewLocateInfo* viewLocateInfo,
@@ -93,6 +96,8 @@ namespace openxr_api_layer
         [[nodiscard]] bool isSystemHandled(XrSystemId systemId) const;
         bool isSessionHandled(XrSession session) const;
         bool isViewSpace(XrSpace space) const;
+        bool isActionSpace(XrSpace space) const;
+        bool isCompensationRequired(const XrActionSpaceCreateInfo* createInfo) const;
         [[nodiscard]] uint32_t GetNumViews() const;
         bool CreateTrackerActions(const std::string& caller);
         void DestroyTrackerActions(const std::string& caller);
@@ -110,6 +115,8 @@ namespace openxr_api_layer
         bool m_Enabled{false};
         bool m_PhysicalEnabled{false};
         bool m_OverlayEnabled{false};
+        bool m_CompensateControllers{false};
+        bool m_SuppressInteraction{false};
         bool m_ActionsCreated{false};
         bool m_ActionSpaceCreated{false};
         bool m_ActionSetAttached{false};
@@ -123,6 +130,7 @@ namespace openxr_api_layer
         std::string m_SubActionPath;
         XrPath m_XrSubActionPath{XR_NULL_PATH};
         std::set<XrSpace> m_ViewSpaces{};
+        std::set<XrSpace> m_ActionSpaces{};
         std::vector<XrView> m_EyeOffsets{};
         XrViewConfigurationType m_ViewConfigType{XR_VIEW_CONFIGURATION_TYPE_MAX_ENUM};
         Tracker::TrackerBase* m_Tracker{nullptr};

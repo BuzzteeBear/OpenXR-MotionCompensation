@@ -88,8 +88,8 @@ namespace Tracker
         {
             // Query the latest tracker pose.
             XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
+            if (!m_XrSyncCalled)
             {
-                // TODO: skip xrSyncActions if other actions are active as well?
                 constexpr XrActionsSyncInfo syncInfo{XR_TYPE_ACTIONS_SYNC_INFO, nullptr, 0, nullptr};
 
                 TraceLoggingWrite(g_traceProvider,
@@ -884,6 +884,7 @@ namespace Tracker
             ErrorLog("%s: unable to cast layer to OpenXrLayer\n", __FUNCTION__);
             return;
         }
+        if (!m_Tracker->m_XrSyncCalled)
         {
             // sync actions
             TraceLoggingWrite(g_traceProvider,
