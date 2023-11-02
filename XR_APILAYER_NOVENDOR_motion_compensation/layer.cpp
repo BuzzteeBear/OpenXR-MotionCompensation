@@ -653,6 +653,11 @@ namespace openxr_api_layer
                 }
                 m_ReferenceSpace = *space;
             }
+            else if (XR_REFERENCE_SPACE_TYPE_STAGE == createInfo->referenceSpaceType)
+            {
+                // uee stage space as fallback reference space for applications not using local space for view localization
+                m_ReferenceStageSpace = *space;
+            }
         }
         TraceLoggingWrite(g_traceProvider, "xrCreateReferenceSpace", TLPArg(*space, "Space"));
 
@@ -670,7 +675,7 @@ namespace openxr_api_layer
         }
         const std::string subActionPath{!createInfo->subactionPath ? "null" : getXrPath(createInfo->subactionPath)};
         TraceLoggingWrite(g_traceProvider,
-                          "xrCreateReferenceSpace",
+                          "xrCreateActionSpace",
                           TLPArg(session, "Session"),
                           TLPArg(*space, "Space"),
                           TLArg(subActionPath.c_str(), "SubactionPath"));
@@ -1289,6 +1294,7 @@ namespace openxr_api_layer
                 if (XR_FAILED(xrCreateAction(m_ActionSet, &actionCreateInfo, &m_PoseAction)))
                 {
                     ErrorLog("%s: unable to create pose action\n", __FUNCTION__);
+                    success = false;
                 }
                 TraceLoggingWrite(g_traceProvider, "CreateTrackerActions", TLPArg(m_PoseAction, "PoseAction"));
                 if (GetConfig()->IsVirtualTracker())
@@ -1321,7 +1327,7 @@ namespace openxr_api_layer
                 }
                 m_ActionsCreated = success;
             }
-            if (!m_ActionSpaceCreated)
+            if (m_ActionsCreated && !m_ActionSpaceCreated && XR_NULL_HANDLE != m_Session)
             {
                 DebugLog("CreateTrackerActionSpace %s\n", caller.c_str());
                 XrActionSpaceCreateInfo actionSpaceCreateInfo{XR_TYPE_ACTION_SPACE_CREATE_INFO, nullptr};
@@ -1515,16 +1521,26 @@ namespace openxr_api_layer
         bool success = true;
         if (m_ReferenceSpace == XR_NULL_HANDLE)
         {
-            Log("reference space created during lazy init\n");
-            // Create a reference space.
-            XrReferenceSpaceCreateInfo referenceSpaceCreateInfo{XR_TYPE_REFERENCE_SPACE_CREATE_INFO, nullptr};
-            referenceSpaceCreateInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_LOCAL;
-            referenceSpaceCreateInfo.poseInReferenceSpace = Pose::Identity();
-            TraceLoggingWrite(g_traceProvider, "LazyInit", TLPArg("Executed", "xrCreateReferenceSpaceLocal"));
-            if (XR_FAILED(xrCreateReferenceSpace(m_Session, &referenceSpaceCreateInfo, &m_ReferenceSpace)))
+            if (XR_NULL_HANDLE != m_ReferenceStageSpace)
             {
-                ErrorLog("%s: xrCreateReferenceSpace (local) failed\n", __FUNCTION__);
-                success = false;
+                Log("using stage space as fallback reference space during lazy init\n");
+                m_ReferenceSpace = m_ReferenceStageSpace;
+            }
+            else
+            {
+                Log("reference space created during lazy init\n");
+                // Create a reference space.
+                XrReferenceSpaceCreateInfo referenceSpaceCreateInfo{XR_TYPE_REFERENCE_SPACE_CREATE_INFO, nullptr};
+                referenceSpaceCreateInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_LOCAL;
+                referenceSpaceCreateInfo.poseInReferenceSpace = Pose::Identity();
+                TraceLoggingWrite(g_traceProvider, "LazyInit", TLPArg("Executed", "xrCreateReferenceSpaceLocal"));
+                if (const XrResult result =
+                        xrCreateReferenceSpace(m_Session, &referenceSpaceCreateInfo, &m_ReferenceSpace);
+                    XR_FAILED(result))
+                {
+                    ErrorLog("%s: xrCreateReferenceSpace (local) failed: %s\n", __FUNCTION__, xr::ToCString(result));
+                    success = false;
+                }
             }
         }
         if (m_StageSpace == XR_NULL_HANDLE)
@@ -1537,9 +1553,11 @@ namespace openxr_api_layer
             TraceLoggingWrite(g_traceProvider,
                               "LazyInit",
                               TLPArg("Executed", "xrCreateReferenceSpaceStage"));
-            if (XR_FAILED(xrCreateReferenceSpace(m_Session, &referenceSpaceCreateInfo, &m_StageSpace)))
+            if (const XrResult result =
+                    OpenXrApi::xrCreateReferenceSpace(m_Session, &referenceSpaceCreateInfo, &m_StageSpace);
+                XR_FAILED(result))
             {
-                ErrorLog("%s: xrCreateReferenceSpace (stage) failed\n", __FUNCTION__);
+                ErrorLog("%s: xrCreateReferenceSpace (stage) failed: %s\n", __FUNCTION__, xr::ToCString(result));
             }
         }
 

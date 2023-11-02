@@ -91,6 +91,7 @@ namespace openxr_api_layer
         XrSpace m_ViewSpace{XR_NULL_HANDLE};
         XrSpace m_ReferenceSpace{XR_NULL_HANDLE};
         XrSpace m_StageSpace{XR_NULL_HANDLE};
+        XrSpace m_ReferenceStageSpace{XR_NULL_HANDLE};
 
       private:
         [[nodiscard]] bool isSystemHandled(XrSystemId systemId) const;
