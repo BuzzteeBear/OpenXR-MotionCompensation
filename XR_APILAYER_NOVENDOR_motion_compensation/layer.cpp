@@ -143,10 +143,10 @@ namespace openxr_api_layer
                             xrStringToPath(GetXrInstance(), m_SubActionPath.c_str(), &m_XrSubActionPath);
                         XR_FAILED(result))
                     {
-                        ErrorLog("%s: unable to create XrPath for sub action path %s: %d\n",
+                        ErrorLog("%s: unable to create XrPath for sub action path %s: %s\n",
                                  __FUNCTION__,
                                  m_SubActionPath.c_str(),
-                                 pathResult);
+                                 xr::ToCString(pathResult));
                         m_SuppressInteraction = true;
                     }
                 }
@@ -302,7 +302,7 @@ namespace openxr_api_layer
                         xrCreateReferenceSpace(*session, &referenceSpaceCreateInfo, &m_ViewSpace);
                     XR_FAILED(refResult))
                 {
-                    ErrorLog("%s: unable to create reference view space: %d\n", __FUNCTION__, refResult);
+                    ErrorLog("%s: unable to create reference view space: %s\n", __FUNCTION__, xr::ToCString(refResult));
                 }
             }
 
@@ -492,7 +492,7 @@ namespace openxr_api_layer
             }
             else
             {
-                ErrorLog("%s: unable to create XrPath from %s: %d\n", __FUNCTION__, posePath.c_str(), result);
+                ErrorLog("%s: unable to create XrPath from %s: %s\n", __FUNCTION__, posePath.c_str(), xr::ToCString(result));
             }
         }
         if (isVirtual && isTrackerPath && !moveBindingOverriden)
@@ -507,7 +507,7 @@ namespace openxr_api_layer
             }
             else
             {
-                ErrorLog("%s: unable to create XrPath from %s: %d\n", __FUNCTION__, movePath.c_str(), result);
+                ErrorLog("%s: unable to create XrPath from %s: %s\n", __FUNCTION__, movePath.c_str(), xr::ToCString(result));
             }
         }
         if (isVirtual && isTrackerPath && !positionBindingOverriden)
@@ -522,7 +522,7 @@ namespace openxr_api_layer
             }
             else
             {
-                ErrorLog("%s: unable to create XrPath from %s: %d\n", __FUNCTION__, positionPath.c_str(), result);
+                ErrorLog("%s: unable to create XrPath from %s: %s\n", __FUNCTION__, positionPath.c_str(), xr::ToCString(result));
             }
         }
         if (isVirtual && isTrackerPath  && !hapticBindingOverriden)
@@ -537,7 +537,7 @@ namespace openxr_api_layer
             }
             else
             {
-                ErrorLog("%s: unable to create XrPath from %s: %d\n", __FUNCTION__, hapticPath.c_str(), result);
+                ErrorLog("%s: unable to create XrPath from %s: %s\n", __FUNCTION__, hapticPath.c_str(), xr::ToCString(result));
             }
         }
 
@@ -580,9 +580,9 @@ namespace openxr_api_layer
         chainAttachInfo.countActionSets = static_cast<uint32_t>(newActionSets.size());
 
         const XrResult result = OpenXrApi::xrAttachSessionActionSets(session, &chainAttachInfo);
-        Log("action set(s)%s attached, result = %d, #sets = %d\n",
+        Log("action set(s)%s attached, result = %s, #sets = %d\n",
             XR_SUCCEEDED(result) ? "" : " not",
-            result,
+            xr::ToCString(result),
             chainAttachInfo.countActionSets);
         if (XR_ERROR_ACTIONSETS_ALREADY_ATTACHED == result)
         {
@@ -713,7 +713,7 @@ namespace openxr_api_layer
         const XrResult result = OpenXrApi::xrLocateSpace(space, baseSpace, time, location);
         if (XR_FAILED(result))
         {
-            ErrorLog("%s: xrLocateSpace failed: %d\n", __FUNCTION__, result);
+            ErrorLog("%s: xrLocateSpace failed: %s\n", __FUNCTION__, xr::ToCString(result));
             return result; 
         }
         const bool compensateSpace = isViewSpace(space) || (m_CompensateControllers && isActionSpace(space));
@@ -912,10 +912,10 @@ namespace openxr_api_layer
                               TLPArg(trackerActionSet, "ActionSet Attached"),
                               TLArg(chainSyncInfo.countActiveActionSets, "ActionSet Count"));
         }
-        const XrResult res = OpenXrApi::xrSyncActions(session, &chainSyncInfo);
-        DebugLog("xrSyncAction result = %d, #sets = %d\n", res, chainSyncInfo.countActiveActionSets);
+        const XrResult result = OpenXrApi::xrSyncActions(session, &chainSyncInfo);
+        DebugLog("xrSyncAction result = %s, #sets = %d\n", xr::ToCString(result), chainSyncInfo.countActiveActionSets);
         m_Tracker->m_XrSyncCalled = true;
-        return res;
+        return result;
     }
 
     XrResult OpenXrLayer::xrBeginFrame(XrSession session, const XrFrameBeginInfo* frameBeginInfo)
@@ -1214,10 +1214,10 @@ namespace openxr_api_layer
         }
         else
         {
-            ErrorLog("%s: unable get current interaction profile for %s: %d\n",
+            ErrorLog("%s: unable get current interaction profile for %s: %s\n",
                      __FUNCTION__,
                      m_SubActionPath.c_str(),
-                     interactionResult);
+                     xr::ToCString(interactionResult));
         }
     }
 
@@ -1328,9 +1328,11 @@ namespace openxr_api_layer
                 actionSpaceCreateInfo.action = m_PoseAction;
                 actionSpaceCreateInfo.subactionPath = m_XrSubActionPath;
                 actionSpaceCreateInfo.poseInActionSpace = Pose::Identity();
-                if (XR_FAILED(GetInstance()->xrCreateActionSpace(m_Session, &actionSpaceCreateInfo, &m_TrackerSpace)))
+                const XrResult createSpaceResult =
+                    GetInstance()->xrCreateActionSpace(m_Session, &actionSpaceCreateInfo, &m_TrackerSpace); 
+                if (XR_FAILED(createSpaceResult))
                 {
-                    ErrorLog("%s: unable to create action space\n", __FUNCTION__);
+                    ErrorLog("%s: unable to create action space: %s\n", __FUNCTION__, xr::ToCString(createSpaceResult));
                     success = false;
                 }
                 TraceLoggingWrite(g_traceProvider,
@@ -1415,7 +1417,7 @@ namespace openxr_api_layer
                     xrStringToPath(GetXrInstance(), profile.c_str(), &suggestedBindings.interactionProfile);
                 XR_FAILED(profileResult))
             {
-                ErrorLog("%s: unable to create XrPath from %s: %d\n", __FUNCTION__, profile.c_str(), profileResult);
+                ErrorLog("%s: unable to create XrPath from %s: %s\n", __FUNCTION__, profile.c_str(), xr::ToCString(profileResult));
             }
             else
             {
@@ -1427,7 +1429,7 @@ namespace openxr_api_layer
                 if (const XrResult poseResult = xrStringToPath(GetXrInstance(), posePath.c_str(), &poseBinding.binding);
                     XR_FAILED(poseResult))
                 {
-                    ErrorLog("%s: unable to create XrPath from %s: %d\n", __FUNCTION__, posePath.c_str(), poseResult);
+                    ErrorLog("%s: unable to create XrPath from %s: %s\n", __FUNCTION__, posePath.c_str(), xr::ToCString(poseResult));
                 }
                 else
                 {
@@ -1441,10 +1443,10 @@ namespace openxr_api_layer
                                 xrStringToPath(GetXrInstance(), movePath.c_str(), &moveBinding.binding);
                             XR_FAILED(result))
                         {
-                            ErrorLog("%s: unable to create XrPath from %s: %d\n",
+                            ErrorLog("%s: unable to create XrPath from %s: %s\n",
                                      __FUNCTION__,
                                      movePath.c_str(),
-                                     result);
+                                     xr::ToCString(result));
                         }
                         else
                         {
@@ -1456,10 +1458,10 @@ namespace openxr_api_layer
                                 xrStringToPath(GetXrInstance(), positionPath.c_str(), &positionBinding.binding);
                             XR_FAILED(result))
                         {
-                            ErrorLog("%s: unable to create XrPath from %s: %d\n",
+                            ErrorLog("%s: unable to create XrPath from %s: %s\n",
                                      __FUNCTION__,
                                      positionPath.c_str(),
-                                     result);
+                                     xr::ToCString(result));
                         }
                         else
                         {
@@ -1470,10 +1472,10 @@ namespace openxr_api_layer
                                 xrStringToPath(GetXrInstance(), hapticPath.c_str(), &hapticBinding.binding);
                             XR_FAILED(result))
                         {
-                            ErrorLog("%s: unable to create XrPath from %s: %d\n",
+                            ErrorLog("%s: unable to create XrPath from %s: %s\n",
                                      __FUNCTION__,
                                      hapticPath.c_str(),
-                                     result);
+                                     xr::ToCString(result));
                         }
                         else
                         {
@@ -1486,7 +1488,7 @@ namespace openxr_api_layer
                             OpenXrApi::xrSuggestInteractionProfileBindings(GetXrInstance(), &suggestedBindings);
                         XR_FAILED(suggestResult))
                     {
-                        ErrorLog("%s: unable to suggest bindings: %d\n", __FUNCTION__, suggestResult);
+                        ErrorLog("%s: unable to suggest bindings: %s\n", __FUNCTION__, xr::ToCString(suggestResult));
                     }
                     else
                     {
@@ -1571,7 +1573,7 @@ namespace openxr_api_layer
         }
         else
         {
-            ErrorLog("%s: unable to convert XrPath %u to string: %d\n", __FUNCTION__, path, result);
+            ErrorLog("%s: unable to convert XrPath %u to string: %s\n", __FUNCTION__, path, xr::ToCString(result));
         }
         return str;
     }

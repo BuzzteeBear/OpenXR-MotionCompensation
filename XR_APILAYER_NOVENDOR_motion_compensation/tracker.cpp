@@ -98,7 +98,7 @@ namespace Tracker
                                   TLArg(time, "Time"));
                 if (const XrResult result = GetInstance()->xrSyncActions(session, &syncInfo); XR_FAILED(result))
                 {
-                    ErrorLog("%s: xrSyncActions failed: %d\n", __FUNCTION__, result);
+                    ErrorLog("%s: xrSyncActions failed: %s\n", __FUNCTION__, xr::ToCString(result));
                     return false;
                 }
             }
@@ -115,7 +115,7 @@ namespace Tracker
                         GetInstance()->xrGetActionStatePose(session, &getActionStateInfo, &actionStatePose);
                     XR_FAILED(result))
                 {
-                    ErrorLog("%s: xrGetActionStatePose failed: %d\n", __FUNCTION__, result);
+                    ErrorLog("%s: xrGetActionStatePose failed: %s\n", __FUNCTION__, xr::ToCString(result));
                     return false;
                 }
 
@@ -134,7 +134,7 @@ namespace Tracker
                     GetInstance()->xrLocateSpace(layer->m_TrackerSpace, layer->m_ReferenceSpace, time, &location);
                 XR_FAILED(result))
             {
-                ErrorLog("%s: xrLocateSpace failed: %d\n", __FUNCTION__, result);
+                ErrorLog("%s: xrLocateSpace failed: %s\n", __FUNCTION__, xr::ToCString(result));
                 return false;
             }
 
@@ -826,7 +826,7 @@ namespace Tracker
                                                                      reinterpret_cast<XrHapticBaseHeader*>(&vibration));
                 XR_FAILED(result))
             {
-                ErrorLog("%s: xrApplyHapticFeedback failed: %d\n", __FUNCTION__, result);
+                ErrorLog("%s: xrApplyHapticFeedback failed: %s\n", __FUNCTION__, xr::ToCString(result));
             }
         }
 
@@ -893,7 +893,7 @@ namespace Tracker
             constexpr XrActionsSyncInfo syncInfo{XR_TYPE_ACTIONS_SYNC_INFO, nullptr, 0, nullptr};
             if (const XrResult result = GetInstance()->xrSyncActions(session, &syncInfo); XR_FAILED(result))
             {
-                ErrorLog("%s: xrSyncActions failed: %d\n", __FUNCTION__, result);
+                ErrorLog("%s: xrSyncActions failed: %s\n", __FUNCTION__, xr::ToCString(result));
                 return;
             }
         }
@@ -908,7 +908,7 @@ namespace Tracker
             XrActionStateBoolean moveButtonState{XR_TYPE_ACTION_STATE_BOOLEAN};
             if (const XrResult result = layer->xrGetActionStateBoolean(session, &moveInfo, &moveButtonState); XR_FAILED(result))
             {
-                ErrorLog("%s: xrGetActionStateBoolean failed: %d\n", __FUNCTION__, result);
+                ErrorLog("%s: xrGetActionStateBoolean failed: %s\n", __FUNCTION__, xr::ToCString(result));
                 return;
             }
             if (moveButtonState.isActive == XR_TRUE)
@@ -927,7 +927,7 @@ namespace Tracker
             if (const XrResult result = layer->xrGetActionStateBoolean(session, &positionInfo, &positionButtonState);
                 XR_FAILED(result))
             {
-                ErrorLog("%s: xrGetActionStateBoolean failed: %d\n", __FUNCTION__, result);
+                ErrorLog("%s: xrGetActionStateBoolean failed: %s\n", __FUNCTION__, xr::ToCString(result));
                 return;
             }
             if (positionButtonState.isActive == XR_TRUE)
