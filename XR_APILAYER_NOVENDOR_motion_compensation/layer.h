@@ -79,7 +79,7 @@ namespace openxr_api_layer
         XrResult xrSyncActions(XrSession session, const XrActionsSyncInfo* syncInfo) override;
         XrResult xrBeginFrame(XrSession session, const XrFrameBeginInfo* frameBeginInfo)override;
         XrResult xrEndFrame(XrSession session, const XrFrameEndInfo* frameEndInfo) override;
-        bool GetStageToLocalSpace(XrTime time, XrPosef& pose);
+        
         void RequestCurrentInteractionProfile();
 
         XrActionSet m_ActionSet{XR_NULL_HANDLE};
@@ -89,9 +89,7 @@ namespace openxr_api_layer
         XrAction m_HapticAction{XR_NULL_HANDLE};
         XrSpace m_TrackerSpace{XR_NULL_HANDLE};
         XrSpace m_ViewSpace{XR_NULL_HANDLE};
-        XrSpace m_ReferenceSpace{XR_NULL_HANDLE};
         XrSpace m_StageSpace{XR_NULL_HANDLE};
-        XrSpace m_ReferenceStageSpace{XR_NULL_HANDLE};
 
       private:
         [[nodiscard]] bool isSystemHandled(XrSystemId systemId) const;
@@ -100,6 +98,7 @@ namespace openxr_api_layer
         bool isActionSpace(XrSpace space) const;
         bool isCompensationRequired(const XrActionSpaceCreateInfo* createInfo) const;
         [[nodiscard]] uint32_t GetNumViews() const;
+        bool SetStageToLocalSpace(XrSpace space, XrTime time);
         bool CreateTrackerActions(const std::string& caller);
         void DestroyTrackerActions(const std::string& caller);
         bool AttachActionSet(const std::string& caller);
@@ -127,6 +126,7 @@ namespace openxr_api_layer
         bool m_Activated{false};
         bool m_UseEyeCache{false};
         bool m_VarjoPollWorkaround{false};
+        XrPosef m_StageToLocal{xr::math::Pose::Identity()};
         std::string m_Application;
         std::string m_SubActionPath;
         XrPath m_XrSubActionPath{XR_NULL_PATH};
@@ -150,11 +150,6 @@ namespace openxr_api_layer
         // connection recovery
         XrTime m_RecoveryWait{3000000000}; // 3 sec default timeout
         XrTime m_RecoveryStart{0};
-
-        // recentering of in-game view
-        XrTime m_LastFrameTime{0};
-        bool m_LocalRefSpaceCreated{false};
-        bool m_RecenterInProgress{false};
 
         // debugging
         bool m_TestRotation{false};

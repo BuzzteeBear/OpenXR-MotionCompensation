@@ -621,8 +621,9 @@ namespace openxr_api_layer
         {
             if (XR_REFERENCE_SPACE_TYPE_VIEW == createInfo->referenceSpaceType)
             {
-                Log("creation of view space detected: %u\n", *space);
-                DebugLog("view pose: %s\n", xr::ToString(createInfo->poseInReferenceSpace).c_str());
+                Log("creation of view space detected: %u, offset pose: %s\n",
+                    *space,
+                    xr::ToString(createInfo->poseInReferenceSpace).c_str());
 
                 // memorize view spaces
                 TraceLoggingWrite(g_traceProvider, "xrCreateReferenceSpace", TLArg("View_Space", "Added"));
@@ -630,33 +631,15 @@ namespace openxr_api_layer
             }
             else if (XR_REFERENCE_SPACE_TYPE_LOCAL == createInfo->referenceSpaceType)
             {
-                Log("creation of local reference space detected: %u\n", *space);
-                DebugLog("local pose: %s\n", xr::ToString(createInfo->poseInReferenceSpace).c_str());
-                
-                // disable mc temporarily until series of reference space creations is over
-                m_RecenterInProgress = true;
-                m_LocalRefSpaceCreated = true;
-
-                if (m_Tracker->m_Calibrated)
-                {
-                    // adjust reference pose to match newly created ref space
-                    XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
-                    if (XR_SUCCEEDED(xrLocateSpace(m_ReferenceSpace, *space, m_LastFrameTime, &location)))
-                    {
-                        DebugLog("old space to new space: %s\n", xr::ToString(location.pose).c_str());
-                        m_Tracker->AdjustReferencePose(location.pose);
-                    }
-                    else
-                    {
-                        ErrorLog("unable to adjust reference pose to newly created reference space");
-                    }
-                }
-                m_ReferenceSpace = *space;
+                Log("creation of local reference space detected: %u, offset pose: %s\n",
+                    *space,
+                    xr::ToString(createInfo->poseInReferenceSpace).c_str());
             }
             else if (XR_REFERENCE_SPACE_TYPE_STAGE == createInfo->referenceSpaceType)
             {
-                // uee stage space as fallback reference space for applications not using local space for view localization
-                m_ReferenceStageSpace = *space;
+                Log("creation of stage reference space detected: %u, offset pose: %s\n",
+                    *space,
+                    xr::ToString(createInfo->poseInReferenceSpace).c_str());
             }
         }
         TraceLoggingWrite(g_traceProvider, "xrCreateReferenceSpace", TLPArg(*space, "Space"));
@@ -724,47 +707,54 @@ namespace openxr_api_layer
         const bool compensateSpace = isViewSpace(space) || (m_CompensateControllers && isActionSpace(space));
         const bool compensateBaseSpace =
             isViewSpace(baseSpace) || (m_CompensateControllers && isActionSpace(baseSpace));
-        if (m_Activated && !m_RecenterInProgress && (compensateSpace || compensateBaseSpace))
+        if (m_Activated && ((compensateSpace && !compensateBaseSpace) || (!compensateSpace && compensateBaseSpace)))
         {
             TraceLoggingWrite(g_traceProvider,
                               "xrLocateSpace",
                               TLArg(xr::ToString(location->pose).c_str(), "PoseBefore"),
                               TLArg(location->locationFlags, "LocationFlags"));
 
-            // manipulate pose using tracker
-            XrPosef trackerDelta = Pose::Identity();
-            if (!m_TestRotation ? m_Tracker->GetPoseDelta(trackerDelta, m_Session, time)
-                                : TestRotation(&trackerDelta, time, false))
+            // determine stage to local transformation
+            if (SetStageToLocalSpace(baseSpace, time))
             {
-                m_RecoveryStart = 0;
-                if (compensateSpace && !compensateBaseSpace)
+                // manipulate pose using tracker
+                XrPosef trackerDelta{Pose::Identity()}, trackerDeltaInStage{Pose::Identity()};
+                if (!m_TestRotation ? m_Tracker->GetPoseDelta(trackerDeltaInStage, m_Session, time)
+                                    : TestRotation(&trackerDeltaInStage, time, false))
                 {
-                    location->pose = Pose::Multiply(location->pose, trackerDelta);
+                    trackerDelta = Pose::Multiply(Pose::Multiply(Pose::Invert(m_StageToLocal), trackerDeltaInStage),
+                                                  m_StageToLocal);
+                    m_RecoveryStart = 0;
+                    if (compensateSpace)
+                    {
+                        location->pose = Pose::Multiply(location->pose, trackerDelta);
+                    }
+                    if (compensateBaseSpace)
+                    {
+                        // TODO: verify calculation
+                        Log("Please report the application in use to oxrmc developer!");
+                        location->pose = Pose::Multiply(location->pose, Pose::Invert(trackerDelta));
+                    }
                 }
-                if (compensateBaseSpace && !compensateSpace)
+                else
                 {
-                    // TODO: verify calculation
-                    location->pose = Pose::Multiply(location->pose, Pose::Invert(trackerDelta));
+                    if (0 == m_RecoveryStart)
+                    {
+                        ErrorLog("unable to retrieve tracker pose delta\n");
+                        m_RecoveryStart = time;
+                    }
+                    else if (m_RecoveryWait >= 0 && time - m_RecoveryStart > m_RecoveryWait)
+                    {
+                        ErrorLog("tracker connection lost\n");
+                        GetAudioOut()->Execute(Event::ConnectionLost);
+                        m_Activated = false;
+                        m_RecoveryStart = -1;
+                    }
                 }
-            }
-            else
-            {
-                if (0 == m_RecoveryStart)
-                {
-                    ErrorLog("unable to retrieve tracker pose delta\n");
-                    m_RecoveryStart = time;
-                }
-                else if (m_RecoveryWait >= 0 && time - m_RecoveryStart > m_RecoveryWait)
-                {
-                    ErrorLog("tracker connection lost\n");
-                    GetAudioOut()->Execute(Event::ConnectionLost);
-                    m_Activated = false;  
-                    m_RecoveryStart = -1;
-                }
-            }
 
-            // safe pose for use in xrEndFrame
-            m_PoseCache.AddSample(time, trackerDelta);
+                // safe pose for use in xrEndFrame
+                m_PoseCache.AddSample(time, trackerDelta);
+            }
 
             TraceLoggingWrite(g_traceProvider,
                               "xrLocateSpace",
@@ -815,7 +805,7 @@ namespace openxr_api_layer
             return result;
         }
 
-        // store eye poses to avoid recalculation in xrEndFrame?
+        // store eye poses to avoid recalculation in xrEndFrame
         std::vector<XrPosef> originalEyePoses{};
         for (uint32_t i = 0; i < *viewCountOutput; i++)
         {
@@ -970,22 +960,14 @@ namespace openxr_api_layer
 
         std::unique_lock lock(m_FrameLock);
 
-        m_LastFrameTime = frameEndInfo->displayTime;
-        if (m_RecenterInProgress && !m_LocalRefSpaceCreated)
-        {
-            m_RecenterInProgress = false;
-        }
-        else if (m_AutoActivator)
+        if (m_AutoActivator)
         {
             m_AutoActivator->ActivateIfNecessary(frameEndInfo->displayTime);
         }
-        m_LocalRefSpaceCreated = false; 
 
         XrFrameEndInfo chainFrameEndInfo = *frameEndInfo;
-       
-        XrPosef referenceTrackerPose = m_Tracker->GetReferencePose();
 
-        XrPosef reversedManipulation;
+        XrPosef reversedManipulation{Pose::Identity()};
         std::vector<XrPosef> cachedEyePoses;
         if (m_Activated)
         {
@@ -1004,10 +986,12 @@ namespace openxr_api_layer
         {
             m_Overlay->DrawOverlay(session,
                                    &chainFrameEndInfo,
-                                   referenceTrackerPose,
+                                   Pose::Multiply(m_Tracker->GetReferencePose(), m_StageToLocal),
                                    reversedManipulation,
                                    m_Activated);
         }
+
+        m_Tracker->m_XrSyncCalled = false;
 
         if (!m_Activated)
         {
@@ -1071,6 +1055,7 @@ namespace openxr_api_layer
                     XrPosef reversedEyePose = m_UseEyeCache
                                                   ? cachedEyePoses[j]
                                                   : Pose::Multiply((*projectionViews)[j].pose, reversedManipulation);
+
                     (*projectionViews)[j].pose = reversedEyePose;
 
                     TraceLoggingWrite(g_traceProvider,
@@ -1097,7 +1082,7 @@ namespace openxr_api_layer
 
                 const auto* quadLayer = reinterpret_cast<const XrCompositionLayerQuad*>(chainFrameEndInfo.layers[i]);
 
-               TraceLoggingWrite(g_traceProvider,
+                TraceLoggingWrite(g_traceProvider,
                                   "xrEndFrame_Layer",
                                   TLArg("QuadLayer", "Type"),
                                   TLArg(quadLayer->layerFlags, "Flags"),
@@ -1144,8 +1129,6 @@ namespace openxr_api_layer
 
         XrResult result = OpenXrApi::xrEndFrame(session, &resetFrameEndInfo);
 
-        m_Tracker->m_XrSyncCalled = false;
-
         // clean up memory
         if (m_Overlay)
         {
@@ -1167,42 +1150,46 @@ namespace openxr_api_layer
         return result;
     }
 
-    bool OpenXrLayer::GetStageToLocalSpace(const XrTime time, XrPosef& pose)
+    bool OpenXrLayer::SetStageToLocalSpace(const XrSpace space, const XrTime time)
     {
+        TraceLoggingWrite(g_traceProvider, "SetStageToLocalSpace", TLPArg(space, "Space"), TLArg(time, "Time"));
         if (m_StageSpace == XR_NULL_HANDLE)
         {
             LazyInit(time);
         }
-        if (m_StageSpace != XR_NULL_HANDLE)
-        {
-            XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
-            if (XR_SUCCEEDED(xrLocateSpace(m_StageSpace, m_ReferenceSpace, time, &location)))
-            {
-                if (Pose::IsPoseValid(location.locationFlags))
-                {
-                    DebugLog("local space to stage space: %s\n", xr::ToString(location.pose).c_str()); 
-                    pose = location.pose;
-                    TraceLoggingWrite(g_traceProvider,
-                                      "LocateLocalInStageSpace",
-                                      TLArg(xr::ToString(pose).c_str(), "StageToLocalPose"));
-                    return true;
-                }
-                else
-                {
-                    ErrorLog("pose of local space in stage space not valid. locationFlags: %d\n",
-                             location.locationFlags);
-                }
-            }
-            else
-            {
-                ErrorLog("unable to locate local reference space in stage reference space\n");
-            }
-        }
-        else
+        if (m_StageSpace == XR_NULL_HANDLE)
         {
             ErrorLog("stage reference space not initialized\n");
+            return false;
         }
-        return false;
+        XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
+        const XrResult result = OpenXrApi::xrLocateSpace(m_StageSpace, space, time, &location);
+        if (XR_FAILED(result))
+        {
+            ErrorLog("unable to locate local reference space (%u) in stage reference space (%u): %s\n",
+                     space,
+                     m_StageSpace,
+                     xr::ToCString(result));
+            return false;
+        }
+        if (!Pose::IsPoseValid(location.locationFlags))
+        {
+            ErrorLog("pose of local space in stage space not valid. locationFlags: %d\n", location.locationFlags);
+            return false;
+        }
+        if (!DirectX::XMVector3Equal(LoadXrVector3(location.pose.position), LoadXrVector3(m_StageToLocal.position)))
+            /* ||
+            !DirectX::XMVector4Equal(LoadXrQuaternion(location.pose.orientation),
+                                     LoadXrQuaternion(m_StageToLocal.orientation)))*/
+        {
+            Log("local space to stage space: %s\n", xr::ToString(location.pose).c_str());
+            m_StageToLocal = location.pose;
+        }
+
+        TraceLoggingWrite(g_traceProvider,
+                          "SetStageToLocalSpace",
+                          TLArg(xr::ToString(m_StageToLocal).c_str(), "StageToLocalPose"));
+        return true;
     }
 
     void OpenXrLayer::RequestCurrentInteractionProfile()
@@ -1519,33 +1506,9 @@ namespace openxr_api_layer
     bool OpenXrLayer::LazyInit(const XrTime time)
     {
         bool success = true;
-        if (m_ReferenceSpace == XR_NULL_HANDLE)
-        {
-            if (XR_NULL_HANDLE != m_ReferenceStageSpace)
-            {
-                Log("using stage space as fallback reference space during lazy init\n");
-                m_ReferenceSpace = m_ReferenceStageSpace;
-            }
-            else
-            {
-                Log("reference space created during lazy init\n");
-                // Create a reference space.
-                XrReferenceSpaceCreateInfo referenceSpaceCreateInfo{XR_TYPE_REFERENCE_SPACE_CREATE_INFO, nullptr};
-                referenceSpaceCreateInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_LOCAL;
-                referenceSpaceCreateInfo.poseInReferenceSpace = Pose::Identity();
-                TraceLoggingWrite(g_traceProvider, "LazyInit", TLPArg("Executed", "xrCreateReferenceSpaceLocal"));
-                if (const XrResult result =
-                        xrCreateReferenceSpace(m_Session, &referenceSpaceCreateInfo, &m_ReferenceSpace);
-                    XR_FAILED(result))
-                {
-                    ErrorLog("%s: xrCreateReferenceSpace (local) failed: %s\n", __FUNCTION__, xr::ToCString(result));
-                    success = false;
-                }
-            }
-        }
         if (m_StageSpace == XR_NULL_HANDLE)
         {
-            Log("stage space created during lazy init\n");
+           
             // Create a reference space.
             XrReferenceSpaceCreateInfo referenceSpaceCreateInfo{XR_TYPE_REFERENCE_SPACE_CREATE_INFO, nullptr};
             referenceSpaceCreateInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_STAGE;
@@ -1555,9 +1518,14 @@ namespace openxr_api_layer
                               TLPArg("Executed", "xrCreateReferenceSpaceStage"));
             if (const XrResult result =
                     OpenXrApi::xrCreateReferenceSpace(m_Session, &referenceSpaceCreateInfo, &m_StageSpace);
-                XR_FAILED(result))
+                XR_SUCCEEDED(result))
+            {
+                Log("stage space created during lazy init: %u\n", m_StageSpace);
+            }
+            else
             {
                 ErrorLog("%s: xrCreateReferenceSpace (stage) failed: %s\n", __FUNCTION__, xr::ToCString(result));
+                success = false;
             }
         }
 

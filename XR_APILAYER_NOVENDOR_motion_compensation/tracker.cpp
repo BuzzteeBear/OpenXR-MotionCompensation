@@ -131,7 +131,7 @@ namespace Tracker
             }
 
             if (const XrResult result =
-                    GetInstance()->xrLocateSpace(layer->m_TrackerSpace, layer->m_ReferenceSpace, time, &location);
+                    GetInstance()->xrLocateSpace(layer->m_TrackerSpace, layer->m_StageSpace, time, &location);
                 XR_FAILED(result))
             {
                 ErrorLog("%s: xrLocateSpace failed: %s\n", __FUNCTION__, xr::ToCString(result));
@@ -282,31 +282,11 @@ namespace Tracker
 
     void TrackerBase::LogCurrentTrackerPoses(XrSession session, XrTime time, bool activated)
     {
-        Log("current reference pose in reference space: %s\n", xr::ToString(m_ReferencePose).c_str());
+        Log("current reference pose in stage space: %s\n", xr::ToString(m_ReferencePose).c_str());
         XrPosef currentPose{Pose::Identity()};
         if (activated && GetPose(currentPose, session, time))
         {
-            Log("current tracker pose in reference space: %s\n", xr::ToString(currentPose).c_str());
-        }
-        auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
-        if (!layer)
-        {
-            ErrorLog("%s: unable to cast layer to OpenXrLayer\n", __FUNCTION__);
-            return;
-        }
-        XrPosef stageToLocal{Pose::Identity()};
-        if (!layer->GetStageToLocalSpace(time, stageToLocal))
-        {
-            ErrorLog("%s: unable to determine local to stage pose\n", __FUNCTION__);
-            return;
-        }
-        Log("local space to stage space: %s\n", xr::ToString(stageToLocal).c_str()); 
-        const XrPosef refPosInStageSpace = Pose::Multiply(m_ReferencePose, Pose::Invert(stageToLocal));
-        Log("current reference pose in stage space: %s\n", xr::ToString(refPosInStageSpace).c_str());
-        if (activated)
-        {
-            const XrPosef curPosInStageSpace = Pose::Multiply(currentPose, Pose::Invert(stageToLocal));
-            Log("current tracker pose in stage space: %s\n", xr::ToString(curPosInStageSpace).c_str());
+            Log("current tracker pose in stage space: %s\n", xr::ToString(currentPose).c_str());
         }
     }
 
@@ -438,7 +418,7 @@ namespace Tracker
             {
                 XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
                 if (XR_SUCCEEDED(layer->OpenXrApi::xrLocateSpace(layer->m_ViewSpace,
-                                                                 layer->m_ReferenceSpace,
+                                                                 layer->m_StageSpace,
                                                                  time,
                                                                  &location)) &&
                     Pose::IsPoseValid(location.locationFlags))
@@ -544,27 +524,13 @@ namespace Tracker
     {
         if (m_Calibrated)
         {
-            auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
-            if (!layer)
-            {
-                ErrorLog("%s: unable to cast layer to OpenXrLayer\n", __FUNCTION__);
-                return;
-            }
-            XrPosef stageToLocal{Pose::Identity()};
-            if (!layer->GetStageToLocalSpace(time, stageToLocal))
-            {
-                ErrorLog("%s: unable to determine local to stage pose\n", __FUNCTION__);
-                return;
-            }
-            const XrPosef refPosInStageSpace = Pose::Multiply(m_ReferencePose, Pose::Invert(stageToLocal));
-
-            GetConfig()->SetValue(Cfg::CorX, refPosInStageSpace.position.x);
-            GetConfig()->SetValue(Cfg::CorY, refPosInStageSpace.position.y);
-            GetConfig()->SetValue(Cfg::CorZ, refPosInStageSpace.position.z);
-            GetConfig()->SetValue(Cfg::CorA, refPosInStageSpace.orientation.w);
-            GetConfig()->SetValue(Cfg::CorB, refPosInStageSpace.orientation.x);
-            GetConfig()->SetValue(Cfg::CorC, refPosInStageSpace.orientation.y);
-            GetConfig()->SetValue(Cfg::CorD, refPosInStageSpace.orientation.z);
+            GetConfig()->SetValue(Cfg::CorX, m_ReferencePose.position.x);
+            GetConfig()->SetValue(Cfg::CorY, m_ReferencePose.position.y);
+            GetConfig()->SetValue(Cfg::CorZ, m_ReferencePose.position.z);
+            GetConfig()->SetValue(Cfg::CorA, m_ReferencePose.orientation.w);
+            GetConfig()->SetValue(Cfg::CorB, m_ReferencePose.orientation.x);
+            GetConfig()->SetValue(Cfg::CorC, m_ReferencePose.orientation.y);
+            GetConfig()->SetValue(Cfg::CorD, m_ReferencePose.orientation.z);
         }
     }
 
@@ -592,30 +558,9 @@ namespace Tracker
             Log("you may need to save cor position separately for native OpenXR and OpenComposite\n");
             return false;
         }
-
-        auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
-        if (success && !layer)
-        {
-            ErrorLog("%s: unable to cast layer to OpenXrLayer\n", __FUNCTION__);
-            return false;
-        }
-        XrPosef stageToLocal{Pose::Identity()};
-        if (success && !layer->GetStageToLocalSpace(time, stageToLocal))
-        {
-            ErrorLog("%s: unable to determine local to stage pose\n", __FUNCTION__);
-            return false;
-        }
         if (success)
         {
             Log("reference pose successfully loaded from config file\n");
-
-            TraceLoggingWrite(g_traceProvider,
-                              "LoadReferencePose",
-                              TLArg(xr::ToString(refPose).c_str(), "LoadedPose"));
-            refPose = Pose::Multiply(refPose, stageToLocal);   
-            TraceLoggingWrite(g_traceProvider,
-                              "LoadReferencePose",
-                              TLArg(xr::ToString(refPose).c_str(), "ReferencePose"));
             SetReferencePose(refPose);    
         }
         return success;
@@ -648,15 +593,12 @@ namespace Tracker
             if (const auto layer = reinterpret_cast<OpenXrLayer*>(GetInstance()))
             {
                 XrSpaceLocation hmdLocation{XR_TYPE_SPACE_LOCATION, nullptr};
-                if (XR_SUCCEEDED(layer->OpenXrApi::xrLocateSpace(layer->m_ViewSpace,
-                                                                 layer->m_ReferenceSpace,
-                                                                 time,
-                                                                 &hmdLocation)) &&
-                    Pose::IsPoseValid(hmdLocation.locationFlags))
+                const XrResult result =
+                    layer->OpenXrApi::xrLocateSpace(layer->m_ViewSpace, layer->m_StageSpace, time, &hmdLocation);
+                if (XR_SUCCEEDED(result))
                 {
-                    if (XrPosef stageToLocal{Pose::Identity()}; layer->GetStageToLocalSpace(time, stageToLocal))
+                    if (Pose::IsPoseValid(hmdLocation.locationFlags))
                     {
-                        const XrPosef hmdPosInStageSpace = Pose::Multiply(hmdLocation.pose, Pose::Invert(stageToLocal));
                         YawData data{};
                         if (m_Mmf.Read(&data, sizeof(data), time))
                         {
@@ -666,7 +608,7 @@ namespace Tracker
 
                             m_OffsetRight = 0.0;
                             m_OffsetForward = data.rotationForwardHead / 100.0f;
-                            m_OffsetDown = hmdPosInStageSpace.position.y - data.rotationHeight / 100.0f;
+                            m_OffsetDown = hmdLocation.pose.position.y - data.rotationHeight / 100.0f;
 
                             Log("offset down value based on Yaw Game Engine value: %f\n", m_OffsetDown);
                         }
@@ -677,12 +619,14 @@ namespace Tracker
                     }
                     else
                     {
-                        ErrorLog("%s: unable to use Yaw GE offset values: could not determine local to stage pose\n", __FUNCTION__);
+                        ErrorLog("%s: unable to use Yaw GE offset values: pose invalid\n", __FUNCTION__);
                     }
                 }
                 else
                 {
-                    ErrorLog("%s: unable to use Yaw GE offset values: xrLocateSpace(view) failed\n", __FUNCTION__);
+                    ErrorLog("%s: unable to use Yaw GE offset values: xrLocateSpace(view) failed: %s\n",
+                             __FUNCTION__,
+                             xr::ToCString(result));
                 }
             }
             else
