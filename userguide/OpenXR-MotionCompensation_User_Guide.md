@@ -146,7 +146,9 @@ What you can modify in a configuration file:
 To use a virtual tracker (as opposed to a physical device) set parameter `tracker_type` according to the motion software that is providing the data for motion compensation on your system:
 - `yaw`: Yaw Game Engine (or Sim Racing Studio when using rotational data provided by Yaw VR or Yaw 2)
 - `srs`: Sim Racing Studio, using a Witmotion sensor
-- `flypt`: FlyPT Mover 
+- `flypt`: FlyPT Mover
+
+You can find video tutorials on virtual tracker setup by [MotionXP](https://www.youtube.com/watch?v=116TVKMO9p8) and [SimHanger](https://www.youtube.com/watch?v=NT-kpJwzJzw) on YouTube.
 
 ### Calibrating virtual tracker
 To enable OXRMC to correlate translation and rotation of the rig to the virtual space correctly when using a virtual tracker, you have to provide the information where the center of rotation (cor) of your motion rig is positioned and which way is forward. This can be done with the following steps:

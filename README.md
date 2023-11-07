@@ -17,10 +17,11 @@ To be able to do that, the software needs to be informed on the motion rig movem
 
 Prerequisites:
 
-- Visual Studio 2019 or above;
+- Visual Studio 2022 or above;
 - NuGet package manager (installed via Visual Studio Installer);
 - Python 3 interpreter (installed via Visual Studio Installer or externally available in your PATH).
 - Inno Setup Compiler for creating an installation executable
+- Git client with LFS support installed
 
 Limitations:
 
@@ -29,12 +30,15 @@ Limitations:
 DISCLAIMER: This software is distributed as-is, without any warranties or conditions of any kind. Use at your own risks.
 
 ## Customization
+The easiest way to get a uable project set up is to use the `Clone a repository` function of Visual Studio with the url of this github repository. Make sure the project path does not contain any whitespaces (or the call of the python script for source code generation will fail). Also ensure that the [Visual Studio git client can handle LFS](https://stackoverflow.com/a/47921547) for the external sdk dependencies below. 
 
 ### Make sure to pull all 3 Git submodules dependencies:
 
 - `external/OpenXR-SDK-Source`: This repository contains some critical definition files for generating and building the API layer.
 - `external/OpenXR-SDK`: This repository contains the official Khronos SDK (pre-built), with the OpenXR header files needed for OpenXR development.
 - `external/OpenXR-MixedReality`: This repository contains (among other things) a collection of utilities to conveniently write OpenXR code.
+
+
 
 ### Use the developer's install/uninstall scripts under `script\[Un]install-layer.ps1`.
 
