@@ -413,13 +413,9 @@ namespace openxr_api_layer
         {
             // detach and recreate action set and tracker space
             DestroyTrackerActions("xrSuggestInteractionProfileBindings");
-            CreateTrackerActions("xrSuggestInteractionProfileBindings");
-            Log("detached and recreated tracker action\n");
+            Log("destroyed tracker action for recreation\n");
         }
-        else
-        {
-            CreateTrackerActions("xrSuggestInteractionProfileBindings");
-        }
+        CreateTrackerActions("xrSuggestInteractionProfileBindings");
 
         XrInteractionProfileSuggestedBinding bindingProfiles = *suggestedBindings;
         std::vector<XrActionSuggestedBinding> bindings{};
@@ -665,15 +661,8 @@ namespace openxr_api_layer
         Log("creation of action space detected: %u, sub action path: %s\n", *space, subActionPath.c_str());
         if (m_CompensateControllers)
         {
-            if (isCompensationRequired(createInfo))
-            {
-                Log("added action space for motion controller compensation: %u\n", *space);
-                m_ActionSpaces.insert(*space);
-            }
-            else
-            {
-                Log("ignored action space for motion controller compensation: %u\n", *space);
-            }
+            Log("added action space for motion controller compensation: %u\n", *space);
+            m_ActionSpaces.insert(*space);
         }
         return result;
     }
@@ -1234,16 +1223,6 @@ namespace openxr_api_layer
         return m_ActionSpaces.contains(space);
     }
 
-    bool OpenXrLayer::isCompensationRequired(const XrActionSpaceCreateInfo* createInfo) const
-    {
-        if (!createInfo->subactionPath)
-        {
-            return true;
-        }
-        const std::string subActionPath = getXrPath(createInfo->subactionPath); 
-        return subActionPath != m_SubActionPath;
-    }
-
     uint32_t OpenXrLayer::GetNumViews() const
     {
         return XR_VIEW_CONFIGURATION_TYPE_PRIMARY_MONO == m_ViewConfigType                                ? 1
@@ -1265,9 +1244,10 @@ namespace openxr_api_layer
                 strcpy_s(actionSetCreateInfo.actionSetName, "general_tracker_set");
                 strcpy_s(actionSetCreateInfo.localizedActionSetName, "General Tracker Set");
                 actionSetCreateInfo.priority = 0;
-                if (XR_FAILED(xrCreateActionSet(GetXrInstance(), &actionSetCreateInfo, &m_ActionSet)))
+                if (const XrResult result = xrCreateActionSet(GetXrInstance(), &actionSetCreateInfo, &m_ActionSet);
+                    XR_FAILED(result))
                 {
-                    ErrorLog("%s: unable to create action set\n", __FUNCTION__);
+                    ErrorLog("%s: unable to create action set: %s\n", __FUNCTION__, xr::ToCString(result));
                     success = false;
                 }
                 TraceLoggingWrite(g_traceProvider, "CreateTrackerActions", TLPArg(m_ActionSet, "ActionSet"));
@@ -1278,9 +1258,10 @@ namespace openxr_api_layer
                 actionCreateInfo.countSubactionPaths = 1;
                 actionCreateInfo.subactionPaths = &m_XrSubActionPath;
 
-                if (XR_FAILED(xrCreateAction(m_ActionSet, &actionCreateInfo, &m_PoseAction)))
+                if (const XrResult result = xrCreateAction(m_ActionSet, &actionCreateInfo, &m_PoseAction);
+                    XR_FAILED(result))
                 {
-                    ErrorLog("%s: unable to create pose action\n", __FUNCTION__);
+                    ErrorLog("%s: unable to create pose action: %s\n", __FUNCTION__, xr::ToCString(result));
                     success = false;
                 }
                 TraceLoggingWrite(g_traceProvider, "CreateTrackerActions", TLPArg(m_PoseAction, "PoseAction"));
@@ -1289,22 +1270,25 @@ namespace openxr_api_layer
                     strcpy_s(actionCreateInfo.actionName, "cor_move");
                     strcpy_s(actionCreateInfo.localizedActionName, "COR Move");
                     actionCreateInfo.actionType = XR_ACTION_TYPE_BOOLEAN_INPUT;
-                    if (XR_FAILED(xrCreateAction(m_ActionSet, &actionCreateInfo, &m_MoveAction)))
+                    if (const XrResult result = xrCreateAction(m_ActionSet, &actionCreateInfo, &m_MoveAction);
+                        XR_FAILED(result))
                     {
-                        ErrorLog("%s: unable to create move action\n", __FUNCTION__);
+                        ErrorLog("%s: unable to create move action: %s\n", __FUNCTION__, xr::ToCString(result));
                     }
                     strcpy_s(actionCreateInfo.actionName, "cor_position");
                     strcpy_s(actionCreateInfo.localizedActionName, "COR Position");
-                    if (XR_FAILED(xrCreateAction(m_ActionSet, &actionCreateInfo, &m_PositionAction)))
+                    if (const XrResult result = xrCreateAction(m_ActionSet, &actionCreateInfo, &m_PositionAction);
+                        XR_FAILED(result))
                     {
-                        ErrorLog("%s: unable to create position action\n", __FUNCTION__);
+                        ErrorLog("%s: unable to create position action: %s\n", __FUNCTION__, xr::ToCString(result));
                     }
                     strcpy_s(actionCreateInfo.actionName, "haptic_feedback");
                     strcpy_s(actionCreateInfo.localizedActionName, "Haptic Feedback");
                     actionCreateInfo.actionType = XR_ACTION_TYPE_VIBRATION_OUTPUT;
-                    if (XR_FAILED(xrCreateAction(m_ActionSet, &actionCreateInfo, &m_HapticAction)))
+                    if (const XrResult result = xrCreateAction(m_ActionSet, &actionCreateInfo, &m_HapticAction);
+                        XR_FAILED(result))
                     {
-                        ErrorLog("%s: unable to create haptic action\n", __FUNCTION__);
+                        ErrorLog("%s: unable to create haptic action: %s\n", __FUNCTION__, xr::ToCString(result));
                     }
                     TraceLoggingWrite(g_traceProvider,
                                       "CreateTrackerActions",
@@ -1321,16 +1305,20 @@ namespace openxr_api_layer
                 actionSpaceCreateInfo.action = m_PoseAction;
                 actionSpaceCreateInfo.subactionPath = m_XrSubActionPath;
                 actionSpaceCreateInfo.poseInActionSpace = Pose::Identity();
-                const XrResult createSpaceResult =
-                    GetInstance()->xrCreateActionSpace(m_Session, &actionSpaceCreateInfo, &m_TrackerSpace); 
-                if (XR_FAILED(createSpaceResult))
+                if (const XrResult result = GetInstance()->OpenXrApi::xrCreateActionSpace(m_Session,
+                                                                                          &actionSpaceCreateInfo,
+                                                                                          &m_TrackerSpace);
+                    XR_FAILED(result))
                 {
-                    ErrorLog("%s: unable to create action space: %s\n", __FUNCTION__, xr::ToCString(createSpaceResult));
+                    ErrorLog("%s: unable to create action space: %s\n", __FUNCTION__, xr::ToCString(result));
                     success = false;
                 }
-                TraceLoggingWrite(g_traceProvider,
-                                  "CreateTrackerActions",
-                                  TLPArg(m_TrackerSpace, "xrCreateActionSpace"));
+                else
+                {
+                    Log("action space for tracker pose created: %u\n", m_TrackerSpace);
+                }
+
+                TraceLoggingWrite(g_traceProvider, "CreateTrackerActions", TLPArg(m_TrackerSpace, "ActionSpace"));
                 m_ActionSpaceCreated = success;
             }
         }

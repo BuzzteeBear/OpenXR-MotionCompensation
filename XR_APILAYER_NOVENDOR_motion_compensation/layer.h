@@ -96,7 +96,6 @@ namespace openxr_api_layer
         bool isSessionHandled(XrSession session) const;
         bool isViewSpace(XrSpace space) const;
         bool isActionSpace(XrSpace space) const;
-        bool isCompensationRequired(const XrActionSpaceCreateInfo* createInfo) const;
         [[nodiscard]] uint32_t GetNumViews() const;
         bool SetStageToLocalSpace(XrSpace space, XrTime time);
         bool CreateTrackerActions(const std::string& caller);
