@@ -459,6 +459,11 @@ namespace Tracker
 
     bool VirtualTracker::ChangeOffset(XrVector3f modification)
     {
+        if (!m_Calibrated)
+        {
+            ErrorLog("please calibrate cor position before trying to move it");
+            return false;
+        }
         TraceLoggingWrite(g_traceProvider,
                           "ChangeOffset",
                           TLArg(modification.z, "Fwd Modification"),
@@ -501,6 +506,11 @@ namespace Tracker
 
     bool VirtualTracker::ChangeRotation(float radian)
     {
+        if (!m_Calibrated)
+        {
+            ErrorLog("please calibrate cor position before trying to rotate it");
+            return false;
+        }
         TraceLoggingWrite(g_traceProvider, "ChangeRotation", TLArg(m_OffsetYaw, "Old Angle"), TLArg(radian, "Radian"));
         XrPosef adjustment{Pose::Identity()};
         const float direction = radian * (m_UpsideDown ? -1.0f : 1.0f);
