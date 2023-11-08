@@ -970,6 +970,17 @@ namespace Tracker
             {
                 return false;
             }
+            if (!validRoles.contains(side))
+            {
+                ErrorLog("invalid role for vive tracker (= parameter 'side'): %s", side.c_str());
+                std::string validOptions;
+                for (const auto& option : validRoles)
+                {
+                    validOptions += (validOptions.empty() ? "" : ", ") + option;
+                }
+                Log("try one of the following instead: %s", validOptions.c_str());
+                return false;
+            }
             role = "/user/vive_tracker_htcx/role/" + side;
             Log("vive tracker is using role %s", role.c_str());
             active = true;

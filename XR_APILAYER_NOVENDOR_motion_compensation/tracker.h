@@ -193,6 +193,18 @@ namespace Tracker
         bool active{false};
         std::string role;
         const std::string profile{"/interaction_profiles/htc/vive_tracker_htcx"};
+        inline static std::set<std::string> validRoles{"left_foot",
+                                                       "left_shoulder",
+                                                       "left_elbow",
+                                                       "left_knee",
+                                                       "right_foot",
+                                                       "right_shoulder",
+                                                       "right_elbow",
+                                                       "right_knee",
+                                                       "waist",
+                                                       "chest",
+                                                       "camera",
+                                                       "keyboard"};
     };
 
     constexpr float floatPi{static_cast<float>(M_PI)};
