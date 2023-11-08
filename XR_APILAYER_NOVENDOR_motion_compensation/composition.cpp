@@ -1054,7 +1054,7 @@ namespace
                 TraceLoggingWriteTagged(local,
                                         "CompositionFrameworkFactory_CreateSession_Error",
                                         TLArg(exc.what(), "Error"));
-                ErrorLog(fmt::format("xrCreateSession: {}\n", exc.what()));
+                ErrorLog(fmt::format("xrCreateSession: {}", exc.what()));
             }
 
             TraceLoggingWriteStop(local, "CompositionFrameworkFactory_CreateSession", TLXArg(session, "Session"));

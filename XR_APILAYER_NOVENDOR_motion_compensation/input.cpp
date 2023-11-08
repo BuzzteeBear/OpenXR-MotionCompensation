@@ -162,7 +162,7 @@ namespace Input
         const auto it = m_ShortCuts.find(key);
         if (it == m_ShortCuts.end())
         {
-            openxr_api_layer::log::ErrorLog("%s(%d): unable to find key\n", __FUNCTION__, key);
+            openxr_api_layer::log::ErrorLog("%s(%d): unable to find key", __FUNCTION__, key);
             return false;
         }
         return UpdateKeyState(it->second.first, it->second.second, isRepeat);
@@ -209,7 +209,7 @@ namespace Input
         {
             m_Layer->m_TestRotStart = time;
             m_Layer->m_Activated = !m_Layer->m_Activated;
-            Log("test rotation motion compensation % s\n", m_Layer->m_Activated ? "activated" : "deactivated");
+            Log("test rotation motion compensation % s", m_Layer->m_Activated ? "activated" : "deactivated");
             return;
         }
 
@@ -226,9 +226,9 @@ namespace Input
         }
         else
         {
-            ErrorLog("layer initialization failed or incomplete!\n");
+            ErrorLog("layer initialization failed or incomplete!");
         }
-        Log("motion compensation %s\n",
+        Log("motion compensation %s",
             oldState != m_Layer->m_Activated ? (m_Layer->m_Activated ? "activated" : "deactivated")
             : m_Layer->m_Activated           ? "kept active"
                                              : "could not be activated");
@@ -251,7 +251,7 @@ namespace Input
         if (m_Layer->m_TestRotation)
         {
             m_Layer->m_TestRotStart = time;
-            Log("test rotation motion compensation recalibrated\n");
+            Log("test rotation motion compensation recalibrated");
             return;
         }
 
@@ -274,7 +274,7 @@ namespace Input
             // failed to update reference pose -> deactivate mc
             if (m_Layer->m_Activated)
             {
-                ErrorLog("motion compensation deactivated because tracker reference pose cold not be reset\n");
+                ErrorLog("motion compensation deactivated because tracker reference pose cold not be reset");
             }
             m_Layer->m_Activated = false;
             GetAudioOut()->Execute(Event::Error);
@@ -290,7 +290,7 @@ namespace Input
         if (!m_Layer->m_OverlayEnabled)
         {
             GetAudioOut()->Execute(Event::Error);
-            ErrorLog("overlay is deactivated in config file and cannot be activated\n");
+            ErrorLog("overlay is deactivated in config file and cannot be activated");
             return;
         }
         m_Layer->m_Overlay->ToggleOverlay();
@@ -332,13 +332,13 @@ namespace Input
             }
             else
             {
-                ErrorLog("unable to cast tracker to VirtualTracker pointer\n");
+                ErrorLog("unable to cast tracker to VirtualTracker pointer");
                 success = false;
             }
         }
         else
         {
-            ErrorLog("unable to modify offset, wrong type of tracker\n");
+            ErrorLog("unable to modify offset, wrong type of tracker");
             success = false;
         }
 
@@ -360,6 +360,7 @@ namespace Input
         bool success = GetConfig()->Init(m_Layer->m_Application);
         if (success)
         {
+            GetConfig()->GetBool(Cfg::LogVerbose, logVerbose);
             GetConfig()->GetBool(Cfg::TestRotation, m_Layer->m_TestRotation);
             GetConfig()->GetBool(Cfg::CacheUseEye, m_Layer->m_UseEyeCache);
             m_Layer->m_AutoActivator =
@@ -387,7 +388,7 @@ namespace Input
             }
             else
             {
-                ErrorLog("unable to cast tracker to VirtualTracker pointer\n");
+                ErrorLog("unable to cast tracker to VirtualTracker pointer");
             }
         }
         GetConfig()->WriteConfig(forApp);
@@ -402,7 +403,7 @@ namespace Input
         }
         else
         {
-            ErrorLog("%s: no button mapping (%d) found for profile: %s\n", __FUNCTION__, index, profile.c_str());
+            ErrorLog("%s: no button mapping (%d) found for profile: %s", __FUNCTION__, index, profile.c_str());
         }
         return path;
     }

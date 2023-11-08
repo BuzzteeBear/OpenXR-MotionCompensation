@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 #include "pch.h"
+#include "log.h"
 
 namespace {
     constexpr uint32_t k_maxLoggedErrors = 100;
@@ -40,7 +41,8 @@ namespace openxr_api_layer::log {
     namespace {
 
         // Utility logging function.
-        void InternalLog(const char* fmt, va_list va) {
+        void InternalLog(const std::string& fmt, va_list va)
+        {
             SYSTEMTIME lt;
             GetLocalTime(&lt);
 
@@ -55,7 +57,7 @@ namespace openxr_api_layer::log {
                                     lt.wSecond,
                                     lt.wMilliseconds);
 
-            vsnprintf_s(buf + offset, sizeof(buf) - offset, _TRUNCATE, fmt, va);
+            vsnprintf_s(buf + offset, sizeof(buf) - offset, _TRUNCATE, (fmt + "\n").c_str(), va);
             if (logStream.is_open()) {
                 logStream << buf;
                 logStream.flush();
@@ -63,18 +65,20 @@ namespace openxr_api_layer::log {
         }
     } // namespace
 
-    void Log(const char* fmt, ...) {
+    void Log(const char* fmt, ...)
+    {
         va_list va;
         va_start(va, fmt);
         InternalLog(fmt, va);
         va_end(va);
     }
 
-    void ErrorLog(const char* fmt, ...) {
+    void ErrorLog(const char* fmt, ...)
+    {
         if (g_globalErrorCount++ < k_maxLoggedErrors) {
             va_list va;
             va_start(va, fmt);
-            InternalLog((std::string("error - ")+ fmt).c_str(), va);
+            InternalLog(std::string("error - ")+ fmt, va);
             va_end(va);
             if (g_globalErrorCount == k_maxLoggedErrors) {
                 Log("Maximum number of errors logged. Going silent.");
@@ -82,13 +86,15 @@ namespace openxr_api_layer::log {
         }
     }
 
-    void DebugLog(const char* fmt, ...) {
-#ifdef _DEBUG
-        va_list va;
-        va_start(va, fmt);
-        InternalLog(fmt, va);
-        va_end(va);
-#endif
+    void DebugLog(const char* fmt, ...)
+    {
+        if (logVerbose)
+        {
+            va_list va;
+            va_start(va, fmt);
+            InternalLog(fmt, va);
+            va_end(va);
+        }
     }
 
 } // namespace openxr_api_layer::log

@@ -46,7 +46,7 @@ namespace utility
 
             TraceLoggingWrite(openxr_api_layer::log::g_traceProvider, "GetSample", TLArg(time, "Time"));
 
-            openxr_api_layer::log::DebugLog("GetSample(%s): %u\n", m_SampleType.c_str(), time);
+            openxr_api_layer::log::DebugLog("GetSample(%s): %u", m_SampleType.c_str(), time);
 
             auto it = m_Cache.lower_bound(time);
             const bool itIsEnd = m_Cache.end() == it;
@@ -61,7 +61,7 @@ namespace utility
                                       TLArg("Exact", "Match"),
                                       TLArg(it->first, "Time"));
 
-                    openxr_api_layer::log::DebugLog("GetSample(%s): exact match found\n", m_SampleType.c_str());
+                    openxr_api_layer::log::DebugLog("GetSample(%s): exact match found", m_SampleType.c_str());
 
                     return it->second;
                 }
@@ -73,7 +73,7 @@ namespace utility
                                       TLArg(m_SampleType.c_str(), "Type"),
                                       TLArg("Later", "Match"),
                                       TLArg(it->first, "Time"));
-                    openxr_api_layer::log::DebugLog("GetSample(%s): later match found %u\n",
+                    openxr_api_layer::log::DebugLog("GetSample(%s): later match found %u",
                                                    m_SampleType.c_str(),
                                                    it->first);
 
@@ -93,14 +93,14 @@ namespace utility
                                       TLArg(m_SampleType.c_str(), "Type"),
                                       TLArg("Earlier", "Match"),
                                       TLArg(lowerIt->first, "Time"));
-                    openxr_api_layer::log::DebugLog("GetSample(%s): earlier match found: %u\n",
+                    openxr_api_layer::log::DebugLog("GetSample(%s): earlier match found: %u",
                                                    m_SampleType.c_str(),
                                                    lowerIt->first);
 
                     return lowerIt->second;
                 }
             }
-            openxr_api_layer::log::ErrorLog("GetSample(%s) unable to find sample %u+-%.3fms\n",
+            openxr_api_layer::log::ErrorLog("GetSample(%s) unable to find sample %u+-%.3fms",
                                            m_SampleType.c_str(),
                                            time,
                                            m_Tolerance / 1000000.0);
@@ -117,7 +117,7 @@ namespace utility
                                       TLArg(m_SampleType.c_str(), "Type"),
                                       TLArg("Estimated Both", "Match"),
                                       TLArg(it->first, "Time"));
-                    openxr_api_layer::log::ErrorLog("Using best match: t = %u \n", returnIt->first);
+                    openxr_api_layer::log::ErrorLog("Using best match: t = %u ", returnIt->first);
 
                     return returnIt->second;
                 }
@@ -128,7 +128,7 @@ namespace utility
                                   TLArg(m_SampleType.c_str(), "Type"),
                                   TLArg("Estimated Earlier", "Match"),
                                   TLArg(it->first, "Time"));
-                openxr_api_layer::log::ErrorLog("Using best match: t = %u \n", it->first);
+                openxr_api_layer::log::ErrorLog("Using best match: t = %u ", it->first);
                 return it->second;
             }
             if (!itIsBegin)
@@ -136,7 +136,7 @@ namespace utility
                 auto lowerIt = it;
                 --lowerIt;
                 // lower entry is last in cache-> use it
-                openxr_api_layer::log::ErrorLog("Using best match: t = %u \n", lowerIt->first);
+                openxr_api_layer::log::ErrorLog("Using best match: t = %u ", lowerIt->first);
                 TraceLoggingWrite(openxr_api_layer::log::g_traceProvider,
                                   "GetSample_Failed",
                                   TLArg(m_SampleType.c_str(), "Type"),
@@ -145,7 +145,7 @@ namespace utility
                 return lowerIt->second;
             }
             // cache is empty -> return fallback
-            openxr_api_layer::log::ErrorLog("Using fallback!!!\n", time);
+            openxr_api_layer::log::ErrorLog("Using fallback!!!", time);
             TraceLoggingWrite(openxr_api_layer::log::g_traceProvider, "GetSample_Failed", TLArg("Fallback", "Type"));
             return m_Fallback;
         }

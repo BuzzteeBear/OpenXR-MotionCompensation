@@ -18,6 +18,7 @@ Version 0.2.8
 	- simplified/improved handling of in-game recenter events
 	- increased default tolerance for eye/pose reconstruction cache
 	- added support for X-Plane 12
+	- added toggle to enable debug level logging
 	
 	Known issues
 	- motion controller compensation does not work properly in MSFS main menu (controller movement gets blocked)

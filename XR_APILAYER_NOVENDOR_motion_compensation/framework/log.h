@@ -43,6 +43,8 @@ namespace openxr_api_layer::log {
 #define TLXArg TLPArg
 #endif
 
+    inline bool logVerbose = false;
+
     // General logging function.
     void Log(const char* fmt, ...);
     static inline void Log(const std::string_view& str)

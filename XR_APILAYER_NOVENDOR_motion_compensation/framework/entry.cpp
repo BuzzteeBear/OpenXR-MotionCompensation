@@ -74,10 +74,10 @@ XrResult __declspec(dllexport) XRAPI_CALL
         logStream.open(logFile, std::ios_base::ate);
     }
 
-    DebugLog("--> xrNegotiateLoaderApiLayerInterface\n");
+    DebugLog("--> xrNegotiateLoaderApiLayerInterface");
 
     if (apiLayerName && apiLayerName != LayerName) {
-        ErrorLog("Invalid apiLayerName \"%s\"\n", apiLayerName);
+        ErrorLog("Invalid apiLayerName \"%s\"", apiLayerName);
         return XR_ERROR_INITIALIZATION_FAILED;
     }
 
@@ -91,7 +91,7 @@ XrResult __declspec(dllexport) XRAPI_CALL
         loaderInfo->maxInterfaceVersion < XR_CURRENT_LOADER_API_LAYER_VERSION ||
         loaderInfo->maxInterfaceVersion > XR_CURRENT_LOADER_API_LAYER_VERSION ||
         loaderInfo->maxApiVersion < XR_CURRENT_API_VERSION || loaderInfo->minApiVersion > XR_CURRENT_API_VERSION) {
-        ErrorLog("xrNegotiateLoaderApiLayerInterface validation failed\n");
+        ErrorLog("xrNegotiateLoaderApiLayerInterface validation failed");
         return XR_ERROR_INITIALIZATION_FAILED;
     }
 
@@ -101,9 +101,9 @@ XrResult __declspec(dllexport) XRAPI_CALL
     apiLayerRequest->getInstanceProcAddr = reinterpret_cast<PFN_xrGetInstanceProcAddr>(xrGetInstanceProcAddr);
     apiLayerRequest->createApiLayerInstance = reinterpret_cast<PFN_xrCreateApiLayerInstance>(xrCreateApiLayerInstance);
 
-    DebugLog("<-- xrNegotiateLoaderApiLayerInterface\n");
+    DebugLog("<-- xrNegotiateLoaderApiLayerInterface");
 
-    Log("%s layer (%s) is active\n", LayerName.c_str(), VersionString.c_str());
+    Log("%s layer (%s) is active", LayerName.c_str(), VersionString.c_str());
 
     TraceLoggingWrite(g_traceProvider, "xrNegotiateLoaderApiLayerInterface_Complete");
 

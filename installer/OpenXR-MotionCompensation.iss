@@ -126,6 +126,7 @@ Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key:
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "reload_config"; String: "CTRL+SHIFT+L"; Flags: createkeyifdoesntexist
 
 ; [debug]
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "debug"; Key: "log_verbose"; String: "0"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "debug"; Key: "testrotation"; String: "0"; Flags: createkeyifdoesntexist
 
 [Languages]

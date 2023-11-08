@@ -138,7 +138,9 @@ What you can modify in a configuration file:
   - Note that there are some immutable keyboard shortcuts:
     - `ctrl + shift + alt + i`: logs your current interaction profile, which can be useful when debugging issues with a physical tracker.
     - `ctrl + shift + alt + t`: logs the current pose of the reference tracker, can also be used for the purpose of troubleshooting. 
-- `debug`: For debugging reasons you can check, if the motion compensation functionality generally works on your system without using tracker input from the motion controllers at all by setting `testrotation` value to `1` and reloading the configuration. You should be able to see the world rotating around you after pressing the activation shortcut.  
+- `debug`: 
+  - `log_verbose` - enables debug level entries in log file. Note that activating this option may have a negative impact on performance.
+  - `testrotation` - for debugging reasons you can check, if the motion compensation functionality generally works on your system without using tracker input from the motion controllers at all by setting this value to `1` and reloading the configuration. You should be able to see the world rotating around you after pressing the activation shortcut.  
 **Beware that this can be a nauseating experience because your eyes suggest that your head is turning in the virtual world, while your inner ear tells your brain otherwise. You can stop motion compensation at any time by pressing the activation shortcut again!** 
 
 ## Using a virtual tracker

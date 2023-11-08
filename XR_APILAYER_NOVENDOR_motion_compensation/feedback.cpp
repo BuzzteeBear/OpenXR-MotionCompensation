@@ -53,7 +53,7 @@ namespace Feedback
                                                               SND_RESOURCE | SND_ASYNC))
 
             {
-                ErrorLog("%s: unable to play sound (%d : % d): %s\n",
+                ErrorLog("%s: unable to play sound (%d : % d): %s",
                          __FUNCTION__,
                          soundResource->first,
                          soundResource->second,
@@ -62,7 +62,7 @@ namespace Feedback
         }
         else
         {
-            ErrorLog("%s: unknown feedback identifier: %d\n", __FUNCTION__, feedback);
+            ErrorLog("%s: unknown feedback identifier: %d", __FUNCTION__, feedback);
         }
     }
 
@@ -73,7 +73,7 @@ namespace Feedback
                                                      openxr_api_layer::dllModule,
                                                      SND_RESOURCE | SND_ASYNC)))
         {
-            ErrorLog("%s: unable to play sound (%d : % d): %s\n",
+            ErrorLog("%s: unable to play sound (%d : % d): %s",
                      __FUNCTION__,
                      -seconds,
                      126 + seconds,

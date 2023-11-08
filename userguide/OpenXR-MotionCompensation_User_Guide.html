@@ -196,8 +196,13 @@ The key <code>vertical_factor</code> is applied to translational filter strength
 </li>
 </ul>
 </li>
-<li><code>debug</code>: For debugging reasons you can check, if the motion compensation functionality generally works on your system without using tracker input from the motion controllers at all by setting <code>testrotation</code> value to <code>1</code> and reloading the configuration. You should be able to see the world rotating around you after pressing the activation shortcut.<br />
+<li><code>debug</code>:
+<ul>
+<li><code>log_verbose</code> - enables debug level entries in log file. Note that activating this option may have a negative impact on performance.</li>
+<li><code>testrotation</code> - for debugging reasons you can check, if the motion compensation functionality generally works on your system without using tracker input from the motion controllers at all by setting this value to <code>1</code> and reloading the configuration. You should be able to see the world rotating around you after pressing the activation shortcut.<br />
 <strong>Beware that this can be a nauseating experience because your eyes suggest that your head is turning in the virtual world, while your inner ear tells your brain otherwise. You can stop motion compensation at any time by pressing the activation shortcut again!</strong></li>
+</ul>
+</li>
 </ul>
 <h2 id="using-a-virtual-tracker">Using a virtual tracker</h2>
 <p>To use a virtual tracker (as opposed to a physical device) set parameter <code>tracker_type</code> according to the motion software that is providing the data for motion compensation on your system:</p>

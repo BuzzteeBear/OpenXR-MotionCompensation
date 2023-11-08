@@ -78,7 +78,7 @@ namespace
             {
                 if (cdErrorBlob)
                 {
-                    openxr_api_layer::log::Log("%s\n", (char*)cdErrorBlob->GetBufferPointer());
+                    openxr_api_layer::log::Log("%s", (char*)cdErrorBlob->GetBufferPointer());
                 }
                 CHECK_HRESULT(hr, "Failed to compile shader file");
             }
@@ -113,7 +113,7 @@ namespace
             {
                 if (cdErrorBlob)
                 {
-                    openxr_api_layer::log::Log("%s\n", (char*)cdErrorBlob->GetBufferPointer());
+                    openxr_api_layer::log::Log("%s", (char*)cdErrorBlob->GetBufferPointer());
                 }
                 CHECK_HRESULT(hr, "Failed to compile shader");
             }
@@ -930,7 +930,7 @@ namespace
                 {
                     if (errors)
                     {
-                        Log("%s\n", (char*)errors->GetBufferPointer());
+                        Log("%s", (char*)errors->GetBufferPointer());
                     }
                     CHECK_HRESULT(hr, "Failed to compile shader");
                 }

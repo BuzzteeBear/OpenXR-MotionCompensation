@@ -18,7 +18,7 @@ bool ConfigManager::Init(const std::string& application)
     const auto& enabledKey = m_Keys.find(Cfg::Enabled);
     if (enabledKey == m_Keys.cend())
     {
-        ErrorLog("unable to find internal enable entry\n");
+        ErrorLog("unable to find internal enable entry");
         return false;
     }
     m_UsesOpenComposite = application.rfind("OpenComposite", 0) == 0;
@@ -32,7 +32,7 @@ bool ConfigManager::Init(const std::string& application)
                                        m_ApplicationIni.c_str()) &&
             2 != GetLastError())
         {
-            ErrorLog("%s: unable to create %s, error: %s\n",
+            ErrorLog("%s: unable to create %s, error: %s",
                      __FUNCTION__,
                      m_ApplicationIni.c_str(),
                      LastErrorMsg().c_str());
@@ -44,7 +44,7 @@ bool ConfigManager::Init(const std::string& application)
             const auto& upsideDownKey = m_Keys.find(Cfg::UpsideDown);
             if (upsideDownKey == m_Keys.cend())
             {
-                ErrorLog("unable to find internal upside_down entry\n");
+                ErrorLog("unable to find internal upside_down entry");
             }            
             else if (!WritePrivateProfileString(upsideDownKey->second.first.c_str(),
                                                 upsideDownKey->second.second.c_str(),
@@ -52,7 +52,7 @@ bool ConfigManager::Init(const std::string& application)
                                                 m_ApplicationIni.c_str()) &&
                      2 != GetLastError())
             {
-                ErrorLog("%s: unable to create upside_down key for iRacing in %s, error: %s\n",
+                ErrorLog("%s: unable to create upside_down key for iRacing in %s, error: %s",
                          __FUNCTION__,
                          m_ApplicationIni.c_str(),
                          LastErrorMsg().c_str());
@@ -73,7 +73,7 @@ bool ConfigManager::Init(const std::string& application)
             std::string(buffer) != "1")
         {
             m_Values[Cfg::Enabled] = buffer;
-            Log("motion compensation disabled globally\n");
+            Log("motion compensation disabled globally");
             return true;
         }
 
@@ -102,13 +102,13 @@ bool ConfigManager::Init(const std::string& application)
         }
         if (!errors.empty())
         {
-            ErrorLog("%s: unable to read configuration: %s\n", __FUNCTION__, errors.c_str());
+            ErrorLog("%s: unable to read configuration: %s", __FUNCTION__, errors.c_str());
             return false;
         }
     }
     else
     {
-        ErrorLog("%s: unable to find config file %s\n", __FUNCTION__, coreIni.c_str());
+        ErrorLog("%s: unable to find config file %s", __FUNCTION__, coreIni.c_str());
         return false;
     }
     
@@ -127,7 +127,7 @@ bool ConfigManager::GetBool(const Cfg key, bool& val)
         }
         catch (std::exception& e)
         {
-            ErrorLog("%s: unable to convert value (%s) for key (%s) to integer: %s\n",
+            ErrorLog("%s: unable to convert value (%s) for key (%s) to integer: %s",
                      __FUNCTION__,
                      strVal.c_str(),
                      m_Keys[key].first,
@@ -148,7 +148,7 @@ bool ConfigManager::GetInt(const Cfg key, int& val)
         }
         catch (std::exception& e)
         {
-            ErrorLog("%s: unable to convert value (%s) for key (%s) to integer: %s\n",
+            ErrorLog("%s: unable to convert value (%s) for key (%s) to integer: %s",
                      __FUNCTION__,
                      strVal.c_str(),
                      m_Keys[key].first.c_str(),
@@ -169,7 +169,7 @@ bool ConfigManager::GetFloat(const Cfg key, float& val)
         }
         catch (std::exception& e)
         {
-            ErrorLog("%s: unable to convert value (%s) for key (%s) to double: %s\n",
+            ErrorLog("%s: unable to convert value (%s) for key (%s) to double: %s",
                      __FUNCTION__,
                      strVal.c_str(),
                      m_Keys[key].first.c_str(),
@@ -184,7 +184,7 @@ bool ConfigManager::GetString(const Cfg key, std::string& val)
     const auto it = m_Values.find(key);
     if (m_Values.end() == it)
     {
-        ErrorLog("%s: unable to find value for key: [%s] %s \n",
+        ErrorLog("%s: unable to find value for key: [%s] %s ",
                  __FUNCTION__,
                  m_Keys[key].first.c_str(), m_Keys[key].second.c_str());
         return false;
@@ -206,7 +206,7 @@ bool ConfigManager::GetShortcut(const Cfg key, std::set<int>& val)
             auto it = m_ShortCuts.find(singleKey);
             if (it == m_ShortCuts.end())
             {
-                errors += "unable to find virtual key number for: " + singleKey + "\n";
+                errors += std::string(errors.empty() ? "" : "\n") + "unable to find virtual key number for: " + singleKey;
             }
             else
             {
@@ -217,7 +217,7 @@ bool ConfigManager::GetShortcut(const Cfg key, std::set<int>& val)
     }
     if (!errors.empty())
     {
-        ErrorLog("%s: unable to convert value (%s) for key (%s) to shortcut: %s\n",
+        ErrorLog("%s: unable to convert value (%s) for key (%s) to shortcut: %s",
                  __FUNCTION__,
                  strVal.c_str(),
                  m_Keys[key].first.c_str(),
@@ -243,11 +243,11 @@ std::string ConfigManager::GetControllerSide()
     }
     if (!GetString(Cfg::TrackerSide, side))
     {
-        ErrorLog("%s: unable to determine controller side. Defaulting to %s\n", __FUNCTION__, side.c_str());
+        ErrorLog("%s: unable to determine controller side. Defaulting to %s", __FUNCTION__, side.c_str());
     }
     if ("right" != side && "left" != side)
     {
-        ErrorLog("%s: invalid controller side: %s. Defaulting to 'left'\n", __FUNCTION__, side.c_str());
+        ErrorLog("%s: invalid controller side: %s. Defaulting to 'left'", __FUNCTION__, side.c_str());
         side = "left";
     }
     return side;
@@ -293,7 +293,7 @@ void ConfigManager::WriteConfig(const bool forApp)
                     2 != GetLastError())
                 {
                     error = true;
-                    ErrorLog("%s: unable to write value %s into key %s to section %s in %s, error: %s\n",
+                    ErrorLog("%s: unable to write value %s into key %s to section %s in %s, error: %s",
                              __FUNCTION__,
                              valueEntry->second.c_str(),
                              keyName.c_str(),
@@ -305,16 +305,16 @@ void ConfigManager::WriteConfig(const bool forApp)
             else
             {
                 error = true;
-                ErrorLog("%s: key not found in value map: %d:%s\n", __FUNCTION__, section.c_str(), keyName.c_str());
+                ErrorLog("%s: key not found in value map: %d:%s", __FUNCTION__, section.c_str(), keyName.c_str());
             }
         }
         else
         {
             error = true;
-            ErrorLog("%s: key not found in key map: %d\n", __FUNCTION__, key);
+            ErrorLog("%s: key not found in key map: %d", __FUNCTION__, key);
         }
     }
-    Log("current configuration %saved to %s\n", error ? "could not be " : "", m_ApplicationIni.c_str());
+    Log("current configuration %saved to %s", error ? "could not be " : "", m_ApplicationIni.c_str());
     GetAudioOut()->Execute(!error ? Feedback::Event::Save : Feedback::Event::Error);
 }
 

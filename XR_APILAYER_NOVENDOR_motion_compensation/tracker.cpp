@@ -65,7 +65,7 @@ namespace Tracker
         }
         else
         {
-            ErrorLog("%s: unable to get current pose\n", __FUNCTION__);
+            ErrorLog("%s: unable to get current pose", __FUNCTION__);
             return false;
         }
     }
@@ -74,14 +74,14 @@ namespace Tracker
     {
         m_ReferencePose = pose;
         TraceLoggingWrite(g_traceProvider, "SetReferencePose", TLArg(xr::ToString(pose).c_str(), "ReferencePose"));
-        Log("tracker reference pose set\n");
+        Log("tracker reference pose set");
     }
 
     bool ControllerBase::GetControllerPose(XrPosef& trackerPose, XrSession session, XrTime time)
     {
         if (!m_PhysicalEnabled)
         {
-            ErrorLog("physical tracker disabled in config file\n");
+            ErrorLog("physical tracker disabled in config file");
             return false;
         }
         if (auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance()))
@@ -98,7 +98,7 @@ namespace Tracker
                                   TLArg(time, "Time"));
                 if (const XrResult result = GetInstance()->xrSyncActions(session, &syncInfo); XR_FAILED(result))
                 {
-                    ErrorLog("%s: xrSyncActions failed: %s\n", __FUNCTION__, xr::ToCString(result));
+                    ErrorLog("%s: xrSyncActions failed: %s", __FUNCTION__, xr::ToCString(result));
                     return false;
                 }
             }
@@ -115,7 +115,7 @@ namespace Tracker
                         GetInstance()->xrGetActionStatePose(session, &getActionStateInfo, &actionStatePose);
                     XR_FAILED(result))
                 {
-                    ErrorLog("%s: xrGetActionStatePose failed: %s\n", __FUNCTION__, xr::ToCString(result));
+                    ErrorLog("%s: xrGetActionStatePose failed: %s", __FUNCTION__, xr::ToCString(result));
                     return false;
                 }
 
@@ -123,7 +123,7 @@ namespace Tracker
                 {
                     if (!m_ConnectionLost)
                     {
-                        ErrorLog("%s: unable to determine tracker pose - XrActionStatePose not active\n", __FUNCTION__);
+                        ErrorLog("%s: unable to determine tracker pose - XrActionStatePose not active", __FUNCTION__);
                         m_ConnectionLost = true;
                     }
                     return false;
@@ -134,7 +134,7 @@ namespace Tracker
                     GetInstance()->xrLocateSpace(layer->m_TrackerSpace, layer->m_StageSpace, time, &location);
                 XR_FAILED(result))
             {
-                ErrorLog("%s: xrLocateSpace failed: %s\n", __FUNCTION__, xr::ToCString(result));
+                ErrorLog("%s: xrLocateSpace failed: %s", __FUNCTION__, xr::ToCString(result));
                 return false;
             }
 
@@ -142,7 +142,7 @@ namespace Tracker
             {
                 if (!m_ConnectionLost)
                 {
-                    ErrorLog("%s: unable to determine tracker pose - XrSpaceLocation not valid\n", __FUNCTION__);
+                    ErrorLog("%s: unable to determine tracker pose - XrSpaceLocation not valid", __FUNCTION__);
                     m_ConnectionLost = true;
                 }
                 return false;
@@ -157,7 +157,7 @@ namespace Tracker
         }
         else
         {
-            ErrorLog("%s: unable to cast instance to OpenXrLayer\n", __FUNCTION__);
+            ErrorLog("%s: unable to cast instance to OpenXrLayer", __FUNCTION__);
             return false;
         }
     }
@@ -212,16 +212,16 @@ namespace Tracker
             !GetConfig()->GetFloat(Cfg::TransStrength, strengthTrans) ||
             !GetConfig()->GetFloat(Cfg::RotStrength, strengthRot))
         {
-            ErrorLog("%s: error reading configured values for filters\n", __FUNCTION__);
+            ErrorLog("%s: error reading configured values for filters", __FUNCTION__);
         }
         if (1 > orderTrans || 3 < orderTrans)
         {
-            ErrorLog("%s: invalid order for translational filter: %d\n", __FUNCTION__, orderTrans);
+            ErrorLog("%s: invalid order for translational filter: %d", __FUNCTION__, orderTrans);
             return false;
         }
         if (1 > orderRot || 3 < orderRot)
         {
-            ErrorLog("%s: invalid order for rotational filter: %d\n", __FUNCTION__, orderRot);
+            ErrorLog("%s: invalid order for rotational filter: %d", __FUNCTION__, orderRot);
             return false;
         }
         // remove previous filter objects
@@ -232,14 +232,14 @@ namespace Tracker
         m_TransStrength = strengthTrans;
         m_RotStrength = strengthRot;
 
-        Log("translational filter stages: %d\n", orderTrans);
-        Log("translational filter strength: %f\n", m_TransStrength);
+        Log("translational filter stages: %d", orderTrans);
+        Log("translational filter strength: %f", m_TransStrength);
         m_TransFilter = 1 == orderTrans   ? new Filter::SingleEmaFilter(m_TransStrength)
                         : 2 == orderTrans ? new Filter::DoubleEmaFilter(m_TransStrength)
                                           : new Filter::TripleEmaFilter(m_TransStrength);
 
-        Log("rotational filter stages: %d\n", orderRot);
-        Log("rotational filter strength: %f\n", m_TransStrength);
+        Log("rotational filter stages: %d", orderRot);
+        Log("rotational filter strength: %f", m_TransStrength);
         m_RotFilter = 1 == orderRot   ? new Filter::SingleSlerpFilter(m_RotStrength)
                       : 2 == orderRot ? new Filter::DoubleSlerpFilter(m_RotStrength)
                                       : new Filter::TripleSlerpFilter(m_RotStrength);
@@ -257,13 +257,13 @@ namespace Tracker
         {
             *currentValue = m_TransFilter->SetStrength(newValue);
             GetConfig()->SetValue(Cfg::TransStrength, *currentValue);
-            Log("translational filter strength %screased to %f\n", increase ? "in" : "de", *currentValue);
+            Log("translational filter strength %screased to %f", increase ? "in" : "de", *currentValue);
         }
         else
         {
             *currentValue = m_RotFilter->SetStrength(newValue);
             GetConfig()->SetValue(Cfg::RotStrength, *currentValue);
-            Log("rotational filter strength %screased to %f\n", increase ? "in" : "de", *currentValue);
+            Log("rotational filter strength %screased to %f", increase ? "in" : "de", *currentValue);
         }
         GetAudioOut()->Execute(*currentValue == prevValue ? increase ? Event::Max : Event::Min
                                : increase                 ? Event::Plus
@@ -282,11 +282,11 @@ namespace Tracker
 
     void TrackerBase::LogCurrentTrackerPoses(XrSession session, XrTime time, bool activated)
     {
-        Log("current reference pose in stage space: %s\n", xr::ToString(m_ReferencePose).c_str());
+        Log("current reference pose in stage space: %s", xr::ToString(m_ReferencePose).c_str());
         XrPosef currentPose{Pose::Identity()};
         if (activated && GetPose(currentPose, session, time))
         {
-            Log("current tracker pose in stage space: %s\n", xr::ToString(currentPose).c_str());
+            Log("current tracker pose in stage space: %s", xr::ToString(currentPose).c_str());
         }
     }
 
@@ -335,7 +335,7 @@ namespace Tracker
         {
             success = false; 
         }
-        Log("Virtual tracker is%s upside down\n", m_UpsideDown ? "" : " not");
+        Log("Virtual tracker is%s upside down", m_UpsideDown ? "" : " not");
         float value;
         if (GetConfig()->GetFloat(Cfg::TrackerOffsetForward, value))
         {
@@ -373,7 +373,7 @@ namespace Tracker
 
         if (GetConfig()->GetBool(Cfg::UseCorPos, m_LoadPoseFromFile))
         {
-            Log("center of rotation is %s read from config file\n", m_LoadPoseFromFile ? "" : "not");
+            Log("center of rotation is %s read from config file", m_LoadPoseFromFile ? "" : "not");
         }
         else
         {
@@ -395,8 +395,7 @@ namespace Tracker
 
             if (!m_Mmf.Open(time))
             {
-                ErrorLog("unable to open mmf '%s'. Check if motion software is running and motion compensation is "
-                         "activated!\n",
+                ErrorLog("unable to open mmf '%s'. Check if motion software is running and data output is activated!",
                          m_Filename.c_str());
                 success = false;
             }
@@ -442,13 +441,13 @@ namespace Tracker
                 }
                 else
                 {
-                    ErrorLog("%s: xrLocateSpace(view) failed\n", __FUNCTION__);
+                    ErrorLog("%s: xrLocateSpace(view) failed", __FUNCTION__);
                     success = false;
                 }
             }
             else
             {
-                ErrorLog("%s: cast of layer failed\n", __FUNCTION__);
+                ErrorLog("%s: cast of layer failed", __FUNCTION__);
                 success = false;
             }
         }
@@ -564,13 +563,13 @@ namespace Tracker
         ReadValue(Cfg::CorD, refPose.orientation.z);
         if (success && !Quaternion::IsNormalized(refPose.orientation))
         {
-            ErrorLog("%s: rotation values are invalid in config file\n", __FUNCTION__);
-            Log("you may need to save cor position separately for native OpenXR and OpenComposite\n");
+            ErrorLog("%s: rotation values are invalid in config file", __FUNCTION__);
+            Log("you may need to save cor position separately for native OpenXR and OpenComposite");
             return false;
         }
         if (success)
         {
-            Log("reference pose successfully loaded from config file\n");
+            Log("reference pose successfully loaded from config file");
             SetReferencePose(refPose);    
         }
         return success;
@@ -578,7 +577,7 @@ namespace Tracker
 
     void VirtualTracker::LogOffsetValues() const
     {
-        Log("offset values: forward = %.3f m, down = %.3f m, right = %.3f m, yaw = %.3f deg,   \n", m_OffsetForward, m_OffsetDown, m_OffsetRight, m_OffsetYaw / angleToRadian);
+        Log("offset values: forward = %.3f m, down = %.3f m, right = %.3f m, yaw = %.3f deg,   ", m_OffsetForward, m_OffsetDown, m_OffsetRight, m_OffsetYaw / angleToRadian);
     }
 
     void VirtualTracker::ApplyCorManipulation(XrSession session, XrTime time)
@@ -612,7 +611,7 @@ namespace Tracker
                         YawData data{};
                         if (m_Mmf.Read(&data, sizeof(data), time))
                         {
-                            Log("Yaw Game Engine values: rotationHeight = %f, rotationForwardHead = %f\n",
+                            Log("Yaw Game Engine values: rotationHeight = %f, rotationForwardHead = %f",
                                 data.rotationHeight,
                                 data.rotationForwardHead);
 
@@ -620,28 +619,28 @@ namespace Tracker
                             m_OffsetForward = data.rotationForwardHead / 100.0f;
                             m_OffsetDown = hmdLocation.pose.position.y - data.rotationHeight / 100.0f;
 
-                            Log("offset down value based on Yaw Game Engine value: %f\n", m_OffsetDown);
+                            Log("offset down value based on Yaw Game Engine value: %f", m_OffsetDown);
                         }
                         else
                         {
-                            ErrorLog("%s: unable to use Yaw GE offset values: could not read mmf file\n", __FUNCTION__);
+                            ErrorLog("%s: unable to use Yaw GE offset values: could not read mmf file", __FUNCTION__);
                         }
                     }
                     else
                     {
-                        ErrorLog("%s: unable to use Yaw GE offset values: pose invalid\n", __FUNCTION__);
+                        ErrorLog("%s: unable to use Yaw GE offset values: pose invalid", __FUNCTION__);
                     }
                 }
                 else
                 {
-                    ErrorLog("%s: unable to use Yaw GE offset values: xrLocateSpace(view) failed: %s\n",
+                    ErrorLog("%s: unable to use Yaw GE offset values: xrLocateSpace(view) failed: %s",
                              __FUNCTION__,
                              xr::ToCString(result));
                 }
             }
             else
             {
-                ErrorLog("%s: unable to use Yaw GE offset values: cast of layer failed\n", __FUNCTION__);
+                ErrorLog("%s: unable to use Yaw GE offset values: cast of layer failed", __FUNCTION__);
             }
         }
         return VirtualTracker::ResetReferencePose(session, time);
@@ -657,7 +656,7 @@ namespace Tracker
         }
 
         DebugLog("YawData:\n\tyaw: %f, pitch: %f, roll: %f\n\tbattery: %f, rotationHeight: %f, "
-                 "rotationForwardHead: %f\n\tsixDof: %d, usePos: %d, autoX: %f, autoY: %f\n",
+                 "rotationForwardHead: %f\n\tsixDof: %d, usePos: %d, autoX: %f, autoY: %f",
                  data.yaw,
                  data.pitch,
                  data.roll,
@@ -706,7 +705,7 @@ namespace Tracker
             return false;
         }
 
-        DebugLog("MotionData:\n\tyaw: %f, pitch: %f, roll: %f\n\tsway: %f, surge: %f, heave: %f\n",
+        DebugLog("MotionData:\n\tyaw: %f, pitch: %f, roll: %f\n\tsway: %f, surge: %f, heave: %f",
                  data.yaw,
                  data.pitch,
                  data.roll,
@@ -755,7 +754,7 @@ namespace Tracker
         if (!layer)
         {
             m_Initialized = false;
-            ErrorLog("%s: unable to cast layer to OpenXrLayer\n", __FUNCTION__);
+            ErrorLog("%s: unable to cast layer to OpenXrLayer", __FUNCTION__);
             return;
         }
         
@@ -780,7 +779,7 @@ namespace Tracker
                                                                      reinterpret_cast<XrHapticBaseHeader*>(&vibration));
                 XR_FAILED(result))
             {
-                ErrorLog("%s: xrApplyHapticFeedback failed: %s\n", __FUNCTION__, xr::ToCString(result));
+                ErrorLog("%s: xrApplyHapticFeedback failed: %s", __FUNCTION__, xr::ToCString(result));
             }
         }
 
@@ -835,7 +834,7 @@ namespace Tracker
         if (!layer)
         {
             m_Initialized = false;
-            ErrorLog("%s: unable to cast layer to OpenXrLayer\n", __FUNCTION__);
+            ErrorLog("%s: unable to cast layer to OpenXrLayer", __FUNCTION__);
             return;
         }
         if (!m_Tracker->m_XrSyncCalled)
@@ -847,7 +846,7 @@ namespace Tracker
             constexpr XrActionsSyncInfo syncInfo{XR_TYPE_ACTIONS_SYNC_INFO, nullptr, 0, nullptr};
             if (const XrResult result = GetInstance()->xrSyncActions(session, &syncInfo); XR_FAILED(result))
             {
-                ErrorLog("%s: xrSyncActions failed: %s\n", __FUNCTION__, xr::ToCString(result));
+                ErrorLog("%s: xrSyncActions failed: %s", __FUNCTION__, xr::ToCString(result));
                 return;
             }
         }
@@ -862,7 +861,7 @@ namespace Tracker
             XrActionStateBoolean moveButtonState{XR_TYPE_ACTION_STATE_BOOLEAN};
             if (const XrResult result = layer->xrGetActionStateBoolean(session, &moveInfo, &moveButtonState); XR_FAILED(result))
             {
-                ErrorLog("%s: xrGetActionStateBoolean failed: %s\n", __FUNCTION__, xr::ToCString(result));
+                ErrorLog("%s: xrGetActionStateBoolean failed: %s", __FUNCTION__, xr::ToCString(result));
                 return;
             }
             if (moveButtonState.isActive == XR_TRUE)
@@ -881,7 +880,7 @@ namespace Tracker
             if (const XrResult result = layer->xrGetActionStateBoolean(session, &positionInfo, &positionButtonState);
                 XR_FAILED(result))
             {
-                ErrorLog("%s: xrGetActionStateBoolean failed: %s\n", __FUNCTION__, xr::ToCString(result));
+                ErrorLog("%s: xrGetActionStateBoolean failed: %s", __FUNCTION__, xr::ToCString(result));
                 return;
             }
             if (positionButtonState.isActive == XR_TRUE)
@@ -961,7 +960,7 @@ namespace Tracker
         {
             if (!GetInstance()->IsExtensionGranted(XR_HTCX_VIVE_TRACKER_INTERACTION_EXTENSION_NAME))
             {
-                ErrorLog("%s: runtime does not support Vive tracker OpenXR extension: %s\n",
+                ErrorLog("%s: runtime does not support Vive tracker OpenXR extension: %s",
                          __FUNCTION__,
                          XR_HTCX_VIVE_TRACKER_INTERACTION_EXTENSION_NAME);
                 return false;
@@ -972,7 +971,7 @@ namespace Tracker
                 return false;
             }
             role = "/user/vive_tracker_htcx/role/" + side;
-            Log("vive tracker is using role %s\n", role.c_str());
+            Log("vive tracker is using role %s", role.c_str());
             active = true;
         }
         return true;
@@ -986,7 +985,7 @@ namespace Tracker
         {
             if ("yaw" == trackerType)
             {
-                Log("using Yaw Game Engine memory mapped file as tracker\n");
+                Log("using Yaw Game Engine memory mapped file as tracker");
 
                 delete previousTracker;
 
@@ -995,7 +994,7 @@ namespace Tracker
             }
             if ("srs" == trackerType)
             {
-                Log("using SRS memory mapped file as tracker\n");
+                Log("using SRS memory mapped file as tracker");
 
                 delete previousTracker;
 
@@ -1004,7 +1003,7 @@ namespace Tracker
             }
             if ("flypt" == trackerType)
             {
-                Log("using FlyPT Mover memory mapped file as tracker\n");
+                Log("using FlyPT Mover memory mapped file as tracker");
 
                 delete previousTracker;
 
@@ -1013,7 +1012,7 @@ namespace Tracker
             }
             if ("controller" == trackerType)
             {
-                Log("using motion controller as tracker\n");
+                Log("using motion controller as tracker");
 
                 delete previousTracker;
 
@@ -1022,7 +1021,7 @@ namespace Tracker
             }
             if ("vive" == trackerType)
             {
-                Log("using vive tracker as tracker\n");
+                Log("using vive tracker as tracker");
 
                 delete previousTracker;
 
@@ -1031,19 +1030,19 @@ namespace Tracker
             }
             else
             {
-                ErrorLog("unknown tracker type: %s\n", trackerType.c_str());
+                ErrorLog("unknown tracker type: %s", trackerType.c_str());
             }
         }
         else
         {
-            ErrorLog("unable to determine tracker type\n");
+            ErrorLog("unable to determine tracker type");
         }
         if (previousTracker)
         {
-            ErrorLog("retaining previous tracker type\n");
+            ErrorLog("retaining previous tracker type");
             return;
         }
-        ErrorLog("defaulting to 'controller'\n");
+        ErrorLog("defaulting to 'controller'");
         *tracker = new OpenXrTracker();
     }
 } // namespace Tracker

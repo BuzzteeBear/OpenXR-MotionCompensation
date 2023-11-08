@@ -37,7 +37,7 @@ namespace openxr_api_layer {
                                       const struct XrApiLayerCreateInfo* const apiLayerInfo,
                                       XrInstance* const instance) {
         TraceLoggingWrite(g_traceProvider, "xrCreateApiLayerInstance");
-        DebugLog("--> xrCreateApiLayerInstance\n");
+        DebugLog("--> xrCreateApiLayerInstance");
 
         if (!apiLayerInfo || apiLayerInfo->structType != XR_LOADER_INTERFACE_STRUCT_API_LAYER_CREATE_INFO ||
             apiLayerInfo->structVersion != XR_API_LAYER_CREATE_INFO_STRUCT_VERSION ||
@@ -47,7 +47,7 @@ namespace openxr_api_layer {
             apiLayerInfo->nextInfo->structSize != sizeof(XrApiLayerNextInfo) ||
             apiLayerInfo->nextInfo->layerName != LayerName || !apiLayerInfo->nextInfo->nextGetInstanceProcAddr ||
             !apiLayerInfo->nextInfo->nextCreateApiLayerInstance) {
-            ErrorLog("xrCreateApiLayerInstance validation failed\n");
+            ErrorLog("xrCreateApiLayerInstance validation failed");
             return XR_ERROR_INITIALIZATION_FAILED;
         }
 
@@ -58,7 +58,7 @@ namespace openxr_api_layer {
             auto info = apiLayerInfo->nextInfo;
             while (info) {
                 TraceLoggingWrite(g_traceProvider, "xrCreateApiLayerInstance", TLArg(info->layerName, "LayerName"));
-                Log("Using layer: %s\n", info->layerName);
+                Log("Using layer: %s", info->layerName);
                 info = info->next;
             }
         }
@@ -75,7 +75,7 @@ namespace openxr_api_layer {
         }
         else
         {
-            Log("extension %s not requested for tracker type: %s\n",
+            Log("extension %s not requested for tracker type: %s",
                 XR_HTCX_VIVE_TRACKER_INTERACTION_EXTENSION_NAME,
                 type.c_str());
         }
@@ -134,7 +134,7 @@ namespace openxr_api_layer {
                     }
                     else
                     {
-                        Log("Cannot satisfy implicit extension request: %s\n", it->c_str());
+                        Log("Cannot satisfy implicit extension request: %s", it->c_str());
                         it = implicitExtensions.erase(it);
                     }
                 }
@@ -143,7 +143,7 @@ namespace openxr_api_layer {
             }
             catch (std::exception& e)
             {
-                ErrorLog("%s: error checking for supported extensions: %s\n\t%s\n", __FUNCTION__, e.what());
+                ErrorLog("%s: error checking for supported extensions: %s\n\t%s", __FUNCTION__, e.what());
             }
         }
 
@@ -155,14 +155,14 @@ namespace openxr_api_layer {
             TraceLoggingWrite(g_traceProvider, "xrCreateApiLayerInstance", TLArg(ext.data(), "ExtensionName"));
 
             if (std::find(blockedExtensions.cbegin(), blockedExtensions.cend(), ext) == blockedExtensions.cend()) {
-                Log("Requested extension: %s\n", ext.data());
+                Log("Requested extension: %s", ext.data());
                 newEnabledExtensionNames.push_back(ext.data());
             } else {
-                Log("Blocking extension: %s\n", ext.data());
+                Log("Blocking extension: %s", ext.data());
             }
         }
         for (const auto& ext : implicitExtensions) {
-            Log("Requesting extension: %s\n", ext.c_str());
+            Log("Requesting extension: %s", ext.c_str());
             newEnabledExtensionNames.push_back(ext.c_str());
         }
         chainInstanceCreateInfo.enabledExtensionNames = newEnabledExtensionNames.data();
@@ -184,7 +184,7 @@ namespace openxr_api_layer {
                 result = openxr_api_layer::GetInstance()->xrCreateInstance(instanceCreateInfo);
             } catch (std::runtime_error exc) {
                 TraceLoggingWrite(g_traceProvider, "xrCreateInstance_Error", TLArg(exc.what(), "Error"));
-                ErrorLog("xrCreateInstance: %s\n", exc.what());
+                ErrorLog("xrCreateInstance: %s", exc.what());
                 result = XR_ERROR_RUNTIME_FAILURE;
             }
 
@@ -200,10 +200,10 @@ namespace openxr_api_layer {
 
         TraceLoggingWrite(g_traceProvider, "xrCreateApiLayerInstance_Result", TLArg(xr::ToCString(result), "Result"));
         if (XR_FAILED(result)) {
-            ErrorLog("xrCreateApiLayerInstance failed with %s\n", xr::ToCString(result));
+            ErrorLog("xrCreateApiLayerInstance failed with %s", xr::ToCString(result));
         }
 
-        DebugLog("<-- xrCreateApiLayerInstance %d\n", result);
+        DebugLog("<-- xrCreateApiLayerInstance %d", result);
 
         return result;
     }
@@ -220,13 +220,13 @@ namespace openxr_api_layer {
             }
         } catch (std::runtime_error exc) {
             TraceLoggingWrite(g_traceProvider, "xrDestroyInstance_Error", TLArg(exc.what(), "Error"));
-            ErrorLog("xrDestroyInstance: %s\n", exc.what());
+            ErrorLog("xrDestroyInstance: %s", exc.what());
             result = XR_ERROR_RUNTIME_FAILURE;
         }
 
         TraceLoggingWrite(g_traceProvider, "xrDestroyInstance_Result", TLArg(xr::ToCString(result), "Result"));
         if (XR_FAILED(result)) {
-            ErrorLog("xrDestroyInstance failed with %s\n", xr::ToCString(result));
+            ErrorLog("xrDestroyInstance failed with %s", xr::ToCString(result));
         }
 
         return result;
@@ -241,7 +241,7 @@ namespace openxr_api_layer {
             result = openxr_api_layer::GetInstance()->xrGetInstanceProcAddr(instance, name, function);
         } catch (std::runtime_error exc) {
             TraceLoggingWrite(g_traceProvider, "xrGetInstanceProcAddr_Error", TLArg(exc.what(), "Error"));
-            ErrorLog("xrGetInstanceProcAddr: %s\n", exc.what());
+            ErrorLog("xrGetInstanceProcAddr: %s", exc.what());
             result = XR_ERROR_RUNTIME_FAILURE;
         }
 

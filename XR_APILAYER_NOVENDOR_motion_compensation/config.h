@@ -59,7 +59,8 @@ enum class Cfg
     KeyReloadConfig,
     TestRotation,
     InteractionProfile,
-    CurrentTrackerPose
+    CurrentTrackerPose,
+    LogVerbose
 };
 
 class ConfigManager
@@ -157,7 +158,9 @@ class ConfigManager
         {Cfg::KeySaveConfigApp, {"shortcuts", "save_config_app"}},
         {Cfg::KeyReloadConfig, {"shortcuts", "reload_config"}},
 
+        {Cfg::LogVerbose, {"debug", "log_verbose"}},
         {Cfg::TestRotation, {"debug", "testrotation"}}};
+
 
     std::set<Cfg> m_KeysToSave{Cfg::TransStrength,
                                Cfg::RotStrength,

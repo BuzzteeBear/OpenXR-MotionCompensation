@@ -22,7 +22,7 @@ namespace utility
         GetConfig()->GetInt(Cfg::AutoActiveDelay, m_SecondsLeft);
         GetConfig()->GetBool(Cfg::AutoActiveCountdown, m_Countdown);
 
-        Log("auto activation %s, delay: %d seconds, countdown %s\n",
+        Log("auto activation %s, delay: %d seconds, countdown %s",
             m_Activate ? "on" : "off",
             m_SecondsLeft,
             m_Countdown ? "on" : "off");
@@ -57,11 +57,11 @@ namespace utility
         if (GetConfig()->GetFloat(Cfg::TrackerCheck, check) && check >= 0)
         {
             m_Check = static_cast<XrTime>(check * 1000000000.0);
-            Log("mmf connection refresh interval is set to %.3f ms\n", check * 1000.0);
+            Log("mmf connection refresh interval is set to %.3f ms", check * 1000.0);
         }
         else
         {
-            ErrorLog("%s: defaulting to mmf connection refresh interval of %.3f ms\n",
+            ErrorLog("%s: defaulting to mmf connection refresh interval of %.3f ms",
                      __FUNCTION__,
                      static_cast<double>(m_Check) / 1000000.0);
         }
@@ -92,7 +92,7 @@ namespace utility
             }
             else
             {
-                ErrorLog("unable to map view of mmf %s: %s\n", m_Name.c_str(), LastErrorMsg().c_str());
+                ErrorLog("unable to map view of mmf %s: %s", m_Name.c_str(), LastErrorMsg().c_str());
                 lock.unlock();
                 Close();
                 return false;
@@ -102,7 +102,7 @@ namespace utility
         {
             if (!m_ConnectionLost)
             {
-                ErrorLog("could not open file mapping object %s: %s\n", m_Name.c_str(), LastErrorMsg().c_str());
+                ErrorLog("could not open file mapping object %s: %s", m_Name.c_str(), LastErrorMsg().c_str());
                 m_ConnectionLost = true;
             }
             return false;
@@ -128,7 +128,7 @@ namespace utility
             }
             catch (std::exception& e)
             {
-                ErrorLog("%s: unable to read from mmf %s: %s\n", __FUNCTION__, m_Name.c_str(), e.what());
+                ErrorLog("%s: unable to read from mmf %s: %s", __FUNCTION__, m_Name.c_str(), e.what());
                 // reset mmf connection
                 Close();
                 return false;

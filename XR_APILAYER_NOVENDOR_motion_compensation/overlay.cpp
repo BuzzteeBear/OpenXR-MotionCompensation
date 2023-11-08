@@ -57,7 +57,7 @@ namespace openxr_api_layer::graphics
         }
         else
         {
-            ErrorLog("%s: unable to retrieve composition framework\n", __FUNCTION__);
+            ErrorLog("%s: unable to retrieve composition framework", __FUNCTION__);
             m_Initialized = false;
         }
     }
@@ -86,7 +86,7 @@ namespace openxr_api_layer::graphics
         if (!m_Initialized)
         {
             m_OverlayActive = false;
-            ErrorLog("graphical overlay is not properly initialized\n");
+            ErrorLog("graphical overlay is not properly initialized");
             GetAudioOut()->Execute(Feedback::Event::Error);
             return false;
         }
@@ -269,7 +269,7 @@ namespace openxr_api_layer::graphics
             }
             catch (std::exception& e)
             {
-                ErrorLog("%s: encountered exception: %s\n", __FUNCTION__, e.what());
+                ErrorLog("%s: encountered exception: %s", __FUNCTION__, e.what());
                 m_Initialized = false;
             }
         }
