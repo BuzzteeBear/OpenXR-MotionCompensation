@@ -185,6 +185,7 @@ The key <code>vertical_factor</code> is applied to translational filter strength
 <li><code>rotate_right</code>, <code>rotate_left</code> - rotate the aforementioned forward vector around the gravitational (yaw-)axis. Note that these changes cannot be saved. Therefore changing the offset position AFTER rotating manually and saving the offset values will result in the cor being a different offset position after reloading those saved values.</li>
 <li><code>toggle_overlay</code> - (de-)activate graphical overlay displaying the reference tracker position(s) (See <a href="#graphical-overlay">Graphical overlay</a> for details).</li>
 <li><code>toggle_cache</code> - change between calculated and cached eye positions.</li>
+<li><code>fast_modifier</code> - press key(s) in addition to a filter or cor manipulation shortcut to increase amount of change per keypress/repetition. Filter modification will be sped up by factor 5 while cor manipulation will move/rotate 10 instead of 1 cm/degree</li>
 <li><code>save_config</code> -  write current filter strength and cor offsets to global config file</li>
 <li><code>save_config_app</code> -  write current filter strength and cor offsets to application specific config file. Note that values in this file will precedent values in the global config file.</li>
 <li><code>reload_config</code> - read in and apply configuration for current app from config files. For technical reasons motion compensation is automatically deactivated and the reference tracker pose is invalidated upon configuration reload.</li>

@@ -52,6 +52,7 @@ enum class Cfg
     KeyOffLeft,
     KeyRotRight,
     KeyRotLeft,
+    KeyFastModifier,
     KeyOverlay,
     KeyCache,
     KeySaveConfig,
@@ -149,6 +150,8 @@ class ConfigManager
 
         {Cfg::KeyRotRight, {"shortcuts", "rotate_right"}},
         {Cfg::KeyRotLeft, {"shortcuts", "rotate_left"}},
+
+        {Cfg::KeyFastModifier, {"shortcuts", "fast_modifier"}},
 
         {Cfg::KeyOverlay, {"shortcuts", "toggle_overlay"}},
 

@@ -18,11 +18,26 @@ namespace Input
         bool GetKeyState(Cfg key, bool& isRepeat);
 
       private:
-        bool UpdateKeyState(const std::set<int>& vkKeySet, const std::set<int>& vkExclusionSet, bool& isRepeat);
+        bool UpdateKeyState(const std::set<int>& vkKeySet,
+                            const std::set<int>& vkExclusionSet,
+                            bool& isRepeat,
+                            bool isModifier);
 
         std::map<Cfg, std::pair<std::set<int>, std::set<int>>> m_ShortCuts;
         std::map<std::set<int>, std::pair<bool, std::chrono::steady_clock::time_point>> m_KeyStates;
         const std::chrono::milliseconds m_KeyRepeatDelay = 300ms;
+        std::set<Cfg> m_FastActivities{Cfg::KeyTransInc,
+                                     Cfg::KeyTransDec,
+                                     Cfg::KeyRotInc,
+                                     Cfg::KeyRotDec,
+                                     Cfg::KeyOffForward,
+                                     Cfg::KeyOffBack,
+                                     Cfg::KeyOffUp,
+                                     Cfg::KeyOffDown,
+                                     Cfg::KeyOffRight,
+                                     Cfg::KeyOffLeft,
+                                     Cfg::KeyRotRight,
+                                     Cfg::KeyRotLeft};
     };
     class InputHandler
     {
@@ -46,7 +61,7 @@ namespace Input
         void Recalibrate(XrTime time) const;
         void ToggleOverlay() const;
         void ToggleCache() const;
-        void ChangeOffset(::Input::InputHandler::Direction dir) const;
+        void ChangeOffset(::Input::InputHandler::Direction dir, bool fast) const;
         void ReloadConfig() const;
         void SaveConfig(XrTime time, bool forApp) const;
 

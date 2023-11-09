@@ -247,11 +247,11 @@ namespace Tracker
         return true;
     }
 
-    void TrackerBase::ModifyFilterStrength(const bool trans, const bool increase)
+    void TrackerBase::ModifyFilterStrength(const bool trans, const bool increase, const bool fast)
     {
         float* currentValue = trans ? &m_TransStrength : &m_RotStrength;
         const float prevValue = *currentValue;
-        const float amount = (1.1f - *currentValue) * 0.05f;
+        const float amount = (1.1f - *currentValue) * (fast ? 0.25f : 0.05f);
         const float newValue = *currentValue + (increase ? amount : -amount);
         if (trans)
         {

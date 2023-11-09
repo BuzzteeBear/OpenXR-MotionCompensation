@@ -132,6 +132,7 @@ What you can modify in a configuration file:
   - `rotate_right`, `rotate_left` - rotate the aforementioned forward vector around the gravitational (yaw-)axis. Note that these changes cannot be saved. Therefore changing the offset position AFTER rotating manually and saving the offset values will result in the cor being a different offset position after reloading those saved values.
   - `toggle_overlay` - (de-)activate graphical overlay displaying the reference tracker position(s) (See [Graphical overlay](#graphical-overlay) for details).
   - `toggle_cache` - change between calculated and cached eye positions.
+  - `fast_modifier` - press key(s) in addition to a filter or cor manipulation shortcut to increase amount of change per keypress/repetition. Filter modification will be sped up by factor 5 while cor manipulation will move/rotate 10 instead of 1 cm/degree
   - `save_config` -  write current filter strength and cor offsets to global config file 
   - `save_config_app` -  write current filter strength and cor offsets to application specific config file. Note that values in this file will precedent values in the global config file. 
   - `reload_config` - read in and apply configuration for current app from config files. For technical reasons motion compensation is automatically deactivated and the reference tracker pose is invalidated upon configuration reload.

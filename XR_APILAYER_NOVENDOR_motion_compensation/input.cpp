@@ -34,10 +34,13 @@ namespace Input
                                        Cfg::KeyRotLeft,
                                        Cfg::KeyOverlay,
                                        Cfg::KeyCache,
+                                       Cfg::KeyFastModifier,
                                        Cfg::KeySaveConfig,
                                        Cfg::KeySaveConfigApp,
                                        Cfg::KeyReloadConfig};
         const std::set<int> modifiers{VK_CONTROL, VK_SHIFT, VK_MENU};
+        std::set<int> fastModifiers;
+        GetConfig()->GetShortcut(Cfg::KeyFastModifier, fastModifiers);
         std::string errors;
 
         // undocumented / immutable shortcuts:
@@ -53,10 +56,14 @@ namespace Input
                 std::set<int> modifiersNotSet;
                 for (const int& modifier : modifiers)
                 {
-                    if (!shortcut.contains(modifier))
+                    if (shortcut.contains(modifier) || Cfg::KeyFastModifier == activity ||
+                        (m_FastActivities.contains(activity) && fastModifiers.contains(modifier)))
                     {
-                        modifiersNotSet.insert(modifier);
+                        // don't exclude keys included in shortcut (and potential fast modifiers for corresponding
+                        // activities)
+                        continue;
                     }
+                    modifiersNotSet.insert(modifier);
                 }
                 m_ShortCuts[activity] = {shortcut, modifiersNotSet};
             }
@@ -71,6 +78,7 @@ namespace Input
     void InputHandler::HandleKeyboardInput(const XrTime time)
     {
         bool isRepeat{false};
+        const bool fast = m_Input.GetKeyState(Cfg::KeyFastModifier, isRepeat);
         if (m_Input.GetKeyState(Cfg::KeyActivate, isRepeat) && !isRepeat)
         {
             ToggleActive(time);
@@ -81,51 +89,51 @@ namespace Input
         }
         if (m_Input.GetKeyState(Cfg::KeyTransInc, isRepeat))
         {
-            m_Layer->m_Tracker->ModifyFilterStrength(true, true);
+            m_Layer->m_Tracker->ModifyFilterStrength(true, true, fast);
         }
         if (m_Input.GetKeyState(Cfg::KeyTransDec, isRepeat))
         {
-            m_Layer->m_Tracker->ModifyFilterStrength(true, false);
+            m_Layer->m_Tracker->ModifyFilterStrength(true, false, fast);
         }
         if (m_Input.GetKeyState(Cfg::KeyRotInc, isRepeat))
         {
-            m_Layer->m_Tracker->ModifyFilterStrength(false, true);
+            m_Layer->m_Tracker->ModifyFilterStrength(false, true, fast);
         }
         if (m_Input.GetKeyState(Cfg::KeyRotDec, isRepeat))
         {
-            m_Layer->m_Tracker->ModifyFilterStrength(false, false);
+            m_Layer->m_Tracker->ModifyFilterStrength(false, false, fast);
         }
         if (m_Input.GetKeyState(Cfg::KeyOffForward, isRepeat))
         {
-            ChangeOffset(Direction::Fwd);
+            ChangeOffset(Direction::Fwd, fast);
         }
         if (m_Input.GetKeyState(Cfg::KeyOffBack, isRepeat))
         {
-            ChangeOffset(Direction::Back);
+            ChangeOffset(Direction::Back, fast);
         }
         if (m_Input.GetKeyState(Cfg::KeyOffUp, isRepeat))
         {
-            ChangeOffset(Direction::Up);
+            ChangeOffset(Direction::Up, fast);
         }
         if (m_Input.GetKeyState(Cfg::KeyOffDown, isRepeat))
         {
-            ChangeOffset(Direction::Down);
+            ChangeOffset(Direction::Down, fast);
         }
         if (m_Input.GetKeyState(Cfg::KeyOffRight, isRepeat))
         {
-            ChangeOffset(Direction::Right);
+            ChangeOffset(Direction::Right, fast);
         }
         if (m_Input.GetKeyState(Cfg::KeyOffLeft, isRepeat))
         {
-            ChangeOffset(Direction::Left);
+            ChangeOffset(Direction::Left, fast);
         }
         if (m_Input.GetKeyState(Cfg::KeyRotRight, isRepeat))
         {
-            ChangeOffset(Direction::RotRight);
+            ChangeOffset(Direction::RotRight, fast);
         }
         if (m_Input.GetKeyState(Cfg::KeyRotLeft, isRepeat))
         {
-            ChangeOffset(Direction::RotLeft);
+            ChangeOffset(Direction::RotLeft, fast);
         }
         if (m_Input.GetKeyState(Cfg::KeyOverlay, isRepeat) && !isRepeat)
         {
@@ -165,10 +173,13 @@ namespace Input
             openxr_api_layer::log::ErrorLog("%s(%d): unable to find key", __FUNCTION__, key);
             return false;
         }
-        return UpdateKeyState(it->second.first, it->second.second, isRepeat);
+        return UpdateKeyState(it->second.first, it->second.second, isRepeat, Cfg::KeyFastModifier == key);
     }
 
-    bool KeyboardInput::UpdateKeyState(const std::set<int>& vkKeySet, const std::set<int>& vkExclusionSet,  bool& isRepeat)
+    bool KeyboardInput::UpdateKeyState(const std::set<int>& vkKeySet,
+                                       const std::set<int>& vkExclusionSet,
+                                       bool& isRepeat,
+                                       bool isModifier)
     {
         const auto isPressed =
             vkKeySet.size() > 0 &&
@@ -189,7 +200,7 @@ namespace Input
             // reset toggle time for next repetition
             keyState->second.second = now;
         }
-        return isPressed && (!prevState.first || isRepeat);
+        return isPressed && (!prevState.first || isRepeat || isModifier);
     }
 
     InputHandler::InputHandler(OpenXrLayer* layer)
@@ -303,7 +314,7 @@ namespace Input
         GetAudioOut()->Execute(m_Layer->m_UseEyeCache ? Event::EyeCached : Event::EyeCalculated);
     }
 
-    void InputHandler::ChangeOffset(const Direction dir) const
+    void InputHandler::ChangeOffset(const Direction dir, const bool fast) const
     {
         bool success;
 
@@ -313,21 +324,22 @@ namespace Input
             {
                 if (Direction::RotLeft != dir && Direction::RotRight != dir)
                 {
-                    const XrVector3f direction{Direction::Left == dir    ? 0.01f
-                                               : Direction::Right == dir ? -0.01f
+                    const float amount = fast ? 0.1f : 0.01f; 
+                    const XrVector3f direction{Direction::Left == dir    ? amount
+                                               : Direction::Right == dir ? -amount
                                                                          : 0.0f,
-                                               Direction::Up == dir     ? 0.01f
-                                               : Direction::Down == dir ? -0.01f
+                                               Direction::Up == dir     ? amount
+                                               : Direction::Down == dir ? -amount
                                                                         : 0.0f,
-                                               Direction::Fwd == dir    ? 0.01f
-                                               : Direction::Back == dir ? -0.01f
+                                               Direction::Fwd == dir    ? amount
+                                               : Direction::Back == dir ? -amount
                                                                         : 0.0f};
                     success = tracker->ChangeOffset(direction);
                 }
                 else
                 {
-                    success = tracker->ChangeRotation(Direction::RotRight == dir ? -Tracker::angleToRadian
-                                                                                 : Tracker::angleToRadian);
+                    const float amount = fast ? Tracker::angleToRadian * 10.0f : Tracker::angleToRadian;
+                    success = tracker->ChangeRotation(Direction::RotRight == dir ? -amount : amount);
                 }
             }
             else

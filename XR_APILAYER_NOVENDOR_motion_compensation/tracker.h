@@ -43,7 +43,7 @@ namespace Tracker
         ~TrackerBase() override;
         bool Init() override;
         virtual bool LazyInit(XrTime time);
-        void ModifyFilterStrength(bool trans, bool increase);
+        void ModifyFilterStrength(bool trans, bool increase, bool fast);
         void AdjustReferencePose(const XrPosef& pose);
         [[nodiscard]] XrPosef GetReferencePose() const;
         void SetReferencePose(const XrPosef& pose) override;
