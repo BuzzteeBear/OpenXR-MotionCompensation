@@ -26,8 +26,8 @@ namespace Tracker
 
         XrPosef m_ReferencePose{xr::math::Pose::Identity()};
         XrPosef m_LastPose{xr::math::Pose::Identity()};
-
-    private:
+        
+      private:
         virtual void ApplyFilters(XrPosef& trackerPose){};
 
         bool m_PhysicalEnabled{false};
@@ -52,6 +52,12 @@ namespace Tracker
        
       protected:
         void ApplyFilters(XrPosef& trackerPose) override;
+        bool CalibrateForward(XrSession session, XrTime time, float yawOffset);
+
+        XrVector3f m_Forward{0.f, 0.f, 1.f};
+        XrVector3f m_Right{-1.f, 0.f, 0.f};
+        XrVector3f m_Up{0.f, 1.f, 0.f};
+        XrPosef m_ForwardPose{xr::math::Pose::Identity()};
 
       private:
         bool LoadFilters();

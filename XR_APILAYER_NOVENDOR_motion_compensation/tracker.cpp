@@ -296,8 +296,42 @@ namespace Tracker
                           TLArg(xr::ToString(pose).c_str(), "LocationAfterFilter"));
     }
 
+    bool TrackerBase::CalibrateForward(XrSession session, XrTime time, float yawOffset)
+    {
+        if (auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance()); !layer)
+        {
+            ErrorLog("%s: cast of layer failed", __FUNCTION__);
+            return false;
+        }
+        else
+        {
+            XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
+            if (const XrResult result =
+                    layer->OpenXrApi::xrLocateSpace(layer->m_ViewSpace, layer->m_StageSpace, time, &location);
+                XR_FAILED(result))
+            {
+                ErrorLog("%s: xrLocateSpace(view) failed: %s", __FUNCTION__, xr::ToCString(result));
+                return false;
+            }
+            if (!Pose::IsPoseValid(location.locationFlags))
+            {
+                ErrorLog("%s: view space location invalid", __FUNCTION__);
+                return false;
+            }
+            // project forward and right vector of view onto 'floor plane'
+            m_Forward = GetForwardVector(location.pose.orientation);
+            m_Right = XrVector3f{-m_Forward.z, 0.0f, m_Forward.x};
+
+            // calculate orientation parallel to floor
+            location.pose.orientation = GetYawRotation(m_Forward, yawOffset);
+            m_ForwardPose = location.pose;
+        }
+        return true;
+    }
+
     bool OpenXrTracker::ResetReferencePose(XrSession session, XrTime time)
     {
+        CalibrateForward(session, time, 0.f);
         if (!ControllerBase::ResetReferencePose(session, time))
         {
             m_Calibrated = false;
@@ -398,40 +432,21 @@ namespace Tracker
         }
         else
         {
-            if (auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance()))
+            if (!CalibrateForward(session, time, m_OffsetYaw))
             {
-                XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
-                if (XR_SUCCEEDED(
-                        layer->OpenXrApi::xrLocateSpace(layer->m_ViewSpace, layer->m_StageSpace, time, &location)) &&
-                    Pose::IsPoseValid(location.locationFlags))
-                {
-                    // project forward and right vector of view onto 'floor plane'
-                    const XrVector3f forward = GetForwardVector(location.pose.orientation);
-                    const XrVector3f right{-forward.z, 0.0f, forward.x};
-
-                    const float offsetRight = m_UpsideDown ? -m_OffsetRight : m_OffsetRight;
-                    const float offsetDown = m_UpsideDown ? -m_OffsetDown : m_OffsetDown;
-
-                    // calculate and apply translational offset
-                    const XrVector3f offset =
-                        m_OffsetForward * forward + offsetRight * right + XrVector3f{0.0f, -offsetDown, 0.0f};
-                    location.pose.position = location.pose.position + offset;
-
-                    // calculate orientation parallel to floor
-                    location.pose.orientation = GetYawRotation(forward, m_OffsetYaw);
-
-                    TrackerBase::SetReferencePose(location.pose);
-                }
-                else
-                {
-                    ErrorLog("%s: xrLocateSpace(view) failed", __FUNCTION__);
-                    success = false;
-                }
+                success = false;
             }
             else
             {
-                ErrorLog("%s: cast of layer failed", __FUNCTION__);
-                success = false;
+                XrPosef refPose = m_ForwardPose;
+                const float offsetRight = m_UpsideDown ? -m_OffsetRight : m_OffsetRight;
+                const float offsetDown = m_UpsideDown ? -m_OffsetDown : m_OffsetDown;
+
+                // calculate and apply translational offset
+                const XrVector3f offset =
+                    m_OffsetForward * m_Forward + offsetRight * m_Right + XrVector3f{0.0f, -offsetDown, 0.0f};
+                refPose.position = refPose.position + offset;
+                TrackerBase::SetReferencePose(refPose);
             }
         }
 
