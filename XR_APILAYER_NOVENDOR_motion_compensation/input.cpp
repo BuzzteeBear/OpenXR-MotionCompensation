@@ -267,9 +267,7 @@ namespace Input
         }
 
         std::string trackerType;
-        if (m_Layer->m_PhysicalEnabled && !m_Layer->m_Activated &&
-            GetConfig()->GetString(Cfg::TrackerType, trackerType) &&
-            ("controller" == trackerType || "vive" == trackerType))
+        if (!m_Layer->m_Activated)
         {
             // trigger interaction suggestion and action set attachment if necessary
             m_Layer->LazyInit(time);

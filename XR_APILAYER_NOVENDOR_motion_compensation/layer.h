@@ -80,7 +80,6 @@ namespace openxr_api_layer
         XrResult xrBeginFrame(XrSession session, const XrFrameBeginInfo* frameBeginInfo)override;
         XrResult xrEndFrame(XrSession session, const XrFrameEndInfo* frameEndInfo) override;
 
-        bool CreateStageSpace(const std::string& caller);
         void RequestCurrentInteractionProfile();
 
         XrActionSet m_ActionSet{XR_NULL_HANDLE};
@@ -98,6 +97,7 @@ namespace openxr_api_layer
         bool isViewSpace(XrSpace space) const;
         bool isActionSpace(XrSpace space) const;
         [[nodiscard]] uint32_t GetNumViews() const;
+        bool CreateStageSpace(const std::string& caller);
         bool SetStageToLocalSpace(XrSpace space, XrTime time);
         bool CreateTrackerActions(const std::string& caller);
         void DestroyTrackerActions(const std::string& caller);

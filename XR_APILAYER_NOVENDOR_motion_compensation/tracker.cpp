@@ -400,40 +400,31 @@ namespace Tracker
         {
             if (auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance()))
             {
-                if (layer->CreateStageSpace("ResetReferencePose"))
+                XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
+                if (XR_SUCCEEDED(
+                        layer->OpenXrApi::xrLocateSpace(layer->m_ViewSpace, layer->m_StageSpace, time, &location)) &&
+                    Pose::IsPoseValid(location.locationFlags))
                 {
-                    XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
-                    if (XR_SUCCEEDED(layer->OpenXrApi::xrLocateSpace(layer->m_ViewSpace,
-                                                                     layer->m_StageSpace,
-                                                                     time,
-                                                                     &location)) &&
-                        Pose::IsPoseValid(location.locationFlags))
-                    {
-                        // project forward and right vector of view onto 'floor plane'
-                        const XrVector3f forward = GetForwardVector(location.pose.orientation);
-                        const XrVector3f right{-forward.z, 0.0f, forward.x};
+                    // project forward and right vector of view onto 'floor plane'
+                    const XrVector3f forward = GetForwardVector(location.pose.orientation);
+                    const XrVector3f right{-forward.z, 0.0f, forward.x};
 
-                        const float offsetRight = m_UpsideDown ? -m_OffsetRight : m_OffsetRight;
-                        const float offsetDown = m_UpsideDown ? -m_OffsetDown : m_OffsetDown;
+                    const float offsetRight = m_UpsideDown ? -m_OffsetRight : m_OffsetRight;
+                    const float offsetDown = m_UpsideDown ? -m_OffsetDown : m_OffsetDown;
 
-                        // calculate and apply translational offset
-                        const XrVector3f offset =
-                            m_OffsetForward * forward + offsetRight * right + XrVector3f{0.0f, -offsetDown, 0.0f};
-                        location.pose.position = location.pose.position + offset;
+                    // calculate and apply translational offset
+                    const XrVector3f offset =
+                        m_OffsetForward * forward + offsetRight * right + XrVector3f{0.0f, -offsetDown, 0.0f};
+                    location.pose.position = location.pose.position + offset;
 
-                        // calculate orientation parallel to floor
-                        location.pose.orientation = GetYawRotation(forward, m_OffsetYaw);
+                    // calculate orientation parallel to floor
+                    location.pose.orientation = GetYawRotation(forward, m_OffsetYaw);
 
-                        TrackerBase::SetReferencePose(location.pose);
-                    }
-                    else
-                    {
-                        ErrorLog("%s: xrLocateSpace(view) failed", __FUNCTION__);
-                        success = false;
-                    }
+                    TrackerBase::SetReferencePose(location.pose);
                 }
                 else
                 {
+                    ErrorLog("%s: xrLocateSpace(view) failed", __FUNCTION__);
                     success = false;
                 }
             }
