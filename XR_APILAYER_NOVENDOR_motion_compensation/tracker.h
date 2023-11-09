@@ -14,7 +14,6 @@ namespace Tracker
         bool GetPoseDelta(XrPosef& poseDelta, XrSession session, XrTime time);
         virtual bool ResetReferencePose(XrSession session, XrTime time);
 
-        bool m_ResetReferencePose{false};
         bool m_XrSyncCalled{false};
 
       protected:
@@ -26,7 +25,6 @@ namespace Tracker
         static float GetYawAngle(const XrVector3f& forward);
 
         XrPosef m_ReferencePose{xr::math::Pose::Identity()};
-        XrPosef m_LastPoseDelta{xr::math::Pose::Identity()};
         XrPosef m_LastPose{xr::math::Pose::Identity()};
 
     private:
@@ -34,7 +32,6 @@ namespace Tracker
 
         bool m_PhysicalEnabled{false};
         bool m_ConnectionLost{false};
-        XrTime m_LastPoseTime{0};
     };
    
     class TrackerBase : public ControllerBase
@@ -177,7 +174,7 @@ namespace Tracker
       private:
         void GetButtonState(XrSession session, bool& moveButton, bool& positionButton);
         void ApplyPosition() const;
-        void ApplyRotation() const;
+        void ApplyRotation(const XrPosef& poseDelta) const;
         void ApplyTranslation() const;
 
         VirtualTracker* m_Tracker{nullptr};

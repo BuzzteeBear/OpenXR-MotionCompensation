@@ -22,20 +22,6 @@ namespace Tracker
 
     bool ControllerBase::GetPoseDelta(XrPosef& poseDelta, XrSession session, XrTime time)
     {
-        // pose already calculated for requested time
-        if (time == m_LastPoseTime)
-        {
-            // already calculated for requested time;
-            poseDelta = m_LastPoseDelta;
-            TraceLoggingWrite(g_traceProvider,
-                              "GetPoseDelta",
-                              TLArg(xr::ToString(m_LastPoseDelta).c_str(), "LastDelta"));
-            return true;
-        }
-        if (m_ResetReferencePose)
-        {
-            m_ResetReferencePose = !ResetReferencePose(session, time);
-        }
         if (XrPosef curPose{Pose::Identity()}; GetPose(curPose, session, time))
         {
             ApplyFilters(curPose);
@@ -44,16 +30,10 @@ namespace Tracker
             poseDelta = Pose::Multiply(Pose::Invert(curPose), m_ReferencePose);
 
             TraceLoggingWrite(g_traceProvider, "GetPoseDelta", TLArg(xr::ToString(poseDelta).c_str(), "Delta"));
-
-            m_LastPoseTime = time;
             m_LastPose = curPose;
-            m_LastPoseDelta = poseDelta;
             return true;
         }
-        else
-        {
-            return false;
-        }
+        return false;
     }
 
     bool ControllerBase::ResetReferencePose(XrSession session, XrTime time)
@@ -825,7 +805,7 @@ namespace Tracker
                 else
                 {
                     ApplyTranslation();
-                    ApplyRotation();
+                    ApplyRotation(poseDelta);
                     ResetReferencePose(session, time);
                 }
             }
@@ -945,14 +925,14 @@ namespace Tracker
                           TLArg(xr::ToString(m_Tracker->GetReferencePose()).c_str(), "After"));
     }
 
-    void CorManipulator::ApplyRotation() const
+    void CorManipulator::ApplyRotation(const XrPosef& poseDelta) const
     {
         TraceLoggingWrite(g_traceProvider,
                           "ApplyRotation",
                           TLArg(xr::ToString(m_Tracker->GetReferencePose()).c_str(), "Before"),
-                          TLArg(xr::ToString(this->m_LastPoseDelta).c_str(), "Delta"));
+                          TLArg(xr::ToString(poseDelta).c_str(), "Delta"));
 
-        const float yawAngle = - GetYawAngle(GetForwardVector(m_LastPoseDelta.orientation, true));
+        const float yawAngle = -GetYawAngle(GetForwardVector(poseDelta.orientation, true));
         m_Tracker->ChangeRotation(yawAngle);
        
         TraceLoggingWrite(g_traceProvider,
