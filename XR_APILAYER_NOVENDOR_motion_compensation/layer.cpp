@@ -1141,46 +1141,30 @@ namespace openxr_api_layer
 
         return result;
     }
-
-    bool OpenXrLayer::SetStageToLocalSpace(const XrSpace space, const XrTime time)
+    bool OpenXrLayer::CreateStageSpace(const std::string& caller)
     {
-        TraceLoggingWrite(g_traceProvider, "SetStageToLocalSpace", TLPArg(space, "Space"), TLArg(time, "Time"));
+        TraceLoggingWrite(g_traceProvider, "CreateStageSpace", TLPArg(caller.c_str(), "Called by"));
         if (m_StageSpace == XR_NULL_HANDLE)
         {
-            LazyInit(time);
+            // Create internal stage reference space.
+            XrReferenceSpaceCreateInfo referenceSpaceCreateInfo{XR_TYPE_REFERENCE_SPACE_CREATE_INFO, nullptr};
+            referenceSpaceCreateInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_STAGE;
+            referenceSpaceCreateInfo.poseInReferenceSpace = Pose::Identity();
+            
+            if (const XrResult result =
+                    OpenXrApi::xrCreateReferenceSpace(m_Session, &referenceSpaceCreateInfo, &m_StageSpace);
+                XR_FAILED(result))
+            {
+                TraceLoggingWrite(g_traceProvider, "CreateStageSpace", TLPArg("failure", "xrCreateReferenceSpaceStage"));
+                ErrorLog("%s (%s): xrCreateReferenceSpace(stage) failed: %s",
+                         __FUNCTION__,
+                         caller.c_str(),
+                         xr::ToCString(result));
+                return false;
+            }
+            TraceLoggingWrite(g_traceProvider, "CreateStageSpace", TLPArg("success", "xrCreateReferenceSpaceStage"));
+            Log("internal stage space created (%s): %u", caller.c_str(), m_StageSpace);
         }
-        if (m_StageSpace == XR_NULL_HANDLE)
-        {
-            ErrorLog("stage reference space not initialized");
-            return false;
-        }
-        XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
-        const XrResult result = OpenXrApi::xrLocateSpace(m_StageSpace, space, time, &location);
-        if (XR_FAILED(result))
-        {
-            ErrorLog("unable to locate local reference space (%u) in stage reference space (%u): %s",
-                     space,
-                     m_StageSpace,
-                     xr::ToCString(result));
-            return false;
-        }
-        if (!Pose::IsPoseValid(location.locationFlags))
-        {
-            ErrorLog("pose of local space in stage space not valid. locationFlags: %d", location.locationFlags);
-            return false;
-        }
-        if (!DirectX::XMVector3Equal(LoadXrVector3(location.pose.position), LoadXrVector3(m_StageToLocal.position)))
-            /* ||
-            !DirectX::XMVector4Equal(LoadXrQuaternion(location.pose.orientation),
-                                     LoadXrQuaternion(m_StageToLocal.orientation)))*/
-        {
-            Log("local space to stage space: %s", xr::ToString(location.pose).c_str());
-            m_StageToLocal = location.pose;
-        }
-
-        TraceLoggingWrite(g_traceProvider,
-                          "SetStageToLocalSpace",
-                          TLArg(xr::ToString(m_StageToLocal).c_str(), "StageToLocalPose"));
         return true;
     }
 
@@ -1204,8 +1188,43 @@ namespace openxr_api_layer
                      xr::ToCString(interactionResult));
         }
     }
-
+    
     // private
+    bool OpenXrLayer::SetStageToLocalSpace(const XrSpace space, const XrTime time)
+    {
+        TraceLoggingWrite(g_traceProvider, "SetStageToLocalSpace", TLPArg(space, "Space"), TLArg(time, "Time"));
+        if (m_StageSpace == XR_NULL_HANDLE && !CreateStageSpace("SetStageToLocalSpace"))
+        {
+            return false;
+        }
+        XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
+        const XrResult result = OpenXrApi::xrLocateSpace(m_StageSpace, space, time, &location);
+        if (XR_FAILED(result))
+        {
+            ErrorLog("%s: unable to locate local reference space (%u) in stage reference space (%u): %s",
+                     __FUNCTION__,
+                     space,
+                     m_StageSpace,
+                     xr::ToCString(result));
+            return false;
+        }
+        if (!Pose::IsPoseValid(location.locationFlags))
+        {
+            ErrorLog("%s: pose of local space in stage space not valid. locationFlags: %d", __FUNCTION__, location.locationFlags);
+            return false;
+        }
+        if (!DirectX::XMVector3Equal(LoadXrVector3(location.pose.position), LoadXrVector3(m_StageToLocal.position)))
+        {
+            Log("local space to stage space: %s", xr::ToString(location.pose).c_str());
+            m_StageToLocal = location.pose;
+        }
+
+        TraceLoggingWrite(g_traceProvider,
+                          "SetStageToLocalSpace",
+                          TLArg(xr::ToString(m_StageToLocal).c_str(), "StageToLocalPose"));
+        return true;
+    }
+
     bool OpenXrLayer::isSystemHandled(XrSystemId systemId) const
     {
         return systemId == m_systemId;
@@ -1497,27 +1516,9 @@ namespace openxr_api_layer
     bool OpenXrLayer::LazyInit(const XrTime time)
     {
         bool success = true;
-        if (m_StageSpace == XR_NULL_HANDLE)
+        if (!CreateStageSpace("LazyInit"))
         {
-           
-            // Create a reference space.
-            XrReferenceSpaceCreateInfo referenceSpaceCreateInfo{XR_TYPE_REFERENCE_SPACE_CREATE_INFO, nullptr};
-            referenceSpaceCreateInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_STAGE;
-            referenceSpaceCreateInfo.poseInReferenceSpace = Pose::Identity();
-            TraceLoggingWrite(g_traceProvider,
-                              "LazyInit",
-                              TLPArg("Executed", "xrCreateReferenceSpaceStage"));
-            if (const XrResult result =
-                    OpenXrApi::xrCreateReferenceSpace(m_Session, &referenceSpaceCreateInfo, &m_StageSpace);
-                XR_SUCCEEDED(result))
-            {
-                Log("stage space created during lazy init: %u", m_StageSpace);
-            }
-            else
-            {
-                ErrorLog("%s: xrCreateReferenceSpace (stage) failed: %s", __FUNCTION__, xr::ToCString(result));
-                success = false;
-            }
+            success = false;
         }
 
         if (!CreateTrackerActions("LazyInit"))

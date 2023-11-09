@@ -282,6 +282,11 @@ namespace Tracker
 
     void TrackerBase::LogCurrentTrackerPoses(XrSession session, XrTime time, bool activated)
     {
+        if (!m_Calibrated)
+        {
+            ErrorLog("%s: tracker not calibrated", __FUNCTION__);
+            return;
+        }
         Log("current reference pose in stage space: %s", xr::ToString(m_ReferencePose).c_str());
         XrPosef currentPose{Pose::Identity()};
         if (activated && GetPose(currentPose, session, time))
@@ -415,33 +420,40 @@ namespace Tracker
         {
             if (auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance()))
             {
-                XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
-                if (XR_SUCCEEDED(layer->OpenXrApi::xrLocateSpace(layer->m_ViewSpace,
-                                                                 layer->m_StageSpace,
-                                                                 time,
-                                                                 &location)) &&
-                    Pose::IsPoseValid(location.locationFlags))
+                if (layer->CreateStageSpace("ResetReferencePose"))
                 {
-                    // project forward and right vector of view onto 'floor plane'
-                    const XrVector3f forward = GetForwardVector(location.pose.orientation);
-                    const XrVector3f right{-forward.z, 0.0f, forward.x};
+                    XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
+                    if (XR_SUCCEEDED(layer->OpenXrApi::xrLocateSpace(layer->m_ViewSpace,
+                                                                     layer->m_StageSpace,
+                                                                     time,
+                                                                     &location)) &&
+                        Pose::IsPoseValid(location.locationFlags))
+                    {
+                        // project forward and right vector of view onto 'floor plane'
+                        const XrVector3f forward = GetForwardVector(location.pose.orientation);
+                        const XrVector3f right{-forward.z, 0.0f, forward.x};
 
-                    const float offsetRight = m_UpsideDown ? -m_OffsetRight : m_OffsetRight;
-                    const float offsetDown = m_UpsideDown ? -m_OffsetDown : m_OffsetDown;
-                    
-                    // calculate and apply translational offset
-                    const XrVector3f offset =
-                        m_OffsetForward * forward + offsetRight * right + XrVector3f{0.0f, -offsetDown, 0.0f};
-                    location.pose.position = location.pose.position + offset;
+                        const float offsetRight = m_UpsideDown ? -m_OffsetRight : m_OffsetRight;
+                        const float offsetDown = m_UpsideDown ? -m_OffsetDown : m_OffsetDown;
 
-                    // calculate orientation parallel to floor
-                    location.pose.orientation = GetYawRotation(forward, m_OffsetYaw);
-                   
-                    TrackerBase::SetReferencePose(location.pose);
+                        // calculate and apply translational offset
+                        const XrVector3f offset =
+                            m_OffsetForward * forward + offsetRight * right + XrVector3f{0.0f, -offsetDown, 0.0f};
+                        location.pose.position = location.pose.position + offset;
+
+                        // calculate orientation parallel to floor
+                        location.pose.orientation = GetYawRotation(forward, m_OffsetYaw);
+
+                        TrackerBase::SetReferencePose(location.pose);
+                    }
+                    else
+                    {
+                        ErrorLog("%s: xrLocateSpace(view) failed", __FUNCTION__);
+                        success = false;
+                    }
                 }
                 else
                 {
-                    ErrorLog("%s: xrLocateSpace(view) failed", __FUNCTION__);
                     success = false;
                 }
             }

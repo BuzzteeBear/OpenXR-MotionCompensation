@@ -79,7 +79,8 @@ namespace openxr_api_layer
         XrResult xrSyncActions(XrSession session, const XrActionsSyncInfo* syncInfo) override;
         XrResult xrBeginFrame(XrSession session, const XrFrameBeginInfo* frameBeginInfo)override;
         XrResult xrEndFrame(XrSession session, const XrFrameEndInfo* frameEndInfo) override;
-        
+
+        bool CreateStageSpace(const std::string& caller);
         void RequestCurrentInteractionProfile();
 
         XrActionSet m_ActionSet{XR_NULL_HANDLE};
