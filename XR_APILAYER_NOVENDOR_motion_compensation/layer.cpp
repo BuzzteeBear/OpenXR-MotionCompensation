@@ -969,7 +969,7 @@ namespace openxr_api_layer
                 m_UseEyeCache ? m_EyeCache.GetSample(chainFrameEndInfo.displayTime) : std::vector<XrPosef>();
             m_EyeCache.CleanUp(chainFrameEndInfo.displayTime);
         }
-        else if (m_Tracker->m_Calibrated)
+        else if (m_Tracker->m_Calibrated && !m_SuppressInteraction)
         {
             m_Tracker->ApplyCorManipulation(session, chainFrameEndInfo.displayTime);
         }
