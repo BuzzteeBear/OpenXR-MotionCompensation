@@ -9,6 +9,9 @@
 
 namespace utility
 {
+    constexpr float floatPi{static_cast<float>(M_PI)};
+    constexpr float angleToRadian{floatPi / 180.0f};
+
     class AutoActivator
     {
       private:
@@ -20,6 +23,24 @@ namespace utility
       public:
         explicit AutoActivator(std::shared_ptr<Input::InputHandler> input);
         void ActivateIfNecessary(XrTime time);
+    };
+
+    class DeltaMultiplier
+    {
+      public:
+        DeltaMultiplier();
+        void SetApply(bool apply);
+        void SetStageToLocal(const XrPosef& pose);
+        void SetFwdToStage(const XrPosef& pose);
+        void Apply(XrPosef& delta, const XrPosef& pose) const;
+
+      private:
+        inline static XrVector3f ToEulerAngles(XrQuaternionf q);
+
+        bool m_ApplyTranslation{false}, m_ApplyRotation{false};
+        float m_FactorPitch{1.f}, m_FactorRoll{1.f}, m_FactorYaw{1.f}, m_FactorSway{1.f}, m_FactorHeave{1.f}, m_FactorSurge{1.f};
+        XrPosef m_StageToLocal{xr::math::Pose::Identity()}, m_LocalToStage{xr::math::Pose::Identity()},
+            m_FwdToStage{xr::math::Pose::Identity()}, m_StageToFwd{xr::math::Pose::Identity()};
     };
 
     template <typename Sample>

@@ -209,6 +209,9 @@ namespace openxr_api_layer
         // initialize auto activator
         m_AutoActivator = std::make_unique<utility::AutoActivator>(utility::AutoActivator(m_Input));
 
+        // initialize delta multiplier
+        m_DeltaMultiplier = std::make_unique<utility::DeltaMultiplier>();
+
         return result;
     }
 
@@ -710,12 +713,21 @@ namespace openxr_api_layer
             if (SetStageToLocalSpace(baseSpace, time))
             {
                 // manipulate pose using tracker
-                XrPosef trackerDelta{Pose::Identity()}, trackerDeltaInStage{Pose::Identity()};
-                if (!m_TestRotation ? m_Tracker->GetPoseDelta(trackerDeltaInStage, m_Session, time)
-                                    : TestRotation(&trackerDeltaInStage, time, false))
+                XrPosef trackerDelta{Pose::Identity()};
+                bool apply = true;
+                if (!m_TestRotation)
                 {
-                    trackerDelta = Pose::Multiply(Pose::Multiply(Pose::Invert(m_StageToLocal), trackerDeltaInStage),
-                                                  m_StageToLocal);
+                    apply = m_Tracker->GetPoseDelta(trackerDelta, m_Session, time);
+                    m_DeltaMultiplier->Apply(trackerDelta, location->pose);
+                    trackerDelta =
+                        Pose::Multiply(Pose::Multiply(Pose::Invert(m_StageToLocal), trackerDelta), m_StageToLocal);
+                }
+                else
+                {
+                    TestRotation(&trackerDelta, time, false);
+                }
+                if (apply)
+                {
                     m_RecoveryStart = 0;
                     if (compensateSpace)
                     {
@@ -1141,32 +1153,6 @@ namespace openxr_api_layer
 
         return result;
     }
-    bool OpenXrLayer::CreateStageSpace(const std::string& caller)
-    {
-        TraceLoggingWrite(g_traceProvider, "CreateStageSpace", TLPArg(caller.c_str(), "Called by"));
-        if (m_StageSpace == XR_NULL_HANDLE)
-        {
-            // Create internal stage reference space.
-            XrReferenceSpaceCreateInfo referenceSpaceCreateInfo{XR_TYPE_REFERENCE_SPACE_CREATE_INFO, nullptr};
-            referenceSpaceCreateInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_STAGE;
-            referenceSpaceCreateInfo.poseInReferenceSpace = Pose::Identity();
-            
-            if (const XrResult result =
-                    OpenXrApi::xrCreateReferenceSpace(m_Session, &referenceSpaceCreateInfo, &m_StageSpace);
-                XR_FAILED(result))
-            {
-                TraceLoggingWrite(g_traceProvider, "CreateStageSpace", TLPArg("failure", "xrCreateReferenceSpaceStage"));
-                ErrorLog("%s (%s): xrCreateReferenceSpace(stage) failed: %s",
-                         __FUNCTION__,
-                         caller.c_str(),
-                         xr::ToCString(result));
-                return false;
-            }
-            TraceLoggingWrite(g_traceProvider, "CreateStageSpace", TLPArg("success", "xrCreateReferenceSpaceStage"));
-            Log("internal stage space created (%s): %u", caller.c_str(), m_StageSpace);
-        }
-        return true;
-    }
 
     void OpenXrLayer::RequestCurrentInteractionProfile()
     {
@@ -1188,8 +1174,44 @@ namespace openxr_api_layer
                      xr::ToCString(interactionResult));
         }
     }
-    
+
+    void OpenXrLayer::SetForwardPose(const XrPosef& pose) const
+    {
+
+        m_DeltaMultiplier->SetFwdToStage(pose);
+    }
+
+
     // private
+    bool OpenXrLayer::CreateStageSpace(const std::string& caller)
+    {
+        TraceLoggingWrite(g_traceProvider, "CreateStageSpace", TLPArg(caller.c_str(), "Called by"));
+        if (m_StageSpace == XR_NULL_HANDLE)
+        {
+            // Create internal stage reference space.
+            XrReferenceSpaceCreateInfo referenceSpaceCreateInfo{XR_TYPE_REFERENCE_SPACE_CREATE_INFO, nullptr};
+            referenceSpaceCreateInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_STAGE;
+            referenceSpaceCreateInfo.poseInReferenceSpace = Pose::Identity();
+
+            if (const XrResult result =
+                    OpenXrApi::xrCreateReferenceSpace(m_Session, &referenceSpaceCreateInfo, &m_StageSpace);
+                XR_FAILED(result))
+            {
+                TraceLoggingWrite(g_traceProvider,
+                                  "CreateStageSpace",
+                                  TLPArg("failure", "xrCreateReferenceSpaceStage"));
+                ErrorLog("%s (%s): xrCreateReferenceSpace(stage) failed: %s",
+                         __FUNCTION__,
+                         caller.c_str(),
+                         xr::ToCString(result));
+                return false;
+            }
+            TraceLoggingWrite(g_traceProvider, "CreateStageSpace", TLPArg("success", "xrCreateReferenceSpaceStage"));
+            Log("internal stage space created (%s): %u", caller.c_str(), m_StageSpace);
+        }
+        return true;
+    }
+
     bool OpenXrLayer::SetStageToLocalSpace(const XrSpace space, const XrTime time)
     {
         TraceLoggingWrite(g_traceProvider, "SetStageToLocalSpace", TLPArg(space, "Space"), TLArg(time, "Time"));
@@ -1217,6 +1239,7 @@ namespace openxr_api_layer
         {
             Log("local space to stage space: %s", xr::ToString(location.pose).c_str());
             m_StageToLocal = location.pose;
+            m_DeltaMultiplier->SetStageToLocal(m_StageToLocal);
         }
 
         TraceLoggingWrite(g_traceProvider,
@@ -1563,7 +1586,7 @@ namespace openxr_api_layer
 
         // determine rotation angle
         const int64_t milliseconds = ((time - m_TestRotStart) / 1000000) % 10000;
-        float angle = static_cast<float>(M_PI) * 0.0002f * static_cast<float>(milliseconds);
+        float angle = utility::floatPi * 0.0002f * static_cast<float>(milliseconds);
         if (reverse)
         {
             angle = -angle;

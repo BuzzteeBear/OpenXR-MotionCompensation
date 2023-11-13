@@ -51,6 +51,98 @@ namespace utility
         }
     }
 
+    DeltaMultiplier::DeltaMultiplier()
+    {
+        const auto cfg = GetConfig();
+        bool apply{false};
+        cfg->GetBool(Cfg::FactorApply, apply);
+        cfg->GetFloat(Cfg::FactorHmdRoll, m_FactorRoll);
+        cfg->GetFloat(Cfg::FactorHmdPitch, m_FactorPitch);
+        cfg->GetFloat(Cfg::FactorHmdYaw, m_FactorYaw);
+        cfg->GetFloat(Cfg::FactorHmdSurge, m_FactorSurge);
+        cfg->GetFloat(Cfg::FactorHmdSway, m_FactorSway);
+        cfg->GetFloat(Cfg::FactorHmdHeave, m_FactorHeave);
+
+        SetApply(apply);
+    }
+
+    void DeltaMultiplier::SetApply(bool apply)
+    {
+        m_ApplyRotation = apply && (m_FactorRoll != 1.f || m_FactorPitch != 1.f || m_FactorYaw != 1.f);
+        m_ApplyTranslation = apply && (m_FactorSurge != 1.f || m_FactorSway != 1.f || m_FactorHeave != 1.f);
+    }
+
+    void DeltaMultiplier::SetStageToLocal(const XrPosef& pose)
+    {
+        m_StageToLocal = pose;
+        m_LocalToStage = Pose::Invert(pose);
+    }
+
+    void DeltaMultiplier::SetFwdToStage(const XrPosef& pose)
+    {
+        m_FwdToStage = pose;
+        m_StageToFwd = Pose::Invert(pose);
+    }
+    void DeltaMultiplier::Apply(XrPosef& delta, const XrPosef& pose) const
+    {
+        if (!m_ApplyTranslation && !m_ApplyRotation)
+        {
+            return;
+        }
+        using namespace Pose;
+
+        // transfer delta and original pose to forward space
+        XrPosef deltaFwd = Multiply(Multiply(m_FwdToStage, delta), m_StageToFwd);
+        const XrPosef poseStage = Multiply(pose, m_LocalToStage);
+        const XrPosef poseFwd = Multiply(poseStage, m_StageToFwd);
+
+        // calculate compensated pose
+        XrPosef compensatedFwd = Multiply(poseFwd, deltaFwd);
+        if (m_ApplyTranslation)
+        {
+            // apply translation scaling
+            const XrVector3f translation = compensatedFwd.position - poseFwd.position;
+            compensatedFwd.position =
+                poseFwd.position +
+                XrVector3f{translation.x * m_FactorSway, translation.y * m_FactorHeave, translation.z * m_FactorSurge};
+        }
+        if (m_ApplyRotation)
+        {
+            // apply rotation scaling
+            XrVector3f angles = ToEulerAngles(deltaFwd.orientation);
+            DirectX::XMVECTOR rotation = DirectX::XMQuaternionRotationRollPitchYaw(angles.x * m_FactorPitch,
+                                                                                   angles.y * m_FactorYaw,
+                                                                                   angles.z * m_FactorRoll);
+            StoreXrQuaternion(&compensatedFwd.orientation,
+                              DirectX::XMQuaternionMultiply(LoadXrQuaternion(poseFwd.orientation), rotation));
+        }
+        // calculate modified delta
+        deltaFwd = Multiply(Invert(poseFwd), compensatedFwd);
+        delta = Multiply(Multiply(m_StageToFwd, deltaFwd), m_FwdToStage);
+    }
+
+    XrVector3f DeltaMultiplier::ToEulerAngles(XrQuaternionf q)
+    {
+        XrVector3f angles;
+
+        // pitch (x-axis rotation)
+        float sinp = std::sqrt(1 + 2 * (q.w * q.x - q.z * q.y));
+        float cosp = std::sqrt(1 - 2 * (q.w * q.x - q.z * q.y));
+        angles.x = 2 * std::atan2f(sinp, cosp) - floatPi / 2;
+
+        // yaw (y-axis rotation)
+        float siny_cosp = 2 * (q.w * q.y + q.z * q.x);
+        float cosy_cosp = 1 - 2 * (q.x * q.x + q.y * q.y);
+        angles.y = std::atan2f(siny_cosp, cosy_cosp);
+
+        // roll (z-axis rotation)
+        float sinr_cosp = 2 * (q.w * q.z + q.x * q.y);
+        float cosr_cosp = 1 - 2 * (q.z * q.z + q.x * q.x);
+        angles.z = std::atan2f(sinr_cosp, cosr_cosp);
+
+        return angles;
+    }
+
     Mmf::Mmf()
     {
         float check;
@@ -152,47 +244,6 @@ namespace utility
         }
         m_FileHandle = nullptr;
     }
-
-    namespace
-    {
-        using namespace DirectX;
-
-        // Taken from
-        // https://github.com/microsoft/OpenXR-MixedReality/blob/main/samples/SceneUnderstandingUwp/Scene_Placement.cpp
-        bool XM_CALLCONV rayIntersectQuad(DirectX::FXMVECTOR rayPosition,
-                                          DirectX::FXMVECTOR rayDirection,
-                                          DirectX::FXMVECTOR v0,
-                                          DirectX::FXMVECTOR v1,
-                                          DirectX::FXMVECTOR v2,
-                                          DirectX::FXMVECTOR v3,
-                                          XrPosef* hitPose,
-                                          float& distance)
-        {
-            // Not optimal. Should be possible to determine which triangle to test.
-            bool hit = TriangleTests::Intersects(rayPosition, rayDirection, v0, v1, v2, distance);
-            if (!hit)
-            {
-                hit = TriangleTests::Intersects(rayPosition, rayDirection, v3, v2, v0, distance);
-            }
-            if (hit && hitPose != nullptr)
-            {
-                FXMVECTOR hitPosition = XMVectorAdd(rayPosition, XMVectorScale(rayDirection, distance));
-                FXMVECTOR plane = XMPlaneFromPoints(v0, v2, v1);
-
-                // p' = p - (n . p + d) * n
-                // Project the ray position onto the plane
-                float t = XMVectorGetX(XMVector3Dot(plane, rayPosition)) + XMVectorGetW(plane);
-                FXMVECTOR projPoint = XMVectorSubtract(rayPosition, XMVectorMultiply(XMVectorSet(t, t, t, 0), plane));
-
-                // From the projected ray position, look towards the hit position and make the plane's normal "up"
-                FXMVECTOR forward = XMVectorSubtract(hitPosition, projPoint);
-                XMMATRIX virtualToGazeOrientation = XMMatrixLookToRH(hitPosition, forward, plane);
-                xr::math::StoreXrPose(hitPose, XMMatrixInverse(nullptr, virtualToGazeOrientation));
-            }
-            return hit;
-        }
-
-    } // namespace
 
     std::string LastErrorMsg()
     {

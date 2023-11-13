@@ -100,6 +100,15 @@ Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "translation_filt
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "rotation_filter"; Key: "strength"; String: "0.50"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "rotation_filter"; Key: "order"; String: "2"; Flags: createkeyifdoesntexist
 
+; [compensation_factors]
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "compensation_factors"; Key: "apply"; String: "0"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "compensation_factors"; Key: "hmd_roll"; String: "1.0"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "compensation_factors"; Key: "hmd_pitch"; String: "1.0"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "compensation_factors"; Key: "hmd_yaw"; String: "1.0"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "compensation_factors"; Key: "hmd_surge"; String: "1.0"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "compensation_factors"; Key: "hmd_sway"; String: "1.0"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "compensation_factors"; Key: "hmd_heave"; String: "1.0"; Flags: createkeyifdoesntexist
+
 ; [cache]
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "cache"; Key: "use_eye_cache"; String: "0"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "cache"; Key: "tolerance"; String: "500.0"; Flags: createkeyifdoesntexist

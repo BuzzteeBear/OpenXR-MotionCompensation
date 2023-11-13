@@ -336,7 +336,7 @@ namespace Input
                 }
                 else
                 {
-                    const float amount = fast ? Tracker::angleToRadian * 10.0f : Tracker::angleToRadian;
+                    const float amount = fast ? utility::angleToRadian * 10.0f : utility::angleToRadian;
                     success = tracker->ChangeRotation(Direction::RotRight == dir ? -amount : amount);
                 }
             }
@@ -375,6 +375,7 @@ namespace Input
             GetConfig()->GetBool(Cfg::CacheUseEye, m_Layer->m_UseEyeCache);
             m_Layer->m_AutoActivator =
                 std::make_unique<utility::AutoActivator>(utility::AutoActivator(m_Layer->m_Input));
+            m_Layer->m_DeltaMultiplier = std::make_unique<utility::DeltaMultiplier>();
             Tracker::GetTracker(&m_Layer->m_Tracker);
             if (!m_Layer->m_Tracker->Init())
             {

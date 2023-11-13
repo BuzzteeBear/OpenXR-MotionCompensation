@@ -81,6 +81,7 @@ namespace openxr_api_layer
         XrResult xrEndFrame(XrSession session, const XrFrameEndInfo* frameEndInfo) override;
 
         void RequestCurrentInteractionProfile();
+        void SetForwardPose(const XrPosef& pose) const;
 
         XrActionSet m_ActionSet{XR_NULL_HANDLE};
         XrAction m_PoseAction{XR_NULL_HANDLE};
@@ -146,6 +147,7 @@ namespace openxr_api_layer
         std::unique_ptr<graphics::Overlay> m_Overlay{};
         std::shared_ptr<Input::InputHandler> m_Input{};
         std::unique_ptr<utility::AutoActivator> m_AutoActivator{};
+        std::unique_ptr<utility::DeltaMultiplier> m_DeltaMultiplier{};
 
         // connection recovery
         XrTime m_RecoveryWait{3000000000}; // 3 sec default timeout

@@ -11,6 +11,7 @@ using namespace openxr_api_layer;
 using namespace log;
 using namespace Feedback;
 using namespace xr::math;
+using namespace utility;
 
 namespace Tracker
 {
@@ -325,6 +326,8 @@ namespace Tracker
             // calculate orientation parallel to floor
             location.pose.orientation = GetYawRotation(m_Forward, yawOffset);
             m_ForwardPose = location.pose;
+            // update forward rotation
+            layer->SetForwardPose(XrPosef{m_ForwardPose.orientation, {0.f, 0.f, 0.f}});
         }
         return true;
     }
@@ -585,6 +588,20 @@ namespace Tracker
             m_Manipulator->ApplyManipulation(session, time);
         }
     }
+
+    void VirtualTracker::SetReferencePose(const ::XrPosef& pose)
+    {
+        TrackerBase::SetReferencePose(pose);
+        auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
+        if (!layer)
+        {
+            ErrorLog("%s: unable to cast layer to OpenXrLayer", __FUNCTION__);
+            return;
+        }
+        layer->SetForwardPose(XrPosef{pose.orientation, {0.f, 0.f, 0.f}});
+    }
+
+    
 
     bool VirtualTracker::GetPose(XrPosef& trackerPose, const XrSession session, const XrTime time)
     {

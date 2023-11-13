@@ -92,6 +92,7 @@ namespace Tracker
         void ApplyCorManipulation(XrSession session, XrTime time) override;
 
       protected:
+        void SetReferencePose(const XrPosef& pose) override;
         bool GetPose(XrPosef& trackerPose, XrSession session, XrTime time) override;
         virtual bool GetVirtualPose(XrPosef& trackerPose, XrSession session, XrTime time) = 0;
 
@@ -209,9 +210,6 @@ namespace Tracker
                                                        "camera",
                                                        "keyboard"};
     };
-
-    constexpr float floatPi{static_cast<float>(M_PI)};
-    constexpr float angleToRadian{floatPi / 180.0f};
 
     void GetTracker(TrackerBase** tracker);
 } // namespace Tracker
