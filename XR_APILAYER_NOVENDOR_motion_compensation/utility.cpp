@@ -56,20 +56,30 @@ namespace utility
         const auto cfg = GetConfig();
         bool apply{false};
         cfg->GetBool(Cfg::FactorApply, apply);
-        cfg->GetFloat(Cfg::FactorHmdRoll, m_FactorRoll);
-        cfg->GetFloat(Cfg::FactorHmdPitch, m_FactorPitch);
-        cfg->GetFloat(Cfg::FactorHmdYaw, m_FactorYaw);
-        cfg->GetFloat(Cfg::FactorHmdSurge, m_FactorSurge);
-        cfg->GetFloat(Cfg::FactorHmdSway, m_FactorSway);
-        cfg->GetFloat(Cfg::FactorHmdHeave, m_FactorHeave);
+
+        cfg->GetFloat(Cfg::FactorTrackerRoll, m_FactorTrackerRoll);
+        cfg->GetFloat(Cfg::FactorTrackerPitch, m_FactorTrackerPitch);
+        cfg->GetFloat(Cfg::FactorTrackerYaw, m_FactorTrackerYaw);
+        cfg->GetFloat(Cfg::FactorTrackerSurge, m_FactorTrackerSurge);
+        cfg->GetFloat(Cfg::FactorTrackerSway, m_FactorTrackerSway);
+        cfg->GetFloat(Cfg::FactorTrackerHeave, m_FactorTrackerHeave);
+
+        cfg->GetFloat(Cfg::FactorHmdRoll, m_FactorHmdRoll);
+        cfg->GetFloat(Cfg::FactorHmdPitch, m_FactorHmdPitch);
+        cfg->GetFloat(Cfg::FactorHmdYaw, m_FactorHmdYaw);
+        cfg->GetFloat(Cfg::FactorHmdSurge, m_FactorHmdSurge);
+        cfg->GetFloat(Cfg::FactorHmdSway, m_FactorHmdSway);
+        cfg->GetFloat(Cfg::FactorHmdHeave, m_FactorHmdHeave);
 
         SetApply(apply);
     }
 
-    void DeltaMultiplier::SetApply(bool apply)
+    void DeltaMultiplier::SetApply(const bool apply)
     {
-        m_ApplyRotation = apply && (m_FactorRoll != 1.f || m_FactorPitch != 1.f || m_FactorYaw != 1.f);
-        m_ApplyTranslation = apply && (m_FactorSurge != 1.f || m_FactorSway != 1.f || m_FactorHeave != 1.f);
+        m_ApplyTrackerRotation = apply && (m_FactorTrackerRoll != 1.f || m_FactorTrackerPitch != 1.f || m_FactorTrackerYaw != 1.f);
+        m_ApplyTrackerTranslation = apply && (m_FactorTrackerSurge != 1.f || m_FactorTrackerSway != 1.f || m_FactorTrackerHeave != 1.f);
+        m_ApplyHmdRotation = apply && (m_FactorHmdRoll != 1.f || m_FactorHmdPitch != 1.f || m_FactorHmdYaw != 1.f);
+        m_ApplyHmdTranslation = apply && (m_FactorHmdSurge != 1.f || m_FactorHmdSway != 1.f || m_FactorHmdHeave != 1.f);
     }
 
     void DeltaMultiplier::SetStageToLocal(const XrPosef& pose)
@@ -83,39 +93,80 @@ namespace utility
         m_FwdToStage = pose;
         m_StageToFwd = Pose::Invert(pose);
     }
-    void DeltaMultiplier::Apply(XrPosef& delta, const XrPosef& pose) const
+    void DeltaMultiplier::Apply(XrPosef& delta, const XrPosef& pose)
     {
-        if (!m_ApplyTranslation && !m_ApplyRotation)
+        m_DeltaFwd.reset();
+        m_Angles.reset();
+        ApplyOnTracker(delta);
+        ApplyOnHmd(delta, pose);
+    }
+
+    void DeltaMultiplier::ApplyOnTracker(const XrPosef& delta)
+    {
+        if (!m_ApplyTrackerTranslation && !m_ApplyTrackerRotation)
         {
             return;
         }
         using namespace Pose;
+        m_DeltaFwd = Multiply(Multiply(m_FwdToStage, delta), m_StageToFwd);
+
+        if (m_ApplyTrackerTranslation)
+        {
+            // apply translation scaling
+            m_DeltaFwd->position = XrVector3f{m_DeltaFwd->position.x * m_FactorTrackerSway,
+                                              m_DeltaFwd->position.y * m_FactorTrackerHeave,
+                                              m_DeltaFwd->position.z * m_FactorTrackerSurge};
+        }
+        if (m_ApplyTrackerRotation)
+        {
+            // apply rotation scaling
+            m_Angles = ToEulerAngles(m_DeltaFwd->orientation);
+            StoreXrQuaternion(&m_DeltaFwd->orientation,
+                              DirectX::XMQuaternionRotationRollPitchYaw(m_Angles->x * m_FactorTrackerPitch,
+                                                                        m_Angles->y * m_FactorTrackerYaw,
+                                                                        m_Angles->z * m_FactorTrackerRoll));
+        }
+    }
+
+    void DeltaMultiplier::ApplyOnHmd(XrPosef& delta, const XrPosef& pose) const
+    {
+        using namespace Pose;
+        if (!m_ApplyHmdTranslation && !m_ApplyHmdRotation)
+        {
+            if (m_DeltaFwd.has_value())
+            {
+                // calculate delta modified at tracker position
+                delta = Multiply(Multiply(m_StageToFwd, *m_DeltaFwd), m_FwdToStage);
+            }
+            return;
+        }
 
         // transfer delta and original pose to forward space
-        XrPosef deltaFwd = Multiply(Multiply(m_FwdToStage, delta), m_StageToFwd);
+        XrPosef deltaFwd = m_DeltaFwd.value_or(Multiply(Multiply(m_FwdToStage, delta), m_StageToFwd));
         const XrPosef poseStage = Multiply(pose, m_LocalToStage);
         const XrPosef poseFwd = Multiply(poseStage, m_StageToFwd);
 
         // calculate compensated pose
         XrPosef compensatedFwd = Multiply(poseFwd, deltaFwd);
-        if (m_ApplyTranslation)
+        if (m_ApplyHmdTranslation)
         {
             // apply translation scaling
             const XrVector3f translation = compensatedFwd.position - poseFwd.position;
-            compensatedFwd.position =
-                poseFwd.position +
-                XrVector3f{translation.x * m_FactorSway, translation.y * m_FactorHeave, translation.z * m_FactorSurge};
+            compensatedFwd.position = poseFwd.position + XrVector3f{translation.x * m_FactorHmdSway,
+                                                                    translation.y * m_FactorHmdHeave,
+                                                                    translation.z * m_FactorHmdSurge};
         }
-        if (m_ApplyRotation)
+        if (m_ApplyHmdRotation)
         {
             // apply rotation scaling
-            XrVector3f angles = ToEulerAngles(deltaFwd.orientation);
-            DirectX::XMVECTOR rotation = DirectX::XMQuaternionRotationRollPitchYaw(angles.x * m_FactorPitch,
-                                                                                   angles.y * m_FactorYaw,
-                                                                                   angles.z * m_FactorRoll);
+            XrVector3f angles = m_Angles.value_or(ToEulerAngles(deltaFwd.orientation));
+            DirectX::XMVECTOR rotation = DirectX::XMQuaternionRotationRollPitchYaw(angles.x * m_FactorHmdPitch,
+                                                                                   angles.y * m_FactorHmdYaw,
+                                                                                   angles.z * m_FactorHmdRoll);
             StoreXrQuaternion(&compensatedFwd.orientation,
                               DirectX::XMQuaternionMultiply(LoadXrQuaternion(poseFwd.orientation), rotation));
         }
+
         // calculate modified delta
         deltaFwd = Multiply(Invert(poseFwd), compensatedFwd);
         delta = Multiply(Multiply(m_StageToFwd, deltaFwd), m_FwdToStage);

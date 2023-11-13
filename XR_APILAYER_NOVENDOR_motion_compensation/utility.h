@@ -32,15 +32,22 @@ namespace utility
         void SetApply(bool apply);
         void SetStageToLocal(const XrPosef& pose);
         void SetFwdToStage(const XrPosef& pose);
-        void Apply(XrPosef& delta, const XrPosef& pose) const;
+        void Apply(XrPosef& delta, const XrPosef& pose);
 
       private:
+        void ApplyOnTracker(const XrPosef& delta);
+        void ApplyOnHmd(XrPosef& delta, const XrPosef& pose) const;
         inline static XrVector3f ToEulerAngles(XrQuaternionf q);
 
-        bool m_ApplyTranslation{false}, m_ApplyRotation{false};
-        float m_FactorPitch{1.f}, m_FactorRoll{1.f}, m_FactorYaw{1.f}, m_FactorSway{1.f}, m_FactorHeave{1.f}, m_FactorSurge{1.f};
+        bool m_ApplyTrackerTranslation{false}, m_ApplyTrackerRotation{false}, m_ApplyHmdTranslation{false},
+            m_ApplyHmdRotation{false};
+        float m_FactorTrackerPitch{1.f}, m_FactorTrackerRoll{1.f}, m_FactorTrackerYaw{1.f}, m_FactorTrackerSway{1.f},
+            m_FactorTrackerHeave{1.f}, m_FactorTrackerSurge{1.f}, m_FactorHmdPitch{1.f}, m_FactorHmdRoll{1.f},
+            m_FactorHmdYaw{1.f}, m_FactorHmdSway{1.f}, m_FactorHmdHeave{1.f}, m_FactorHmdSurge{1.f};
         XrPosef m_StageToLocal{xr::math::Pose::Identity()}, m_LocalToStage{xr::math::Pose::Identity()},
             m_FwdToStage{xr::math::Pose::Identity()}, m_StageToFwd{xr::math::Pose::Identity()};
+        std::optional<XrPosef> m_DeltaFwd;
+        std::optional<XrVector3f> m_Angles;
     };
 
     template <typename Sample>
