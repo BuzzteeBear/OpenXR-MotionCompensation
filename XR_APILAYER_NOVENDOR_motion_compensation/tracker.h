@@ -11,7 +11,7 @@ namespace Tracker
       public:
         virtual ~ControllerBase() = default;
         virtual bool Init();
-        bool GetPoseDelta(XrPosef& poseDelta, XrSession session, XrTime time);
+        virtual bool GetPoseDelta(XrPosef& poseDelta, XrSession session, XrTime time);
         virtual bool ResetReferencePose(XrSession session, XrTime time);
 
         bool m_XrSyncCalled{false};
@@ -29,6 +29,7 @@ namespace Tracker
         
       private:
         virtual void ApplyFilters(XrPosef& trackerPose){};
+        virtual void ApplyMultiplier(XrPosef& trackerPose){};
 
         bool m_PhysicalEnabled{false};
         bool m_ConnectionLost{false};
@@ -44,6 +45,7 @@ namespace Tracker
         void AdjustReferencePose(const XrPosef& pose);
         [[nodiscard]] XrPosef GetReferencePose() const;
         void SetReferencePose(const XrPosef& pose) override;
+        void SetStageToLocal(const XrPosef& pose) const;
         void LogCurrentTrackerPoses(XrSession session, XrTime time, bool activated);
         virtual void ApplyCorManipulation(XrSession session, XrTime time){};
 
@@ -51,8 +53,10 @@ namespace Tracker
         bool m_Calibrated{false};
        
       protected:
-        void ApplyFilters(XrPosef& trackerPose) override;
+        void ApplyFilters(XrPosef& pose) override;
+        void ApplyMultiplier(XrPosef& pose) override;
         bool CalibrateForward(XrSession session, XrTime time, float yawOffset);
+        void SetForwardPose(const XrPosef& pose) const;
 
         XrVector3f m_Forward{0.f, 0.f, 1.f};
         XrVector3f m_Right{-1.f, 0.f, 0.f};
@@ -66,6 +70,8 @@ namespace Tracker
         float m_RotStrength{0.0f};
         Filter::FilterBase<XrVector3f>* m_TransFilter = nullptr;
         Filter::FilterBase<XrQuaternionf>* m_RotFilter = nullptr;
+
+        std::shared_ptr<utility::TrackerMultiplier> m_TrackerMultiplier{};
     };
 
     class OpenXrTracker final : public TrackerBase

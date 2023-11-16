@@ -209,8 +209,8 @@ namespace openxr_api_layer
         // initialize auto activator
         m_AutoActivator = std::make_unique<utility::AutoActivator>(utility::AutoActivator(m_Input));
 
-        // initialize delta multiplier
-        m_DeltaMultiplier = std::make_unique<utility::DeltaMultiplier>();
+        // initialize hmd multiplier
+        m_HmdMultiplier = std::make_unique<utility::HmdMultiplier>();
 
         return result;
     }
@@ -718,7 +718,7 @@ namespace openxr_api_layer
                 if (!m_TestRotation)
                 {
                     apply = m_Tracker->GetPoseDelta(trackerDelta, m_Session, time);
-                    m_DeltaMultiplier->Apply(trackerDelta, location->pose);
+                    m_HmdMultiplier->Apply(trackerDelta, location->pose);
                     trackerDelta =
                         Pose::Multiply(Pose::Multiply(Pose::Invert(m_StageToLocal), trackerDelta), m_StageToLocal);
                 }
@@ -1178,9 +1178,8 @@ namespace openxr_api_layer
     void OpenXrLayer::SetForwardPose(const XrPosef& pose) const
     {
 
-        m_DeltaMultiplier->SetFwdToStage(pose);
+        m_HmdMultiplier->SetFwdToStage(pose);
     }
-
 
     // private
     bool OpenXrLayer::CreateStageSpace(const std::string& caller)
@@ -1239,7 +1238,8 @@ namespace openxr_api_layer
         {
             Log("local space to stage space: %s", xr::ToString(location.pose).c_str());
             m_StageToLocal = location.pose;
-            m_DeltaMultiplier->SetStageToLocal(m_StageToLocal);
+            m_HmdMultiplier->SetStageToLocal(m_StageToLocal);
+            m_Tracker->SetStageToLocal(m_StageToLocal);
         }
 
         TraceLoggingWrite(g_traceProvider,

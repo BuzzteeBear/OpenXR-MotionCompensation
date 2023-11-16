@@ -26,6 +26,7 @@ namespace Tracker
         if (XrPosef curPose{Pose::Identity()}; GetPose(curPose, session, time))
         {
             ApplyFilters(curPose);
+            ApplyMultiplier(curPose);
 
             // calculate difference toward reference pose
             poseDelta = Pose::Multiply(Pose::Invert(curPose), m_ReferencePose);
@@ -174,6 +175,7 @@ namespace Tracker
 
     bool TrackerBase::Init()
     {
+        m_TrackerMultiplier = std::make_unique<TrackerMultiplier>();
         ControllerBase::Init();
         return LoadFilters();
     }
@@ -284,6 +286,11 @@ namespace Tracker
         ControllerBase::SetReferencePose(pose); 
     }
 
+    void TrackerBase::SetStageToLocal(const XrPosef& pose) const
+    {
+        m_TrackerMultiplier->SetStageToLocal(pose);
+    }
+
     void TrackerBase::ApplyFilters(XrPosef& pose)
     {
         // apply translational filter
@@ -295,6 +302,11 @@ namespace Tracker
         TraceLoggingWrite(g_traceProvider,
                           "ApplyFilters",
                           TLArg(xr::ToString(pose).c_str(), "LocationAfterFilter"));
+    }
+
+    void TrackerBase::ApplyMultiplier(XrPosef& pose)
+    {
+        m_TrackerMultiplier->Apply(pose, m_ReferencePose);
     }
 
     bool TrackerBase::CalibrateForward(XrSession session, XrTime time, float yawOffset)
@@ -325,11 +337,23 @@ namespace Tracker
 
             // calculate orientation parallel to floor
             location.pose.orientation = GetYawRotation(m_Forward, yawOffset);
-            m_ForwardPose = location.pose;
-            // update forward rotation
-            layer->SetForwardPose(XrPosef{m_ForwardPose.orientation, {0.f, 0.f, 0.f}});
+
+            SetForwardPose(location.pose);   
         }
         return true;
+    }
+
+    void TrackerBase::SetForwardPose(const XrPosef& pose) const
+    {
+        // update forward rotation
+        const XrPosef fwdRotation = {pose.orientation, {0.f, 0.f, 0.f}};
+        m_TrackerMultiplier->SetFwdToStage(fwdRotation);
+        const auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
+        if ( !layer)
+        {
+            ErrorLog("%s: cast of layer failed", __FUNCTION__);
+        }
+        layer->SetForwardPose(fwdRotation);
     }
 
     bool OpenXrTracker::ResetReferencePose(XrSession session, XrTime time)
@@ -592,13 +616,7 @@ namespace Tracker
     void VirtualTracker::SetReferencePose(const ::XrPosef& pose)
     {
         TrackerBase::SetReferencePose(pose);
-        auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
-        if (!layer)
-        {
-            ErrorLog("%s: unable to cast layer to OpenXrLayer", __FUNCTION__);
-            return;
-        }
-        layer->SetForwardPose(XrPosef{pose.orientation, {0.f, 0.f, 0.f}});
+        SetForwardPose(XrPosef(pose));
     }
 
     

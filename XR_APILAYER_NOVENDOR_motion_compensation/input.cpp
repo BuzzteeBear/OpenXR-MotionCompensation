@@ -375,7 +375,7 @@ namespace Input
             GetConfig()->GetBool(Cfg::CacheUseEye, m_Layer->m_UseEyeCache);
             m_Layer->m_AutoActivator =
                 std::make_unique<utility::AutoActivator>(utility::AutoActivator(m_Layer->m_Input));
-            m_Layer->m_DeltaMultiplier = std::make_unique<utility::DeltaMultiplier>();
+            m_Layer->m_HmdMultiplier = std::make_unique<utility::HmdMultiplier>();
             Tracker::GetTracker(&m_Layer->m_Tracker);
             if (!m_Layer->m_Tracker->Init())
             {

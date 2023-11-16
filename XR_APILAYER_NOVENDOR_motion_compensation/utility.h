@@ -21,33 +21,40 @@ namespace utility
         int m_SecondsLeft{0};
         XrTime m_ActivationTime{0};
       public:
-        explicit AutoActivator(std::shared_ptr<Input::InputHandler> input);
+        explicit AutoActivator(const std::shared_ptr<Input::InputHandler>& input);
         void ActivateIfNecessary(XrTime time);
     };
 
-    class DeltaMultiplier
+    class MultiplierBase
     {
       public:
-        DeltaMultiplier();
-        void SetApply(bool apply);
+        ~MultiplierBase() = default;
+        void SetActive(bool apply);
         void SetStageToLocal(const XrPosef& pose);
         void SetFwdToStage(const XrPosef& pose);
-        void Apply(XrPosef& delta, const XrPosef& pose);
+        virtual void Apply(XrPosef& target, const XrPosef& reference) const = 0; 
 
-      private:
-        void ApplyOnTracker(const XrPosef& delta);
-        void ApplyOnHmd(XrPosef& delta, const XrPosef& pose) const;
+      protected:
         inline static XrVector3f ToEulerAngles(XrQuaternionf q);
 
-        bool m_ApplyTrackerTranslation{false}, m_ApplyTrackerRotation{false}, m_ApplyHmdTranslation{false},
-            m_ApplyHmdRotation{false};
-        float m_FactorTrackerPitch{1.f}, m_FactorTrackerRoll{1.f}, m_FactorTrackerYaw{1.f}, m_FactorTrackerSway{1.f},
-            m_FactorTrackerHeave{1.f}, m_FactorTrackerSurge{1.f}, m_FactorHmdPitch{1.f}, m_FactorHmdRoll{1.f},
-            m_FactorHmdYaw{1.f}, m_FactorHmdSway{1.f}, m_FactorHmdHeave{1.f}, m_FactorHmdSurge{1.f};
+        bool m_ApplyTranslation{false}, m_ApplyRotation{false};
+        float m_Pitch{1.f}, m_Roll{1.f}, m_Yaw{1.f}, m_Sway{1.f}, m_Heave{1.f}, m_Surge{1.f};
         XrPosef m_StageToLocal{xr::math::Pose::Identity()}, m_LocalToStage{xr::math::Pose::Identity()},
             m_FwdToStage{xr::math::Pose::Identity()}, m_StageToFwd{xr::math::Pose::Identity()};
-        std::optional<XrPosef> m_DeltaFwd;
-        std::optional<XrVector3f> m_Angles;
+    };
+
+    class TrackerMultiplier final : public MultiplierBase
+    {
+      public:
+        TrackerMultiplier();
+        void Apply(XrPosef& target, const XrPosef& reference) const override;
+    };
+
+    class HmdMultiplier final : public MultiplierBase
+    {
+      public:
+        HmdMultiplier();
+        void Apply(XrPosef& target, const XrPosef& reference) const override;
     };
 
     template <typename Sample>
