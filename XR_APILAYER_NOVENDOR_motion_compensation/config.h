@@ -68,6 +68,7 @@ enum class Cfg
     KeyFastModifier,
     KeyOverlay,
     KeyCache,
+    KeyModifier,
     KeySaveConfig,
     KeySaveConfigApp,
     KeyReloadConfig,
@@ -184,6 +185,8 @@ class ConfigManager
 
         {Cfg::KeyCache, {"shortcuts", "toggle_cache"}},
 
+        {Cfg::KeyModifier, {"shortcuts", "toggle_pose_modifier"}},
+
         {Cfg::KeySaveConfig, {"shortcuts", "save_config"}},
         {Cfg::KeySaveConfigApp, {"shortcuts", "save_config_app"}},
         {Cfg::KeyReloadConfig, {"shortcuts", "reload_config"}},
@@ -205,7 +208,8 @@ class ConfigManager
                                Cfg::CorA,
                                Cfg::CorB,
                                Cfg::CorC,
-                               Cfg::CorD};
+                               Cfg::CorD,
+                               Cfg::FactorApply};
 
     std::set<Cfg> m_CorValues{Cfg::CorX, Cfg::CorY, Cfg::CorZ, Cfg::CorA, Cfg::CorB, Cfg::CorC, Cfg::CorD};
 

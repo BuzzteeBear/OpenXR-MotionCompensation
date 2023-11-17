@@ -30,7 +30,9 @@ namespace Feedback
         EyeCached,
         EyeCalculated,
         OverlayOn,
-        OverlayOff
+        OverlayOff,
+        ModifierOn,
+        ModifierOff
     };
 
     class AudioOut

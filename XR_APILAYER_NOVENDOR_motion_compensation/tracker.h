@@ -29,7 +29,7 @@ namespace Tracker
         
       private:
         virtual void ApplyFilters(XrPosef& trackerPose){};
-        virtual void ApplyMultiplier(XrPosef& trackerPose){};
+        virtual void ApplyModifier(XrPosef& trackerPose){};
 
         bool m_PhysicalEnabled{false};
         bool m_ConnectionLost{false};
@@ -46,6 +46,7 @@ namespace Tracker
         [[nodiscard]] XrPosef GetReferencePose() const;
         void SetReferencePose(const XrPosef& pose) override;
         void SetStageToLocal(const XrPosef& pose) const;
+        void SetModifierActive(const bool active) const;
         void LogCurrentTrackerPoses(XrSession session, XrTime time, bool activated);
         virtual void ApplyCorManipulation(XrSession session, XrTime time){};
 
@@ -54,7 +55,7 @@ namespace Tracker
        
       protected:
         void ApplyFilters(XrPosef& pose) override;
-        void ApplyMultiplier(XrPosef& pose) override;
+        void ApplyModifier(XrPosef& pose) override;
         bool CalibrateForward(XrSession session, XrTime time, float yawOffset);
         void SetForwardPose(const XrPosef& pose) const;
 
@@ -71,7 +72,7 @@ namespace Tracker
         Filter::FilterBase<XrVector3f>* m_TransFilter = nullptr;
         Filter::FilterBase<XrQuaternionf>* m_RotFilter = nullptr;
 
-        std::shared_ptr<utility::TrackerMultiplier> m_TrackerMultiplier{};
+        std::shared_ptr<utility::TrackerModifier> m_TrackerModifier{};
     };
 
     class OpenXrTracker final : public TrackerBase

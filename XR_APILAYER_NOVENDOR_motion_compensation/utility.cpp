@@ -53,25 +53,25 @@ namespace utility
         }
     }
 
-    void MultiplierBase::SetActive(const bool apply)
+    void ModifierBase::SetActive(const bool apply)
     {
         m_ApplyRotation = apply && (m_Roll != 1.f || m_Pitch != 1.f || m_Yaw != 1.f);
         m_ApplyTranslation = apply && (m_Surge != 1.f || m_Sway != 1.f || m_Heave != 1.f);
     }
 
-    void MultiplierBase::SetStageToLocal(const XrPosef& pose)
+    void ModifierBase::SetStageToLocal(const XrPosef& pose)
     {
         m_StageToLocal = pose;
         m_LocalToStage = Invert(pose);
     }
 
-    void MultiplierBase::SetFwdToStage(const XrPosef& pose)
+    void ModifierBase::SetFwdToStage(const XrPosef& pose)
     {
         m_FwdToStage = pose;
         m_StageToFwd = Invert(pose);
     }
 
-    XrVector3f MultiplierBase::ToEulerAngles(XrQuaternionf q)
+    XrVector3f ModifierBase::ToEulerAngles(XrQuaternionf q)
     {
         XrVector3f angles;
 
@@ -93,7 +93,7 @@ namespace utility
         return angles;
     }
 
-    TrackerMultiplier::TrackerMultiplier()
+    TrackerModifier::TrackerModifier()
     {
         GetConfig()->GetFloat(Cfg::FactorTrackerRoll, m_Roll);
         GetConfig()->GetFloat(Cfg::FactorTrackerPitch, m_Pitch);
@@ -107,7 +107,7 @@ namespace utility
         SetActive(apply);
     }
 
-    void TrackerMultiplier::Apply(XrPosef& target, const XrPosef& reference) const
+    void TrackerModifier::Apply(XrPosef& target, const XrPosef& reference) const
     {
         if (!m_ApplyTranslation && !m_ApplyRotation)
         {
@@ -138,7 +138,7 @@ namespace utility
         target = Multiply(curFwd, m_FwdToStage);
     }
 
-    HmdMultiplier::HmdMultiplier()
+    HmdModifier::HmdModifier()
     {
         GetConfig()->GetFloat(Cfg::FactorHmdRoll, m_Roll);
         GetConfig()->GetFloat(Cfg::FactorHmdPitch, m_Pitch);
@@ -152,7 +152,7 @@ namespace utility
         SetActive(apply);
     }
 
-    void HmdMultiplier::Apply(XrPosef& target, const XrPosef& reference) const
+    void HmdModifier::Apply(XrPosef& target, const XrPosef& reference) const
     {
         if (!m_ApplyTranslation && !m_ApplyRotation)
         {

@@ -61,6 +61,7 @@ namespace Input
         void Recalibrate(XrTime time) const;
         void ToggleOverlay() const;
         void ToggleCache() const;
+        void ToggleModifier() const;
         void ChangeOffset(::Input::InputHandler::Direction dir, bool fast) const;
         void ReloadConfig() const;
         void SaveConfig(XrTime time, bool forApp) const;

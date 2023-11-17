@@ -209,8 +209,9 @@ namespace openxr_api_layer
         // initialize auto activator
         m_AutoActivator = std::make_unique<utility::AutoActivator>(utility::AutoActivator(m_Input));
 
-        // initialize hmd multiplier
-        m_HmdMultiplier = std::make_unique<utility::HmdMultiplier>();
+        // initialize hmd modifier
+        m_HmdModifier = std::make_unique<utility::HmdModifier>();
+        GetConfig()->GetBool(Cfg::FactorApply, m_ModifierActive);
 
         return result;
     }
@@ -718,7 +719,7 @@ namespace openxr_api_layer
                 if (!m_TestRotation)
                 {
                     apply = m_Tracker->GetPoseDelta(trackerDelta, m_Session, time);
-                    m_HmdMultiplier->Apply(trackerDelta, location->pose);
+                    m_HmdModifier->Apply(trackerDelta, location->pose);
                     trackerDelta =
                         Pose::Multiply(Pose::Multiply(Pose::Invert(m_StageToLocal), trackerDelta), m_StageToLocal);
                 }
@@ -1178,7 +1179,15 @@ namespace openxr_api_layer
     void OpenXrLayer::SetForwardPose(const XrPosef& pose) const
     {
 
-        m_HmdMultiplier->SetFwdToStage(pose);
+        m_HmdModifier->SetFwdToStage(pose);
+    }
+
+    bool OpenXrLayer::ToggleModifierActive()
+    {
+        m_ModifierActive = !m_ModifierActive;
+        m_Tracker->SetModifierActive(m_ModifierActive);
+        m_HmdModifier->SetActive(m_ModifierActive);
+        return m_ModifierActive;
     }
 
     // private
@@ -1238,7 +1247,7 @@ namespace openxr_api_layer
         {
             Log("local space to stage space: %s", xr::ToString(location.pose).c_str());
             m_StageToLocal = location.pose;
-            m_HmdMultiplier->SetStageToLocal(m_StageToLocal);
+            m_HmdModifier->SetStageToLocal(m_StageToLocal);
             m_Tracker->SetStageToLocal(m_StageToLocal);
         }
 

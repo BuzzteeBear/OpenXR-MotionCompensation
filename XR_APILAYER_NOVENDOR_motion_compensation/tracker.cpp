@@ -26,7 +26,7 @@ namespace Tracker
         if (XrPosef curPose{Pose::Identity()}; GetPose(curPose, session, time))
         {
             ApplyFilters(curPose);
-            ApplyMultiplier(curPose);
+            ApplyModifier(curPose);
 
             // calculate difference toward reference pose
             poseDelta = Pose::Multiply(Pose::Invert(curPose), m_ReferencePose);
@@ -175,7 +175,7 @@ namespace Tracker
 
     bool TrackerBase::Init()
     {
-        m_TrackerMultiplier = std::make_unique<TrackerMultiplier>();
+        m_TrackerModifier = std::make_unique<TrackerModifier>();
         ControllerBase::Init();
         return LoadFilters();
     }
@@ -288,7 +288,12 @@ namespace Tracker
 
     void TrackerBase::SetStageToLocal(const XrPosef& pose) const
     {
-        m_TrackerMultiplier->SetStageToLocal(pose);
+        m_TrackerModifier->SetStageToLocal(pose);
+    }
+
+    void TrackerBase::SetModifierActive(const bool active) const
+    {
+        m_TrackerModifier->SetActive(active);
     }
 
     void TrackerBase::ApplyFilters(XrPosef& pose)
@@ -304,9 +309,9 @@ namespace Tracker
                           TLArg(xr::ToString(pose).c_str(), "LocationAfterFilter"));
     }
 
-    void TrackerBase::ApplyMultiplier(XrPosef& pose)
+    void TrackerBase::ApplyModifier(XrPosef& pose)
     {
-        m_TrackerMultiplier->Apply(pose, m_ReferencePose);
+        m_TrackerModifier->Apply(pose, m_ReferencePose);
     }
 
     bool TrackerBase::CalibrateForward(XrSession session, XrTime time, float yawOffset)
@@ -347,7 +352,7 @@ namespace Tracker
     {
         // update forward rotation
         const XrPosef fwdRotation = {pose.orientation, {0.f, 0.f, 0.f}};
-        m_TrackerMultiplier->SetFwdToStage(fwdRotation);
+        m_TrackerModifier->SetFwdToStage(fwdRotation);
         const auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
         if ( !layer)
         {

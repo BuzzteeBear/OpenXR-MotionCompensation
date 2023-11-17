@@ -39,6 +39,8 @@ namespace Feedback
         m_SoundResources[Event::EyeCalculated] = EYE_CALCULATION_WAV;
         m_SoundResources[Event::OverlayOn] = OVERLAY_ON_WAV;
         m_SoundResources[Event::OverlayOff] = OVERLAY_OFF_WAV;
+        m_SoundResources[Event::ModifierOn] = MODIFIER_ON_WAV;
+        m_SoundResources[Event::ModifierOff] = MODIFIER_OFF_WAV;
 
         return true;
     }

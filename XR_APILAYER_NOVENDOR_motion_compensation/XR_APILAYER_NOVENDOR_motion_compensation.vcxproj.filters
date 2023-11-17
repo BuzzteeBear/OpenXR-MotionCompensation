@@ -238,5 +238,11 @@
     <Media Include="sounds\point.wav">
       <Filter>Sounds</Filter>
     </Media>
+    <Media Include="sounds\modifier_on.wav">
+      <Filter>Sounds</Filter>
+    </Media>
+    <Media Include="sounds\modifier_off.wav">
+      <Filter>Sounds</Filter>
+    </Media>
   </ItemGroup>
 </Project>

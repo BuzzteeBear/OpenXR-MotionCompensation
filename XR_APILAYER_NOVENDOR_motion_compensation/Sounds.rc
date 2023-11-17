@@ -124,6 +124,10 @@ COUNT10_WAV             WAVE                    "sounds\\10.wav"
 
 POINT_WAV               WAVE                    "sounds\\point.wav"
 
+MODIFIER_ON_WAV         WAVE                    "sounds\\modifier_on.wav"
+
+MODIFIER_OFF_WAV        WAVE                    "sounds\\modifier_off.wav"
+
 #endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////
 

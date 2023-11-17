@@ -25,10 +25,10 @@ namespace utility
         void ActivateIfNecessary(XrTime time);
     };
 
-    class MultiplierBase
+    class ModifierBase
     {
       public:
-        ~MultiplierBase() = default;
+        virtual ~ModifierBase() = default;
         void SetActive(bool apply);
         void SetStageToLocal(const XrPosef& pose);
         void SetFwdToStage(const XrPosef& pose);
@@ -43,17 +43,17 @@ namespace utility
             m_FwdToStage{xr::math::Pose::Identity()}, m_StageToFwd{xr::math::Pose::Identity()};
     };
 
-    class TrackerMultiplier final : public MultiplierBase
+    class TrackerModifier final : public ModifierBase
     {
       public:
-        TrackerMultiplier();
+        TrackerModifier();
         void Apply(XrPosef& target, const XrPosef& reference) const override;
     };
 
-    class HmdMultiplier final : public MultiplierBase
+    class HmdModifier final : public ModifierBase
     {
       public:
-        HmdMultiplier();
+        HmdModifier();
         void Apply(XrPosef& target, const XrPosef& reference) const override;
     };
 

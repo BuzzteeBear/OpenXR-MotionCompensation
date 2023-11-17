@@ -82,6 +82,7 @@ namespace openxr_api_layer
 
         void RequestCurrentInteractionProfile();
         void SetForwardPose(const XrPosef& pose) const;
+        bool ToggleModifierActive();
 
         XrActionSet m_ActionSet{XR_NULL_HANDLE};
         XrAction m_PoseAction{XR_NULL_HANDLE};
@@ -126,6 +127,7 @@ namespace openxr_api_layer
         bool m_Initialized{true};
         bool m_Activated{false};
         bool m_UseEyeCache{false};
+        bool m_ModifierActive{false};
         bool m_VarjoPollWorkaround{false};
         XrPosef m_StageToLocal{xr::math::Pose::Identity()};
         std::string m_Application;
@@ -147,7 +149,7 @@ namespace openxr_api_layer
         std::unique_ptr<graphics::Overlay> m_Overlay{};
         std::shared_ptr<Input::InputHandler> m_Input{};
         std::unique_ptr<utility::AutoActivator> m_AutoActivator{};
-        std::unique_ptr<utility::HmdMultiplier> m_HmdMultiplier{};
+        std::unique_ptr<utility::HmdModifier> m_HmdModifier{};
 
         // connection recovery
         XrTime m_RecoveryWait{3000000000}; // 3 sec default timeout

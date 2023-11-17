@@ -34,6 +34,7 @@ namespace Input
                                        Cfg::KeyRotLeft,
                                        Cfg::KeyOverlay,
                                        Cfg::KeyCache,
+                                       Cfg::KeyModifier,
                                        Cfg::KeyFastModifier,
                                        Cfg::KeySaveConfig,
                                        Cfg::KeySaveConfigApp,
@@ -142,6 +143,10 @@ namespace Input
         if (m_Input.GetKeyState(Cfg::KeyCache, isRepeat) && !isRepeat)
         {
             ToggleCache();
+        }
+        if (m_Input.GetKeyState(Cfg::KeyModifier, isRepeat) && !isRepeat)
+        {
+            ToggleModifier();
         }
         if (m_Input.GetKeyState(Cfg::KeySaveConfig, isRepeat) && !isRepeat)
         {
@@ -312,6 +317,13 @@ namespace Input
         GetAudioOut()->Execute(m_Layer->m_UseEyeCache ? Event::EyeCached : Event::EyeCalculated);
     }
 
+    void InputHandler::ToggleModifier() const
+    {
+        const bool active = m_Layer->ToggleModifierActive();
+        GetConfig()->SetValue(Cfg::FactorApply, active);
+        GetAudioOut()->Execute(active ? Event::ModifierOn : Event::ModifierOff);
+    }
+
     void InputHandler::ChangeOffset(const Direction dir, const bool fast) const
     {
         bool success;
@@ -375,7 +387,7 @@ namespace Input
             GetConfig()->GetBool(Cfg::CacheUseEye, m_Layer->m_UseEyeCache);
             m_Layer->m_AutoActivator =
                 std::make_unique<utility::AutoActivator>(utility::AutoActivator(m_Layer->m_Input));
-            m_Layer->m_HmdMultiplier = std::make_unique<utility::HmdMultiplier>();
+            m_Layer->m_HmdModifier = std::make_unique<utility::HmdModifier>();
             Tracker::GetTracker(&m_Layer->m_Tracker);
             if (!m_Layer->m_Tracker->Init())
             {
