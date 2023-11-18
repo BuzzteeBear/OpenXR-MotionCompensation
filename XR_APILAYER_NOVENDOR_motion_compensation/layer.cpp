@@ -710,6 +710,8 @@ namespace openxr_api_layer
                               TLArg(xr::ToString(location->pose).c_str(), "PoseBefore"),
                               TLArg(location->locationFlags, "LocationFlags"));
 
+            std::unique_lock lock(m_FrameLock);
+
             // determine stage to local transformation
             if (SetStageToLocalSpace(baseSpace, time))
             {
