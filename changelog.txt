@@ -11,14 +11,17 @@ Version 0.2.8
 	- internal refactoring
 	- prepared for (potential) future use of in-game menu
 	
+	Keyboard input
+	- added modifier key(s) for faster in-game filter and cor position modification
+	- added toggle to enable debug level logging
+	- added	`NONE` key to deactivate shortcut
+	
 	MmfReader
 	- added ability to write values to csv file
 	
 	Miscellaneous
-	- added modifier key(s) for faster in-game filter and cor position modification
 	- simplified/improved handling of in-game recenter events
 	- added support for X-Plane 12
-	- added toggle to enable debug level logging
 	- increased default tolerance for eye/pose reconstruction cache to 500ms (only on installation without previous config file present)
 	
 	Known issues

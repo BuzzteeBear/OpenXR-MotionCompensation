@@ -300,6 +300,7 @@ List of supported shortcut key names:
 
 Name | Key 
 :---|:---
+`NONE` | don't assign any keys (cannot be combined with other keys)
 `SHIFT` | shift key
 `CTRL` | control key
 `ALT` | alt key

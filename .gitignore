@@ -1,6 +1,7 @@
 .vs/
 packages/
 bin/
+enc_temp_folder/
 **/x64/
 **/obj/
 **/__pycache__/

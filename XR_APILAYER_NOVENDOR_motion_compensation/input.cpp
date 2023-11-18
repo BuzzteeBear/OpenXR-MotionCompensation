@@ -40,7 +40,7 @@ namespace Input
                                        Cfg::KeySaveConfigApp,
                                        Cfg::KeyReloadConfig};
         const std::set<int> modifiers{VK_CONTROL, VK_SHIFT, VK_MENU};
-        std::set<int> fastModifiers;
+        std::set<int> fastModifiers{};
         GetConfig()->GetShortcut(Cfg::KeyFastModifier, fastModifiers);
         std::string errors;
 
@@ -50,7 +50,7 @@ namespace Input
 
         for (const Cfg& activity : activities)
         {
-            std::set<int> shortcut;
+            std::set<int> shortcut{};
             if (GetConfig()->GetShortcut(activity, shortcut))
             {
                 // modifiers not included in the shortcut are put in the exclusion list
@@ -186,6 +186,10 @@ namespace Input
                                        bool& isRepeat,
                                        bool isModifier)
     {
+        if (vkKeySet.empty())
+        {
+            return false;
+        }
         const auto isPressed =
             vkKeySet.size() > 0 &&
             std::ranges::all_of(vkKeySet, [](const int vk) { return GetAsyncKeyState(vk) < 0; }) &&

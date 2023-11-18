@@ -197,6 +197,11 @@ bool ConfigManager::GetShortcut(const Cfg key, std::set<int>& val)
     std::string strVal, errors;
     if (GetString(key, strVal))
     {
+        if ("NONE" == strVal)
+        {
+            Log("keyboard shortcut is set to 'NONE': %s ", m_Keys[key].second.c_str());
+            return true;
+        }
         size_t separator;
         std::string remaining = strVal;
         do
