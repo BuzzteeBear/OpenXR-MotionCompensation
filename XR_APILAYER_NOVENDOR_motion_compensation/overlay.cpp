@@ -290,68 +290,74 @@ namespace openxr_api_layer::graphics
         m_BaseLayerVector.clear();
     }
 
-    std::vector<SimpleMeshVertex> Overlay::CreateMarker(bool rgb)
+    std::vector<SimpleMeshVertex> Overlay::CreateMarker(bool reference)
     {
+        float tip{1.f}, point4{0.4f}, point1{0.1f}, bottom{0.f};
+        if (reference)
+        {
+            // slightly decrease size of reference marker to avoid z-fighting
+            tip = 0.995f;
+            point4 = 0.3995f;
+            point1 = 0.099f;
+            bottom = 0.005f;
+        }
         bool upsideDown;
         GetConfig()->GetBool(Cfg::UpsideDown, upsideDown);
         // right
-        std::vector<SimpleMeshVertex> vertices = CreateConeMesh({upsideDown ? 1.f : -1.f, 0.f, 0.f},
-                                                                {upsideDown ? 0.375f : -0.375f, 0.125f, 0.f},
-                                                                {0.f, 0.f, 0.f},
-                                                                rgb ? DarkRed : DarkMagenta,
-                                                                rgb ? Red : Magenta,
-                                                                rgb ? LightRed : LightMagenta);
+        std::vector<SimpleMeshVertex> vertices = CreateConeMesh({upsideDown ? tip : -tip, 0.f, 0.f},
+                                                                {upsideDown ? point4 : -point4, point1, 0.f},
+                                                                {upsideDown ? bottom : -bottom, 0.f, 0.f},
+                                                                reference ? DarkRed : DarkMagenta,
+                                                                reference ? Red : Magenta,
+                                                                reference ? LightRed : LightMagenta);
         // up
-        std::vector<SimpleMeshVertex> top = CreateConeMesh({0.f, upsideDown ? -1.f : 1.f, 0.f},
-                                                           {0.f, upsideDown ? -0.375f : 0.375f, 0.125f},
-                                                           {0.f, 0.f, 0.f},
-                                                           rgb ? DarkBlue : DarkCyan,
-                                                           rgb ? Blue : Cyan,
-                                                           rgb ? LightBlue : LightCyan);
+        std::vector<SimpleMeshVertex> top = CreateConeMesh({0.f, upsideDown ? -tip : tip, 0.f},
+                                                           {0.f, upsideDown ? -point4 : point4, point1},
+                                                           {0.f, upsideDown ? -bottom : bottom, 0.f},
+                                                           reference ? DarkBlue : DarkCyan,
+                                                           reference ? Blue : Cyan,
+                                                           reference ? LightBlue : LightCyan);
         // forward
         vertices.insert(vertices.end(), top.begin(), top.end());
-        std::vector<SimpleMeshVertex> front = CreateConeMesh({0.f, 0.f, 1.f},
-                                                             {0.125f, 0.f, 0.375f},
-                                                             {0.f, 0.f, 0.f},
-                                                             rgb ? DarkGreen : DarkYellow,
-                                                             rgb ? Green : Yellow,
-                                                             rgb ? LightGreen : LightYellow);
+        std::vector<SimpleMeshVertex> front = CreateConeMesh({0.f, 0.f, tip},
+                                                             {point1, 0.f, point4},
+                                                             {0.f, 0.f, bottom},
+                                                             reference ? DarkGreen : DarkYellow,
+                                                             reference ? Green : Yellow,
+                                                             reference ? LightGreen : LightYellow);
         vertices.insert(vertices.end(), front.begin(), front.end());
         return vertices;
     }
 
     std::vector<SimpleMeshVertex> Overlay::CreateConeMesh(const XrVector3f& top,
                                                           const XrVector3f& side,
-                                                          const XrVector3f& offset,
+                                                          const XrVector3f& bottom,
                                                           const XrVector3f& topColor,
                                                           const XrVector3f& sideColor,
                                                           const XrVector3f& bottomColor)
     {
         std::vector<SimpleMeshVertex> vertices;
         const DirectX::XMVECTOR dxTop = xr::math::LoadXrVector3(top);
-        const DirectX::XMVECTOR dxOffset = xr::math::LoadXrVector3(offset);
-        XrVector3f xrTop;
-        ;
-        xr::math::StoreXrVector3(&xrTop, DirectX::XMVectorAdd(dxTop, dxOffset));
+        
+
         constexpr float angleIncrement = DirectX::XM_2PI / 32.f;
-        xr::math::StoreXrVector3(&xrTop, DirectX::XMVectorAdd(dxTop, dxOffset));
         const DirectX::XMVECTOR rotation = DirectX::XMQuaternionRotationAxis(dxTop, angleIncrement);
         DirectX::XMVECTOR side1 = xr::math::LoadXrVector3(side);
         XrVector3f xrSide0, xrSide1;
-        for (int i = 0; i < 32; i++)
+        for (int i = 0; i < 128; i++)
         {
             const DirectX::XMVECTOR side0 = side1;
             side1 = DirectX::XMVector3Rotate(side0, rotation);
-            xr::math::StoreXrVector3(&xrSide0, DirectX::XMVectorAdd(side0, dxOffset));
-            xr::math::StoreXrVector3(&xrSide1, DirectX::XMVectorAdd(side1, dxOffset));
+            xr::math::StoreXrVector3(&xrSide0, side0);
+            xr::math::StoreXrVector3(&xrSide1, side1);
 
             // bottom
-            vertices.push_back({offset, bottomColor});
+            vertices.push_back({bottom, bottomColor});
             vertices.push_back({xrSide0, sideColor});
             vertices.push_back({xrSide1, sideColor});
 
             // top
-            vertices.push_back({xrTop, topColor});
+            vertices.push_back({top, topColor});
             vertices.push_back({xrSide1, sideColor});
             vertices.push_back({xrSide0, sideColor});
         }

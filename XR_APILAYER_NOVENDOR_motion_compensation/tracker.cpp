@@ -31,6 +31,7 @@ namespace Tracker
             TraceLoggingWrite(g_traceProvider,
                               "GetPoseDelta",
                               TLArg(xr::ToString(m_LastPoseDelta).c_str(), "LastDelta"));
+            DebugLog("delta(%u) reused", time);
             return true;
         }
         if (XrPosef curPose{Pose::Identity()}; GetPose(curPose, session, time))
@@ -40,8 +41,8 @@ namespace Tracker
 
             // calculate difference toward reference pose
             poseDelta = Pose::Multiply(Pose::Invert(curPose), m_ReferencePose);
-
             TraceLoggingWrite(g_traceProvider, "GetPoseDelta", TLArg(xr::ToString(poseDelta).c_str(), "Delta"));
+            DebugLog("delta(%u): %s", time, xr::ToString(m_LastPoseDelta).c_str());
             m_LastPose = curPose;
             m_LastPoseDelta = poseDelta;
             m_LastPoseTime = time;
@@ -360,7 +361,7 @@ namespace Tracker
         return true;
     }
 
-    void TrackerBase::SetForwardPose(const XrPosef& pose) const
+    void TrackerBase::SetForwardRotation(const XrPosef& pose) const
     {
         // update forward rotation
         const XrPosef fwdRotation = {pose.orientation, {0.f, 0.f, 0.f}};
@@ -370,13 +371,13 @@ namespace Tracker
         {
             ErrorLog("%s: cast of layer failed", __FUNCTION__);
         }
-        layer->SetForwardPose(fwdRotation);
+        layer->SetForwardRotation(fwdRotation);
     }
 
     bool OpenXrTracker::ResetReferencePose(XrSession session, XrTime time)
     {
         CalibrateForward(session, time, 0.f);
-        SetForwardPose(m_ForwardPose);
+        SetForwardRotation(m_ForwardPose);
         if (!ControllerBase::ResetReferencePose(session, time))
         {
             m_Calibrated = false;
@@ -633,7 +634,7 @@ namespace Tracker
 
     void VirtualTracker::SetReferencePose(const ::XrPosef& pose)
     {
-        SetForwardPose(pose);
+        SetForwardRotation(pose);
         TrackerBase::SetReferencePose(pose);
     }
 

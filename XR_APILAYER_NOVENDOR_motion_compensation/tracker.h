@@ -59,7 +59,7 @@ namespace Tracker
         void ApplyFilters(XrPosef& pose) override;
         void ApplyModifier(XrPosef& pose) override;
         bool CalibrateForward(XrSession session, XrTime time, float yawOffset);
-        void SetForwardPose(const XrPosef& pose) const;
+        void SetForwardRotation(const XrPosef& pose) const;
 
         XrVector3f m_Forward{0.f, 0.f, 1.f};
         XrVector3f m_Right{-1.f, 0.f, 0.f};
@@ -205,7 +205,6 @@ namespace Tracker
 
         bool active{false};
         std::string role;
-        const std::string profile{"/interaction_profiles/htc/vive_tracker_htcx"};
         inline static std::set<std::string> validRoles{"left_foot",
                                                        "left_shoulder",
                                                        "left_elbow",

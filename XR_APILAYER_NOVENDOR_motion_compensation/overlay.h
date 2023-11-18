@@ -81,7 +81,7 @@ namespace openxr_api_layer::graphics
         static std::vector<SimpleMeshVertex> CreateMarker(bool rgb);
         static std::vector<SimpleMeshVertex> CreateConeMesh(const XrVector3f& top,
                                                             const XrVector3f& side,
-                                                            const XrVector3f& offset,
+                                                            const XrVector3f& bottom,
                                                             const XrVector3f& topColor,
                                                             const XrVector3f& sideColor,
                                                             const XrVector3f& bottomColor);

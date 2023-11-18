@@ -13,7 +13,6 @@ Version 0.2.8
 	
 	Keyboard input
 	- added modifier key(s) for faster in-game filter and cor position modification
-	- added toggle to enable debug level logging
 	- added	`NONE` key to deactivate shortcut
 	
 	MmfReader
@@ -21,11 +20,12 @@ Version 0.2.8
 	
 	Miscellaneous
 	- simplified/improved handling of in-game recenter events
+	- added config option to enable debug level logging
 	- added support for X-Plane 12
 	- increased default tolerance for eye/pose reconstruction cache to 500ms (only on installation without previous config file present)
 	
 	Known issues
-	- motion controller compensation does not work properly in MSFS main menu (controller movement gets blocked)
+	- compensation of motion controller pose does not work properly in MSFS main menu (controller movement gets blocked)
 	- graphical overlay conflicts:
 		- does not properly work with OpenXR Toolkit v1.3.2 (black screen instead of game, bug already reported to mbucchia)
 		- iRacing displays marker only in left eye

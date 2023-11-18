@@ -1178,9 +1178,8 @@ namespace openxr_api_layer
         }
     }
 
-    void OpenXrLayer::SetForwardPose(const XrPosef& pose) const
+    void OpenXrLayer::SetForwardRotation(const XrPosef& pose) const
     {
-
         m_HmdModifier->SetFwdToStage(pose);
     }
 
@@ -1447,7 +1446,7 @@ namespace openxr_api_layer
             XrActionSuggestedBinding positionBinding{m_PositionAction};
             XrActionSuggestedBinding hapticBinding{m_HapticAction};
 
-            const std::string profile{m_ViveTracker.active ? m_ViveTracker.profile
+            const std::string profile{m_ViveTracker.active ? "/interaction_profiles/htc/vive_tracker_htcx"
                                                            : "/interaction_profiles/khr/simple_controller"};
 
             if (const XrResult profileResult =
