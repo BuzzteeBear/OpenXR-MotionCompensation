@@ -355,7 +355,7 @@ namespace Tracker
             // calculate orientation parallel to floor
             location.pose.orientation = GetYawRotation(m_Forward, yawOffset);
 
-            SetForwardPose(location.pose);   
+            m_ForwardPose = location.pose;
         }
         return true;
     }
@@ -376,6 +376,7 @@ namespace Tracker
     bool OpenXrTracker::ResetReferencePose(XrSession session, XrTime time)
     {
         CalibrateForward(session, time, 0.f);
+        SetForwardPose(m_ForwardPose);
         if (!ControllerBase::ResetReferencePose(session, time))
         {
             m_Calibrated = false;
@@ -632,11 +633,9 @@ namespace Tracker
 
     void VirtualTracker::SetReferencePose(const ::XrPosef& pose)
     {
+        SetForwardPose(pose);
         TrackerBase::SetReferencePose(pose);
-        SetForwardPose(XrPosef(pose));
     }
-
-    
 
     bool VirtualTracker::GetPose(XrPosef& trackerPose, const XrSession session, const XrTime time)
     {
