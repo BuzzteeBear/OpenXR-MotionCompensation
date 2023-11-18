@@ -71,8 +71,13 @@ namespace utility
         void AddSample(XrTime time, Sample sample)
         {
             std::unique_lock lock(m_Mutex);
-
-            m_Cache.insert({time, sample});
+            if (m_Cache.contains(time))
+            {
+                openxr_api_layer::log::DebugLog("AddSample(%s): multiple samples inserted: %u",
+                                                m_SampleType.c_str(),
+                                                time);
+            }
+            m_Cache[time] = sample;
         }
 
         Sample GetSample(XrTime time) const
@@ -108,7 +113,7 @@ namespace utility
                                       TLArg(m_SampleType.c_str(), "Type"),
                                       TLArg("Later", "Match"),
                                       TLArg(it->first, "Time"));
-                    openxr_api_layer::log::DebugLog("GetSample(%s): later match found %u",
+                    openxr_api_layer::log::DebugLog("GetSample(%s): later match found: %u",
                                                    m_SampleType.c_str(),
                                                    it->first);
 

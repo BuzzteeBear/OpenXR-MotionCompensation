@@ -23,6 +23,16 @@ namespace Tracker
 
     bool ControllerBase::GetPoseDelta(XrPosef& poseDelta, XrSession session, XrTime time)
     {
+        // pose already calculated for requested time
+        if (time == m_LastPoseTime)
+        {
+            // already calculated for requested time;
+            poseDelta = m_LastPoseDelta;
+            TraceLoggingWrite(g_traceProvider,
+                              "GetPoseDelta",
+                              TLArg(xr::ToString(m_LastPoseDelta).c_str(), "LastDelta"));
+            return true;
+        }
         if (XrPosef curPose{Pose::Identity()}; GetPose(curPose, session, time))
         {
             ApplyFilters(curPose);
@@ -33,6 +43,8 @@ namespace Tracker
 
             TraceLoggingWrite(g_traceProvider, "GetPoseDelta", TLArg(xr::ToString(poseDelta).c_str(), "Delta"));
             m_LastPose = curPose;
+            m_LastPoseDelta = poseDelta;
+            m_LastPoseTime = time;
             return true;
         }
         return false;
