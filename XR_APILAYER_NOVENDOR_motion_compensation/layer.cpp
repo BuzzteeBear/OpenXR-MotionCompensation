@@ -211,7 +211,7 @@ namespace openxr_api_layer
 
         // initialize hmd modifier
         m_HmdModifier = std::make_unique<utility::HmdModifier>();
-        GetConfig()->GetBool(Cfg::FactorApply, m_ModifierActive);
+        GetConfig()->GetBool(Cfg::FactorEnabled, m_ModifierActive);
 
         return result;
     }

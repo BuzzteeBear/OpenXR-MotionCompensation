@@ -103,7 +103,7 @@ namespace utility
         GetConfig()->GetFloat(Cfg::FactorTrackerHeave, m_Heave);
 
         bool apply{false};
-        GetConfig()->GetBool(Cfg::FactorApply, apply);
+        GetConfig()->GetBool(Cfg::FactorEnabled, apply);
         SetActive(apply);
     }
 
@@ -148,7 +148,7 @@ namespace utility
         GetConfig()->GetFloat(Cfg::FactorHmdHeave, m_Heave);
 
         bool apply{false};
-        GetConfig()->GetBool(Cfg::FactorApply, apply);
+        GetConfig()->GetBool(Cfg::FactorEnabled, apply);
         SetActive(apply);
     }
 

@@ -87,9 +87,9 @@ What you can modify in a configuration file:
   - `overlay_enabled`: enable initialization of the graphical overlay (for example if it's not required because of using a physical tracker or if the position of the center of rotation is successfully setup and `use_cor_pos` = 1 is used). Changing this value requires the VR session to be restarted.
   - `physical_early_init`: initialize physical tracker as soon instead of as late as possible. May be required in native OpenXR games / sims that do not support motion controllers input (e.g. iRacing). May avoid conflicts with other OpenXR layers (e.g. eye tracking in OpenXR toolkit). Modifying this setting requires an application restart.
   - `upside_down`: turn in-game coordinate system upside down by rotating it 180 degrees around the 'forward' axis. Necessary for correct orientation of virtual tracker and motion compensation in some games (automatically set for iRacing). Changing this value requires the VR session to be restarted.
-  - `activate`: automatically activate motion compensation on application start and configuration reload.
-  - `activate_delay`: delay auto-activation by specified number of seconds. The required time for successful activation may vary, depending on application and tracker type used.
-  - `activate_countdown`: enable audible countdown for the last 10 seconds before auto-activation. This is supposed to allow getting to neutral position and timely centering of in-game view.
+  - `auto_activate`: automatically activate motion compensation on application start and configuration reloading.
+  - `auto_activate_delay`: delay auto-activation by specified number of seconds. The required time for successful activation may vary, depending on application and tracker type used.
+  - `auto_activate_countdown`: enable audible countdown for the last 10 seconds before auto-activation. This is supposed to allow getting to neutral position and timely centering of in-game view.
   - `compensate_controllers`: enable motion compensation for motion controllers (that are not used as reference trackers). Note that enabling this feature will disable cor manipulation via motion controller. Changing this value requires the application top be restarted.
 - `tracker`: 
   - The following tracker `type` keys are available:
@@ -120,20 +120,24 @@ What you can modify in a configuration file:
   - `connection_check` is only relevant for virtual trackers and determines the period (in seconds) for checking whether the memory mapped file used for data input is actually still actively used. Setting a negative value disables the check
 - `translational_filter` and `rotational_filter`: set the filtering magnitude (key `strength` with valid options between **0.0** and **1.0**) number of filtering stages (key `order`with valid options: **1, 2, 3**).  
   The key `vertical_factor` is applied to translational filter strength in vertical/heave direction only (Note that the filter strength is multiplied by the factor and the resulting product of strength * vertical_factor is clamped internally between 0.0 and 1.0).
+- `pose_modifier`: you can use the [pose modifier](#pose-modifier) to increase or decrease the compensation effect for different degrees of freedom  
+  - `apply` - turn pose modifier on/off. Can also be toggled in-game with the correspopnding keyboard shorcut
+  - the other values are the factors that are to be applied to the corresponding degree of freedom, if the pose modifier is activated
 - `cache`: you can modify the cache used for reverting the motion corrected pose on frame submission:
   - `use_eye_cache` - choose between calculating eye poses (0 = default) or use cached eye poses (1, was default up until version 0.1.4). Either one might work better with some games or hmds if you encounter jitter with mc activated. You can also modify this setting (and subsequently save it to config file) during runtime with the corresponding shortcut below.
   - `tolerance` - modify the time values are kept in cache for before deletion. This may affect eye calculation as well as cached eye positions.
 - `shortcuts`: can be used to configure shortcuts for different commands (See [List of keyboard bindings](#list-of-keyboard-bindings) for valid values):
-  - `activate`- turn motion compensation on or off. Note that this implicitly triggers the calibration action (`center`) if that hasn't been executed before.
-  - `center` - re-calibrate the neutral reference pose of the tracker
+  - `activate`- turn motion compensation on or off. Note that this implicitly triggers the calibration action (`calibrate`) if that hasn't been executed before.
+  - `calibrate` - calibrate the neutral reference pose of the tracker
   - `translation_increase`, `translation_decrease` - modify the strength of the translational filter. Changes made during runtime can be saved by using a save command (see below).
   - `rotation_increase`, `rotation_decrease` = see above, but for rotational filter
-  - `offset_forward`, `offset_back`, `offset_up`, `offset_down`, `offset_right`, `offset_left` - move the center of rotation (cor) for a virtual tracker. The directions are aligned with the forward vector set with the `center` command. Changes made during runtime can be saved by using a save command (see below).
+  - `offset_forward`, `offset_back`, `offset_up`, `offset_down`, `offset_right`, `offset_left` - move the center of rotation (cor) for a virtual tracker. The directions are aligned with the forward vector set with the `calibrate` command. Changes made during runtime can be saved by using a save command (see below).
   - `rotate_right`, `rotate_left` - rotate the aforementioned forward vector around the gravitational (yaw-)axis. Note that these changes cannot be saved. Therefore changing the offset position AFTER rotating manually and saving the offset values will result in the cor being a different offset position after reloading those saved values.
-  - `toggle_overlay` - (de-)activate graphical overlay displaying the reference tracker position(s) (See [Graphical overlay](#graphical-overlay) for details).
-  - `toggle_cache` - change between calculated and cached eye positions.
+  - `toggle_overlay` - activate/deactivate graphical overlay displaying the reference tracker position(s) (See [Graphical overlay](#graphical-overlay) for details).
+  - `toggle_cache` - change between calculated and cached eye positions
   - `fast_modifier` - press key(s) in addition to a filter or cor manipulation shortcut to increase amount of change per keypress/repetition. Filter modification will be sped up by factor 5 while cor manipulation will move/rotate 10 instead of 1 cm/degree
-  - `save_config` -  write current filter strength and cor offsets to global config file 
+  - `save_config` -  write current filter strength and cor offsets to global config file
+  - `toggle_pose_modifier` - enable/disable application of factors on the motion compensation effect
   - `save_config_app` -  write current filter strength and cor offsets to application specific config file. Note that values in this file will precedent values in the global config file. 
   - `reload_config` - read in and apply configuration for current app from config files. For technical reasons motion compensation is automatically deactivated and the reference tracker pose is invalidated upon configuration reload.
   - Note that there are some immutable keyboard shortcuts:
@@ -162,16 +166,11 @@ To enable OXRMC to correlate translation and rotation of the rig to the virtual 
 3. Bring your motion rig in neutral position
 3. Sit in your rig 
 4. put your headset on and face forward (~ direction surge). Potential rotation of the hmd on roll and pitch axis is ignored for the calculation
-5. issue the calibration command by activating the `center` shortcut. You can also do this implicitly by activating motion compensation if you haven't (re)calibrated since last loading of the configuration.
+5. issue the calibration command by activating the `calibrate` shortcut. You can also do this implicitly by activating motion compensation if you haven't (re)calibrated since last loading of the configuration.
 - You can use the tracker marker of the graphical overlay and keyboard shortcuts (or the left motion controller, see further below) to adjust the cor position in-game. Make sure to calibrate the tracker first, because the marker tracker just rests at vr play-space origin beforehand. For in-game changes to survive application restart, you have to manually save the configuration.
 - If you're unable to locate the cor of your rig, try out the method described in the [according troubleshooting section](#virtual-tracker)
 - You may have to invert some of the rotations/translations on output side to get them compensated properly. **For new users it's strongly recommended to use some artificial telemetry (joystick input, sine wave generator, etc.) and testing one degree of freedom at at time**
 - If you're using YawVR Game Engine you can also use the parameters `Head Distance` and `Height` in its Motion Compensation tab to specify the offset of the cor. Head distance is basically equal to `offset_forward` in the configration file. But note that the height parameter is measured upwards from the bottom of your play-space, so you'll need to have that setup correctly in order to use that feature.
-
-### Saving and reloading the cor location
-Once you're satisfied with the current setting, the current position and orientation of the cor can be saved to the (global = `ctrl + shift + s` or app-specific = `ctrl + shift + a`) config file. You can subsequently set the config key `use_cor_pos` to `1`. This causes the cor position to be loaded from the config file when calibrating instead of being determined using the hmd position and the offset values.  
-Applications using OpenComposite usually operate in a different VR play-space than titles supporting native OpenXR. That's why cor position needs to be saved once for all native games and once for all games using OpenComposite.  
-**Note that this functionality may not work with all HMD vendors. Setting up the play-space in the VR runtime of your hmd (before first use) might help to get this working correctly. Rumor has it that some HMDs need to be started/initialized at the exact same location for the play-space coordinates to be consistent in between uses.**
 
 ### Adjusting cor location using a motion controller
 You can use (only) the left motion controller to move the cor position in virtual space. The virtual tracker has to be calibrated and motion compensation needs to be deactivated. Make sure to activate the graphical overlay (`ctrl + d` by default) to see the cor marker in game. 
@@ -190,7 +189,7 @@ You can use (only) the left motion controller to move the cor position in virtua
 5. bring your motion rig to neutral position
 6. Reset the in-game view if necessary
 7. press the `activate` shortcut (**CTRL** + **INSERT** by default). This implicitly sets the neutral reference pose for the tracker
-- if necessary you can re-calibrate the tracker by pressing the `center` shortcut (**CTRL** + **DEL** by default) while the motion rig is in neutral position 
+- if necessary you can re-calibrate the tracker by pressing the `calibrate` shortcut (**CTRL** + **DEL** by default) while the motion rig is in neutral position 
 - you can increase or decrease the filter strength of translational and rotational filters
 - you can modify the cor offset when currently using a virtual tracker
 - after modifying filter strength or cor offset for virtual tracker you can save your changes to the default configuration file 
@@ -220,6 +219,36 @@ After detecting a loss of connection a configurable timeout period is used (`con
 - the connection stays lost and motion compensation is automatically deactivated. At that point you get an audible warning about connection loss. 
   - If you try to reactivate and the tracker is available again, motion compensation is resumed (without the need for tracker re-calibration) 
   - Otherwise, the error feedback is repeated and motion compensation stays deactivated. When using a virtual tracker and having connection problems, you can use the MMF Reader app (see below) to cross check existence and current output values of the memory mapped file used for data exchange.
+  
+## Advanced Features
+The following features are purely optional and only recommended for users already familiar with the basic funtionality of oxrmc.
+
+### Saving and reloading the cor location
+This feeature is relevant for [using a virtual tracker](#using-a-virtual-tracker) only. Once you're satisfied with the current setting, the current position and orientation of the cor can be saved to the (global = `ctrl + shift + s` or app-specific = `ctrl + shift + a`) config file. You can subsequently set the config key `use_cor_pos` to `1`. This causes the cor position to be loaded from the config file when calibrating instead of being determined using the hmd position and the offset values.  
+Applications using OpenComposite usually operate in a different VR play-space than titles supporting native OpenXR. That's why cor position needs to be saved once for all native games and once for all games using OpenComposite.  
+**Note that this functionality may not work with all HMD vendors. Setting up the play-space in the VR runtime of your hmd (before first use) might help to get this working correctly. Rumor has it that some HMDs need to be started/initialized at the exact same location for the play-space coordinates to be consistent in between uses.**
+
+### Pose modifier
+If you don't want the motion compensation effect to reflect the movement of the reference tracker exactly one to one, you can use this feature to increase or decrease it on one or more degrees of freedom. This is done under following constraints:
+- the orientation (which way is forward?) is based on:
+  - physical tracker (`controller` or `vive`): forward vector of the hmd (orthogonal to gravity vector) in the moment of tracker calibration
+  - virtual tracker (`srs`, `flypt`, or `yaw`): calibrated reference pose of the cor (which means 'forward' may differ from hmd pose on calibration, if the cor position is loaded from config file)
+- the compensation effect is scaled by the corresponding factor:
+  -  `1.0`: no modification
+  -  `0.0`: completley eliminates the effect
+  -  `factor > 1.0`: increase the effect 
+  -  `factor < 1.0`: decrease the effect
+  -  negative factors: invert the effect
+- modifications can be applied at tracker/cor position and/or at hmd position
+  - modifcations at tracker position are made first, those at hmd position follow
+  - increasing/decreasing a rotation (roll, pitch, yaw) at tracker position also affects the resulting translation of the hmd
+  - increasing/decreasing a translation (surge, sway, heave) at hmd position also affects translations caused by tracker rotation(s)
+  - order of application of rotations is roll first, then pitch, and yaw last
+- different factors can be combined to achieve a desired modification, e.g.:
+  - `0.5` on tracker pitch and `2.0` on hmd pitch will halve the compensation for translation caused by pitch (usually mostly heave and a bit of surge) but keep the original compensation for pitch rotation 
+  - `0.0` on hmd yaw, pitch and roll will keep your head position compensated, while the rotation of the hmd caused by simulator movement won't be corrected  
+
+**Note that using compensation factors will mess up the tracker marker in the [graphical overlay](#graphical-overlay). Instead of the 'real' tracker position the 'effective' tracker position (the one that corresponds to the actual compensation effect) will be displayed.**
 
 ## Troubleshooting
 Upon activating any shortcut you get audible feedback, corresponding to the performed action (or an error, if something went wrong).
@@ -229,7 +258,7 @@ If you're getting 'error' or no feedback at all, check for error entries (search
 If you recenter the in-app view during a session the reference pose is reset by default. Therefore you should only do that while your motion rig is in neutral position. It is possible (depending on the application) that this automatic recalibration is not triggered, causing the view and reference pose to be out of sync and leading to erroneous motion compensation. You should do the following steps to get this corrected again:
 1. deactivate motion compensation by pressing the `activate` shortcut
 2. bring your motion rig to neutral position. Face forward if you using a virtual tracker
-3. re-calibrate by pressing the `center` shortcut
+3. re-calibrate by pressing the `calibrate` shortcut
 4. reactivate motion compensation by pressing the `activate` shortcut
 
 ### Virtual tracker

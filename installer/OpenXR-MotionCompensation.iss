@@ -59,9 +59,9 @@ Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "startup"; Key: "
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "startup"; Key: "overlay_enabled"; String: "1"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "startup"; Key: "physical_early_init"; String: "0"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "startup"; Key: "upside_down"; String: "0"; Flags: createkeyifdoesntexist
-Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "startup"; Key: "activate"; String: "0"; Flags: createkeyifdoesntexist
-Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "startup"; Key: "activate_delay"; String: "10"; Flags: createkeyifdoesntexist
-Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "startup"; Key: "activate_countdown"; String: "1"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "startup"; Key: "auto_activate"; String: "0"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "startup"; Key: "auto_activate_delay"; String: "10"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "startup"; Key: "auto_activate_countdown"; String: "1"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "startup"; Key: "compensate_controllers"; String: "0"; Flags: createkeyifdoesntexist
 
 ; [tracker]
@@ -100,14 +100,20 @@ Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "translation_filt
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "rotation_filter"; Key: "strength"; String: "0.50"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "rotation_filter"; Key: "order"; String: "2"; Flags: createkeyifdoesntexist
 
-; [compensation_factors]
-Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "compensation_factors"; Key: "apply"; String: "0"; Flags: createkeyifdoesntexist
-Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "compensation_factors"; Key: "hmd_roll"; String: "1.0"; Flags: createkeyifdoesntexist
-Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "compensation_factors"; Key: "hmd_pitch"; String: "1.0"; Flags: createkeyifdoesntexist
-Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "compensation_factors"; Key: "hmd_yaw"; String: "1.0"; Flags: createkeyifdoesntexist
-Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "compensation_factors"; Key: "hmd_surge"; String: "1.0"; Flags: createkeyifdoesntexist
-Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "compensation_factors"; Key: "hmd_sway"; String: "1.0"; Flags: createkeyifdoesntexist
-Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "compensation_factors"; Key: "hmd_heave"; String: "1.0"; Flags: createkeyifdoesntexist
+; [pose_modifier]
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "pose_modifier"; Key: "apply"; String: "0"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "pose_modifier"; Key: "tracker_roll"; String: "1.0"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "pose_modifier"; Key: "tracker_pitch"; String: "1.0"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "pose_modifier"; Key: "tracker_yaw"; String: "1.0"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "pose_modifier"; Key: "tracker_surge"; String: "1.0"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "pose_modifier"; Key: "tracker_sway"; String: "1.0"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "pose_modifier"; Key: "tracker_heave"; String: "1.0"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "pose_modifier"; Key: "hmd_roll"; String: "1.0"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "pose_modifier"; Key: "hmd_pitch"; String: "1.0"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "pose_modifier"; Key: "hmd_yaw"; String: "1.0"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "pose_modifier"; Key: "hmd_surge"; String: "1.0"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "pose_modifier"; Key: "hmd_sway"; String: "1.0"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "pose_modifier"; Key: "hmd_heave"; String: "1.0"; Flags: createkeyifdoesntexist
 
 ; [cache]
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "cache"; Key: "use_eye_cache"; String: "0"; Flags: createkeyifdoesntexist
@@ -115,7 +121,7 @@ Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "cache"; Key: "to
 
 ; [shortcuts]
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "activate"; String: "CTRL+INS"; Flags: createkeyifdoesntexist
-Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "center"; String: "CTRL+DEL"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "calibrate"; String: "CTRL+DEL"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "translation_increase"; String: "CTRL+PLUS"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "translation_decrease"; String: "CTRL+MINUS"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "rotation_increase"; String: "CTRL+0"; Flags: createkeyifdoesntexist
@@ -131,6 +137,7 @@ Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key:
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "toggle_overlay"; String: "CTRL+D"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "toggle_cache"; String: "CTRL+E"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "fast_modifier "; String: "ALT"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "toggle_pose_modifier"; String: "CTRL+P"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "save_config"; String: "CTRL+SHIFT+S"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "save_config_app"; String: "CTRL+SHIFT+A"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "reload_config"; String: "CTRL+SHIFT+L"; Flags: createkeyifdoesntexist

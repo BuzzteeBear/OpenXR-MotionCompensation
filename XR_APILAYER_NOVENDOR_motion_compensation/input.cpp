@@ -19,7 +19,7 @@ namespace Input
     {
         bool success = true;
         const std::set<Cfg> activities{Cfg::KeyActivate,
-                                       Cfg::KeyCenter,
+                                       Cfg::KeyCalibrate,
                                        Cfg::KeyTransInc,
                                        Cfg::KeyTransDec,
                                        Cfg::KeyRotInc,
@@ -84,7 +84,7 @@ namespace Input
         {
             ToggleActive(time);
         }
-        if (m_Input.GetKeyState(Cfg::KeyCenter, isRepeat) && !isRepeat)
+        if (m_Input.GetKeyState(Cfg::KeyCalibrate, isRepeat) && !isRepeat)
         {
             Recalibrate(time);
         }
@@ -324,7 +324,7 @@ namespace Input
     void InputHandler::ToggleModifier() const
     {
         const bool active = m_Layer->ToggleModifierActive();
-        GetConfig()->SetValue(Cfg::FactorApply, active);
+        GetConfig()->SetValue(Cfg::FactorEnabled, active);
         GetAudioOut()->Execute(active ? Event::ModifierOn : Event::ModifierOff);
     }
 
