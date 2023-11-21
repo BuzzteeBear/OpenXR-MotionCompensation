@@ -198,6 +198,8 @@ namespace openxr_api_layer
         GetConfig()->GetBool(Cfg::OverlayEnabled, m_OverlayEnabled);
         if (m_OverlayEnabled)
         {
+            // Needed by DirectXTex.
+            CoInitializeEx(nullptr, COINIT_MULTITHREADED);
             m_Overlay = std::make_unique<graphics::Overlay>();
             m_Overlay->Init(*createInfo, GetXrInstance(), m_xrGetInstanceProcAddr);  
         }
@@ -1611,8 +1613,6 @@ namespace openxr_api_layer
         return true;
     }
 
-    std::unique_ptr<OpenXrLayer> g_instance = nullptr;
-
     OpenXrApi* GetInstance()
     {
         if (!g_instance)
@@ -1620,11 +1620,6 @@ namespace openxr_api_layer
             g_instance = std::make_unique<OpenXrLayer>();
         }
         return g_instance.get();
-    }
-
-    void ResetInstance()
-    {
-        g_instance.reset();
     }
 
 } // namespace openxr_api_layer

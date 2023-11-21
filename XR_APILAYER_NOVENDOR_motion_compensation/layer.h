@@ -29,6 +29,13 @@
 
 namespace openxr_api_layer
 {
+    // Our API layer implement these extensions, and their specified version.
+    inline const std::vector<std::pair<std::string, uint32_t>> advertisedExtensions = {};
+
+    // Initialize these vectors with arrays of extensions to block and implicitly request for the instance.
+    const std::vector<std::string> blockedExtensions = {};
+    inline std::vector<std::string> implicitExtensions = {};
+
     // The handle of the dll
     extern HMODULE dllModule;
 
@@ -164,8 +171,5 @@ namespace openxr_api_layer
 
     // Singleton accessor.
     OpenXrApi* GetInstance();
-
-    // A function to reset (delete) the singleton.
-    void ResetInstance();
 
 } // namespace openxr_api_layer

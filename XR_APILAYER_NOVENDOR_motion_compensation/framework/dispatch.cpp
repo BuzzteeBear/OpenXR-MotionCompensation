@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright(c) 2021-2022 Matthieu Bucchianeri
+// Copyright(c) 2021-2023 Matthieu Bucchianeri
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this softwareand associated documentation files(the "Software"), to deal
@@ -27,46 +27,41 @@
 #include "dispatch.h"
 #include "log.h"
 
-
 using namespace openxr_api_layer::log;
 
 namespace openxr_api_layer {
 
     // Entry point for creating the layer.
-    XrResult xrCreateApiLayerInstance(const XrInstanceCreateInfo* const instanceCreateInfo,
-                                      const struct XrApiLayerCreateInfo* const apiLayerInfo,
-                                      XrInstance* const instance) {
-        TraceLoggingWrite(g_traceProvider, "xrCreateApiLayerInstance");
+    XrResult XRAPI_CALL xrCreateApiLayerInstance(const XrInstanceCreateInfo* const instanceCreateInfo,
+                                                 const struct XrApiLayerCreateInfo* const apiLayerInfo,
+                                                 XrInstance* const instance) {
         DebugLog("--> xrCreateApiLayerInstance");
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "xrCreateApiLayerInstance");
 
         if (!apiLayerInfo || apiLayerInfo->structType != XR_LOADER_INTERFACE_STRUCT_API_LAYER_CREATE_INFO ||
             apiLayerInfo->structVersion != XR_API_LAYER_CREATE_INFO_STRUCT_VERSION ||
             apiLayerInfo->structSize != sizeof(XrApiLayerCreateInfo) || !apiLayerInfo->nextInfo ||
             apiLayerInfo->nextInfo->structType != XR_LOADER_INTERFACE_STRUCT_API_LAYER_NEXT_INFO ||
             apiLayerInfo->nextInfo->structVersion != XR_API_LAYER_NEXT_INFO_STRUCT_VERSION ||
-            apiLayerInfo->nextInfo->structSize != sizeof(XrApiLayerNextInfo) ||
-            apiLayerInfo->nextInfo->layerName != LayerName || !apiLayerInfo->nextInfo->nextGetInstanceProcAddr ||
-            !apiLayerInfo->nextInfo->nextCreateApiLayerInstance) {
+            apiLayerInfo->nextInfo->structSize != sizeof(XrApiLayerNextInfo) || !apiLayerInfo->nextInfo->layerName ||
+            std::string_view(apiLayerInfo->nextInfo->layerName) != LAYER_NAME ||
+            !apiLayerInfo->nextInfo->nextGetInstanceProcAddr || !apiLayerInfo->nextInfo->nextCreateApiLayerInstance) {
             ErrorLog("xrCreateApiLayerInstance validation failed");
             return XR_ERROR_INITIALIZATION_FAILED;
         }
-
-       
 
         // Dump the other layers.
         {
             auto info = apiLayerInfo->nextInfo;
             while (info) {
-                TraceLoggingWrite(g_traceProvider, "xrCreateApiLayerInstance", TLArg(info->layerName, "LayerName"));
-                Log("Using layer: %s", info->layerName);
+                TraceLoggingWriteTagged(local, "xrCreateApiLayerInstance", TLArg(info->layerName, "LayerName"));
+                Log(fmt::format("Using layer: {}", info->layerName));
                 info = info->next;
             }
         }
 
-        std::vector<std::string> blockedExtensions;
-        std::vector<std::string> implicitExtensions;
-
-        // request extension for usage of vive tracker
+         // request extension for usage of vive tracker
         std::string type;
         GetConfig()->Init("");
         if (GetConfig()->GetString(Cfg::TrackerType, type) && "vive" == type)
@@ -86,6 +81,7 @@ namespace openxr_api_layer {
         // instance, this does not stand for API layers, since API layers implementation might rely on the next
         // xrGetInstanceProcAddr() pointer, which is not (yet) populated if no instance is created.
         // We create a dummy instance in order to do these checks.
+        std::vector<std::string> filteredImplicitExtensions;
         if (!implicitExtensions.empty()) {
             XrInstance dummyInstance = XR_NULL_HANDLE;
 
@@ -96,17 +92,19 @@ namespace openxr_api_layer {
             XrApiLayerCreateInfo chainApiLayerInfo = *apiLayerInfo;
             chainApiLayerInfo.nextInfo = apiLayerInfo->nextInfo->next;
 
-            try
-            {
-                CHECK_XRCMD(apiLayerInfo->nextInfo->nextCreateApiLayerInstance(&dummyCreateInfo,
-                                                                               &chainApiLayerInfo,
-                                                                               &dummyInstance));
-
+            if (XR_SUCCEEDED(apiLayerInfo->nextInfo->nextCreateApiLayerInstance(
+                    &dummyCreateInfo, &chainApiLayerInfo, &dummyInstance))) {
                 PFN_xrDestroyInstance xrDestroyInstance;
                 CHECK_XRCMD(apiLayerInfo->nextInfo->nextGetInstanceProcAddr(
+                    dummyInstance, "xrDestroyInstance", reinterpret_cast<PFN_xrVoidFunction*>(&xrDestroyInstance)));
+                PFN_xrGetSystem xrGetSystem = nullptr;
+                CHECK_XRCMD(apiLayerInfo->nextInfo->nextGetInstanceProcAddr(
+                    dummyInstance, "xrGetSystem", reinterpret_cast<PFN_xrVoidFunction*>(&xrGetSystem)));
+                PFN_xrGetSystemProperties xrGetSystemProperties = nullptr;
+                CHECK_XRCMD(apiLayerInfo->nextInfo->nextGetInstanceProcAddr(
                     dummyInstance,
-                    "xrDestroyInstance",
-                    reinterpret_cast<PFN_xrVoidFunction*>(&xrDestroyInstance)));
+                    "xrGetSystemProperties",
+                    reinterpret_cast<PFN_xrVoidFunction*>(&xrGetSystemProperties)));
 
                 // Check the available extensions.
                 PFN_xrEnumerateInstanceExtensionProperties xrEnumerateInstanceExtensionProperties;
@@ -118,32 +116,38 @@ namespace openxr_api_layer {
                 uint32_t extensionsCount = 0;
                 CHECK_XRCMD(xrEnumerateInstanceExtensionProperties(nullptr, 0, &extensionsCount, nullptr));
                 std::vector<XrExtensionProperties> extensions(extensionsCount, {XR_TYPE_EXTENSION_PROPERTIES});
-                CHECK_XRCMD(xrEnumerateInstanceExtensionProperties(nullptr,
-                                                                   extensionsCount,
-                                                                   &extensionsCount,
-                                                                   extensions.data()));
+                CHECK_XRCMD(xrEnumerateInstanceExtensionProperties(
+                    nullptr, extensionsCount, &extensionsCount, extensions.data()));
 
-                for (auto it = implicitExtensions.begin(); it != implicitExtensions.end();)
-                {
+                for (const std::string& extensionName : implicitExtensions) {
                     const auto matchExtensionName = [&](const XrExtensionProperties& properties) {
-                        return properties.extensionName == *it;
+                        return properties.extensionName == extensionName;
                     };
-                    if (std::find_if(extensions.cbegin(), extensions.cend(), matchExtensionName) != extensions.cend())
-                    {
-                        it = ++it;
-                    }
-                    else
-                    {
-                        Log("Cannot satisfy implicit extension request: %s", it->c_str());
-                        it = implicitExtensions.erase(it);
+                    if (std::find_if(extensions.cbegin(), extensions.cend(), matchExtensionName) != extensions.cend()) {
+                        filteredImplicitExtensions.push_back(extensionName);
+                    } else {
+                        Log(fmt::format("Cannot satisfy implicit extension request: {}", extensionName));
                     }
                 }
 
-                CHECK_XRCMD(xrDestroyInstance(dummyInstance));
-            }
-            catch (std::exception& e)
-            {
-                ErrorLog("%s: error checking for supported extensions: %s\n\t%s", __FUNCTION__, e.what());
+                // Workaround: the Vive runtime does not seem to like our flow of destroying the instance
+                // mid-initialization. We skip destruction and we will just create a second instance.
+                if (xrGetSystem && xrGetSystemProperties) {
+                    XrSystemGetInfo getInfo{XR_TYPE_SYSTEM_GET_INFO};
+                    getInfo.formFactor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
+                    XrSystemId systemId;
+                    if (XR_SUCCEEDED(xrGetSystem(dummyInstance, &getInfo, &systemId))) {
+                        XrSystemProperties systemProperties{XR_TYPE_SYSTEM_PROPERTIES};
+                        CHECK_XRCMD(xrGetSystemProperties(dummyInstance, systemId, &systemProperties));
+                        if (std::string(systemProperties.systemName).find("Vive Reality system") != std::string::npos) {
+                            xrDestroyInstance = nullptr;
+                        }
+                    }
+                }
+
+                if (xrDestroyInstance) {
+                    xrDestroyInstance(dummyInstance);
+                }
             }
         }
 
@@ -152,17 +156,17 @@ namespace openxr_api_layer {
         std::vector<const char*> newEnabledExtensionNames;
         for (uint32_t i = 0; i < chainInstanceCreateInfo.enabledExtensionCount; i++) {
             const std::string_view ext(chainInstanceCreateInfo.enabledExtensionNames[i]);
-            TraceLoggingWrite(g_traceProvider, "xrCreateApiLayerInstance", TLArg(ext.data(), "ExtensionName"));
+            TraceLoggingWriteTagged(local, "xrCreateApiLayerInstance", TLArg(ext.data(), "ExtensionName"));
 
             if (std::find(blockedExtensions.cbegin(), blockedExtensions.cend(), ext) == blockedExtensions.cend()) {
-                Log("Requested extension: %s", ext.data());
+                Log(fmt::format("Requested extension: {}", ext));
                 newEnabledExtensionNames.push_back(ext.data());
             } else {
-                Log("Blocking extension: %s", ext.data());
+                Log(fmt::format("Blocking extension: {}", ext));
             }
         }
-        for (const auto& ext : implicitExtensions) {
-            Log("Requesting extension: %s", ext.c_str());
+        for (const auto& ext : filteredImplicitExtensions) {
+            Log(fmt::format("Requesting extension: {}", ext));
             newEnabledExtensionNames.push_back(ext.c_str());
         }
         chainInstanceCreateInfo.enabledExtensionNames = newEnabledExtensionNames.data();
@@ -176,15 +180,15 @@ namespace openxr_api_layer {
         if (result == XR_SUCCESS) {
             // Create our layer.
             openxr_api_layer::GetInstance()->SetGetInstanceProcAddr(apiLayerInfo->nextInfo->nextGetInstanceProcAddr,
-                                                                   *instance);
-            openxr_api_layer::GetInstance()->SetGrantedExtensions(implicitExtensions);
+                                                                    *instance);
+            openxr_api_layer::GetInstance()->SetGrantedExtensions(filteredImplicitExtensions);
 
             // Forward the xrCreateInstance() call to the layer.
             try {
                 result = openxr_api_layer::GetInstance()->xrCreateInstance(instanceCreateInfo);
-            } catch (std::runtime_error exc) {
-                TraceLoggingWrite(g_traceProvider, "xrCreateInstance_Error", TLArg(exc.what(), "Error"));
-                ErrorLog("xrCreateInstance: %s", exc.what());
+            } catch (std::exception& exc) {
+                TraceLoggingWriteTagged(local, "xrCreateInstance_Error", TLArg(exc.what(), "Error"));
+                ErrorLog(fmt::format("xrCreateInstance: {}", exc.what()));
                 result = XR_ERROR_RUNTIME_FAILURE;
             }
 
@@ -198,54 +202,35 @@ namespace openxr_api_layer {
             }
         }
 
-        TraceLoggingWrite(g_traceProvider, "xrCreateApiLayerInstance_Result", TLArg(xr::ToCString(result), "Result"));
+        TraceLoggingWriteStop(local, "xrCreateApiLayerInstance", TLArg(xr::ToCString(result), "Result"));
         if (XR_FAILED(result)) {
-            ErrorLog("xrCreateApiLayerInstance failed with %s", xr::ToCString(result));
-        }
-
-        DebugLog("<-- xrCreateApiLayerInstance %d", result);
-
-        return result;
-    }
-
-    // Handle cleanup of the layer's singleton.
-    XrResult xrDestroyInstance(XrInstance instance) {
-        TraceLoggingWrite(g_traceProvider, "xrDestroyInstance");
-
-        XrResult result;
-        try {
-            result = openxr_api_layer::GetInstance()->xrDestroyInstance(instance);
-            if (XR_SUCCEEDED(result)) {
-                openxr_api_layer::ResetInstance();
-            }
-        } catch (std::runtime_error exc) {
-            TraceLoggingWrite(g_traceProvider, "xrDestroyInstance_Error", TLArg(exc.what(), "Error"));
-            ErrorLog("xrDestroyInstance: %s", exc.what());
-            result = XR_ERROR_RUNTIME_FAILURE;
-        }
-
-        TraceLoggingWrite(g_traceProvider, "xrDestroyInstance_Result", TLArg(xr::ToCString(result), "Result"));
-        if (XR_FAILED(result)) {
-            ErrorLog("xrDestroyInstance failed with %s", xr::ToCString(result));
+            ErrorLog(fmt::format("xrCreateApiLayerInstance failed with {}", xr::ToCString(result)));
         }
 
         return result;
     }
 
     // Forward the xrGetInstanceProcAddr() call to the dispatcher.
-    XrResult xrGetInstanceProcAddr(XrInstance instance, const char* name, PFN_xrVoidFunction* function) {
-        TraceLoggingWrite(g_traceProvider, "xrGetInstanceProcAddr");
+    XrResult XRAPI_CALL xrGetInstanceProcAddr(XrInstance instance, const char* name, PFN_xrVoidFunction* function) {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "xrGetInstanceProcAddr");
 
         XrResult result;
         try {
-            result = openxr_api_layer::GetInstance()->xrGetInstanceProcAddr(instance, name, function);
-        } catch (std::runtime_error exc) {
-            TraceLoggingWrite(g_traceProvider, "xrGetInstanceProcAddr_Error", TLArg(exc.what(), "Error"));
-            ErrorLog("xrGetInstanceProcAddr: %s", exc.what());
+            if (std::string_view(name) != "xrEnumerateInstanceExtensionProperties") {
+                result = openxr_api_layer::GetInstance()->xrGetInstanceProcAddr(instance, name, function);
+            } else {
+                // We must always call our xrEnumerateInstanceExtensionProperties() override in order to be consistent
+                // with the list of extensions defined in our JSON.
+                result = openxr_api_layer::GetInstance()->xrGetInstanceProcAddrInternal(instance, name, function);
+            }
+        } catch (std::exception& exc) {
+            TraceLoggingWriteTagged(local, "xrGetInstanceProcAddr_Error", TLArg(exc.what(), "Error"));
+            ErrorLog(fmt::format("xrGetInstanceProcAddr: {}", exc.what()));
             result = XR_ERROR_RUNTIME_FAILURE;
         }
 
-        TraceLoggingWrite(g_traceProvider, "xrGetInstanceProcAddr_Result", TLArg(xr::ToCString(result), "Result"));
+        TraceLoggingWriteStop(local, "xrGetInstanceProcAddr", TLArg(xr::ToCString(result), "Result"));
 
         return result;
     }

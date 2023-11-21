@@ -33,7 +33,6 @@ Version 0.2.8
 	- graphical overlay conflicts:
 		- does not properly work with OpenXR Toolkit v1.3.2 (black screen instead of game, bug already reported to mbucchia)
 		- iRacing displays marker only in left eye
-		- MSFS refuses to properly close when exiting game from within VR (workaround: leave VR before or disable overlay in config file)
 
 Version 0.2.7
 	

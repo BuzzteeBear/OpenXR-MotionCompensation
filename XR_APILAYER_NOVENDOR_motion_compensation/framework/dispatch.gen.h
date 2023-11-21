@@ -1,7 +1,7 @@
 // *********** THIS FILE IS GENERATED - DO NOT EDIT ***********
 // MIT License
 //
-// Copyright(c) 2021-2022 Matthieu Bucchianeri
+// Copyright(c) 2021-2023 Matthieu Bucchianeri
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this softwareand associated documentation files(the "Software"), to deal
@@ -25,6 +25,9 @@
 
 namespace openxr_api_layer
 {
+
+	void ResetInstance();
+	extern const std::vector<std::pair<std::string, uint32_t>> advertisedExtensions;
 
 	class OpenXrApi
 	{
@@ -62,30 +65,75 @@ namespace openxr_api_layer
 			m_instance = instance;
 		}
 
-		void SetGrantedExtensions(std::vector<std::string>& grantedExtensions)
+		void SetGrantedExtensions(const std::vector<std::string>& grantedExtensions)
 		{
 			m_grantedExtensions = std::set(grantedExtensions.begin(), grantedExtensions.end());
 		}
 
-        bool IsExtensionGranted(const std::string extensionName)
-        {
-            return (bool)m_grantedExtensions.count(extensionName);
-        }
+		bool IsExtensionGranted(const std::string& extensionName) const
+		{
+			return (bool)m_grantedExtensions.count(extensionName);
+		}
+
 
 		// Specially-handled by the auto-generated code.
 		virtual XrResult xrGetInstanceProcAddr(XrInstance instance, const char* name, PFN_xrVoidFunction* function);
 		virtual XrResult xrCreateInstance(const XrInstanceCreateInfo* createInfo);
 
+		// Make sure to destroy the singleton instance.
+		virtual XrResult xrDestroyInstance(XrInstance instance) {
+			// Invoking ResetInstance() is equivalent to `delete this;' so we must take precautions.
+			PFN_xrDestroyInstance finalDestroyInstance = m_xrDestroyInstance;
+			ResetInstance();
+			return finalDestroyInstance(instance);
+		}
+
+		// Make sure we enumerate the layer's extensions, specifically when another API layer may resolve our implementation
+		// of xrEnumerateInstanceExtensionProperties() instead of the loaders.
+		virtual XrResult xrEnumerateInstanceExtensionProperties(const char* layerName,
+																uint32_t propertyCapacityInput,
+																uint32_t* propertyCountOutput,
+																XrExtensionProperties* properties) {
+			XrResult result = XR_ERROR_RUNTIME_FAILURE;
+			if (!layerName || std::string_view(layerName) != LAYER_NAME) {
+				result = m_xrEnumerateInstanceExtensionProperties(layerName, propertyCapacityInput, propertyCountOutput, properties);
+			}
+
+			if (XR_SUCCEEDED(result)) {
+				if (!layerName || std::string_view(layerName) == LAYER_NAME) {
+					const uint32_t baseOffset = *propertyCountOutput;
+					*propertyCountOutput += (uint32_t)advertisedExtensions.size();
+					if (propertyCapacityInput) {
+						if (propertyCapacityInput < *propertyCountOutput) {
+							result = XR_ERROR_SIZE_INSUFFICIENT;
+						} else {
+							result = XR_SUCCESS;
+							for (uint32_t i = baseOffset; i < *propertyCountOutput; i++) {
+								if (properties[i].type != XR_TYPE_EXTENSION_PROPERTIES) {
+									result = XR_ERROR_VALIDATION_FAILURE;
+									break;
+								}
+
+								strcpy_s(properties[i].extensionName, advertisedExtensions[i - baseOffset].first.c_str());
+								properties[i].extensionVersion = advertisedExtensions[i - baseOffset].second;
+							}
+						}
+					}
+				}
+			}
+
+			return result;
+		}
+
+	private:
+		XrResult xrGetInstanceProcAddrInternal(XrInstance instance, const char* name, PFN_xrVoidFunction* function);
+		friend XrResult xrGetInstanceProcAddr(XrInstance instance, const char* name, PFN_xrVoidFunction* function);
+
+		PFN_xrDestroyInstance m_xrDestroyInstance{nullptr};
+		PFN_xrEnumerateInstanceExtensionProperties m_xrEnumerateInstanceExtensionProperties{nullptr};
+
 
 		// Auto-generated entries for the requested APIs.
-
-	public:
-		virtual XrResult xrDestroyInstance(XrInstance instance)
-		{
-			return m_xrDestroyInstance(instance);
-		}
-	private:
-		PFN_xrDestroyInstance m_xrDestroyInstance{ nullptr };
 
 	public:
 		virtual XrResult xrGetInstanceProperties(XrInstance instance, XrInstanceProperties* instanceProperties)
@@ -370,6 +418,8 @@ namespace openxr_api_layer
 
 
 	};
+
+	extern std::unique_ptr<OpenXrApi> g_instance;
 
 } // namespace openxr_api_layer
 

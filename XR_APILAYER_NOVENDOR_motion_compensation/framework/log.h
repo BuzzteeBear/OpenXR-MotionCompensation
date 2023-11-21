@@ -35,8 +35,7 @@ namespace openxr_api_layer::log {
 #define TraceLocalActivity(activity) TraceLoggingActivity<g_traceProvider> activity;
 
 #define TLArg(var, ...) TraceLoggingValue(var, ##__VA_ARGS__)
-#define TLPArg(var, ...) TraceLoggingValue(fmt::format("0x{:08x}", (uintptr_t)(var)).c_str(), ##__VA_ARGS__)
-#define TLPArray(var, count, ...) TraceLoggingCodePointerArray((void**)var, (UINT16)count, ##__VA_ARGS__)
+#define TLPArg(var, ...) TraceLoggingPointer(var, ##__VA_ARGS__)
 #ifdef _M_IX86
 #define TLXArg TLArg
 #else

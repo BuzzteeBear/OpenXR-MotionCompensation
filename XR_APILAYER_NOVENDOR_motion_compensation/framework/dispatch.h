@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright(c) 2022 Matthieu Bucchianeri
+// Copyright(c) 2022-2023 Matthieu Bucchianeri
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this softwareand associated documentation files(the "Software"), to deal
@@ -24,12 +24,9 @@
 
 namespace openxr_api_layer {
 
-    XrResult xrGetInstanceProcAddr(XrInstance instance,
-                                   const char* name,
-                                   PFN_xrVoidFunction* function);
-    XrResult xrDestroyInstance(XrInstance instance);
-    XrResult xrCreateApiLayerInstance(const XrInstanceCreateInfo* instanceCreateInfo,
-                                      const struct XrApiLayerCreateInfo* apiLayerInfo,
-                                      XrInstance* instance);
+    XrResult XRAPI_CALL xrCreateApiLayerInstance(const XrInstanceCreateInfo* instanceCreateInfo,
+                                                 const struct XrApiLayerCreateInfo* apiLayerInfo,
+                                                 XrInstance* instance);
+    XrResult XRAPI_CALL xrGetInstanceProcAddr(XrInstance instance, const char* name, PFN_xrVoidFunction* function);
 
 } // namespace openxr_api_layer

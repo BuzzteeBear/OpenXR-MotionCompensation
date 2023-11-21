@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright(c) 2021-2022 Matthieu Bucchianeri
+# Copyright(c) 2021-2023 Matthieu Bucchianeri
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this softwareand associated documentation files(the "Software"), to deal
@@ -19,7 +19,6 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
 import os
 import re
 import sys
@@ -40,15 +39,11 @@ from xrconventions import OpenXRConventions
 import layer_apis
 
 # Sanity checks on the configuration file
-if 'xrCreateInstance' in layer_apis.override_functions:
-    raise Exception("xrCreateInstance() is implicitly overriden and shall not be specified in override_functions. Use the xrCreateInstance() virtual method.")
-if 'xrCreateInstance' in layer_apis.requested_functions:
-    raise Exception("xrCreateInstance() cannot be specified in requested_functions")
-
-if 'xrDestroyInstance' in layer_apis.override_functions:
-    raise Exception("xrDestroyInstance() is implicitly overriden and shall not be specified in override_functions. Use the OpenXrApi destructor instead.")
-if 'xrCreateInstance' in layer_apis.requested_functions:
-    raise Exception("xrDestroyInstance() cannot be specified in requested_functions")
+for func in ['xrCreateInstance', 'xrDestroyInstance', 'xrEnumerateInstanceExtensionProperties']:
+    if func in layer_apis.override_functions:
+        raise Exception("{func}() is implicitly overriden and shall not be specified in override_functions. Use the {func}() virtual method.")
+    if func in layer_apis.requested_functions:
+        raise Exception("{func}() cannot be specified in requested_functions")
 
 if 'xrGetInstanceProcAddr' in layer_apis.override_functions:
     raise Exception("xrGetInstanceProcAddr() is implicitly overriden and shall not be specified in override_functions. Use the xrGetInstanceProcAddr() virtual method.")
@@ -65,7 +60,7 @@ class DispatchGenOutputGenerator(AutomaticSourceOutputGenerator):
     def outputCopywriteHeader(self):
         copyright = '''// MIT License
 //
-// Copyright(c) 2021-2022 Matthieu Bucchianeri
+// Copyright(c) 2021-2023 Matthieu Bucchianeri
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this softwareand associated documentation files(the "Software"), to deal
@@ -130,7 +125,13 @@ namespace openxr_api_layer
         generated_get_instance_proc_addr = self.genGetInstanceProcAddr()
         generated_create_instance = self.genCreateInstance()
 
-        postamble = '''} // namespace openxr_api_layer
+        postamble = '''	std::unique_ptr<OpenXrApi> g_instance;
+
+	void ResetInstance() {
+		g_instance.reset();
+	}
+
+} // namespace openxr_api_layer
 '''
 
         contents = f'''
@@ -152,31 +153,32 @@ namespace openxr_api_layer
         generated = ''
 
         for cur_cmd in self.core_commands + self.ext_commands:
-            if cur_cmd.name in layer_apis.override_functions:
+            if cur_cmd.name in (layer_apis.override_functions + ['xrDestroyInstance', 'xrEnumerateInstanceExtensionProperties']):
                 parameters_list = self.makeParametersList(cur_cmd)
                 arguments_list = self.makeArgumentsList(cur_cmd)
 
                 if cur_cmd.return_type is not None:
                     generated += f'''
-	XrResult {cur_cmd.name}({parameters_list})
+	XrResult XRAPI_CALL {cur_cmd.name}({parameters_list})
 	{{
-		TraceLoggingWrite(g_traceProvider, "{cur_cmd.name}");
+		TraceLocalActivity(local);
+		TraceLoggingWriteStart(local, "{cur_cmd.name}");
 
 		XrResult result;
 		try
 		{{
 			result = openxr_api_layer::GetInstance()->{cur_cmd.name}({arguments_list});
 		}}
-		catch (std::exception exc)
+		catch (std::exception& exc)
 		{{
-			TraceLoggingWrite(g_traceProvider, "{cur_cmd.name}_Error", TLArg(exc.what(), "Error"));
-			ErrorLog("{cur_cmd.name}: %s\\n", exc.what());
+			TraceLoggingWriteTagged(local, "{cur_cmd.name}_Error", TLArg(exc.what(), "Error"));
+			ErrorLog(fmt::format("{cur_cmd.name}: {{}}", exc.what()));
 			result = XR_ERROR_RUNTIME_FAILURE;
 		}}
 
-		TraceLoggingWrite(g_traceProvider, "{cur_cmd.name}_Result", TLArg(xr::ToCString(result), "Result"));
+		TraceLoggingWriteStop(local, "{cur_cmd.name}", TLArg(xr::ToCString(result), "Result"));
 		if (XR_FAILED(result)) {{
-			ErrorLog("{cur_cmd.name} failed with %s\\n", xr::ToCString(result));
+			ErrorLog(fmt::format("{cur_cmd.name} failed with {{}}", xr::ToCString(result)));
 		}}
 
 		return result;
@@ -184,21 +186,22 @@ namespace openxr_api_layer
 '''
                 else:
                     generated += f'''
-	void {cur_cmd.name}({parameters_list})
+	void XRAPI_CALL {cur_cmd.name}({parameters_list})
 	{{
-		TraceLoggingWrite(g_traceProvider, "{cur_cmd.name}");
+		TraceLocalActivity(local);
+		TraceLoggingWriteStart(local, "{cur_cmd.name}");
 
 		try
 		{{
 			openxr_api_layer::GetInstance()->{cur_cmd.name}({arguments_list});
 		}}
-		catch (std::runtime_error exc)
+		catch (std::exception& exc)
 		{{
-			TraceLoggingWrite(g_traceProvider, "{cur_cmd.name}_Error", TLArg(exc.what(), "Error"));
-			ErrorLog("{cur_cmd.name}: %s\\n", exc.what());
+			TraceLoggingWriteTagged(local, "{cur_cmd.name}_Error", TLArg(exc.what(), "Error"));
+			ErrorLog(fmt::format("{cur_cmd.name}: {{}}", exc.what()));
 		}}
 
-		TraceLoggingWrite(g_traceProvider, "{cur_cmd.name}_Complete");
+		TraceLoggingWriteStop(local, "{cur_cmd.name}"));
 	}}
 '''
                 
@@ -213,7 +216,7 @@ namespace openxr_api_layer
             if cur_cmd.name in layer_apis.requested_functions:
                 generated += f'''		if (XR_FAILED(m_xrGetInstanceProcAddr(m_instance, "{cur_cmd.name}", reinterpret_cast<PFN_xrVoidFunction*>(&m_{cur_cmd.name}))))
 		{{
-			throw new std::runtime_error("Failed to resolve {cur_cmd.name}");
+			throw std::runtime_error("Failed to resolve {cur_cmd.name}");
 		}}
 '''
 
@@ -227,10 +230,15 @@ namespace openxr_api_layer
 		return XR_SUCCESS;
 	}'''
 
-        return generated;
+        return generated
 
     def genGetInstanceProcAddr(self):
         generated = '''	XrResult OpenXrApi::xrGetInstanceProcAddr(XrInstance instance, const char* name, PFN_xrVoidFunction* function)
+	{
+		return xrGetInstanceProcAddrInternal(instance, name, function);
+	}
+
+	XrResult OpenXrApi::xrGetInstanceProcAddrInternal(XrInstance instance, const char* name, PFN_xrVoidFunction* function)
 	{
 		XrResult result = m_xrGetInstanceProcAddr(instance, name, function);
 
@@ -244,7 +252,7 @@ namespace openxr_api_layer
 '''
 
         for cur_cmd in self.core_commands:
-            if cur_cmd.name in layer_apis.override_functions:
+            if cur_cmd.name in layer_apis.override_functions + ['xrEnumerateInstanceExtensionProperties']:
                 generated += f'''		else if (apiName == "{cur_cmd.name}")
 		{{
 			m_{cur_cmd.name} = reinterpret_cast<PFN_{cur_cmd.name}>(*function);
@@ -279,6 +287,9 @@ class DispatchGenHOutputGenerator(DispatchGenOutputGenerator):
 
 namespace openxr_api_layer
 {
+
+	void ResetInstance();
+	extern const std::vector<std::pair<std::string, uint32_t>> advertisedExtensions;
 
 	class OpenXrApi
 	{
@@ -316,19 +327,72 @@ namespace openxr_api_layer
 			m_instance = instance;
 		}
 
-		void SetGrantedExtensions(std::vector<std::string>& grantedExtensions)
+		void SetGrantedExtensions(const std::vector<std::string>& grantedExtensions)
 		{
 			m_grantedExtensions = std::set(grantedExtensions.begin(), grantedExtensions.end());
 		}
 
-        bool IsExtensionGranted(const std::string extensionName)
-        {
-            return (bool)m_grantedExtensions.count(extensionName);
-        }
+		bool IsExtensionGranted(const std::string& extensionName) const
+		{
+			return (bool)m_grantedExtensions.count(extensionName);
+		}
+
 
 		// Specially-handled by the auto-generated code.
 		virtual XrResult xrGetInstanceProcAddr(XrInstance instance, const char* name, PFN_xrVoidFunction* function);
 		virtual XrResult xrCreateInstance(const XrInstanceCreateInfo* createInfo);
+
+		// Make sure to destroy the singleton instance.
+		virtual XrResult xrDestroyInstance(XrInstance instance) {
+			// Invoking ResetInstance() is equivalent to `delete this;' so we must take precautions.
+			PFN_xrDestroyInstance finalDestroyInstance = m_xrDestroyInstance;
+			ResetInstance();
+			return finalDestroyInstance(instance);
+		}
+
+		// Make sure we enumerate the layer's extensions, specifically when another API layer may resolve our implementation
+		// of xrEnumerateInstanceExtensionProperties() instead of the loaders.
+		virtual XrResult xrEnumerateInstanceExtensionProperties(const char* layerName,
+																uint32_t propertyCapacityInput,
+																uint32_t* propertyCountOutput,
+																XrExtensionProperties* properties) {
+			XrResult result = XR_ERROR_RUNTIME_FAILURE;
+			if (!layerName || std::string_view(layerName) != LAYER_NAME) {
+				result = m_xrEnumerateInstanceExtensionProperties(layerName, propertyCapacityInput, propertyCountOutput, properties);
+			}
+
+			if (XR_SUCCEEDED(result)) {
+				if (!layerName || std::string_view(layerName) == LAYER_NAME) {
+					const uint32_t baseOffset = *propertyCountOutput;
+					*propertyCountOutput += (uint32_t)advertisedExtensions.size();
+					if (propertyCapacityInput) {
+						if (propertyCapacityInput < *propertyCountOutput) {
+							result = XR_ERROR_SIZE_INSUFFICIENT;
+						} else {
+							result = XR_SUCCESS;
+							for (uint32_t i = baseOffset; i < *propertyCountOutput; i++) {
+								if (properties[i].type != XR_TYPE_EXTENSION_PROPERTIES) {
+									result = XR_ERROR_VALIDATION_FAILURE;
+									break;
+								}
+
+								strcpy_s(properties[i].extensionName, advertisedExtensions[i - baseOffset].first.c_str());
+								properties[i].extensionVersion = advertisedExtensions[i - baseOffset].second;
+							}
+						}
+					}
+				}
+			}
+
+			return result;
+		}
+
+	private:
+		XrResult xrGetInstanceProcAddrInternal(XrInstance instance, const char* name, PFN_xrVoidFunction* function);
+		friend XrResult xrGetInstanceProcAddr(XrInstance instance, const char* name, PFN_xrVoidFunction* function);
+
+		PFN_xrDestroyInstance m_xrDestroyInstance{nullptr};
+		PFN_xrEnumerateInstanceExtensionProperties m_xrEnumerateInstanceExtensionProperties{nullptr};
 '''
         write(preamble, file=self.outFile)
 
@@ -337,6 +401,8 @@ namespace openxr_api_layer
 
         postamble = '''
 	};
+
+	extern std::unique_ptr<OpenXrApi> g_instance;
 
 } // namespace openxr_api_layer
 '''
@@ -354,7 +420,7 @@ namespace openxr_api_layer
     def genVirtualMethods(self):
         generated = ''
 
-        commands_to_include = list(set(layer_apis.override_functions + layer_apis.requested_functions + ['xrDestroyInstance']))
+        commands_to_include = list(set(layer_apis.override_functions + layer_apis.requested_functions))
         for cur_cmd in self.core_commands + self.ext_commands:
             if cur_cmd.name in commands_to_include:
                 parameters_list = self.makeParametersList(cur_cmd)
