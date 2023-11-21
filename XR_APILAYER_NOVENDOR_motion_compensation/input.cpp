@@ -332,7 +332,7 @@ namespace Input
     {
         bool success;
 
-        if (GetConfig()->IsVirtualTracker())
+        if (m_Layer->m_VirtualTrackerUsed)
         {
             if (auto* tracker = reinterpret_cast<Tracker::VirtualTracker*>(m_Layer->m_Tracker))
             {
@@ -392,6 +392,7 @@ namespace Input
             m_Layer->m_AutoActivator =
                 std::make_unique<utility::AutoActivator>(utility::AutoActivator(m_Layer->m_Input));
             m_Layer->m_HmdModifier = std::make_unique<utility::HmdModifier>();
+            m_Layer->m_VirtualTrackerUsed = GetConfig()->IsVirtualTracker();
             Tracker::GetTracker(&m_Layer->m_Tracker);
             if (!m_Layer->m_Tracker->Init())
             {
@@ -407,7 +408,7 @@ namespace Input
 
     void InputHandler::SaveConfig(XrTime time, bool forApp) const
     {
-        if (GetConfig()->IsVirtualTracker())
+        if (m_Layer->m_VirtualTrackerUsed)
         {
             if (const auto tracker = reinterpret_cast<Tracker::VirtualTracker*>(m_Layer->m_Tracker))
             {

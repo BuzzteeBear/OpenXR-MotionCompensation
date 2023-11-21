@@ -84,7 +84,7 @@ namespace openxr_api_layer
                                uint32_t* viewCountOutput,
                                XrView* views) override;
         XrResult xrSyncActions(XrSession session, const XrActionsSyncInfo* syncInfo) override;
-        XrResult xrBeginFrame(XrSession session, const XrFrameBeginInfo* frameBeginInfo)override;
+        XrResult xrBeginFrame(XrSession session, const XrFrameBeginInfo* frameBeginInfo) override;
         XrResult xrEndFrame(XrSession session, const XrFrameEndInfo* frameEndInfo) override;
 
         void RequestCurrentInteractionProfile();
@@ -124,6 +124,7 @@ namespace openxr_api_layer
         bool m_Enabled{false};
         bool m_PhysicalEnabled{false};
         bool m_OverlayEnabled{false};
+        bool m_VirtualTrackerUsed{false};
         bool m_CompensateControllers{false};
         bool m_SuppressInteraction{false};
         bool m_ActionsCreated{false};

@@ -110,6 +110,8 @@ namespace openxr_api_layer
         // set log level
         GetConfig()->GetBool(Cfg::LogVerbose, logVerbose);
 
+        m_VirtualTrackerUsed = GetConfig()->IsVirtualTracker();
+
         if (m_Initialized)
         {
             GetConfig()->GetBool(Cfg::Enabled, m_Enabled);
@@ -136,7 +138,7 @@ namespace openxr_api_layer
                 if (m_CompensateControllers)
                 {
                     Log("compensation of motion controllers is active");
-                    m_SuppressInteraction = GetConfig()->IsVirtualTracker();
+                    m_SuppressInteraction = m_VirtualTrackerUsed;
                 }
                 if (!m_SuppressInteraction)
                 {
@@ -434,11 +436,10 @@ namespace openxr_api_layer
                bindingProfiles.suggestedBindings,
                bindingProfiles.countSuggestedBindings * sizeof(XrActionSuggestedBinding));
 
-        const bool isVirtual = GetConfig()->IsVirtualTracker();
         const std::string trackerPath(m_SubActionPath + "/");
         const std::string posePath(trackerPath + "input/grip/pose");
-        const std::string movePath(isVirtual ? trackerPath + m_ButtonPath.GetSubPath(profile, 0) : "");
-        const std::string positionPath(isVirtual ? trackerPath + m_ButtonPath.GetSubPath(profile, 1) : "");
+        const std::string movePath(m_VirtualTrackerUsed ? trackerPath + m_ButtonPath.GetSubPath(profile, 0) : "");
+        const std::string positionPath(m_VirtualTrackerUsed ? trackerPath + m_ButtonPath.GetSubPath(profile, 1) : "");
         const std::string hapticPath(trackerPath + "output/haptic");
         
         bool isTrackerPath{false};
@@ -462,19 +463,19 @@ namespace openxr_api_layer
                     m_InteractionProfileSuggested = true;
                     Log("Binding %s - %s overridden with reference tracker action", profile.c_str(), posePath.c_str());
                 }
-                if (isVirtual && getXrPath(curBinding.binding) == movePath)
+                if (m_VirtualTrackerUsed && getXrPath(curBinding.binding) == movePath)
                 {
                     curBinding.action = m_MoveAction;
                     moveBindingOverriden = true;
                     Log("Binding %s - %s overridden with move action", profile.c_str(), movePath.c_str());
                 }
-                if (isVirtual && getXrPath(curBinding.binding) == positionPath)
+                if (m_VirtualTrackerUsed && getXrPath(curBinding.binding) == positionPath)
                 {
                     curBinding.action = m_PositionAction;
                     positionBindingOverriden = true;
                     Log("Binding %s - %s overridden with position action", profile.c_str(), positionPath.c_str());
                 }
-                if (isVirtual && getXrPath(curBinding.binding) == hapticPath)
+                if (m_VirtualTrackerUsed && getXrPath(curBinding.binding) == hapticPath)
                 {
                     curBinding.action = m_HapticAction;
                     hapticBindingOverriden = true;
@@ -500,7 +501,7 @@ namespace openxr_api_layer
                 ErrorLog("%s: unable to create XrPath from %s: %s", __FUNCTION__, posePath.c_str(), xr::ToCString(result));
             }
         }
-        if (isVirtual && isTrackerPath && !moveBindingOverriden)
+        if (m_VirtualTrackerUsed && isTrackerPath && !moveBindingOverriden)
         {
             // suggestion is for tracker input but doesn't include move -> add it
             XrActionSuggestedBinding newBinding{m_MoveAction};
@@ -515,7 +516,7 @@ namespace openxr_api_layer
                 ErrorLog("%s: unable to create XrPath from %s: %s", __FUNCTION__, movePath.c_str(), xr::ToCString(result));
             }
         }
-        if (isVirtual && isTrackerPath && !positionBindingOverriden)
+        if (m_VirtualTrackerUsed && isTrackerPath && !positionBindingOverriden)
         {
             // suggestion is for tracker input but doesn't include position -> add it
             XrActionSuggestedBinding newBinding{m_PositionAction};
@@ -530,7 +531,7 @@ namespace openxr_api_layer
                 ErrorLog("%s: unable to create XrPath from %s: %s", __FUNCTION__, positionPath.c_str(), xr::ToCString(result));
             }
         }
-        if (isVirtual && isTrackerPath  && !hapticBindingOverriden)
+        if (m_VirtualTrackerUsed && isTrackerPath && !hapticBindingOverriden)
         {
             // suggestion is for tracker input but doesn't include haptic -> add it
             XrActionSuggestedBinding newBinding{m_HapticAction};
@@ -1322,7 +1323,7 @@ namespace openxr_api_layer
                     success = false;
                 }
                 TraceLoggingWrite(g_traceProvider, "CreateTrackerActions", TLPArg(m_PoseAction, "PoseAction"));
-                if (GetConfig()->IsVirtualTracker())
+                if (m_VirtualTrackerUsed)
                 {
                     strcpy_s(actionCreateInfo.actionName, "cor_move");
                     strcpy_s(actionCreateInfo.localizedActionName, "COR Move");
@@ -1474,7 +1475,7 @@ namespace openxr_api_layer
                     bindings.push_back(poseBinding);
 
                     // add move, position and haptic bindings for controller
-                    if (GetConfig()->IsVirtualTracker())
+                    if (m_VirtualTrackerUsed)
                     {
                         movePath = trackerPath + m_ButtonPath.GetSubPath(profile, 0);
                         if (const XrResult result =
