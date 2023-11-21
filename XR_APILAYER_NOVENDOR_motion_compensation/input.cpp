@@ -391,7 +391,7 @@ namespace Input
             GetConfig()->GetBool(Cfg::CacheUseEye, m_Layer->m_UseEyeCache);
             m_Layer->m_AutoActivator =
                 std::make_unique<utility::AutoActivator>(utility::AutoActivator(m_Layer->m_Input));
-            m_Layer->m_HmdModifier = std::make_unique<utility::HmdModifier>();
+            m_Layer->m_HmdModifier = std::make_unique<Modifier::HmdModifier>();
             m_Layer->m_VirtualTrackerUsed = GetConfig()->IsVirtualTracker();
             Tracker::GetTracker(&m_Layer->m_Tracker);
             if (!m_Layer->m_Tracker->Init())

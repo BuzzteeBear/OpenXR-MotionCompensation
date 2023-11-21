@@ -3,6 +3,7 @@
 #pragma once
 #include "utility.h"
 #include "filter.h"
+#include "modifier.h"
 
 namespace Tracker
 {
@@ -74,7 +75,7 @@ namespace Tracker
         Filter::FilterBase<XrVector3f>* m_TransFilter = nullptr;
         Filter::FilterBase<XrQuaternionf>* m_RotFilter = nullptr;
 
-        std::shared_ptr<utility::TrackerModifier> m_TrackerModifier{};
+        std::shared_ptr<Modifier::TrackerModifier> m_TrackerModifier{};
     };
 
     class OpenXrTracker final : public TrackerBase

@@ -157,7 +157,7 @@ namespace openxr_api_layer
         std::unique_ptr<graphics::Overlay> m_Overlay{};
         std::shared_ptr<Input::InputHandler> m_Input{};
         std::unique_ptr<utility::AutoActivator> m_AutoActivator{};
-        std::unique_ptr<utility::HmdModifier> m_HmdModifier{};
+        std::unique_ptr<Modifier::HmdModifier> m_HmdModifier{};
 
         // connection recovery
         XrTime m_RecoveryWait{3000000000}; // 3 sec default timeout

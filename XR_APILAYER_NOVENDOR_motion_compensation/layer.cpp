@@ -214,7 +214,7 @@ namespace openxr_api_layer
         m_AutoActivator = std::make_unique<utility::AutoActivator>(utility::AutoActivator(m_Input));
 
         // initialize hmd modifier
-        m_HmdModifier = std::make_unique<utility::HmdModifier>();
+        m_HmdModifier = std::make_unique<Modifier::HmdModifier>();
         GetConfig()->GetBool(Cfg::FactorEnabled, m_ModifierActive);
 
         return result;

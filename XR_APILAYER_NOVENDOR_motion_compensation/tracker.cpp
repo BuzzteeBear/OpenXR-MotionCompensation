@@ -188,7 +188,7 @@ namespace Tracker
 
     bool TrackerBase::Init()
     {
-        m_TrackerModifier = std::make_unique<TrackerModifier>();
+        m_TrackerModifier = std::make_unique<Modifier::TrackerModifier>();
         ControllerBase::Init();
         return LoadFilters();
     }
