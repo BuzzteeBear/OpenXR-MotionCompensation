@@ -1,6 +1,7 @@
 // Copyright(c) 2022 Sebastian Veith
 
 #pragma once
+#include "resource.h"
 
 namespace Feedback
 {
@@ -38,15 +39,37 @@ namespace Feedback
     class AudioOut
     {
       public:
-        bool Init();
-        void Execute(Event feedback);
+        static void Execute(Event feedback);
         static void CountDown(int seconds);
-
       private:
-        std::map<Event, int> m_SoundResources{};
+        inline static const std::map<Event, int> m_SoundResources{{Event::Error, ERROR_WAV},
+                                                         {Event::Load, LOADED_WAV},
+                                                         {Event::Save, SAVED_WAV},
+                                                         {Event::Activated, ACTIVATED_WAV},
+                                                         {Event::Deactivated, DEACTIVATED_WAV},
+                                                         {Event::Calibrated, CALIBRATED_WAV},
+                                                         {Event::Plus, PLUS_WAV},
+                                                         {Event::Minus, MINUS_WAV},
+                                                         {Event::Max, MAX_WAV},
+                                                         {Event::Min, MIN_WAV},
+                                                         {Event::Up, UP_WAV},
+                                                         {Event::Down, DOWN_WAV},
+                                                         {Event::Forward, FORWARD_WAV},
+                                                         {Event::Back, BACK_WAV},
+                                                         {Event::Left, LEFT_WAV},
+                                                         {Event::Right, RIGHT_WAV},
+                                                         {Event::RotLeft, ROT_LEFT_WAV},
+                                                         {Event::RotRight, ROT_RIGHT_WAV},
+                                                         {Event::DebugOn, DEBUG_ON_WAV},
+                                                         {Event::DebugOff, DEBUG_OFF_WAV},
+                                                         {Event::ConnectionLost, CONNECTION_LOST_WAV},
+                                                         {Event::EyeCached, EYE_CACHED_WAV},
+                                                         {Event::EyeCalculated, EYE_CALCULATION_WAV},
+                                                         {Event::OverlayOn, OVERLAY_ON_WAV},
+                                                         {Event::OverlayOff, OVERLAY_OFF_WAV},
+                                                         {Event::ModifierOn, MODIFIER_ON_WAV},
+                                                         {Event::ModifierOff, MODIFIER_OFF_WAV}};
+
     };
 
 } // namespace Feedback
-
-// Singleton accessor.
-Feedback::AudioOut* GetAudioOut();

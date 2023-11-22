@@ -157,10 +157,6 @@ namespace openxr_api_layer
                 }
             }
 
-
-            // initialize audio feedback
-            GetAudioOut()->Init();
-
             // enable debug test rotation
             GetConfig()->GetBool(Cfg::TestRotation, m_TestRotation);
 
@@ -756,7 +752,7 @@ namespace openxr_api_layer
                     else if (m_RecoveryWait >= 0 && time - m_RecoveryStart > m_RecoveryWait)
                     {
                         ErrorLog("tracker connection lost");
-                        GetAudioOut()->Execute(Event::ConnectionLost);
+                        AudioOut::Execute(Event::ConnectionLost);
                         m_Activated = false;
                         m_RecoveryStart = -1;
                     }

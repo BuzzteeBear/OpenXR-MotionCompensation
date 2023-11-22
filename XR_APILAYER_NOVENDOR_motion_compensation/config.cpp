@@ -320,7 +320,7 @@ void ConfigManager::WriteConfig(const bool forApp)
         }
     }
     Log("current configuration %saved to %s", error ? "could not be " : "", m_ApplicationIni.c_str());
-    GetAudioOut()->Execute(!error ? Feedback::Event::Save : Feedback::Event::Error);
+    Feedback::AudioOut::Execute(!error ? Feedback::Event::Save : Feedback::Event::Error);
 }
 
 std::unique_ptr<ConfigManager> g_config = nullptr;

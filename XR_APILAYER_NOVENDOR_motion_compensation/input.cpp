@@ -254,11 +254,11 @@ namespace Input
                                              : "could not be activated");
         if (oldState != m_Layer->m_Activated)
         {
-            GetAudioOut()->Execute(m_Layer->m_Activated ? Event::Activated : Event::Deactivated);
+            AudioOut::Execute(m_Layer->m_Activated ? Event::Activated : Event::Deactivated);
         }
         else if (!m_Layer->m_Activated)
         {
-            GetAudioOut()->Execute(Event::Error);
+            AudioOut::Execute(Event::Error);
         }
         TraceLoggingWrite(g_traceProvider,
                           "ToggleActive",
@@ -284,7 +284,7 @@ namespace Input
 
         if (m_Layer->m_Tracker->ResetReferencePose(m_Layer->m_Session, time))
         {
-            GetAudioOut()->Execute(Event::Calibrated);
+            AudioOut::Execute(Event::Calibrated);
             TraceLoggingWrite(g_traceProvider, "Recalibrate", TLArg("Reset", "Tracker_Reference"), TLArg(time, "Time"));
         }
         else
@@ -295,7 +295,7 @@ namespace Input
                 ErrorLog("motion compensation deactivated because tracker reference pose cold not be reset");
             }
             m_Layer->m_Activated = false;
-            GetAudioOut()->Execute(Event::Error);
+            AudioOut::Execute(Event::Error);
             TraceLoggingWrite(g_traceProvider,
                               "Recalibrate",
                               TLArg("Deactivated_Reset", "MotionCompensation"),
@@ -307,7 +307,7 @@ namespace Input
     {
         if (!m_Layer->m_OverlayEnabled)
         {
-            GetAudioOut()->Execute(Event::Error);
+            AudioOut::Execute(Event::Error);
             ErrorLog("overlay is deactivated in config file and cannot be activated");
             return;
         }
@@ -318,14 +318,14 @@ namespace Input
     {
         m_Layer->m_UseEyeCache = !m_Layer->m_UseEyeCache;
         GetConfig()->SetValue(Cfg::CacheUseEye, m_Layer->m_UseEyeCache);
-        GetAudioOut()->Execute(m_Layer->m_UseEyeCache ? Event::EyeCached : Event::EyeCalculated);
+        AudioOut::Execute(m_Layer->m_UseEyeCache ? Event::EyeCached : Event::EyeCalculated);
     }
 
     void InputHandler::ToggleModifier() const
     {
         const bool active = m_Layer->ToggleModifierActive();
         GetConfig()->SetValue(Cfg::FactorEnabled, active);
-        GetAudioOut()->Execute(active ? Event::ModifierOn : Event::ModifierOff);
+        AudioOut::Execute(active ? Event::ModifierOn : Event::ModifierOff);
     }
 
     void InputHandler::ChangeOffset(const Direction dir, const bool fast) const
@@ -368,7 +368,7 @@ namespace Input
             success = false;
         }
 
-        GetAudioOut()->Execute(!success                    ? Event::Error
+        AudioOut::Execute(!success                    ? Event::Error
                                : Direction::Up == dir      ? Event::Up
                                : Direction::Down == dir    ? Event::Down
                                : Direction::Fwd == dir     ? Event::Forward
@@ -403,7 +403,7 @@ namespace Input
                 m_Layer->m_Overlay->SetMarkerSize();
             }
         }
-        GetAudioOut()->Execute(!success ? Event::Error : Event::Load);
+        AudioOut::Execute(!success ? Event::Error : Event::Load);
     }
 
     void InputHandler::SaveConfig(XrTime time, bool forApp) const

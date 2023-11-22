@@ -261,7 +261,7 @@ namespace Tracker
             GetConfig()->SetValue(Cfg::RotStrength, *currentValue);
             Log("rotational filter strength %screased to %f", increase ? "in" : "de", *currentValue);
         }
-        GetAudioOut()->Execute(*currentValue == prevValue ? increase ? Event::Max : Event::Min
+        AudioOut::Execute(*currentValue == prevValue ? increase ? Event::Max : Event::Min
                                : increase                 ? Event::Plus
                                                           : Event::Minus);
     }

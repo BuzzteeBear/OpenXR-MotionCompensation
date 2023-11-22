@@ -12,39 +12,6 @@
 using namespace openxr_api_layer::log;
 namespace Feedback
 {
-    bool AudioOut::Init()
-    {
-        m_SoundResources[Event::Error] = ERROR_WAV;
-        m_SoundResources[Event::Load] = LOADED_WAV;
-        m_SoundResources[Event::Save] = SAVED_WAV;
-        m_SoundResources[Event::Activated] = ACTIVATED_WAV;
-        m_SoundResources[Event::Deactivated] = DEACTIVATED_WAV;
-        m_SoundResources[Event::Calibrated] = CALIBRATED_WAV;
-        m_SoundResources[Event::Plus] = PLUS_WAV;
-        m_SoundResources[Event::Minus] = MINUS_WAV;
-        m_SoundResources[Event::Max] = MAX_WAV;
-        m_SoundResources[Event::Min] = MIN_WAV;
-        m_SoundResources[Event::Up] = UP_WAV;
-        m_SoundResources[Event::Down] = DOWN_WAV;
-        m_SoundResources[Event::Forward] = FORWARD_WAV;
-        m_SoundResources[Event::Back] = BACK_WAV;
-        m_SoundResources[Event::Left] = LEFT_WAV;
-        m_SoundResources[Event::Right] = RIGHT_WAV;
-        m_SoundResources[Event::RotLeft] = ROT_LEFT_WAV;
-        m_SoundResources[Event::RotRight] = ROT_RIGHT_WAV;
-        m_SoundResources[Event::DebugOn] = DEBUG_ON_WAV;
-        m_SoundResources[Event::DebugOff] = DEBUG_OFF_WAV;
-        m_SoundResources[Event::ConnectionLost] = CONNECTION_LOST_WAV;
-        m_SoundResources[Event::EyeCached] = EYE_CACHED_WAV;
-        m_SoundResources[Event::EyeCalculated] = EYE_CALCULATION_WAV;
-        m_SoundResources[Event::OverlayOn] = OVERLAY_ON_WAV;
-        m_SoundResources[Event::OverlayOff] = OVERLAY_OFF_WAV;
-        m_SoundResources[Event::ModifierOn] = MODIFIER_ON_WAV;
-        m_SoundResources[Event::ModifierOff] = MODIFIER_OFF_WAV;
-
-        return true;
-    }
-
     void AudioOut::Execute(const Event feedback)
     {
         const auto soundResource = m_SoundResources.find(feedback);
@@ -78,19 +45,8 @@ namespace Feedback
             ErrorLog("%s: unable to play sound (%d : % d): %s",
                      __FUNCTION__,
                      -seconds,
-                     126 + seconds,
+                     COUNT0_WAV + seconds,
                      utility::LastErrorMsg().c_str());
         }
     }
 } // namespace Feedback
-
-std::unique_ptr<Feedback::AudioOut> g_AudioOut = nullptr;
-
-Feedback::AudioOut* GetAudioOut()
-{
-    if (!g_AudioOut)
-    {
-        g_AudioOut = std::make_unique<Feedback::AudioOut>();
-    }
-    return g_AudioOut.get();
-}

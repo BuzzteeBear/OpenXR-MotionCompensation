@@ -87,11 +87,11 @@ namespace openxr_api_layer::graphics
         {
             m_OverlayActive = false;
             ErrorLog("graphical overlay is not properly initialized");
-            GetAudioOut()->Execute(Feedback::Event::Error);
+            Feedback::AudioOut::Execute(Feedback::Event::Error);
             return false;
         }
         m_OverlayActive = !m_OverlayActive;
-        GetAudioOut()->Execute(m_OverlayActive ? Feedback::Event::OverlayOn : Feedback::Event::OverlayOff);
+        Feedback::AudioOut::Execute(m_OverlayActive ? Feedback::Event::OverlayOn : Feedback::Event::OverlayOff);
         return true;
     }
 
