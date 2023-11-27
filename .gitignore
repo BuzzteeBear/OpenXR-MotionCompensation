@@ -9,3 +9,5 @@ enc_temp_folder/
 *.vcxproj.user
 *.csproj.user
 *.pubxml.user
+*.gen.h
+*.gen.cpp
