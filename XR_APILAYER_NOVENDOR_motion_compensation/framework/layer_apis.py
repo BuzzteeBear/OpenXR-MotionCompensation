@@ -20,6 +20,7 @@ override_functions = [
     "xrCreateActionSpace",
     "xrLocateSpace",
     "xrLocateViews",
+    "xrWaitFrame",
     "xrBeginFrame",
     "xrEndFrame"
 ]

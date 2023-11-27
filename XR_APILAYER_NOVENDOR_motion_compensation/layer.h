@@ -84,6 +84,9 @@ namespace openxr_api_layer
                                uint32_t* viewCountOutput,
                                XrView* views) override;
         XrResult xrSyncActions(XrSession session, const XrActionsSyncInfo* syncInfo) override;
+        XrResult xrWaitFrame(XrSession session,
+                             const XrFrameWaitInfo* frameWaitInfo,
+                             XrFrameState* frameState) override;
         XrResult xrBeginFrame(XrSession session, const XrFrameBeginInfo* frameBeginInfo) override;
         XrResult xrEndFrame(XrSession session, const XrFrameEndInfo* frameEndInfo) override;
 

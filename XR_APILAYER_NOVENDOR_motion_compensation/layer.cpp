@@ -815,7 +815,7 @@ namespace openxr_api_layer
         const XrResult result = OpenXrApi::xrLocateSpace(space, baseSpace, time, location);
         if (XR_FAILED(result))
         {
-            ErrorLog("%s: xrLocateSpace failed: %s", __FUNCTION__, xr::ToCString(result));
+            ErrorLog("%s: xrLocateSpace(%u) failed: %s", __FUNCTION__, time, xr::ToCString(result));
             TraceLoggingWriteStop(local,
                                   "OpenXrLayer::xrLocateSpace",
                                   TLArg(xr::ToCString(result), "LocateSpaceResult"));
@@ -1064,6 +1064,34 @@ namespace openxr_api_layer
 
         TraceLoggingWriteStop(local, "OpenXrLayer::xrSyncActions", TLArg(xr::ToCString(result), "Result"));
 
+        return result;
+    }
+
+    XrResult OpenXrLayer::xrWaitFrame(XrSession session, const XrFrameWaitInfo* frameWaitInfo, XrFrameState* frameState)
+    {
+        if (!m_Enabled)
+        {
+           return OpenXrApi::xrWaitFrame(session, frameWaitInfo, frameState);
+        }
+
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "OpenXrLayer::xrWaitFrame", TLPArg(session, "Session"));
+
+        if (frameWaitInfo->type != XR_TYPE_FRAME_WAIT_INFO)
+        {
+           TraceLoggingWriteStop(local, "OpenXrLayer::xrWaitFrame", TLArg(false, "TypeCheck"));
+           return XR_ERROR_VALIDATION_FAILURE;
+        }
+
+        const XrResult result = OpenXrApi::xrWaitFrame(session, frameWaitInfo, frameState);
+
+        DebugLog("xrWaitFrame predicted time: %u", frameState->predictedDisplayTime);
+        TraceLoggingWriteStop(local,
+                              "OpenXrLayer::xrWaitFrame",
+                              TLArg(xr::ToCString(result), "Result"),
+                              TLArg(frameState->predictedDisplayTime, "PredictedTime"),
+                              TLArg(frameState->predictedDisplayPeriod, "PredictedPPeriod"),
+                              TLArg(frameState->shouldRender, "ShouldRender"));
         return result;
     }
 
