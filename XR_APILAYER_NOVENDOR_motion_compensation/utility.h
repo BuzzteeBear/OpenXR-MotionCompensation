@@ -5,8 +5,6 @@
 #include <log.h>
 #include "input.h"
 
-
-
 namespace utility
 {
     constexpr float floatPi{static_cast<float>(M_PI)};
@@ -20,6 +18,7 @@ namespace utility
         bool m_Countdown{false};
         int m_SecondsLeft{0};
         XrTime m_ActivationTime{0};
+
       public:
         explicit AutoActivator(const std::shared_ptr<Input::InputHandler>& input);
         void ActivateIfNecessary(XrTime time);
@@ -33,28 +32,40 @@ namespace utility
 
         void SetTolerance(const XrTime tolerance)
         {
+            using namespace openxr_api_layer::log;
+            TraceLocalActivity(local);
+            TraceLoggingWriteStart(local, "Cache::SetTolerance", TLArg(tolerance, "Tolerance"));
+
             m_Tolerance = tolerance;
+
+            TraceLoggingWriteStop(local, "Cache::SetTolerance");
         }
 
         void AddSample(XrTime time, Sample sample)
         {
+            using namespace openxr_api_layer::log;
+            TraceLocalActivity(local);
+            TraceLoggingWriteStart(local, "Cache::AddSample", TLArg(m_SampleType.c_str(), "Type"), TLArg(time, "Time"));
+
             std::unique_lock lock(m_Mutex);
             if (m_Cache.contains(time))
             {
-                openxr_api_layer::log::DebugLog("AddSample(%s): multiple samples inserted: %u",
-                                                m_SampleType.c_str(),
-                                                time);
+                DebugLog("AddSample(%s): multiple samples inserted: %u", m_SampleType.c_str(), time);
             }
             m_Cache[time] = sample;
+
+            TraceLoggingWriteStop(local, "Cache::AddSample");
         }
 
         Sample GetSample(XrTime time) const
         {
+            using namespace openxr_api_layer::log;
+            TraceLocalActivity(local);
+            TraceLoggingWriteStart(local, "Cache::GetSample", TLArg(m_SampleType.c_str(), "Type"), TLArg(time, "Time"));
+
             std::unique_lock lock(m_Mutex);
 
-            TraceLoggingWrite(openxr_api_layer::log::g_traceProvider, "GetSample", TLArg(time, "Time"));
-
-            openxr_api_layer::log::DebugLog("GetSample(%s): %u", m_SampleType.c_str(), time);
+            DebugLog("GetSample(%s): %u", m_SampleType.c_str(), time);
 
             auto it = m_Cache.lower_bound(time);
             const bool itIsEnd = m_Cache.end() == it;
@@ -63,27 +74,25 @@ namespace utility
                 if (it->first == time)
                 {
                     // exact entry found
-                    TraceLoggingWrite(openxr_api_layer::log::g_traceProvider,
-                                      "GetSample_Found",
-                                      TLArg(m_SampleType.c_str(), "Type"),
-                                      TLArg("Exact", "Match"),
-                                      TLArg(it->first, "Time"));
+                    TraceLoggingWriteStop(local,
+                                          "Cache::GetSample",
+                                          TLArg(m_SampleType.c_str(), "Type"),
+                                          TLArg("Exact", "Match"),
+                                          TLArg(it->first, "Time"));
 
-                    openxr_api_layer::log::DebugLog("GetSample(%s): exact match found", m_SampleType.c_str());
+                    DebugLog("GetSample(%s): exact match found", m_SampleType.c_str());
 
                     return it->second;
                 }
                 else if (it->first <= time + m_Tolerance)
                 {
                     // succeeding entry is within tolerance
-                    TraceLoggingWrite(openxr_api_layer::log::g_traceProvider,
-                                      "GetSample_Found",
-                                      TLArg(m_SampleType.c_str(), "Type"),
-                                      TLArg("Later", "Match"),
-                                      TLArg(it->first, "Time"));
-                    openxr_api_layer::log::DebugLog("GetSample(%s): later match found: %u",
-                                                   m_SampleType.c_str(),
-                                                   it->first);
+                    TraceLoggingWriteStop(local,
+                                          "Cache::GetSample",
+                                          TLArg(m_SampleType.c_str(), "Type"),
+                                          TLArg("Later", "Match"),
+                                          TLArg(it->first, "Time"));
+                    DebugLog("GetSample(%s): later match found: %u", m_SampleType.c_str(), it->first);
 
                     return it->second;
                 }
@@ -96,22 +105,20 @@ namespace utility
                 if (lowerIt->first >= time - m_Tolerance)
                 {
                     // preceding entry is within tolerance
-                    TraceLoggingWrite(openxr_api_layer::log::g_traceProvider,
-                                      "GetSample_Found",
-                                      TLArg(m_SampleType.c_str(), "Type"),
-                                      TLArg("Earlier", "Match"),
-                                      TLArg(lowerIt->first, "Time"));
-                    openxr_api_layer::log::DebugLog("GetSample(%s): earlier match found: %u",
-                                                   m_SampleType.c_str(),
-                                                   lowerIt->first);
+                    TraceLoggingWriteStop(local,
+                                          "Cache::GetSample",
+                                          TLArg(m_SampleType.c_str(), "Type"),
+                                          TLArg("Earlier", "Match"),
+                                          TLArg(lowerIt->first, "Time"));
+                    DebugLog("GetSample(%s): earlier match found: %u", m_SampleType.c_str(), lowerIt->first);
 
                     return lowerIt->second;
                 }
             }
-            openxr_api_layer::log::ErrorLog("GetSample(%s) unable to find sample %u+-%.3fms",
-                                           m_SampleType.c_str(),
-                                           time,
-                                           m_Tolerance / 1000000.0);
+            ErrorLog("GetSample(%s) unable to find sample %u+-%.3fms",
+                     m_SampleType.c_str(),
+                     time,
+                     m_Tolerance / 1000000.0);
             if (!itIsEnd)
             {
                 if (!itIsBegin)
@@ -120,23 +127,23 @@ namespace utility
                     --lowerIt;
                     // both entries are valid -> select better match
                     auto returnIt = (time - lowerIt->first < it->first - time ? lowerIt : it);
-                    TraceLoggingWrite(openxr_api_layer::log::g_traceProvider,
-                                      "GetSample_Failed",
-                                      TLArg(m_SampleType.c_str(), "Type"),
-                                      TLArg("Estimated Both", "Match"),
-                                      TLArg(it->first, "Time"));
-                    openxr_api_layer::log::ErrorLog("Using best match: t = %u ", returnIt->first);
+                    TraceLoggingWriteStop(local,
+                                          "Cache::GetSample",
+                                          TLArg(m_SampleType.c_str(), "Type"),
+                                          TLArg("Estimated Both", "Match"),
+                                          TLArg(it->first, "Time"));
+                    ErrorLog("Using best match: t = %u ", returnIt->first);
 
                     return returnIt->second;
                 }
                 // higher entry is first in cache -> use it
 
-                TraceLoggingWrite(openxr_api_layer::log::g_traceProvider,
-                                  "GetSample_Found",
-                                  TLArg(m_SampleType.c_str(), "Type"),
-                                  TLArg("Estimated Earlier", "Match"),
-                                  TLArg(it->first, "Time"));
-                openxr_api_layer::log::ErrorLog("Using best match: t = %u ", it->first);
+                TraceLoggingWriteStop(local,
+                                      "Cache::GetSample",
+                                      TLArg(m_SampleType.c_str(), "Type"),
+                                      TLArg("Estimated Later", "Match"),
+                                      TLArg(it->first, "Time"));
+                ErrorLog("Using best match: t = %u ", it->first);
                 return it->second;
             }
             if (!itIsBegin)
@@ -144,23 +151,30 @@ namespace utility
                 auto lowerIt = it;
                 --lowerIt;
                 // lower entry is last in cache-> use it
-                openxr_api_layer::log::ErrorLog("Using best match: t = %u ", lowerIt->first);
-                TraceLoggingWrite(openxr_api_layer::log::g_traceProvider,
-                                  "GetSample_Failed",
-                                  TLArg(m_SampleType.c_str(), "Type"),
-                                  TLArg("Estimated Earlier", "Type"),
-                                  TLArg(lowerIt->first, "Time"));
+                ErrorLog("Using best match: t = %u ", lowerIt->first);
+                TraceLoggingWriteStop(local,
+                                        "Cache::GetSample",
+                                        TLArg(m_SampleType.c_str(), "Type"),
+                                        TLArg("Estimated Earlier", "Match"),
+                                        TLArg(lowerIt->first, "Time"));
                 return lowerIt->second;
             }
             // cache is empty -> return fallback
-            openxr_api_layer::log::ErrorLog("Using fallback!!!", time);
-            TraceLoggingWrite(openxr_api_layer::log::g_traceProvider, "GetSample_Failed", TLArg("Fallback", "Type"));
+            ErrorLog("Using fallback!!!", time);
+            TraceLoggingWriteStop(local,
+                                  "Cache::GetSample",
+                                  TLArg(m_SampleType.c_str(), "Type"),
+                                  TLArg("Fallback", "Match"));
             return m_Fallback;
         }
 
         // remove outdated entries
         void CleanUp(const XrTime time)
         {
+            using namespace openxr_api_layer::log;
+            TraceLocalActivity(local);
+            TraceLoggingWriteStart(local, "Cache::CleanUp", TLArg(m_SampleType.c_str(), "Type"), TLArg(time, "Time"));
+
             std::unique_lock lock(m_Mutex);
 
             auto it = m_Cache.lower_bound(time - m_Tolerance);
@@ -169,9 +183,12 @@ namespace utility
                 --it;
                 if (m_Cache.end() != it && m_Cache.begin() != it)
                 {
+                    TraceLoggingWriteTagged(local, "Cache::CleanUp", TLArg(it->first, "Eraaed"));
                     m_Cache.erase(m_Cache.begin(), it);
                 }
             }
+
+            TraceLoggingWriteStop(local, "Cache::CleanUp");
         }
 
       private:
@@ -192,8 +209,7 @@ namespace utility
         bool Read(void* buffer, size_t size, XrTime time);
         void Close();
 
-
-      private: 
+      private:
         XrTime m_Check{1000000000}; // reopen mmf once a second by default
         XrTime m_LastRefresh{0};
         std::string m_Name;
@@ -203,41 +219,10 @@ namespace utility
         std::mutex m_MmfLock;
     };
 
-    struct ITimer
-    {
-        virtual ~ITimer() = default;
-
-        virtual void start() = 0;
-        virtual void stop() = 0;
-
-        virtual uint64_t query() const = 0;
-    };
-
-    std::shared_ptr<ITimer> createTimer();
-
-    static inline bool startsWith(const std::string& str, const std::string& substr)
-    {
-        return str.find(substr) == 0;
-    }
-
     static inline bool endsWith(const std::string& str, const std::string& substr)
     {
         const auto pos = str.find(substr);
         return pos != std::string::npos && pos == str.size() - substr.size();
-    }
-
-    // Both ray and quadCenter poses must be located using the same base space.
-    bool hitTest(const XrPosef& ray, const XrPosef& quadCenter, const XrExtent2Df& quadSize, XrPosef& hitPose);
-
-    // Get UV coordinates for a point on quad.
-    XrVector2f getUVCoordinates(const XrVector3f& point, const XrPosef& quadCenter, const XrExtent2Df& quadSize);
-    static inline POINT getUVCoordinates(const XrVector3f& point,
-                                         const XrPosef& quadCenter,
-                                         const XrExtent2Df& quadSize,
-                                         const XrExtent2Di& quadPixelSize)
-    {
-        const XrVector2f uv = getUVCoordinates(point, quadCenter, quadSize);
-        return {static_cast<LONG>(uv.x * quadPixelSize.width), static_cast<LONG>(uv.y * quadPixelSize.height)};
     }
 
     std::string LastErrorMsg();

@@ -41,9 +41,24 @@ namespace xr {
                            pose.orientation.w);
     }
 
+    static inline std::string ToString(XrVector3f vec)
+    {
+        return fmt::format("({:.3f}, {:.3f}, {:.3f})", vec.x, vec.y, vec.z);
+    }
+
+    static inline std::string ToString(XrQuaternionf quat)
+    {
+        return fmt::format("({:.3f}, {:.3f}, {:.3f}, {:.3f})", quat.x, quat.y, quat.z, quat.w);
+    }
+
     static inline std::string ToString(XrFovf fov) {
         return fmt::format(
             "(l:{:.3f}, r:{:.3f}, u:{:.3f}, d:{:.3f})", fov.angleLeft, fov.angleRight, fov.angleUp, fov.angleDown);
+    }
+
+    static inline std::string ToString(math::NearFar nearFar)
+    {
+        return fmt::format("(n:{:.3f}, f:{:.3f})", nearFar.Near, nearFar.Far);
     }
 
     static inline std::string ToString(XrRect2Di rect) {

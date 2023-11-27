@@ -39,7 +39,7 @@ namespace Feedback
     class AudioOut
     {
       public:
-        static void Execute(Event feedback);
+        static void Execute(Event event);
         static void CountDown(int seconds);
       private:
         inline static const std::map<Event, int> m_SoundResources{{Event::Error, ERROR_WAV},

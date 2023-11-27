@@ -14,31 +14,17 @@ namespace Input
     using namespace log;
     using namespace Feedback;
 
-
     bool KeyboardInput::Init()
     {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "KeyboardInput::Init");
         bool success = true;
-        const std::set<Cfg> activities{Cfg::KeyActivate,
-                                       Cfg::KeyCalibrate,
-                                       Cfg::KeyTransInc,
-                                       Cfg::KeyTransDec,
-                                       Cfg::KeyRotInc,
-                                       Cfg::KeyRotDec,
-                                       Cfg::KeyOffForward,
-                                       Cfg::KeyOffBack,
-                                       Cfg::KeyOffUp,
-                                       Cfg::KeyOffDown,
-                                       Cfg::KeyOffRight,
-                                       Cfg::KeyOffLeft,
-                                       Cfg::KeyRotRight,
-                                       Cfg::KeyRotLeft,
-                                       Cfg::KeyOverlay,
-                                       Cfg::KeyCache,
-                                       Cfg::KeyModifier,
-                                       Cfg::KeyFastModifier,
-                                       Cfg::KeySaveConfig,
-                                       Cfg::KeySaveConfigApp,
-                                       Cfg::KeyReloadConfig};
+        const std::set<Cfg> activities{
+            Cfg::KeyActivate,    Cfg::KeyCalibrate,  Cfg::KeyTransInc,     Cfg::KeyTransDec,   Cfg::KeyRotInc,
+            Cfg::KeyRotDec,      Cfg::KeyOffForward, Cfg::KeyOffBack,      Cfg::KeyOffUp,      Cfg::KeyOffDown,
+            Cfg::KeyOffRight,    Cfg::KeyOffLeft,    Cfg::KeyRotRight,     Cfg::KeyRotLeft,    Cfg::KeyOverlay,
+            Cfg::KeyCache,       Cfg::KeyModifier,   Cfg::KeyFastModifier, Cfg::KeySaveConfig, Cfg::KeySaveConfigApp,
+            Cfg::KeyReloadConfig};
         const std::set<int> modifiers{VK_CONTROL, VK_SHIFT, VK_MENU};
         std::set<int> fastModifiers{};
         GetConfig()->GetShortcut(Cfg::KeyFastModifier, fastModifiers);
@@ -47,6 +33,16 @@ namespace Input
         // undocumented / immutable shortcuts:
         m_ShortCuts[Cfg::InteractionProfile] = {{VK_CONTROL, VK_SHIFT, VK_MENU, 0x49}, {}}; // ctrl+shift+alt+i
         m_ShortCuts[Cfg::CurrentTrackerPose] = {{VK_CONTROL, VK_SHIFT, VK_MENU, 0x54}, {}}; // ctrl+shift+alt+t
+
+        auto keySetToString = [](const std::set<int>& keys) {
+            std::string out;
+            for (const int key : keys)
+            {
+                out += (out.empty() ? "[" : ", ") + std::to_string(key);
+            }
+            out += "]";
+            return out;
+        };
 
         for (const Cfg& activity : activities)
         {
@@ -67,19 +63,32 @@ namespace Input
                     modifiersNotSet.insert(modifier);
                 }
                 m_ShortCuts[activity] = {shortcut, modifiersNotSet};
+
+                TraceLoggingWriteTagged(local,
+                                        "KeyboardInput::Init",
+                                        TLArg(static_cast<int>(activity), "Activity"),
+                                        TLArg(keySetToString(shortcut).c_str(), "Keys"),
+                                        TLArg(keySetToString(modifiersNotSet).c_str(), "Excluded Modifiers"));
             }
             else
             {
                 success = false;
             }
         }
+        TraceLoggingWriteStop(local, "KeyboardInput::Init");
         return success;
     }
 
     void InputHandler::HandleKeyboardInput(const XrTime time)
     {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "InputHandler::HandleKeyboardInput", TLArg(time, "Time"));
+
         bool isRepeat{false};
         const bool fast = m_Input.GetKeyState(Cfg::KeyFastModifier, isRepeat);
+
+        TraceLoggingWriteTagged(local, "KeyboardInput::Init", TLArg(fast, "Fast"));
+
         if (m_Input.GetKeyState(Cfg::KeyActivate, isRepeat) && !isRepeat)
         {
             ToggleActive(time);
@@ -162,12 +171,13 @@ namespace Input
         }
         if (m_Input.GetKeyState(Cfg::InteractionProfile, isRepeat) && !isRepeat)
         {
-            m_Layer->RequestCurrentInteractionProfile();
+            m_Layer->LogCurrentInteractionProfile();
         }
         if (m_Input.GetKeyState(Cfg::CurrentTrackerPose, isRepeat) && !isRepeat)
         {
             m_Layer->m_Tracker->LogCurrentTrackerPoses(m_Layer->m_Session, time, m_Layer->m_Activated);
         }
+        TraceLoggingWriteStop(local, "InputHandler::HandleKeyboardInput");
     }
 
     bool KeyboardInput::GetKeyState(const Cfg key, bool& isRepeat)
@@ -224,12 +234,16 @@ namespace Input
 
     void InputHandler::ToggleActive(XrTime time) const
     {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "InputHandler::ToggleActive", TLArg(time, "Time"));
+
         // handle debug test rotation
         if (m_Layer->m_TestRotation)
         {
             m_Layer->m_TestRotStart = time;
             m_Layer->m_Activated = !m_Layer->m_Activated;
             Log("test rotation motion compensation % s", m_Layer->m_Activated ? "activated" : "deactivated");
+            TraceLoggingWriteStop(local, "InputHandler::ToggleActive");
             return;
         }
 
@@ -260,18 +274,21 @@ namespace Input
         {
             AudioOut::Execute(Event::Error);
         }
-        TraceLoggingWrite(g_traceProvider,
-                          "ToggleActive",
-                          TLArg(m_Layer->m_Activated ? "Deactivated" : "Activated", "MotionCompensation"),
-                          TLArg(time, "Time"));
+
+        TraceLoggingWriteStop(local, "InputHandler::ToggleActive", TLArg(m_Layer->m_Activated, "Activated"));
     }
 
     void InputHandler::Recalibrate(XrTime time) const
     {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "InputHandler::Recalibrate", TLArg(time, "Time"));
+
+        bool success = true;
         if (m_Layer->m_TestRotation)
         {
             m_Layer->m_TestRotStart = time;
             Log("test rotation motion compensation recalibrated");
+            TraceLoggingWriteStop(local, "InputHandler::Recalibrate", TLArg(success, "Success"));
             return;
         }
 
@@ -281,55 +298,73 @@ namespace Input
             // trigger interaction suggestion and action set attachment if necessary
             m_Layer->LazyInit(time);
         }
-
-        if (m_Layer->m_Tracker->ResetReferencePose(m_Layer->m_Session, time))
+        success = m_Layer->m_Tracker->ResetReferencePose(m_Layer->m_Session, time);
+        if (success)
         {
             AudioOut::Execute(Event::Calibrated);
-            TraceLoggingWrite(g_traceProvider, "Recalibrate", TLArg("Reset", "Tracker_Reference"), TLArg(time, "Time"));
         }
         else
         {
             // failed to update reference pose -> deactivate mc
             if (m_Layer->m_Activated)
             {
-                ErrorLog("motion compensation deactivated because tracker reference pose cold not be reset");
+                ErrorLog("motion compensation deactivated because tracker reference pose could not be calibrated");
+                m_Layer->m_Activated = false;
             }
-            m_Layer->m_Activated = false;
             AudioOut::Execute(Event::Error);
-            TraceLoggingWrite(g_traceProvider,
-                              "Recalibrate",
-                              TLArg("Deactivated_Reset", "MotionCompensation"),
-                              TLArg(time, "Time"));
         }
+        TraceLoggingWriteStop(local, "InputHandler::Recalibrate", TLArg(success, "Success"));
     }
 
     void InputHandler::ToggleOverlay() const
     {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "InputHandler::ToggleOverlay");
+
         if (!m_Layer->m_OverlayEnabled)
         {
             AudioOut::Execute(Event::Error);
             ErrorLog("overlay is deactivated in config file and cannot be activated");
+            TraceLoggingWriteStop(local, "InputHandler::ToggleOverlay");
             return;
         }
-        m_Layer->m_Overlay->ToggleOverlay();
+        bool success = m_Layer->m_Overlay->ToggleOverlay();
+
+        TraceLoggingWriteStop(local, "InputHandler::ToggleOverlay", TLArg(success, "Success"));
     }
 
     void InputHandler::ToggleCache() const
     {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "InputHandler::ToggleCache");
+
         m_Layer->m_UseEyeCache = !m_Layer->m_UseEyeCache;
         GetConfig()->SetValue(Cfg::CacheUseEye, m_Layer->m_UseEyeCache);
         AudioOut::Execute(m_Layer->m_UseEyeCache ? Event::EyeCached : Event::EyeCalculated);
+
+        TraceLoggingWriteStop(local, "InputHandler::ToggleCache", TLArg(m_Layer->m_UseEyeCache, "Eye Cache"));
     }
 
     void InputHandler::ToggleModifier() const
     {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "InputHandler::ToggleModifier");
+
         const bool active = m_Layer->ToggleModifierActive();
         GetConfig()->SetValue(Cfg::FactorEnabled, active);
         AudioOut::Execute(active ? Event::ModifierOn : Event::ModifierOff);
+
+        TraceLoggingWriteStop(local, "InputHandler::ToggleCache", TLArg(active, "Activated"));
     }
 
     void InputHandler::ChangeOffset(const Direction dir, const bool fast) const
     {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local,
+                               "InputHandler::ChangeOffset",
+                               TLArg(static_cast<int>(dir), "Direction"),
+                               TLArg(fast, "Fast"));
+
         bool success;
 
         if (m_Layer->m_VirtualTrackerUsed)
@@ -338,7 +373,7 @@ namespace Input
             {
                 if (Direction::RotLeft != dir && Direction::RotRight != dir)
                 {
-                    const float amount = fast ? 0.1f : 0.01f; 
+                    const float amount = fast ? 0.1f : 0.01f;
                     const XrVector3f direction{Direction::Left == dir    ? amount
                                                : Direction::Right == dir ? -amount
                                                                          : 0.0f,
@@ -369,18 +404,23 @@ namespace Input
         }
 
         AudioOut::Execute(!success                    ? Event::Error
-                               : Direction::Up == dir      ? Event::Up
-                               : Direction::Down == dir    ? Event::Down
-                               : Direction::Fwd == dir     ? Event::Forward
-                               : Direction::Back == dir    ? Event::Back
-                               : Direction::Left == dir    ? Event::Left
-                               : Direction::Right == dir   ? Event::Right
-                               : Direction::RotLeft == dir ? Event::RotLeft
-                                                           : Event::RotRight);
+                          : Direction::Up == dir      ? Event::Up
+                          : Direction::Down == dir    ? Event::Down
+                          : Direction::Fwd == dir     ? Event::Forward
+                          : Direction::Back == dir    ? Event::Back
+                          : Direction::Left == dir    ? Event::Left
+                          : Direction::Right == dir   ? Event::Right
+                          : Direction::RotLeft == dir ? Event::RotLeft
+                                                      : Event::RotRight);
+
+        TraceLoggingWriteStop(local, "InputHandler::ChangeOffset", TLArg(success, "Success"));
     }
 
     void InputHandler::ReloadConfig() const
     {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "InputHandler::ReloadConfig");
+
         m_Layer->m_Tracker->m_Calibrated = false;
         m_Layer->m_Activated = false;
         bool success = GetConfig()->Init(m_Layer->m_Application);
@@ -404,10 +444,15 @@ namespace Input
             }
         }
         AudioOut::Execute(!success ? Event::Error : Event::Load);
+
+        TraceLoggingWriteStop(local, "InputHandler::ReloadConfig", TLArg(success, "Success"));
     }
 
     void InputHandler::SaveConfig(XrTime time, bool forApp) const
     {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "InputHandler::SaveConfig", TLArg(time, "Time"), TLArg(forApp, "AppSpecific"));
+
         if (m_Layer->m_VirtualTrackerUsed)
         {
             if (const auto tracker = reinterpret_cast<Tracker::VirtualTracker*>(m_Layer->m_Tracker))
@@ -420,10 +465,18 @@ namespace Input
             }
         }
         GetConfig()->WriteConfig(forApp);
+
+        TraceLoggingWriteStop(local, "InputHandler::SaveConfig");
     }
 
     std::string ButtonPath::GetSubPath(const std::string& profile, int index)
     {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local,
+                               "ButtonPath::GetSubPath",
+                               TLArg(profile.c_str(), "Profile"),
+                               TLArg(index, "Index"));
+
         std::string path;
         if (const auto buttons = m_Mapping.find(profile); buttons != m_Mapping.end() && buttons->second.size() > index)
         {
@@ -433,6 +486,8 @@ namespace Input
         {
             ErrorLog("%s: no button mapping (%d) found for profile: %s", __FUNCTION__, index, profile.c_str());
         }
+        TraceLoggingWriteStop(local, "ButtonPath::GetSubPath", TLArg(path.c_str(), "Path"));
+
         return path;
     }
 

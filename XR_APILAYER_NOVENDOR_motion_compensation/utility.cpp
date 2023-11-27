@@ -33,10 +33,16 @@ namespace utility
     {
         if (m_Activate)
         {
+            TraceLocalActivity(local);
+            TraceLoggingWriteStart(local, "AutoActivator::ActivateIfNecessary", TLArg(time, "Time"));
+
             if (m_SecondsLeft <= 0)
             {
                 m_Input->ToggleActive(time);
                 m_Activate = false;
+                TraceLoggingWriteStop(local,
+                                     "AutoActivator::ActivateIfNecessary",
+                                     TLArg(m_SecondsLeft, "No_Seconds_Left"));
                 return;
             }
             if (0 == m_ActivationTime)
@@ -50,6 +56,8 @@ namespace utility
                 Feedback::AudioOut::CountDown(currentlyLeft);
             }
             m_SecondsLeft = currentlyLeft;
+
+            TraceLoggingWriteStop(local, "AutoActivator::ActivateIfNecessary", TLArg(m_SecondsLeft, "Seconds_Left"));
         }
     }
 
@@ -81,6 +89,9 @@ namespace utility
 
     bool Mmf::Open(const XrTime time)
     {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "Mmf::Open", TLArg(time, "Time"));
+
         std::unique_lock lock(m_MmfLock);
         m_FileHandle = OpenFileMapping(FILE_MAP_READ, FALSE, m_Name.c_str());
 
@@ -97,6 +108,7 @@ namespace utility
                 ErrorLog("unable to map view of mmf %s: %s", m_Name.c_str(), LastErrorMsg().c_str());
                 lock.unlock();
                 Close();
+                TraceLoggingWriteStop(local, "Mmf::Open", TLArg(false, "Success"));
                 return false;
             }
         }
@@ -107,12 +119,18 @@ namespace utility
                 ErrorLog("could not open file mapping object %s: %s", m_Name.c_str(), LastErrorMsg().c_str());
                 m_ConnectionLost = true;
             }
+            TraceLoggingWriteStop(local, "Mmf::Open", TLArg(false, "Success"));
             return false;
         }
+        TraceLoggingWriteStop(local, "Mmf::Open", TLArg(true, "Success"));
         return true;
     }
+
     bool Mmf::Read(void* buffer, const size_t size, const XrTime time)
     {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "Mmf::Read", TLArg(time, "Time"));
+
         if (m_Check > 0 && time - m_LastRefresh > m_Check)
         {
             Close();
@@ -133,15 +151,21 @@ namespace utility
                 ErrorLog("%s: unable to read from mmf %s: %s", __FUNCTION__, m_Name.c_str(), e.what());
                 // reset mmf connection
                 Close();
+                TraceLoggingWriteStop(local, "Mmf::Read", TLArg(false, "Memcpy"));
                 return false;
             }
+            TraceLoggingWriteStop(local, "Mmf::Read", TLArg(true, "Success"));
             return true;
         }
+        TraceLoggingWriteStop(local, "Mmf::Read", TLArg(false, "View"));
         return false;
     }
 
     void Mmf::Close()
     {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "Mmf::Close");
+
         std::unique_lock lock(m_MmfLock);
         if (m_View)
         {
@@ -153,6 +177,8 @@ namespace utility
             CloseHandle(m_FileHandle);
         }
         m_FileHandle = nullptr;
+
+        TraceLoggingWriteStop(local, "Mmf::Close");
     }
 
     std::string LastErrorMsg()

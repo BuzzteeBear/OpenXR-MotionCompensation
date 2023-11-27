@@ -27,6 +27,7 @@
 #include "layer.h"
 #include "feedback.h"
 #include "graphics.h"
+#include <util.h>
 #include <log.h>
 
 using namespace openxr_api_layer;
@@ -38,13 +39,21 @@ namespace openxr_api_layer::graphics
                        XrInstance instance,
                        PFN_xrGetInstanceProcAddr xrGetInstanceProcAddr)
     {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "Overlay::Init", TLPArg(instance, "Instance"));
+
         m_compositionFrameworkFactory =
             createCompositionFrameworkFactory(instanceInfo, instance, xrGetInstanceProcAddr, CompositionApi::D3D11);
         m_Initialized = true;
+
+        TraceLoggingWriteStop(local, "Overlay::Init");
     }
 
     void Overlay::CreateSession(const XrSessionCreateInfo* createInfo, XrSession session)
     {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "Overlay::CreateSession", TLPArg(session, "Session"));
+
         std::unique_lock lock(m_DrawMutex);
         m_compositionFrameworkFactory->CreateSession(createInfo, session);
         if (const ICompositionFramework* composition = m_compositionFrameworkFactory->getCompositionFramework(session))
@@ -54,16 +63,25 @@ namespace openxr_api_layer::graphics
             m_MeshRGB = composition->getCompositionDevice()->createSimpleMesh(vertices, indices, "RGB Mesh");
             vertices = CreateMarker(false);
             m_MeshCMY = composition->getCompositionDevice()->createSimpleMesh(vertices, indices, "CMY Mesh");
+            TraceLoggingWriteTagged(local,
+                                    "Overlay::CreateSession",
+                                    TLPArg(m_MeshRGB.get(), "MeshRGB"),
+                                    TLPArg(m_MeshCMY.get(), "MeshCMY"));
         }
         else
         {
             ErrorLog("%s: unable to retrieve composition framework", __FUNCTION__);
             m_Initialized = false;
         }
+
+        TraceLoggingWriteStop(local, "Overlay::CreateSession", TLArg(m_Initialized, "Initiailized"));
     }
 
     void Overlay::DestroySession(XrSession session)
     {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "Overlay::DestroySession", TLPArg(session, "Session"));
+
         std::unique_lock lock(m_DrawMutex);
         DeleteResources();
         m_MarkerSwapchains.clear();
@@ -71,27 +89,49 @@ namespace openxr_api_layer::graphics
         m_MeshRGB.reset();
         m_MeshCMY.reset();
         m_compositionFrameworkFactory->DestroySession(session);
+
+        TraceLoggingWriteStop(local, "Overlay::DestroySession");
     }
 
     void Overlay::SetMarkerSize()
     {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "Overlay::SetMarkerSize");
+
         float scaling{0.1f};
         GetConfig()->GetFloat(Cfg::MarkerSize, scaling);
         scaling /= 100.f;
         m_MarkerSize = {scaling, scaling, scaling};
+
+        TraceLoggingWriteStop(local, "Overlay::SetMarkerSize", TLArg(xr::ToString(m_MarkerSize).c_str(), "MarkerSize"));
     }
 
     bool Overlay::ToggleOverlay()
     {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "Overlay::ToggleOverlay");
+
         if (!m_Initialized)
         {
             m_OverlayActive = false;
-            ErrorLog("graphical overlay is not properly initialized");
+            ErrorLog(" %s: graphical overlay is not properly initialized", __FUNCTION__);
             Feedback::AudioOut::Execute(Feedback::Event::Error);
+
+            TraceLoggingWriteStop(local,
+                                  "Overlay::ToggleOverlay",
+                                  TLArg(false, "Success"),
+                                  TLArg(m_OverlayActive, "OverlayACtive"));
+
             return false;
         }
         m_OverlayActive = !m_OverlayActive;
         Feedback::AudioOut::Execute(m_OverlayActive ? Feedback::Event::OverlayOn : Feedback::Event::OverlayOff);
+
+        TraceLoggingWriteStop(local,
+                              "Overlay::ToggleOverlay",
+                              TLArg(true, "Success"),
+                              TLArg(m_OverlayActive, "OverlayACtive"));
+
         return true;
     }
 
@@ -101,8 +141,18 @@ namespace openxr_api_layer::graphics
                               const XrPosef& reversedManipulation,
                               bool mcActivated)
     {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local,
+                               "Overlay::ToggleOverlay",
+                               TLArg(chainFrameEndInfo->displayTime, "Time"),
+                               TLArg(xr::ToString(referenceTrackerPose).c_str(), "ReferencePose"),
+                               TLArg(xr::ToString(reversedManipulation).c_str(), "ReversedManipulation"),
+                               TLArg(mcActivated, "MC_Activated"));
+
         if (m_Initialized && m_OverlayActive)
         {
+            TraceLoggingWriteTagged(local, "Overlay::ToggleOverlay", TLArg(true, "Overlay_Active"));
+
             std::unique_lock lock(m_DrawMutex);
             try
             {
@@ -173,6 +223,11 @@ namespace openxr_api_layer::graphics
                                 markerInfo.format = DXGI_FORMAT_D32_FLOAT;
                                 m_MarkerDepthTextures.push_back(
                                     composition->getCompositionDevice()->createTexture(markerInfo));
+
+                                TraceLoggingWriteTagged(local,
+                                                        "Overlay::ToggleOverlay_CreateSwapcahin",
+                                                        TLPArg(m_MarkerSwapchains[eye].get(), "Swapchain"),
+                                                        TLPArg(m_MarkerDepthTextures[eye].get(), "DepthTexture"));
                             }
 
                             auto markerImage = m_MarkerSwapchains[eye]->acquireImage();
@@ -273,10 +328,14 @@ namespace openxr_api_layer::graphics
                 m_Initialized = false;
             }
         }
+        TraceLoggingWriteStop(local, "Overlay::ToggleOverlay");
     }
 
     void Overlay::DeleteResources()
     {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "Overlay::DeleteResources");
+
         if (m_CreatedProjectionLayer)
         {
             delete m_CreatedProjectionLayer;
@@ -288,10 +347,15 @@ namespace openxr_api_layer::graphics
         }
         m_CreatedViews.clear();
         m_BaseLayerVector.clear();
+
+        TraceLoggingWriteStop(local, "Overlay::DeleteResources");
     }
 
     std::vector<SimpleMeshVertex> Overlay::CreateMarker(bool reference)
     {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "Overlay::CreateMarker", TLArg(reference, "Refernace"));
+
         float tip{1.f}, point4{0.4f}, point1{0.1f}, bottom{0.f};
         if (reference)
         {
@@ -326,6 +390,9 @@ namespace openxr_api_layer::graphics
                                                              reference ? Green : Yellow,
                                                              reference ? LightGreen : LightYellow);
         vertices.insert(vertices.end(), front.begin(), front.end());
+
+        TraceLoggingWriteStop(local, "Overlay::CreateMarker");
+
         return vertices;
     }
 
@@ -338,7 +405,6 @@ namespace openxr_api_layer::graphics
     {
         std::vector<SimpleMeshVertex> vertices;
         const DirectX::XMVECTOR dxTop = xr::math::LoadXrVector3(top);
-        
 
         constexpr float angleIncrement = DirectX::XM_2PI / 32.f;
         const DirectX::XMVECTOR rotation = DirectX::XMQuaternionRotationAxis(dxTop, angleIncrement);

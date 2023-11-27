@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 #include "pch.h"
+
 #include "log.h"
 
 namespace {
@@ -58,6 +59,7 @@ namespace openxr_api_layer::log {
                                     lt.wMilliseconds);
 
             vsnprintf_s(buf + offset, sizeof(buf) - offset, _TRUNCATE, (fmt + "\n").c_str(), va);
+            TraceLoggingWrite(g_traceProvider, "Log", TLArg(buf, "Msg"));
             if (logStream.is_open()) {
                 logStream << buf;
                 logStream.flush();
@@ -75,6 +77,7 @@ namespace openxr_api_layer::log {
 
     void ErrorLog(const char* fmt, ...)
     {
+
         if (g_globalErrorCount++ < k_maxLoggedErrors) {
             va_list va;
             va_start(va, fmt);

@@ -170,13 +170,6 @@ float4 psMain(VSOutput input) : SV_TARGET {
         Api origin{};
     };
 
-    // A timer on the GPU.
-    struct IGraphicsTimer : utility::ITimer {
-        virtual ~IGraphicsTimer() = default;
-
-        virtual Api getApi() const = 0;
-    };
-
     // A fence.
     struct IGraphicsFence {
         virtual ~IGraphicsFence() = default;
@@ -266,7 +259,6 @@ float4 psMain(VSOutput input) : SV_TARGET {
         virtual void* getNativeDevicePtr() const = 0;
         virtual void* getNativeContextPtr() const = 0;
 
-        virtual std::shared_ptr<IGraphicsTimer> createTimer() = 0;
         virtual std::shared_ptr<IGraphicsFence> createFence(bool shareable = true) = 0;
         virtual std::shared_ptr<IGraphicsFence> openFence(const ShareableHandle& handle) = 0;
         virtual std::shared_ptr<IGraphicsTexture> createTexture(const XrSwapchainCreateInfo& info,
@@ -292,7 +284,6 @@ float4 psMain(VSOutput input) : SV_TARGET {
                           const XrPosef& pose,
                           XrVector3f scaling = {1.0f, 1.0f, 1.0f}) = 0;
         virtual void UnsetDrawResources() const = 0;
-
 
         virtual GenericFormat translateToGenericFormat(int64_t format) const = 0;
         virtual int64_t translateFromGenericFormat(GenericFormat format) const = 0;

@@ -25,7 +25,8 @@
 #ifdef XR_USE_GRAPHICS_API_D3D11
 
 #include "graphics.h"
-#include "log.h"
+#include <log.h>
+#include <util.h>
 
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "d3d11.lib")
@@ -127,99 +128,6 @@ namespace
     } // namespace shader
 
     constexpr bool PreferNtHandle = false;
-
-    struct D3D11Timer : IGraphicsTimer
-    {
-        D3D11Timer(ID3D11Device* device)
-        {
-            TraceLocalActivity(local);
-            TraceLoggingWriteStart(local, "D3D11Timer_Create");
-
-            device->GetImmediateContext(m_context.ReleaseAndGetAddressOf());
-
-            D3D11_QUERY_DESC queryDesc;
-            ZeroMemory(&queryDesc, sizeof(D3D11_QUERY_DESC));
-            queryDesc.Query = D3D11_QUERY_TIMESTAMP_DISJOINT;
-            CHECK_HRCMD(device->CreateQuery(&queryDesc, m_timeStampDis.ReleaseAndGetAddressOf()));
-            queryDesc.Query = D3D11_QUERY_TIMESTAMP;
-            CHECK_HRCMD(device->CreateQuery(&queryDesc, m_timeStampStart.ReleaseAndGetAddressOf()));
-            CHECK_HRCMD(device->CreateQuery(&queryDesc, m_timeStampEnd.ReleaseAndGetAddressOf()));
-
-            TraceLoggingWriteStop(local, "D3D11Timer_Create", TLPArg(this, "Timer"));
-        }
-
-        ~D3D11Timer() override
-        {
-            TraceLocalActivity(local);
-            TraceLoggingWriteStart(local, "D3D11Timer_Destroy", TLPArg(this, "Timer"));
-            TraceLoggingWriteStop(local, "D3D11Timer_Destroy");
-        }
-
-        Api getApi() const override
-        {
-            return Api::D3D11;
-        }
-
-        void start() override
-        {
-            TraceLocalActivity(local);
-            TraceLoggingWriteStart(local, "D3D11Timer_Start", TLPArg(this, "Timer"));
-
-            m_context->Begin(m_timeStampDis.Get());
-            m_context->End(m_timeStampStart.Get());
-
-            TraceLoggingWriteStop(local, "D3D11Timer_Start");
-        }
-
-        void stop() override
-        {
-            TraceLocalActivity(local);
-            TraceLoggingWriteStart(local, "D3D11Timer_Stop", TLPArg(this, "Timer"));
-
-            m_context->End(m_timeStampEnd.Get());
-            m_context->End(m_timeStampDis.Get());
-            m_valid = true;
-
-            TraceLoggingWriteStop(local, "D3D11Timer_Stop");
-        }
-
-        uint64_t query() const override
-        {
-            TraceLocalActivity(local);
-            TraceLoggingWriteStart(local, "D3D11Timer_Query", TLPArg(this, "Timer"), TLArg(m_valid, "Valid"));
-
-            uint64_t duration = 0;
-            if (m_valid)
-            {
-                UINT64 startime = 0, endtime = 0;
-                D3D11_QUERY_DATA_TIMESTAMP_DISJOINT disData = {0};
-
-                if (m_context->GetData(m_timeStampStart.Get(), &startime, sizeof(UINT64), 0) == S_OK &&
-                    m_context->GetData(m_timeStampEnd.Get(), &endtime, sizeof(UINT64), 0) == S_OK &&
-                    m_context->GetData(m_timeStampDis.Get(),
-                                       &disData,
-                                       sizeof(D3D11_QUERY_DATA_TIMESTAMP_DISJOINT),
-                                       0) == S_OK &&
-                    !disData.Disjoint)
-                {
-                    duration = static_cast<uint64_t>(((endtime - startime) * 1e6) / disData.Frequency);
-                }
-                m_valid = false;
-            }
-
-            TraceLoggingWriteStop(local, "D3D11Timer_Query", TLArg(duration, "Duration"));
-
-            return duration;
-        }
-
-        ComPtr<ID3D11DeviceContext> m_context;
-        ComPtr<ID3D11Query> m_timeStampDis;
-        ComPtr<ID3D11Query> m_timeStampStart;
-        ComPtr<ID3D11Query> m_timeStampEnd;
-
-        // Can the timer be queried (it might still only read 0).
-        mutable bool m_valid{false};
-    };
 
     struct D3D11Fence : IGraphicsFence
     {
@@ -469,7 +377,7 @@ namespace
     {
       public:
         D3D11Buffer(IGraphicsDevice* device, D3D11_BUFFER_DESC bufferDesc, ID3D11Buffer* buffer)
-            : m_device(device), m_bufferDesc(bufferDesc), m_buffer(buffer)
+            : m_device(device), m_buffer(buffer), m_bufferDesc(bufferDesc)
         {}
 
         Api getApi() const override
@@ -479,6 +387,9 @@ namespace
 
         void uploadData(const void* buffer, size_t count) override
         {
+            TraceLocalActivity(local);
+            TraceLoggingWriteStart(local, "D3D11Buffer_uploadData");
+
             if (m_bufferDesc.CPUAccessFlags & D3D11_CPU_ACCESS_WRITE)
             {
                 if (auto context = m_device->getNativeContext<D3D11>())
@@ -491,8 +402,11 @@ namespace
             }
             else
             {
+                TraceLoggingWriteStop(local, "D3D11Buffer_uploadData", TLArg(false, "Mutable"));
                 throw std::runtime_error("Texture is immutable");
             }
+
+            TraceLoggingWriteStop(local, "D3D11Buffer_uploadData");
         }
 
         void* getNativePtr() const override
@@ -513,10 +427,20 @@ namespace
         D3D11SimpleMesh(ID3D11Buffer* vertexBuffer, size_t stride, ID3D11Buffer* indexBuffer, size_t numIndices)
             : m_vertexBuffer(vertexBuffer), m_indexBuffer(indexBuffer)
         {
+            TraceLocalActivity(local);
+            TraceLoggingWriteStart(local,
+                                   "D3D11SimpleMesh_Create",
+                                   TLPArg(vertexBuffer, "VertexBuffer"),
+                                   TLArg(stride, "Stride"),
+                                   TLPArg(indexBuffer, "IndexBuffer"),
+                                   TLArg(numIndices, "NumIndices"));
+
             m_meshData.vertexBuffer = get(m_vertexBuffer);
             m_meshData.stride = (UINT)stride;
             m_meshData.indexBuffer = get(m_indexBuffer);
             m_meshData.numIndices = (UINT)numIndices;
+
+            TraceLoggingWriteStop(local, "D3D11SimpleMesh_Create");
         }
 
         Api getApi() const override
@@ -572,6 +496,7 @@ namespace
         {
             TraceLocalActivity(local);
             TraceLoggingWriteStart(local, "D3D11GraphicsDevice_Destroy", TLPArg(this, "Device"));
+
             m_deviceForFencesAndNtHandles.Reset();
             m_DepthNoStencilTest.Reset();
             m_meshVertexShader.Reset();
@@ -582,6 +507,7 @@ namespace
             m_context->ClearState();
             m_context->Flush();
             m_context.Reset();
+
             TraceLoggingWriteStop(local, "D3D11GraphicsDevice_Destroy");
         }
 
@@ -598,11 +524,6 @@ namespace
         void* getNativeContextPtr() const override
         {
             return m_context.Get();
-        }
-
-        std::shared_ptr<IGraphicsTimer> createTimer() override
-        {
-            return std::make_shared<D3D11Timer>(m_device.Get());
         }
 
         std::shared_ptr<IGraphicsFence> createFence(bool shareable) override
@@ -641,6 +562,16 @@ namespace
 
         std::shared_ptr<IGraphicsTexture> createTexture(const XrSwapchainCreateInfo& info, bool shareable) override
         {
+            TraceLocalActivity(local);
+            TraceLoggingWriteStart(local,
+                                   "D3D11GraphicsDevice_createTexture",
+                                   TLArg(info.format, "Format"),
+                                   TLArg(info.height, "Height"),
+                                   TLArg(info.arraySize, "ArraySize"),
+                                   TLArg(info.mipCount, "MipCount"),
+                                   TLArg(info.sampleCount, "SampleCount"),
+                                   TLArg(info.usageFlags, "UsageFlags "));
+
             D3D11_TEXTURE2D_DESC desc{};
             desc.Format = (DXGI_FORMAT)info.format;
             desc.Width = info.width;
@@ -672,6 +603,8 @@ namespace
 
             ComPtr<ID3D11Texture2D> texture;
             CHECK_HRCMD(m_device->CreateTexture2D(&desc, nullptr, texture.ReleaseAndGetAddressOf()));
+
+            TraceLoggingWriteStop(local, "D3D11GraphicsDevice_createTexture");
             return std::make_shared<D3D11Texture>(texture.Get());
         }
 
@@ -722,6 +655,12 @@ namespace
         std::shared_ptr<IShaderBuffer>
         createBuffer(size_t size, std::string_view debugName, const void* initialData, bool immutable) override
         {
+            TraceLocalActivity(local);
+            TraceLoggingWriteStart(local,
+                                   "D3D11GraphicsDevice_createBuffer",
+                                   TLArg(std::string(debugName).c_str(), "debugName"),
+                                   TLArg(immutable, "immutable"));
+
             auto desc = CD3D11_BUFFER_DESC(static_cast<UINT>(size),
                                            D3D11_BIND_CONSTANT_BUFFER,
                                            (initialData && immutable) ? D3D11_USAGE_IMMUTABLE : D3D11_USAGE_DYNAMIC,
@@ -741,14 +680,22 @@ namespace
             }
 
             SetDebugName(get(buffer), debugName);
+            const auto bufferPtr = std::make_shared<D3D11Buffer>(this, desc, get(buffer));
 
-            return std::make_shared<D3D11Buffer>(this, desc, get(buffer));
+            TraceLoggingWriteStop(local, "D3D11GraphicsDevice_createBuffer", TLPArg(bufferPtr.get(), "buffer"));
+
+            return bufferPtr;
         }
 
         std::shared_ptr<ISimpleMesh> createSimpleMesh(std::vector<SimpleMeshVertex>& vertices,
                                                       std::vector<uint16_t>& indices,
                                                       std::string_view debugName) override
         {
+            TraceLocalActivity(local);
+            TraceLoggingWriteStart(local,
+                                   "D3D11GraphicsDevice_createSimpleMesh",
+                                   TLArg(std::string(debugName).c_str(), "debugName"));
+
             D3D11_BUFFER_DESC desc;
             ZeroMemory(&desc, sizeof(desc));
             desc.Usage = D3D11_USAGE_IMMUTABLE;
@@ -774,14 +721,25 @@ namespace
                 SetDebugName(get(indexBuffer), debugName);
             }
 
-            return std::make_shared<D3D11SimpleMesh>(get(vertexBuffer),
-                                                     sizeof(SimpleMeshVertex),
-                                                     get(indexBuffer),
-                                                     indices.size());
+            const auto mesh = std::make_shared<D3D11SimpleMesh>(get(vertexBuffer),
+                                                                sizeof(SimpleMeshVertex),
+                                                                get(indexBuffer),
+                                                                indices.size());
+
+            TraceLoggingWriteStop(local, "D3D11GraphicsDevice_createSimpleMesh", TLPArg(mesh.get(), "mesh"));
+
+            return mesh;
         }
 
         void setViewProjection(const xr::math::ViewProjection& view) override
         {
+            TraceLocalActivity(local);
+            TraceLoggingWriteStart(local,
+                                   "D3D11GraphicsDevice_setViewProjection",
+                                   TLArg(xr::ToString(view.Pose).c_str(), "pose"),
+                                   TLArg(xr::ToString(view.Fov).c_str(), "fov"),
+                                   TLArg(xr::ToString(view.NearFar).c_str(), "nearFar"));
+
             ViewProjectionConstantBuffer staging;
 
             // viewMatrix* projMatrix
@@ -797,10 +755,19 @@ namespace
             m_meshViewProjectionBuffer->uploadData(&staging, sizeof(staging));
 
             m_context->OMSetDepthStencilState(get(m_DepthNoStencilTest), 0);
+
+            TraceLoggingWriteStop(local, "D3D11GraphicsDevice_setViewProjection", TLPArg(m_meshViewProjectionBuffer.get(), "ViewBuffer"));
         }
 
         void draw(std::shared_ptr<ISimpleMesh> mesh, const XrPosef& pose, XrVector3f scaling) override
         {
+            TraceLocalActivity(local);
+            TraceLoggingWriteStart(local,
+                                   "D3D11GraphicsDevice_draw",
+                                   TLPArg(mesh.get(), "mesh"),
+                                   TLArg(xr::ToString(pose).c_str(), "pose"),
+                                   TLArg(xr::ToString(scaling).c_str(), "scaling"));
+
             if (auto meshData = mesh->getAs<D3D11>())
             {
                 if (!m_meshModelBuffer)
@@ -830,10 +797,14 @@ namespace
 
                 m_context->DrawIndexedInstanced(meshData->numIndices, 1, 0, 0, 0);
             }
+            TraceLoggingWriteStop(local, "D3D11GraphicsDevice_draw");
         }
 
         void UnsetDrawResources() const override
         {
+            TraceLocalActivity(local);
+            TraceLoggingWriteStart(local, "D3D11GraphicsDevice_UnsetDrawResources");
+
             m_context->VSSetConstantBuffers(0, 0, nullptr);
             m_context->VSSetShader(nullptr, nullptr, 0);
             m_context->PSSetShader(nullptr, nullptr, 0);
@@ -848,6 +819,8 @@ namespace
             m_context->RSSetViewports(0, nullptr);
             ID3D11RenderTargetView* nullRTV[]{nullptr};
             m_context->OMSetRenderTargets(1, nullRTV, nullptr);
+
+            TraceLoggingWriteStop(local, "D3D11GraphicsDevice_UnsetDrawResources");
         }
 
         void copyTexture(IGraphicsTexture* from, IGraphicsTexture* to) override
@@ -878,6 +851,9 @@ namespace
         // Initialize the resources needed for draw() and related calls.
         void initializeMeshResources()
         {
+            TraceLocalActivity(local);
+            TraceLoggingWriteStart(local, "D3D11GraphicsDevice_initializeMeshResources");
+
             {
                 ComPtr<ID3DBlob> vsBytes;
                 shader::CompileShader(MeshShaders, "vsMain", set(vsBytes), "vs_5_0");
@@ -948,6 +924,7 @@ namespace
                 desc.DepthFunc = D3D11_COMPARISON_LESS;
                 CHECK_HRCMD(m_device->CreateDepthStencilState(&desc, set(m_DepthNoStencilTest)));
             }
+            TraceLoggingWriteStop(local, "D3D11GraphicsDevice_initializeMeshResources");
         }
 
         const ComPtr<ID3D11Device> m_device;
@@ -1014,6 +991,6 @@ namespace openxr_api_layer::graphics::internal
     {
         return std::make_shared<D3D11GraphicsDevice>(bindings.device);
     }
-} // namespace openxr_api_layer::graphics::internal
+}  // namespace openxr_api_layer::graphics::internal
 
 #endif

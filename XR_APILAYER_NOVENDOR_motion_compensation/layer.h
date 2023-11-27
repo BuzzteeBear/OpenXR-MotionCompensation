@@ -87,7 +87,7 @@ namespace openxr_api_layer
         XrResult xrBeginFrame(XrSession session, const XrFrameBeginInfo* frameBeginInfo) override;
         XrResult xrEndFrame(XrSession session, const XrFrameEndInfo* frameEndInfo) override;
 
-        void RequestCurrentInteractionProfile();
+        void LogCurrentInteractionProfile();
         void SetForwardRotation(const XrPosef& pose) const;
         bool ToggleModifierActive();
 
