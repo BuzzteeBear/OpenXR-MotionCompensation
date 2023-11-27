@@ -20,8 +20,6 @@ namespace Feedback
         const auto soundResource = m_SoundResources.find(event);
         if (m_SoundResources.end() != soundResource)
         {
-            
-
             if (PlaySound(nullptr, nullptr, 0) && PlaySound(MAKEINTRESOURCE(soundResource->second),
                                                             openxr_api_layer::dllModule,
                                                             SND_RESOURCE | SND_ASYNC))
@@ -56,9 +54,9 @@ namespace Feedback
         {
             {
                 TraceLoggingWriteTagged(local,
-                                  "AudioOut::CountDown",
-                                  TLArg(seconds, "Seconds"),
-                                  TLArg(COUNT0_WAV + seconds, "Resource"));
+                                        "AudioOut::CountDown",
+                                        TLArg(seconds, "Seconds"),
+                                        TLArg(COUNT0_WAV + seconds, "Resource"));
             }
         }
         else

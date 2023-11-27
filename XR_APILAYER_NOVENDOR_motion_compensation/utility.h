@@ -153,10 +153,10 @@ namespace utility
                 // lower entry is last in cache-> use it
                 ErrorLog("Using best match: t = %u ", lowerIt->first);
                 TraceLoggingWriteStop(local,
-                                        "Cache::GetSample",
-                                        TLArg(m_SampleType.c_str(), "Type"),
-                                        TLArg("Estimated Earlier", "Match"),
-                                        TLArg(lowerIt->first, "Time"));
+                                      "Cache::GetSample",
+                                      TLArg(m_SampleType.c_str(), "Type"),
+                                      TLArg("Estimated Earlier", "Match"),
+                                      TLArg(lowerIt->first, "Time"));
                 return lowerIt->second;
             }
             // cache is empty -> return fallback

@@ -8,12 +8,12 @@
 #include "utility.h"
 #include <log.h>
 
+using namespace openxr_api_layer;
+using namespace log;
+using namespace Feedback;
+
 namespace Input
 {
-    using namespace openxr_api_layer;
-    using namespace log;
-    using namespace Feedback;
-
     bool KeyboardInput::Init()
     {
         TraceLocalActivity(local);

@@ -87,12 +87,8 @@ bool ConfigManager::Init(const std::string& application)
             const std::string key =
                 entry.second.second + (m_UsesOpenComposite && m_CorValues.contains(entry.first) ? "_oc" : "");
 
-            if (0 < GetPrivateProfileString(section.c_str(),
-                                            key.c_str(),
-                                            nullptr,
-                                            buffer,
-                                            2047,
-                                            m_ApplicationIni.c_str()))
+            if (0 <
+                GetPrivateProfileString(section.c_str(), key.c_str(), nullptr, buffer, 2047, m_ApplicationIni.c_str()))
             {
                 TraceLoggingWriteTagged(local,
                                         "ConfigManager::Init",
@@ -102,12 +98,8 @@ bool ConfigManager::Init(const std::string& application)
                                         TLArg(application.c_str(), "Config"));
                 m_Values[entry.first] = buffer;
             }
-            else if ((0 < GetPrivateProfileString(section.c_str(),
-                                                  key.c_str(),
-                                                  nullptr,
-                                                  buffer,
-                                                  2047,
-                                                  coreIni.c_str())))
+            else if ((0 <
+                      GetPrivateProfileString(section.c_str(), key.c_str(), nullptr, buffer, 2047, coreIni.c_str())))
             {
                 TraceLoggingWriteTagged(local,
                                         "ConfigManager::Init",
@@ -162,6 +154,7 @@ bool ConfigManager::GetBool(const Cfg key, bool& val)
     }
     return false;
 }
+
 bool ConfigManager::GetInt(const Cfg key, int& val)
 {
     std::string strVal;
@@ -183,6 +176,7 @@ bool ConfigManager::GetInt(const Cfg key, int& val)
     }
     return false;
 }
+
 bool ConfigManager::GetFloat(const Cfg key, float& val)
 {
     std::string strVal;
@@ -205,6 +199,7 @@ bool ConfigManager::GetFloat(const Cfg key, float& val)
     }
     return false;
 }
+
 bool ConfigManager::GetString(const Cfg key, std::string& val)
 {
     const auto it = m_Values.find(key);
@@ -225,6 +220,7 @@ bool ConfigManager::GetString(const Cfg key, std::string& val)
                       TLArg(val.c_str(), "Value"));
     return true;
 }
+
 bool ConfigManager::GetShortcut(const Cfg key, std::set<int>& val)
 {
     std::string strVal, errors;
@@ -265,6 +261,7 @@ bool ConfigManager::GetShortcut(const Cfg key, std::set<int>& val)
     }
     return true;
 }
+
 bool ConfigManager::IsVirtualTracker()
 {
     std::string type;
@@ -327,8 +324,8 @@ void ConfigManager::WriteConfig(const bool forApp)
         if (const auto& keyEntry = m_Keys.find(key); m_Keys.end() != keyEntry)
         {
             const std::string section = keyEntry->second.first;
-            const std::string keyName = keyEntry->second.second +
-                                        (m_UsesOpenComposite && m_CorValues.contains(keyEntry->first) ? "_oc" : "");
+            const std::string keyName =
+                keyEntry->second.second + (m_UsesOpenComposite && m_CorValues.contains(keyEntry->first) ? "_oc" : "");
             if (const auto& valueEntry = m_Values.find(key); m_Values.end() != valueEntry)
             {
                 if (!WritePrivateProfileString(section.c_str(),
@@ -349,10 +346,10 @@ void ConfigManager::WriteConfig(const bool forApp)
                 else
                 {
                     TraceLoggingWriteTagged(local,
-                                      "ConfigManager::WriteConfig",
-                                      TLArg(section.c_str(), "Section"),
-                                      TLArg(keyName.c_str(), "Key"),
-                                      TLArg(valueEntry->second.c_str(), "Value"));
+                                            "ConfigManager::WriteConfig",
+                                            TLArg(section.c_str(), "Section"),
+                                            TLArg(keyName.c_str(), "Key"),
+                                            TLArg(valueEntry->second.c_str(), "Value"));
                 }
             }
             else

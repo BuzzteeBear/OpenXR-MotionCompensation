@@ -41,8 +41,8 @@ namespace utility
                 m_Input->ToggleActive(time);
                 m_Activate = false;
                 TraceLoggingWriteStop(local,
-                                     "AutoActivator::ActivateIfNecessary",
-                                     TLArg(m_SecondsLeft, "No_Seconds_Left"));
+                                      "AutoActivator::ActivateIfNecessary",
+                                      TLArg(m_SecondsLeft, "No_Seconds_Left"));
                 return;
             }
             if (0 == m_ActivationTime)

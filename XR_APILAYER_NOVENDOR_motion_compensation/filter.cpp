@@ -36,7 +36,7 @@ namespace Filter
         FilterBase::SetStrength(strength);
         m_Alpha = {1.0f - m_Strength, std::max(0.f, 1.0f - (m_VerticalFactor * m_Strength)), 1.0f - m_Strength};
         m_OneMinusAlpha = {1.f, 1.f, 1.f} - m_Alpha;
-        
+
         TraceLoggingWriteStop(local,
                               "SingleEmaFilter::SetStrength",
                               TLArg(xr::ToString(m_Alpha).c_str(), "Alpha"),
