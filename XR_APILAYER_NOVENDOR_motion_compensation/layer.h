@@ -154,8 +154,9 @@ namespace openxr_api_layer
         Tracker::TrackerBase* m_Tracker{nullptr};
         Tracker::ViveTrackerInfo m_ViveTracker;
         Input::ButtonPath m_ButtonPath;
-        utility::Cache<XrPosef> m_PoseCache{xr::math::Pose::Identity()};
-        utility::Cache<std::vector<XrPosef>> m_EyeCache{std::vector<XrPosef>{xr::math::Pose::Identity(),
+        utility::Cache<XrPosef> m_PoseCache{"delta", xr::math::Pose::Identity()};
+        utility::Cache<std::vector<XrPosef>> m_EyeCache{"eye poses",
+                                                        std::vector<XrPosef>{xr::math::Pose::Identity(),
                                                                              xr::math::Pose::Identity(),
                                                                              xr::math::Pose::Identity(),
                                                                              xr::math::Pose::Identity()}};

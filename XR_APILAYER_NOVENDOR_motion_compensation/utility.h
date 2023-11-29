@@ -28,7 +28,7 @@ namespace utility
     class Cache
     {
       public:
-        explicit Cache(Sample fallback) : m_Fallback(fallback){};
+        explicit Cache(const std::string& type, Sample fallback) : m_Fallback(fallback), m_SampleType(type){};
 
         void SetTolerance(const XrTime tolerance)
         {
@@ -196,7 +196,7 @@ namespace utility
         mutable std::mutex m_Mutex;
         Sample m_Fallback;
         XrTime m_Tolerance{2000000};
-        std::string m_SampleType{typeid(Sample).name()};
+        std::string m_SampleType;
     };
 
     class Mmf

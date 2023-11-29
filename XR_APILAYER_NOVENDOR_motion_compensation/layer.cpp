@@ -1640,7 +1640,13 @@ namespace openxr_api_layer
                 actionCreateInfo.subactionPaths = &m_XrSubActionPath;
 
                 if (const XrResult result = xrCreateAction(m_ActionSet, &actionCreateInfo, &m_PoseAction);
-                    XR_FAILED(result))
+                    XR_SUCCEEDED(result))
+                {
+                   TraceLoggingWriteTagged(local,
+                                           "OpenXrLayer::CreateTrackerActions",
+                                           TLPArg(m_PoseAction, "PoseAction"));  
+                }
+                else
                 {
                     ErrorLog("%s: unable to create pose action: %s", __FUNCTION__, xr::ToCString(result));
                     TraceLoggingWriteTagged(local,
@@ -1648,9 +1654,6 @@ namespace openxr_api_layer
                                            TLArg(xr::ToCString(result), "CreateAction_Pose"));
                     success = false;
                 }
-                TraceLoggingWriteTagged(local,
-                                         "OpenXrLayer::CreateTrackerActions",
-                                         TLPArg(m_PoseAction, "PoseAction"));
                 if (m_VirtualTrackerUsed)
                 {
                     strcpy_s(actionCreateInfo.actionName, "cor_move");
