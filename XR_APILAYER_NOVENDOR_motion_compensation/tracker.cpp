@@ -45,9 +45,12 @@ namespace Tracker
             // calculate difference toward reference pose
             poseDelta = Pose::Multiply(Pose::Invert(curPose), m_ReferencePose);
 
-            m_LastPose = curPose;
-            m_LastPoseDelta = poseDelta;
-            m_LastPoseTime = time;
+            if (!m_FallBackUsed)
+            {
+                m_LastPose = curPose;
+                m_LastPoseDelta = poseDelta;
+                m_LastPoseTime = time;
+            }
 
             DebugLog("delta(%u): %s", time, xr::ToString(poseDelta).c_str());
             TraceLoggingWriteStop(local,
@@ -160,6 +163,26 @@ namespace Tracker
                 XR_FAILED(result))
             {
                 ErrorLog("%s: xrLocateSpace failed: %s", __FUNCTION__, xr::ToCString(result));
+                if (XR_ERROR_TIME_INVALID == result && m_LastPoseTime != 0)
+                {
+                    TraceLoggingWriteTagged(local,
+                                            "ControllerBase::GetControllerPose",
+                                            TLArg(time, "RequestedTime"),
+                                            TLArg(m_LastPoseTime, "LastGoodTime"));
+                    if (!m_FallBackUsed)
+                    {
+                        Log("Warning: requested time (%u) is out of bounds, using last known tracker pose (%u)",
+                            time,
+                            m_LastPoseTime);
+                        m_FallBackUsed = true;
+                    }
+                    trackerPose = m_LastPose;
+                    TraceLoggingWriteStop(local,
+                                          "ControllerBase::GetControllerPose",
+                                          TLArg(true, "Success"),
+                                          TLArg(true, "Fallback"));
+                    return true;
+                }
                 TraceLoggingWriteStop(local, "ControllerBase::GetControllerPose", TLArg(false, "Success"));
                 return false;
             }
@@ -178,6 +201,7 @@ namespace Tracker
                                   TLArg(true, "Success"),
                                   TLArg(xr::ToString(location.pose).c_str(), "TrackerPose"));
             m_ConnectionLost = false;
+            m_FallBackUsed = false;
             trackerPose = location.pose;
             return true;
         }

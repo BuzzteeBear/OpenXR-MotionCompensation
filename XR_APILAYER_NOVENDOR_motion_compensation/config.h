@@ -22,6 +22,7 @@ enum class Cfg
     TrackerOffsetRight,
     TrackerOffsetYaw,
     UseYawGeOffset,
+    LegacyMode,
     CorX,
     CorY,
     CorZ,
@@ -126,6 +127,8 @@ class ConfigManager
         {Cfg::TrackerOffsetYaw, {"tracker", "offset_yaw_angle"}},
 
         {Cfg::UseYawGeOffset, {"tracker", "use_yaw_ge_offset"}},
+
+        {Cfg::LegacyMode, {"tracker", "legacy_mode"}},
 
         {Cfg::CorX, {"tracker", "cor_x"}},
         {Cfg::CorY, {"tracker", "cor_y"}},

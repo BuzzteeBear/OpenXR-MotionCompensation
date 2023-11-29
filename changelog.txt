@@ -26,7 +26,8 @@ Version 0.2.8
 	- simplified/improved handling of in-game recenter events
 	- added config option to enable debug level logging
 	- added support for X-Plane 12
-	- increased default tolerance for eye/pose reconstruction cache to 500ms (only on installation without previous config file present)
+	- modified mc application technique to avoid glitching at XR_ERROR_TIME_INVALID on calling xrLocateSpace
+	- increased default tolerance for eye/pose reconstruction cache to 500ms (only when installing without previous default config file present)
 	
 	Known issues
 	- compensation of motion controller pose does not work properly in MSFS main menu (controller movement gets blocked)

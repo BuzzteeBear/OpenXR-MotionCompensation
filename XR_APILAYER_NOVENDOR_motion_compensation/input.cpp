@@ -429,6 +429,8 @@ namespace Input
             GetConfig()->GetBool(Cfg::LogVerbose, logVerbose);
             GetConfig()->GetBool(Cfg::TestRotation, m_Layer->m_TestRotation);
             GetConfig()->GetBool(Cfg::CacheUseEye, m_Layer->m_UseEyeCache);
+            GetConfig()->GetBool(Cfg::LegacyMode, m_Layer->m_LegacyMode);
+            Log("legacy mode is %s", m_Layer->m_LegacyMode ? "activated" : "off");
             m_Layer->m_AutoActivator =
                 std::make_unique<utility::AutoActivator>(utility::AutoActivator(m_Layer->m_Input));
             m_Layer->m_HmdModifier = std::make_unique<Modifier::HmdModifier>();

@@ -29,6 +29,7 @@ namespace Tracker
         XrPosef m_LastPose{xr::math::Pose::Identity()};
         XrPosef m_LastPoseDelta{xr::math::Pose::Identity()};
         XrTime m_LastPoseTime{0};
+        bool m_FallBackUsed{false};
         
       private:
         virtual void ApplyFilters(XrPosef& trackerPose){};

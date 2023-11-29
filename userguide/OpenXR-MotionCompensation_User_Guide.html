@@ -165,6 +165,7 @@ Upon starting an OpenXR application with the API layer active for the first time
 <li><code>marker_size</code> sets the size of the cor / reference tracker marker displayed in the overlay. The value corresponds to the length of one double cone in cm.</li>
 <li><code>connection_timeout</code> sets the time (in seconds) the tracker needs to be unresponsive before motion compensation is automatically deactivated. Setting a negative value disables automatic deactivation.</li>
 <li><code>connection_check</code> is only relevant for virtual trackers and determines the period (in seconds) for checking whether the memory mapped file used for data input is actually still actively used. Setting a negative value disables the check</li>
+<li><code>legacy mode</code> reverts the internal pose manipulation technique to the way it was prior to version 0.3.0</li>
 </ul>
 </li>
 <li><code>translational_filter</code> and <code>rotational_filter</code>: set the filtering magnitude (key <code>strength</code> with valid options between <strong>0.0</strong> and <strong>1.0</strong>) number of filtering stages (key <code>order</code>with valid options: <strong>1, 2, 3</strong>).<br />

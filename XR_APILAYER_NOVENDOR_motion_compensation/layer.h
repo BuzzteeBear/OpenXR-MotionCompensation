@@ -139,8 +139,11 @@ namespace openxr_api_layer
         bool m_Activated{false};
         bool m_UseEyeCache{false};
         bool m_ModifierActive{false};
+        bool m_LegacyMode{false};
         bool m_VarjoPollWorkaround{false};
-        XrPosef m_StageToLocal{xr::math::Pose::Identity()};
+        XrPosef m_StageToLocal{};
+        std::unique_ptr<XrPosef> m_EyeToHmd{};
+        std::map<XrSpace, XrPosef> m_StageToLocalCache{};
         std::string m_Application;
         std::string m_SubActionPath;
         XrPath m_XrSubActionPath{XR_NULL_PATH};

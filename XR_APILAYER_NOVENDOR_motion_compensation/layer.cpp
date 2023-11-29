@@ -164,6 +164,10 @@ namespace openxr_api_layer
                 }
             }
 
+            // use legacy mode
+            GetConfig()->GetBool(Cfg::LegacyMode, m_LegacyMode);
+            Log("legacy mode is %s", m_LegacyMode ? "activated" : "off");
+
             // enable debug test rotation
             GetConfig()->GetBool(Cfg::TestRotation, m_TestRotation);
 
@@ -861,7 +865,7 @@ namespace openxr_api_layer
                     {
                         // TODO: verify calculation
                         Log("Please report the application in use to oxrmc developer!");
-                        location->pose = Pose::Multiply(location->pose, Pose::Invert(trackerDelta));
+                        location->pose = Pose::Multiply(Pose::Invert(trackerDelta),location->pose);
                     }
                 }
                 else
@@ -880,8 +884,11 @@ namespace openxr_api_layer
                     }
                 }
 
-                // safe pose for use in xrEndFrame
-                m_PoseCache.AddSample(time, trackerDelta);
+                if (isViewSpace(space))
+                {
+                    // save pose for use in xrEndFrame
+                    m_PoseCache.AddSample(time, trackerDelta);
+                }
             }
 
             TraceLoggingWriteTagged(local,
@@ -942,6 +949,7 @@ namespace openxr_api_layer
                                   TLArg(xr::ToCString(result), "Result"));
             return result;
         }
+        const XrTime time = viewLocateInfo->displayTime;
 
         // store eye poses to avoid recalculation in xrEndFrame
         std::vector<XrPosef> originalEyePoses{};
@@ -949,15 +957,91 @@ namespace openxr_api_layer
         {
             originalEyePoses.push_back(views[i].pose);
         }
-        m_EyeCache.AddSample(viewLocateInfo->displayTime, originalEyePoses);
+        m_EyeCache.AddSample(time, originalEyePoses);
 
+        if (!m_LegacyMode)
+        {
+            std::unique_lock lock(m_FrameLock);
+
+            if (!m_EyeToHmd)
+            {
+                // determine eye poses
+                const XrViewLocateInfo offsetViewLocateInfo{viewLocateInfo->type,
+                                                            nullptr,
+                                                            viewLocateInfo->viewConfigurationType,
+                                                            time,
+                                                            m_ViewSpace};
+
+                const XrResult toHmdResult = OpenXrApi::xrLocateViews(session,
+                                                                      &offsetViewLocateInfo,
+                                                                      viewState,
+                                                                      viewCapacityInput,
+                                                                      viewCountOutput,
+                                                                      views);
+
+                if (SUCCEEDED(toHmdResult) && 0 < *viewCountOutput)
+                {
+                    m_EyeToHmd = std::make_unique<XrPosef>(Pose::Invert(views[0].pose));
+                    TraceLoggingWriteTagged(local,
+                                            "OpenXrLayer::xrLocateViews",
+                                            TLArg(xr::ToString(*m_EyeToHmd).c_str(), "EyeToHmd"));
+                }
+                else
+                {
+                    ErrorLog("%s: unable to determine eyeToHmd pose");
+                }
+            }
+
+            // manipulate view pose
+            if (SetStageToLocalSpace(viewLocateInfo->space, time))
+            {
+                // manipulate pose using tracker
+                XrPosef trackerDelta{Pose::Identity()};
+                if (m_Tracker->GetPoseDelta(trackerDelta, m_Session, time))
+                {
+                    if (m_EyeToHmd && 0 < *viewCountOutput)
+                    {
+                        // apply hmd pose modifier on delta
+                        const XrPosef HmdPose = Pose::Multiply(*m_EyeToHmd, views[0].pose);
+                        m_HmdModifier->Apply(trackerDelta, HmdPose);
+                    }
+                    trackerDelta =
+                        Pose::Multiply(Pose::Multiply(Pose::Invert(m_StageToLocal), trackerDelta), m_StageToLocal);
+                    for (uint32_t i = 0; i < *viewCountOutput; i++)
+                    {
+                        TraceLoggingWriteTagged(local,
+                                                "OpenXrLayer::xrLocateViews",
+                                                TLArg(i, "Index"),
+                                                TLArg(xr::ToString(views[i].fov).c_str(), "Fov"),
+                                                TLArg(xr::ToString(views[i].pose).c_str(), "OriginalViewPose"));
+
+                        // apply manipulation
+                        views[i].pose = Pose::Multiply(views[i].pose, trackerDelta);
+
+                        TraceLoggingWriteTagged(local,
+                                                "OpenXrLayer::xrLocateViews",
+                                                TLArg(i, "Index"),
+                                                TLArg(xr::ToString(views[i].pose).c_str(), "CompensatedViewPose"));
+                    }
+                    m_PoseCache.AddSample(time, trackerDelta);
+                }
+            }
+            TraceLoggingWriteStop(local,
+                                  "OpenXrLayer::xrLocateViews",
+                                  TLArg(true, "Activated"),
+                                  TLArg(false, "LegacyMode"),
+                                  TLArg(xr::ToCString(result), "Result"));
+            return result;
+        }
+
+        // legacy mode using xrLocateSpace
         if (m_EyeOffsets.empty())
         {
             // determine eye poses
             const XrViewLocateInfo offsetViewLocateInfo{viewLocateInfo->type,
                                                         nullptr,
                                                         viewLocateInfo->viewConfigurationType,
-                                                        viewLocateInfo->displayTime,
+                                                        time,
                                                         m_ViewSpace};
 
             if (XR_SUCCEEDED(OpenXrApi::xrLocateViews(session,
@@ -983,7 +1067,7 @@ namespace openxr_api_layer
 
         // manipulate reference space location
         XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
-        if (XR_SUCCEEDED(xrLocateSpace(m_ViewSpace, viewLocateInfo->space, viewLocateInfo->displayTime, &location)))
+        if (XR_SUCCEEDED(xrLocateSpace(m_ViewSpace, viewLocateInfo->space, time, &location)))
         {
             for (uint32_t i = 0; i < *viewCountOutput; i++)
             {
@@ -1005,6 +1089,7 @@ namespace openxr_api_layer
         TraceLoggingWriteStop(local,
                               "OpenXrLayer::xrLocateViews",
                               TLArg(true, "Activated"),
+                              TLArg(true, "LegacyMode"),
                               TLArg(xr::ToCString(result), "Result"));
         return result;
     }
@@ -1435,33 +1520,51 @@ namespace openxr_api_layer
             return false;
         }
         XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
-        const XrResult result = OpenXrApi::xrLocateSpace(m_StageSpace, space, time, &location);
-        if (XR_FAILED(result))
+        if (!m_StageToLocalCache.contains(space))
         {
-            ErrorLog("%s: unable to locate local reference space (%u) in stage reference space (%u): %s",
-                     __FUNCTION__,
-                     space,
-                     m_StageSpace,
-                     xr::ToCString(result));
-            TraceLoggingWriteStop(local,
-                                  "OpenXrLayer::SetStageToLocalSpace",
-                                  TLArg(xr::ToCString(result), "LocateStageSpace"));
-            return false;
+            // locate stage space within given reference space
+            const XrResult result = OpenXrApi::xrLocateSpace(m_StageSpace, space, time, &location);
+            if (XR_FAILED(result))
+            {
+                ErrorLog("%s: unable to locate local reference space (%u) in stage reference space (%u): %s",
+                         __FUNCTION__,
+                         space,
+                         m_StageSpace,
+                         xr::ToCString(result));
+                TraceLoggingWriteStop(local,
+                                      "OpenXrLayer::SetStageToLocalSpace",
+                                      TLArg(xr::ToCString(result), "LocateStageSpace"));
+                return false;
+            }
+            if (!Pose::IsPoseValid(location.locationFlags))
+            {
+                ErrorLog("%s: pose of local space in stage space not valid. locationFlags: %d",
+                         __FUNCTION__,
+                         location.locationFlags);
+                TraceLoggingWriteStop(local, "OpenXrLayer::SetStageToLocalSpace", TLArg(false, "PoseValid"));
+                return false;
+            }
+            TraceLoggingWriteTagged(local, "OpenXrLayer::SetStageToLocalSpace", TLArg(true, "LocateSpace"));
         }
-        if (!Pose::IsPoseValid(location.locationFlags))
+        else
         {
-            ErrorLog("%s: pose of local space in stage space not valid. locationFlags: %d",
-                     __FUNCTION__,
-                     location.locationFlags);
-            TraceLoggingWriteStop(local, "OpenXrLayer::SetStageToLocalSpace", TLArg(false, "PoseValid"));
-            return false;
+            // reuse cached pose
+            location.pose = m_StageToLocalCache[space];
+            TraceLoggingWriteTagged(local, "OpenXrLayer::SetStageToLocalSpace", TLArg(true, "UseCache"));
         }
-        if (!DirectX::XMVector3Equal(LoadXrVector3(location.pose.position), LoadXrVector3(m_StageToLocal.position)))
+        if (!DirectX::XMVector3Equal(LoadXrVector3(location.pose.position), LoadXrVector3(m_StageToLocal.position)) ||
+            !DirectX::XMVector4Equal(LoadXrQuaternion(location.pose.orientation),
+                                     LoadXrQuaternion(m_StageToLocal.orientation)))
         {
             Log("local space to stage space: %s", xr::ToString(location.pose).c_str());
             m_StageToLocal = location.pose;
             m_HmdModifier->SetStageToLocal(m_StageToLocal);
             m_Tracker->SetStageToLocal(m_StageToLocal);
+            if (!isViewSpace(space))
+            {
+                // cache pose for 'static' reference spaces
+                m_StageToLocalCache[space] = m_StageToLocal;
+            }
         }
         TraceLoggingWriteStop(local,
                               "OpenXrLayer::SetStageToLocalSpace",
