@@ -80,11 +80,12 @@ namespace openxr_api_layer::graphics
       private:
         static std::vector<SimpleMeshVertex> CreateMarker(bool reference);
         static std::vector<SimpleMeshVertex> CreateConeMesh(const XrVector3f& top,
-                                                            const XrVector3f& side,
+                                                            const XrVector3f& innerMiddle,
+                                                            const XrVector3f& outerMiddle,
                                                             const XrVector3f& bottom,
-                                                            const XrVector3f& topColor,
-                                                            const XrVector3f& sideColor,
-                                                            const XrVector3f& bottomColor);
+                                                            const XrVector3f& darkColor,
+                                                            const XrVector3f& pureColor,
+                                                            const XrVector3f& lightColor);
         static std::vector<unsigned short> CreateIndices(size_t amount);
 
         bool m_OverlayActive{false};
