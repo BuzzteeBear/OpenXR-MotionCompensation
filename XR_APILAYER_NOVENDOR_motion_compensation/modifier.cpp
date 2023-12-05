@@ -6,8 +6,8 @@
 #include "modifier.h"
 #include "config.h"
 #include "utility.h"
+#include "feedback.h"
 #include <util.h>
-
 
 using namespace xr::math;
 using namespace Pose;
@@ -170,6 +170,27 @@ namespace Modifier
 
         bool apply{false};
         GetConfig()->GetBool(Cfg::FactorEnabled, apply);
+        bool compensateControllers{false};
+        GetConfig()->GetBool(Cfg::CompensateControllers, compensateControllers);
+        if (compensateControllers && apply &&
+            (m_Roll != 1.f || m_Pitch != 1.f || m_Yaw != 1.f || m_Surge != 1.f || m_Sway != 1.f || m_Heave != 1.f))
+        {
+            ErrorLog("%s: compensating motion controllers and using pose modifier at hmd position are incompatible",
+                     __FUNCTION__);
+            Log("pose modifier at hmd position NOT activated");
+            Feedback::AudioOut::Execute(Feedback::Event::Error);
+
+            // reset values to avoid activation via keyboard shortcut
+            m_Pitch = 1.f;
+            m_Roll = 1.f;
+            m_Yaw = 1.f;
+            m_Sway = 1.f;
+            m_Heave = 1.f;
+            m_Surge = 1.f;
+
+            apply = false;
+        }
+
         SetActive(apply);
 
         TraceLoggingWriteStop(local,
