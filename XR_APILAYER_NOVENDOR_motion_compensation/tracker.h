@@ -49,7 +49,6 @@ namespace Tracker
         void AdjustReferencePose(const XrPosef& pose);
         [[nodiscard]] XrPosef GetReferencePose() const;
         void SetReferencePose(const XrPosef& pose) override;
-        void SetStageToLocal(const XrPosef& pose) const;
         void SetModifierActive(const bool active) const;
         void LogCurrentTrackerPoses(XrSession session, XrTime time, bool activated);
         virtual void ApplyCorManipulation(XrSession session, XrTime time){};

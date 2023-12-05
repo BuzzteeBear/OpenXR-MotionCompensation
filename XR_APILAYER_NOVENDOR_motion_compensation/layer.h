@@ -89,10 +89,9 @@ namespace openxr_api_layer
                              XrFrameState* frameState) override;
         XrResult xrBeginFrame(XrSession session, const XrFrameBeginInfo* frameBeginInfo) override;
         XrResult xrEndFrame(XrSession session, const XrFrameEndInfo* frameEndInfo) override;
-
-        void LogCurrentInteractionProfile();
+        
         void SetForwardRotation(const XrPosef& pose) const;
-        bool ToggleModifierActive();
+        bool GetRefToStage(XrSpace space, XrPosef* refToStage, XrPosef* stageToRef);
 
         XrActionSet m_ActionSet{XR_NULL_HANDLE};
         XrAction m_PoseAction{XR_NULL_HANDLE};
@@ -109,13 +108,17 @@ namespace openxr_api_layer
         bool isViewSpace(XrSpace space) const;
         bool isActionSpace(XrSpace space) const;
         [[nodiscard]] uint32_t GetNumViews() const;
-        bool CreateStageSpace(const std::string& caller);
-        bool SetStageToLocalSpace(XrSpace space, XrTime time);
+        void CreateStageSpace();
+        void CreateViewSpace();
+        void AddStaticRefSpace(XrSpace space);
+        std::optional<XrPosef> LocateRefSpace(XrSpace space);
         bool CreateTrackerActions(const std::string& caller);
         void DestroyTrackerActions(const std::string& caller);
         bool AttachActionSet(const std::string& caller);
         void SuggestInteractionProfiles(const std::string& caller);
         bool LazyInit(XrTime time);
+        void LogCurrentInteractionProfile();
+        bool ToggleModifierActive();
 
         static std::string getXrPath(XrPath path);
 
@@ -141,9 +144,10 @@ namespace openxr_api_layer
         bool m_ModifierActive{false};
         bool m_LegacyMode{false};
         bool m_VarjoPollWorkaround{false};
-        XrPosef m_StageToLocal{};
+        XrTime m_LastFrameTime{0};
+        std::set<XrSpace> m_StaticRefSpaces{};
+        std::map<XrSpace, std::pair<XrPosef, XrPosef>> m_RefToStageMap{};
         std::unique_ptr<XrPosef> m_EyeToHmd{};
-        std::map<XrSpace, XrPosef> m_StageToLocalCache{};
         std::string m_Application;
         std::string m_SubActionPath;
         XrPath m_XrSubActionPath{XR_NULL_PATH};
@@ -154,7 +158,7 @@ namespace openxr_api_layer
         Tracker::TrackerBase* m_Tracker{nullptr};
         Tracker::ViveTrackerInfo m_ViveTracker;
         Input::ButtonPath m_ButtonPath;
-        utility::Cache<XrPosef> m_PoseCache{"delta", xr::math::Pose::Identity()};
+        utility::Cache<XrPosef> m_DeltaCache{"delta", xr::math::Pose::Identity()};
         utility::Cache<std::vector<XrPosef>> m_EyeCache{"eye poses",
                                                         std::vector<XrPosef>{xr::math::Pose::Identity(),
                                                                              xr::math::Pose::Identity(),

@@ -41,19 +41,25 @@ namespace utility
             TraceLoggingWriteStop(local, "Cache::SetTolerance");
         }
 
-        void AddSample(XrTime time, Sample sample)
+        void AddSample(XrTime time, Sample sample, const bool override)
         {
             using namespace openxr_api_layer::log;
             TraceLocalActivity(local);
             TraceLoggingWriteStart(local, "Cache::AddSample", TLArg(m_SampleType.c_str(), "Type"), TLArg(time, "Time"));
 
-            std::unique_lock lock(m_Mutex);
+            std::unique_lock lock(m_CacheLock);
             if (m_Cache.contains(time))
             {
-                DebugLog("AddSample(%s): multiple samples inserted: %u", m_SampleType.c_str(), time);
+                if (!override)
+                {
+                    DebugLog("AddSample(%s): sample omitted: %u", m_SampleType.c_str(), time);
+                    TraceLoggingWriteStop(local, "Cache::AddSample", TLArg(true, "Omitted"));
+                    return;
+                }
+                DebugLog("AddSample(%s): sample overriden: %u", m_SampleType.c_str(), time);
+                TraceLoggingWriteTagged(local, "Cache::AddSample", TLArg(true, "Override"));
             }
             m_Cache[time] = sample;
-
             TraceLoggingWriteStop(local, "Cache::AddSample");
         }
 
@@ -63,7 +69,7 @@ namespace utility
             TraceLocalActivity(local);
             TraceLoggingWriteStart(local, "Cache::GetSample", TLArg(m_SampleType.c_str(), "Type"), TLArg(time, "Time"));
 
-            std::unique_lock lock(m_Mutex);
+            std::unique_lock lock(m_CacheLock);
 
             DebugLog("GetSample(%s): %u", m_SampleType.c_str(), time);
 
@@ -175,7 +181,7 @@ namespace utility
             TraceLocalActivity(local);
             TraceLoggingWriteStart(local, "Cache::CleanUp", TLArg(m_SampleType.c_str(), "Type"), TLArg(time, "Time"));
 
-            std::unique_lock lock(m_Mutex);
+            std::unique_lock lock(m_CacheLock);
 
             auto it = m_Cache.lower_bound(time - m_Tolerance);
             if (m_Cache.begin() != it)
@@ -193,7 +199,7 @@ namespace utility
 
       private:
         std::map<XrTime, Sample> m_Cache{};
-        mutable std::mutex m_Mutex;
+        mutable std::mutex m_CacheLock;
         Sample m_Fallback;
         XrTime m_Tolerance{2000000};
         std::string m_SampleType;

@@ -31,19 +31,6 @@ namespace Modifier
                               TLArg(m_ApplyTranslation, "ApplyTranslation"));
     }
 
-    void ModifierBase::SetStageToLocal(const XrPosef& pose)
-    {
-        TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "ModifierBase::SetStageToLocal", TLArg(xr::ToString(pose).c_str(), "Pose"));
-
-        m_StageToLocal = pose;
-        m_LocalToStage = Invert(pose);
-
-        TraceLoggingWriteStop(local,
-                              "ModifierBase::SetStageToLocal",
-                              TLArg(xr::ToString(m_LocalToStage).c_str(), "Inverted Pose"));
-    }
-
     void ModifierBase::SetFwdToStage(const XrPosef& pose)
     {
         TraceLocalActivity(local);
@@ -54,7 +41,7 @@ namespace Modifier
 
         TraceLoggingWriteStop(local,
                               "ModifierBase::SetFwdToStage",
-                              TLArg(xr::ToString(m_LocalToStage).c_str(), "Inverted Pose"));
+                              TLArg(xr::ToString(m_StageToFwd).c_str(), "Inverted Pose"));
     }
 
     XrVector3f ModifierBase::ToEulerAngles(XrQuaternionf q)
@@ -213,8 +200,7 @@ namespace Modifier
 
         // transfer delta and original pose to forward space
         const XrPosef deltaFwd = Multiply(Multiply(m_FwdToStage, target), m_StageToFwd);
-        const XrPosef poseStage = Multiply(reference, m_LocalToStage);
-        const XrPosef poseFwd = Multiply(poseStage, m_StageToFwd);
+        const XrPosef poseFwd = Multiply(reference, m_StageToFwd);
 
         // calculate compensated pose
         XrPosef compFwd = Multiply(poseFwd, deltaFwd);

@@ -286,23 +286,47 @@ namespace openxr_api_layer::graphics
                             viewport.MaxDepth = 1.0f;
                             context->RSSetViewports(1, &viewport);
 
-                            // draw reference pose marker
-                            XrPosef referencePose =
-                                mcActivated ? xr::math::Pose::Multiply(referenceTrackerPose,
-                                                                       xr::math::Pose::Invert(reversedManipulation))
-                                            : referenceTrackerPose;
-                            graphicsDevice->draw(m_MeshRGB, referencePose, m_MarkerSize);
-
-                            // draw tracker marker
-                            if (mcActivated)
+                            if (auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance()); layer)
                             {
-                                graphicsDevice->draw(m_MeshCMY, referenceTrackerPose, m_MarkerSize);
+                                // transfer trackerPose into projection reference space
+                                XrPosef refToStage;
+                                if (layer->GetRefToStage(lastProjectionLayer->space, &refToStage, nullptr))
+                                {
+                                    const XrPosef trackerPoseRef =
+                                        xr::math::Pose::Multiply(referenceTrackerPose, refToStage);
+
+                                    // draw reference pose marker
+                                    const XrPosef referencePose =
+                                        mcActivated
+                                            ? xr::math::Pose::Multiply(trackerPoseRef,
+                                                                       xr::math::Pose::Invert(reversedManipulation))
+                                            : trackerPoseRef;
+                                    graphicsDevice->draw(m_MeshRGB, referencePose, m_MarkerSize);
+
+                                    // draw tracker marker
+                                    if (mcActivated)
+                                    {
+                                        graphicsDevice->draw(m_MeshCMY, trackerPoseRef, m_MarkerSize);
+                                    }
+
+                                    m_MarkerSwapchains[eye]->releaseImage();
+                                    m_MarkerSwapchains[eye]->commitLastReleasedImage();
+
+                                    view.subImage = m_MarkerSwapchains[eye]->getSubImage();
+                                }
+                                else
+                                {
+                                    ErrorLog(
+                                        "%s(%u): could not determine stage offset for projection reference space (%u)",
+                                        __FUNCTION__,
+                                        chainFrameEndInfo->displayTime,
+                                        lastProjectionLayer->space);
+                                }
                             }
-
-                            m_MarkerSwapchains[eye]->releaseImage();
-                            m_MarkerSwapchains[eye]->commitLastReleasedImage();
-
-                            view.subImage = m_MarkerSwapchains[eye]->getSubImage();
+                            else
+                            {
+                                ErrorLog("%s(%u): cast of layer failed", __FUNCTION__, chainFrameEndInfo->displayTime);
+                            }
                         }
 
                         graphicsDevice->UnsetDrawResources();

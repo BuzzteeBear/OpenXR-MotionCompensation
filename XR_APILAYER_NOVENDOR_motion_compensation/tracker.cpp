@@ -159,7 +159,7 @@ namespace Tracker
             }
 
             if (const XrResult result =
-                    GetInstance()->xrLocateSpace(layer->m_TrackerSpace, layer->m_StageSpace, time, &location);
+                    GetInstance()->OpenXrApi::xrLocateSpace(layer->m_TrackerSpace, layer->m_StageSpace, time, &location);
                 XR_FAILED(result))
             {
                 ErrorLog("%s: xrLocateSpace failed: %s", __FUNCTION__, xr::ToCString(result));
@@ -449,16 +449,6 @@ namespace Tracker
         ControllerBase::SetReferencePose(pose);
 
         TraceLoggingWriteStop(local, "TrackerBase::SetReferencePose");
-    }
-
-    void TrackerBase::SetStageToLocal(const XrPosef& pose) const
-    {
-        TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "TrackerBase::SetStageToLocal", TLArg(xr::ToString(pose).c_str(), "Pose"));
-
-        m_TrackerModifier->SetStageToLocal(pose);
-
-        TraceLoggingWriteStop(local, "TrackerBase::SetStageToLocal");
     }
 
     void TrackerBase::SetModifierActive(const bool active) const
