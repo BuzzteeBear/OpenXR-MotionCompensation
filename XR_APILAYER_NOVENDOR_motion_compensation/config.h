@@ -30,7 +30,7 @@ enum class Cfg
     CorB,
     CorC,
     CorD,
-    UseCorPos,
+    LoadRefPoseFromFile,
     MarkerSize,
     TransStrength,
     TransOrder,
@@ -136,7 +136,7 @@ class ConfigManager
         {Cfg::CorB, {"tracker", "cor_b"}},
         {Cfg::CorC, {"tracker", "cor_c"}},
         {Cfg::CorD, {"tracker", "cor_d"}},
-        {Cfg::UseCorPos, {"tracker", "use_cor_pos"}},
+        {Cfg::LoadRefPoseFromFile, {"tracker", "load_ref_pose_from_file"}},
 
         {Cfg::MarkerSize, {"tracker", "marker_size"}},
 

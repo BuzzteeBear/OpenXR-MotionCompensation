@@ -23,6 +23,7 @@ Version 0.2.8
 	- added ability to write values to csv file
 	
 	Miscellaneous
+	- renamed some config file keys to (hopefully) mprove readability
 	- simplified/improved handling of in-game recenter events
 	- added config option to enable debug level logging
 	- added support for X-Plane 12

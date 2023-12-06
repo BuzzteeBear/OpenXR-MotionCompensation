@@ -430,7 +430,7 @@ namespace Tracker
         }
         Log("current reference pose in stage space: %s", xr::ToString(m_ReferencePose).c_str());
         XrPosef currentPose{Pose::Identity()};
-        if (activated && GetPose(currentPose, session, time))
+        if (GetPose(currentPose, session, time))
         {
             Log("current tracker pose in stage space: %s", xr::ToString(currentPose).c_str());
         }
@@ -637,7 +637,7 @@ namespace Tracker
         }
         LogOffsetValues();
 
-        if (GetConfig()->GetBool(Cfg::UseCorPos, m_LoadPoseFromFile))
+        if (GetConfig()->GetBool(Cfg::LoadRefPoseFromFile, m_LoadPoseFromFile))
         {
             Log("center of rotation is %s read from config file", m_LoadPoseFromFile ? "" : "not");
         }

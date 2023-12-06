@@ -84,7 +84,7 @@ What you can modify in a configuration file:
 - `startup`: You can modify oxrmc's behavior on application start, e.g. disable a specific feature by setting the corresponding key to 0. 
   - `enabled`: you can disable all functionality globally or for a single application. Note that you cannot enable a single application if oxrmc is disabled globally in the default config file. Modifying this setting requires an application restart.
   - `physical_enabled`: initialization of physical tracker (motion controller or vive tracker) on startup can be skipped (e.g. if you're using a virtual tracker). Modifying this setting requires an application restart.
-  - `overlay_enabled`: enable initialization of the graphical overlay (for example if it's not required because of using a physical tracker or if the position of the center of rotation is successfully setup and `use_cor_pos` = 1 is used). Changing this value requires the VR session to be restarted.
+  - `overlay_enabled`: enable initialization of the graphical overlay (for example if it's not required because of using a physical tracker or if the position of the center of rotation is successfully setup and `load_ref_pose_from_file` = 1 is used). Changing this value requires the VR session to be restarted.
   - `physical_early_init`: initialize physical tracker as soon instead of as late as possible. May be required in native OpenXR games / sims that do not support motion controllers input (e.g. iRacing). May avoid conflicts with other OpenXR layers (e.g. eye tracking in OpenXR toolkit). Modifying this setting requires an application restart.
   - `upside_down`: turn in-game coordinate system upside down by rotating it 180 degrees around the 'forward' axis. Necessary for correct orientation of virtual tracker and motion compensation in some games (automatically set for iRacing). Changing this value requires the VR session to be restarted.
   - `auto_activate`: automatically activate motion compensation on application start and configuration reloading.
@@ -111,9 +111,9 @@ What you can modify in a configuration file:
     - `srs`: use the virtual tracker data provided by SRS motion software when using a Witmotion (or similar?) sensor on the motion rig.
     - `flypt` use the virtual tracker data provided by FlyPT Mover.
     - `yaw`: use the virtual tracker data provided by Yaw VR and Yaw 2. Either while using SRS or Game Engine.
-  - the keys `offset_...`, `use_cor_pos` and `cor_...` are used to handle the configuration of the center of rotation (cor) for all available virtual trackers.
+  - the keys `offset_...`, `load_ref_pose_from_file` and `cor_...` are used to handle the configuration of the center of rotation (cor) for all available virtual trackers.
     - offset values are meant to be modified to specify how far away the cor is in terms of up/down, forward/backward left/right, and up/down direction relative to your headset. The yaw angle defines a counterclockwise rotation of the forward vector after positioning of the cor on calibration.
-    - `use_cor_pos` can be enabled to reuse the exact cor position within vr playspace for the next sessions, independent of offset values and hmd position at calibration time.
+    - `load_ref_pose_from_file` can be enabled to reuse the exact cor position within vr playspace for the next sessions, independent of offset values and hmd position at calibration time.
     - values starting with `cor_` are not meant for manual editing in the config file but are instead populated on saving the current configuration.  
   - `marker_size` sets the size of the cor / reference tracker marker displayed in the overlay. The value corresponds to the length of one arrow in cm.
   - `connection_timeout` sets the time (in seconds) the tracker needs to be unresponsive before motion compensation is automatically deactivated. Setting a negative value disables automatic deactivation.
@@ -141,6 +141,8 @@ What you can modify in a configuration file:
   - `toggle_pose_modifier` - enable/disable application of factors on the motion compensation effect
   - `save_config_app` -  write current filter strength and cor offsets to application specific config file. Note that values in this file will precedent values in the global config file. 
   - `reload_config` - read in and apply configuration for current app from config files. For technical reasons motion compensation is automatically deactivated and the reference tracker pose is invalidated upon configuration reload.
+  - `log_tracker_pose` - write the current tracker reference pose (and tracker pose, if obtainable) into the log file, after having it calibrated.
+  - `log_interaction_profile` - (only for physical tracker: `controller` or `vive`): write the current interaction profile bound to the reference tracker into the log file.
   - Note that there are some immutable keyboard shortcuts:
     - `ctrl + shift + alt + i`: logs your current interaction profile, which can be useful when debugging issues with a physical tracker.
     - `ctrl + shift + alt + t`: logs the current pose of the reference tracker, can also be used for the purpose of troubleshooting. 
@@ -225,7 +227,7 @@ After detecting a loss of connection a configurable timeout period is used (`con
 The following features are purely optional and only recommended for users already familiar with the basic funtionality of oxrmc.
 
 ### Saving and reloading the cor location
-This feeature is relevant for [using a virtual tracker](#using-a-virtual-tracker) only. Once you're satisfied with the current setting, the current position and orientation of the cor can be saved to the (global = `ctrl + shift + s` or app-specific = `ctrl + shift + a`) config file. You can subsequently set the config key `use_cor_pos` to `1`. This causes the cor position to be loaded from the config file when calibrating instead of being determined using the hmd position and the offset values.  
+This feeature is relevant for [using a virtual tracker](#using-a-virtual-tracker) only. Once you're satisfied with the current setting, the current position and orientation of the cor can be saved to the (global = `ctrl + shift + s` or app-specific = `ctrl + shift + a`) config file. You can subsequently set the config key `load_ref_pose_from_file` to `1`. This causes the cor position and orientation to be loaded from the config file when calibrating instead of being determined using the hmd position and the offset values.  
 Applications using OpenComposite usually operate in a different VR play-space than titles supporting native OpenXR. That's why cor position needs to be saved once for all native games and once for all games using OpenComposite.  
 **Note that this functionality may not work with all HMD vendors. Setting up the play-space in the VR runtime of your hmd (before first use) might help to get this working correctly. Rumor has it that some HMDs need to be started/initialized at the exact same location for the play-space coordinates to be consistent in between uses.**
 
