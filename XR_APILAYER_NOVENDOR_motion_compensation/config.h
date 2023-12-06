@@ -73,9 +73,9 @@ enum class Cfg
     KeySaveConfig,
     KeySaveConfigApp,
     KeyReloadConfig,
+    KeyLogTracker,
+    KeyLogProfile,
     TestRotation,
-    InteractionProfile,
-    CurrentTrackerPose,
     LogVerbose
 };
 
@@ -99,7 +99,6 @@ class ConfigManager
     void WriteConfig(bool forApp);
 
   private:
-
     bool m_UsesOpenComposite{false};
     std::string m_ApplicationIni;
 
@@ -193,6 +192,9 @@ class ConfigManager
         {Cfg::KeySaveConfig, {"shortcuts", "save_config"}},
         {Cfg::KeySaveConfigApp, {"shortcuts", "save_config_app"}},
         {Cfg::KeyReloadConfig, {"shortcuts", "reload_config"}},
+
+        {Cfg::KeyLogTracker, {"shortcuts", "log_tracker_pose"}},
+        {Cfg::KeyLogProfile, {"shortcuts", "log_interaction_profile"}},
 
         {Cfg::LogVerbose, {"debug", "log_verbose"}},
         {Cfg::TestRotation, {"debug", "testrotation"}}};

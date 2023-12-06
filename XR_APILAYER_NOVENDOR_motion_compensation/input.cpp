@@ -20,19 +20,15 @@ namespace Input
         TraceLoggingWriteStart(local, "KeyboardInput::Init");
         bool success = true;
         const std::set<Cfg> activities{
-            Cfg::KeyActivate,    Cfg::KeyCalibrate,  Cfg::KeyTransInc,     Cfg::KeyTransDec,   Cfg::KeyRotInc,
-            Cfg::KeyRotDec,      Cfg::KeyOffForward, Cfg::KeyOffBack,      Cfg::KeyOffUp,      Cfg::KeyOffDown,
-            Cfg::KeyOffRight,    Cfg::KeyOffLeft,    Cfg::KeyRotRight,     Cfg::KeyRotLeft,    Cfg::KeyOverlay,
-            Cfg::KeyCache,       Cfg::KeyModifier,   Cfg::KeyFastModifier, Cfg::KeySaveConfig, Cfg::KeySaveConfigApp,
-            Cfg::KeyReloadConfig};
+            Cfg::KeyActivate,     Cfg::KeyCalibrate,  Cfg::KeyTransInc,     Cfg::KeyTransDec,   Cfg::KeyRotInc,
+            Cfg::KeyRotDec,       Cfg::KeyOffForward, Cfg::KeyOffBack,      Cfg::KeyOffUp,      Cfg::KeyOffDown,
+            Cfg::KeyOffRight,     Cfg::KeyOffLeft,    Cfg::KeyRotRight,     Cfg::KeyRotLeft,    Cfg::KeyOverlay,
+            Cfg::KeyCache,        Cfg::KeyModifier,   Cfg::KeyFastModifier, Cfg::KeySaveConfig, Cfg::KeySaveConfigApp,
+            Cfg::KeyReloadConfig, Cfg::KeyLogTracker, Cfg::KeyLogProfile};
         const std::set<int> modifiers{VK_CONTROL, VK_SHIFT, VK_MENU};
         std::set<int> fastModifiers{};
         GetConfig()->GetShortcut(Cfg::KeyFastModifier, fastModifiers);
         std::string errors;
-
-        // undocumented / immutable shortcuts:
-        m_ShortCuts[Cfg::InteractionProfile] = {{VK_CONTROL, VK_SHIFT, VK_MENU, 0x49}, {}}; // ctrl+shift+alt+i
-        m_ShortCuts[Cfg::CurrentTrackerPose] = {{VK_CONTROL, VK_SHIFT, VK_MENU, 0x54}, {}}; // ctrl+shift+alt+t
 
         auto keySetToString = [](const std::set<int>& keys) {
             std::string out;
@@ -169,11 +165,11 @@ namespace Input
         {
             ReloadConfig();
         }
-        if (m_Input.GetKeyState(Cfg::InteractionProfile, isRepeat) && !isRepeat)
+        if (m_Input.GetKeyState(Cfg::KeyLogProfile, isRepeat) && !isRepeat)
         {
             m_Layer->LogCurrentInteractionProfile();
         }
-        if (m_Input.GetKeyState(Cfg::CurrentTrackerPose, isRepeat) && !isRepeat)
+        if (m_Input.GetKeyState(Cfg::KeyLogTracker, isRepeat) && !isRepeat)
         {
             m_Layer->m_Tracker->LogCurrentTrackerPoses(m_Layer->m_Session, time, m_Layer->m_Activated);
         }
