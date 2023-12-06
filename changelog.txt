@@ -3,7 +3,7 @@ OpenXR-MotionCompensation Changelog
 Version 0.2.8
 
 	Motion controller interaction
-	- added ability to compensate controller position
+	- added ability to compensate controller position (experimental)
 	- improved interaction profile path suggestion
 	
 	Graphical overlay
@@ -11,7 +11,7 @@ Version 0.2.8
 	- internal refactoring
 	- prepared for (potential) future use of in-game menu
 	
-	Pose modifier
+	Pose modifier (experimental)
 	- added option to increase or decrease the level of compensation for each degree of freedom separately
 	- modify mc effect with tracker and/or hmd as point of reference 
 	

@@ -90,7 +90,7 @@ What you can modify in a configuration file:
   - `auto_activate`: automatically activate motion compensation on application start and configuration reloading.
   - `auto_activate_delay`: delay auto-activation by specified number of seconds. The required time for successful activation may vary, depending on application and tracker type used.
   - `auto_activate_countdown`: enable audible countdown for the last 10 seconds before auto-activation. This is supposed to allow getting to neutral position and timely centering of in-game view.
-  - `compensate_controllers`: enable motion compensation for motion controllers (that are not used as reference trackers). Note that enabling this feature will disable cor manipulation via motion controller. Changing this value requires the application top be restarted.
+  - `compensate_controllers`: enable motion compensation for motion controllers (that are not used as reference trackers). **This feature is considered to be in experimental state**. Note that enabling this feature will disable cor manipulation via motion controller. Changing this value requires the application top be restarted.
 - `tracker`: 
   - The following tracker `type` keys are available:
     - `controller`: use either the left or the right motion controller as reference tracker. Valid options for the key `side` are `left` and `right` (**Note that changing the side or switching between motion controller and vive tracker requires a restart of the vr session**)
@@ -115,7 +115,7 @@ What you can modify in a configuration file:
     - offset values are meant to be modified to specify how far away the cor is in terms of up/down, forward/backward left/right, and up/down direction relative to your headset. The yaw angle defines a counterclockwise rotation of the forward vector after positioning of the cor on calibration.
     - `use_cor_pos` can be enabled to reuse the exact cor position within vr playspace for the next sessions, independent of offset values and hmd position at calibration time.
     - values starting with `cor_` are not meant for manual editing in the config file but are instead populated on saving the current configuration.  
-  - `marker_size` sets the size of the cor / reference tracker marker displayed in the overlay. The value corresponds to the length of one double cone in cm.
+  - `marker_size` sets the size of the cor / reference tracker marker displayed in the overlay. The value corresponds to the length of one arrow in cm.
   - `connection_timeout` sets the time (in seconds) the tracker needs to be unresponsive before motion compensation is automatically deactivated. Setting a negative value disables automatic deactivation.
   - `connection_check` is only relevant for virtual trackers and determines the period (in seconds) for checking whether the memory mapped file used for data input is actually still actively used. Setting a negative value disables the check
   - `legacy mode` reverts the internal pose manipulation technique to the way it was prior to version 0.3.0
@@ -174,7 +174,7 @@ To enable OXRMC to correlate translation and rotation of the rig to the virtual 
 - If you're using YawVR Game Engine you can also use the parameters `Head Distance` and `Height` in its Motion Compensation tab to specify the offset of the cor. Head distance is basically equal to `offset_forward` in the configration file. But note that the height parameter is measured upwards from the bottom of your play-space, so you'll need to have that setup correctly in order to use that feature.
 
 ### Adjusting cor location using a motion controller
-You can use (only) the left motion controller to move the cor position in virtual space. The virtual tracker has to be calibrated and motion compensation needs to be deactivated. Make sure to activate the graphical overlay (`ctrl + d` by default) to see the cor marker in game. 
+You can use (only) the left motion controller to move the cor position in virtual space. The virtual tracker has to be calibrated first. Make sure to activate the graphical overlay (`ctrl + d` by default) to see the cor marker in game. 
 - press and hold the trigger button to 'grab' and move the cor marker, this way you can make it reach positions that are obstructed in the real world.
 - while pressing the trigger:
   - moving the controller left/right, up/down, or forward/backward is pushing the cor marker in the same direction
@@ -200,18 +200,18 @@ You can use (only) the left motion controller to move the cor position in virtua
 You can enable/disable the overlay using the `toggle_overlay` shortcut. It displays a marker in your headset view for:
 - the current neutral position of the reference tracker. **Note that the position of the marker does not represent the tracker/cor position before tracker calibration**
   - for a virtual tracker the neutral position corresponds to the center of rotation currently configured. The marker uses the following color coding:
-    - blue points upwards
-    - green points forward
-    - red points to the right
+    - blue arrow points upwards
+    - green arrow points forward
+    - red arrow points to the right
     - if blue and red are pointing in the opposite direction, try setting `upside_down` to 1 in the `startup` section of the config file of the corresponding application (or check if it is set to 1 inadvertently). 
-  - for a physical tracker the orientation of the marker is depending on the runtime implementation
-- the current tracker position, if mc is currently active. This marker uses:
+  - for a physical tracker (`controller` or `vive`) the orientation of the marker is depending on the runtime implementation and doesn't really matter for functionality
+- the current tracker position, if mc is currently active. This marker's colorcoding uses:
   - cyan instead of blue
   - yellow instead of green
   - magenta instead of red
  
 ### Connection Loss
-OXRMC can detect wether a reference tracker isn't available anymore if: 
+OXRMC can detect whether a reference tracker isn't available anymore if: 
 - for a physical tracker: the runtime lost tracking of a motion controller / vive tracker 
 - for a virtual tracker: the memory mapped file providing data for a virtual tracker is removed by windows due to inactivity of the sender  
 
@@ -230,6 +230,7 @@ Applications using OpenComposite usually operate in a different VR play-space th
 **Note that this functionality may not work with all HMD vendors. Setting up the play-space in the VR runtime of your hmd (before first use) might help to get this working correctly. Rumor has it that some HMDs need to be started/initialized at the exact same location for the play-space coordinates to be consistent in between uses.**
 
 ### Pose modifier
+**This feature is considered experimental and may cause conficts with other oxrmc funtionality!**  
 If you don't want the motion compensation effect to reflect the movement of the reference tracker exactly one to one, you can use this feature to increase or decrease it on one or more degrees of freedom. This is done under following constraints:
 - the orientation (which way is forward?) is based on:
   - physical tracker (`controller` or `vive`): forward vector of the hmd (orthogonal to gravity vector) in the moment of tracker calibration
@@ -245,6 +246,7 @@ If you don't want the motion compensation effect to reflect the movement of the 
   - increasing/decreasing a rotation (roll, pitch, yaw) at tracker position also affects the resulting translation of the hmd
   - increasing/decreasing a translation (surge, sway, heave) at hmd position also affects translations caused by tracker rotation(s)
   - order of application of rotations is roll first, then pitch, and yaw last
+  - when motion controllers are compensated, any modification at hmd will be disabled, due to incompatibilty issues
 - different factors can be combined to achieve a desired modification, e.g.:
   - `0.5` on tracker pitch and `2.0` on hmd pitch will halve the compensation for translation caused by pitch (usually mostly heave and a bit of surge) but keep the original compensation for pitch rotation 
   - `0.0` on hmd yaw, pitch and roll will keep your head position compensated, while the rotation of the hmd caused by simulator movement won't be corrected  

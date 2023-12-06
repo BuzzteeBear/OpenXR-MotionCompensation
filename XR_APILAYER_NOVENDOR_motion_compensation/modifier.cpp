@@ -87,6 +87,10 @@ namespace Modifier
         GetConfig()->GetBool(Cfg::FactorEnabled, apply);
         SetActive(apply);
 
+        Log("pose modifier (experimental) at tracker position is %s",
+            m_ApplyRotation ? (m_ApplyTranslation ? "manipulating rotation and translation" : "manipulating rotation")
+                            : (m_ApplyTranslation ? "manipulating translation" : "off"));
+
         TraceLoggingWriteStop(local,
                               "TrackerModifier::TrackerModifier",
                               TLArg(std::to_string(this->m_Roll).c_str(), "Roll"),
@@ -192,6 +196,10 @@ namespace Modifier
         }
 
         SetActive(apply);
+
+        Log("pose modifier (experimental) at hmd position is %s",
+            m_ApplyRotation ? (m_ApplyTranslation ? "manipulating rotation and translation" : "manipulating rotation")
+                            : (m_ApplyTranslation ? "manipulating translation" : "off"));
 
         TraceLoggingWriteStop(local,
                               "HmdModifier::HmdModifier",
