@@ -40,7 +40,7 @@ A few hints regarding the installation process:
 - If something goes wrong on installation and you don't know what or why, you can check the log file `Setup Log <yyyy-mm-dd xxx>.txt` that is created in the `%TEMP%` folder.
 
 ### Conflict with other OpenXR API layers
-There may be issues with other OpenXR API layers that are installed on your system. For the most part they can be solved by using the correct order of installation (because that implicitly determines the order in which the layers are loaded).  
+There may be issues with other OpenXR API layers that are installed on your system. For the most part they can be solved by using the correct order of installation (because that implicitly determines the order in which the layers are loaded). You can use the folowing tool (HKLM... variant) to examine (and potentially change) layer order and/or deactivate some layers for debugging: [OpenXR-API-Layers-GUI](https://github.com/fredemmott/OpenXR-API-Layers-GUI/releases/latest)  
 According to user feedback following constraints seem to be working:
 - **XRNeckSaver** needs to be installed before OXRMC.
 - **OpenKneeBoard** needs to be installed before OXRMC. 
