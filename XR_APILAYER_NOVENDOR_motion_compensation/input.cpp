@@ -365,32 +365,24 @@ namespace Input
 
         if (m_Layer->m_VirtualTrackerUsed)
         {
-            if (auto* tracker = reinterpret_cast<Tracker::VirtualTracker*>(m_Layer->m_Tracker))
+            if (Direction::RotLeft != dir && Direction::RotRight != dir)
             {
-                if (Direction::RotLeft != dir && Direction::RotRight != dir)
-                {
-                    const float amount = fast ? 0.1f : 0.01f;
-                    const XrVector3f direction{Direction::Left == dir    ? amount
-                                               : Direction::Right == dir ? -amount
-                                                                         : 0.0f,
-                                               Direction::Up == dir     ? amount
-                                               : Direction::Down == dir ? -amount
-                                                                        : 0.0f,
-                                               Direction::Fwd == dir    ? amount
-                                               : Direction::Back == dir ? -amount
-                                                                        : 0.0f};
-                    success = tracker->ChangeOffset(direction);
-                }
-                else
-                {
-                    const float amount = fast ? utility::angleToRadian * 10.0f : utility::angleToRadian;
-                    success = tracker->ChangeRotation(Direction::RotRight == dir ? -amount : amount);
-                }
+                const float amount = fast ? 0.1f : 0.01f;
+                const XrVector3f direction{Direction::Left == dir    ? amount
+                                           : Direction::Right == dir ? -amount
+                                                                     : 0.0f,
+                                           Direction::Up == dir     ? amount
+                                           : Direction::Down == dir ? -amount
+                                                                    : 0.0f,
+                                           Direction::Fwd == dir    ? amount
+                                           : Direction::Back == dir ? -amount
+                                                                    : 0.0f};
+                success = m_Layer->m_Tracker->ChangeOffset(direction);
             }
             else
             {
-                ErrorLog("unable to cast tracker to VirtualTracker pointer");
-                success = false;
+                const float amount = fast ? utility::angleToRadian * 10.0f : utility::angleToRadian;
+                success = m_Layer->m_Tracker->ChangeRotation(Direction::RotRight == dir ? -amount : amount);
             }
         }
         else
@@ -431,7 +423,7 @@ namespace Input
                 std::make_unique<utility::AutoActivator>(utility::AutoActivator(m_Layer->m_Input));
             m_Layer->m_HmdModifier = std::make_unique<Modifier::HmdModifier>();
             m_Layer->m_VirtualTrackerUsed = GetConfig()->IsVirtualTracker();
-            Tracker::GetTracker(&m_Layer->m_Tracker);
+            m_Layer->m_Tracker = Tracker::GetTracker();
             if (!m_Layer->m_Tracker->Init())
             {
                 success = false;
@@ -451,17 +443,7 @@ namespace Input
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "InputHandler::SaveConfig", TLArg(time, "Time"), TLArg(forApp, "AppSpecific"));
 
-        if (m_Layer->m_VirtualTrackerUsed)
-        {
-            if (const auto tracker = reinterpret_cast<Tracker::VirtualTracker*>(m_Layer->m_Tracker))
-            {
-                tracker->SaveReferencePose(time);
-            }
-            else
-            {
-                ErrorLog("unable to cast tracker to VirtualTracker pointer");
-            }
-        }
+        m_Layer->m_Tracker->SaveReferencePose(time);
         GetConfig()->WriteConfig(forApp);
 
         TraceLoggingWriteStop(local, "InputHandler::SaveConfig");

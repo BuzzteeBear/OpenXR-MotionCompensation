@@ -51,6 +51,9 @@ namespace Tracker
         void SetReferencePose(const XrPosef& pose) override;
         void SetModifierActive(const bool active) const;
         void LogCurrentTrackerPoses(XrSession session, XrTime time, bool activated);
+        virtual bool ChangeOffset(XrVector3f modification);
+        virtual bool ChangeRotation(float radian);
+        virtual void SaveReferencePose(XrTime time) const{};
         virtual void ApplyCorManipulation(XrSession session, XrTime time){};
 
         bool m_SkipLazyInit{false};
@@ -95,9 +98,9 @@ namespace Tracker
         bool Init() override;
         bool LazyInit(XrTime time) override;
         bool ResetReferencePose(XrSession session, XrTime time) override;
-        bool ChangeOffset(XrVector3f modification);
-        bool ChangeRotation(float radian);
-        void SaveReferencePose(XrTime time) const;
+        bool ChangeOffset(XrVector3f modification) override;
+        bool ChangeRotation(float radian) override;
+        void SaveReferencePose(XrTime time) const override;
         void LogOffsetValues() const;
         void ApplyCorManipulation(XrSession session, XrTime time) override;
 
@@ -220,5 +223,5 @@ namespace Tracker
                                                        "keyboard"};
     };
 
-    void GetTracker(TrackerBase** tracker);
+    std::unique_ptr<Tracker::TrackerBase> GetTracker();
 } // namespace Tracker

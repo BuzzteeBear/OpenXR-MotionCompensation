@@ -36,11 +36,6 @@ using namespace Feedback;
 using namespace xr::math;
 namespace openxr_api_layer
 {
-    OpenXrLayer::~OpenXrLayer()
-    {
-        delete m_Tracker;
-    }
-
     XrResult OpenXrLayer::xrDestroyInstance(XrInstance instance)
     {
         TraceLocalActivity(local);
@@ -190,7 +185,7 @@ namespace openxr_api_layer
         }
 
         // initialize tracker
-        Tracker::GetTracker(&m_Tracker);
+        m_Tracker = Tracker::GetTracker();
         if (!m_Tracker->Init())
         {
             m_Initialized = false;
@@ -1283,7 +1278,6 @@ namespace openxr_api_layer
         }
 
         m_Tracker->m_XrSyncCalled = false;
-
 
         if (!m_Activated)
         {

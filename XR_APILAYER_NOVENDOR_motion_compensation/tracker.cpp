@@ -438,6 +438,16 @@ namespace Tracker
         TraceLoggingWriteStop(local, "TrackerBase::LogCurrentTrackerPose");
     }
 
+    bool TrackerBase::ChangeOffset(XrVector3f modification)
+    {
+        return false;
+    }
+
+    bool TrackerBase::ChangeRotation(float radian)
+    {
+        return false;
+    }
+
     void TrackerBase::SetReferencePose(const XrPosef& pose)
     {
         TraceLocalActivity(local);
@@ -1382,82 +1392,52 @@ namespace Tracker
         return true;
     }
 
-    void GetTracker(TrackerBase** tracker)
+    std::unique_ptr<Tracker::TrackerBase> GetTracker()
     {
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "GetTracker");
 
-        const TrackerBase* previousTracker = *tracker;
         std::string trackerType;
         if (GetConfig()->GetString(Cfg::TrackerType, trackerType))
         {
             if ("yaw" == trackerType)
             {
                 Log("using Yaw Game Engine memory mapped file as tracker");
-
-                delete previousTracker;
-
-                *tracker = new YawTracker();
                 TraceLoggingWriteStop(local, "GetTracker", TLPArg(trackerType.c_str(), "Tracker"));
-                return;
+                return std::make_unique<YawTracker>();
             }
             if ("srs" == trackerType)
             {
                 Log("using SRS memory mapped file as tracker");
-
-                delete previousTracker;
-
-                *tracker = new SrsTracker();
                 TraceLoggingWriteStop(local, "GetTracker", TLPArg(trackerType.c_str(), "Tracker"));
-                return;
+                return std::make_unique<SrsTracker>();
             }
             if ("flypt" == trackerType)
             {
                 Log("using FlyPT Mover memory mapped file as tracker");
-
-                delete previousTracker;
-
-                *tracker = new FlyPtTracker();
                 TraceLoggingWriteStop(local, "GetTracker", TLPArg(trackerType.c_str(), "Tracker"));
-                return;
+                return std::make_unique<FlyPtTracker>();
             }
             if ("controller" == trackerType)
             {
                 Log("using motion controller as tracker");
-
-                delete previousTracker;
-
-                *tracker = new OpenXrTracker();
                 TraceLoggingWriteStop(local, "GetTracker", TLPArg(trackerType.c_str(), "Tracker"));
-                return;
+                return std::make_unique<OpenXrTracker>();
             }
             if ("vive" == trackerType)
             {
                 Log("using vive tracker as tracker");
-
-                delete previousTracker;
-
-                *tracker = new OpenXrTracker();
                 TraceLoggingWriteStop(local, "GetTracker", TLPArg(trackerType.c_str(), "Tracker"));
-                return;
+                return std::make_unique<OpenXrTracker>();
             }
-            else
-            {
-                ErrorLog("unknown tracker type: %s", trackerType.c_str());
-            }
+            ErrorLog("unknown tracker type: %s", trackerType.c_str());
         }
         else
         {
             ErrorLog("unable to determine tracker type");
         }
-        if (previousTracker)
-        {
-            ErrorLog("retaining previous tracker type");
-            TraceLoggingWriteStop(local, "GetTracker", TLPArg("Previous", "Tracker"));
-            return;
-        }
         ErrorLog("defaulting to 'controller'");
-        *tracker = new OpenXrTracker();
         TraceLoggingWriteStop(local, "GetTracker", TLPArg("Default", "Tracker"));
+        return std::make_unique<OpenXrTracker>();
     }
 } // namespace Tracker

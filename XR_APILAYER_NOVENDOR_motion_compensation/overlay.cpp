@@ -143,33 +143,33 @@ namespace openxr_api_layer::graphics
     {
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local,
-                               "Overlay::ToggleOverlay",
+                               "Overlay::DrawOverlay",
                                TLArg(chainFrameEndInfo->displayTime, "Time"),
                                TLArg(xr::ToString(referenceTrackerPose).c_str(), "ReferencePose"),
                                TLArg(xr::ToString(reversedManipulation).c_str(), "ReversedManipulation"),
                                TLArg(mcActivated, "MC_Activated"));
 
-        if (m_Initialized && m_OverlayActive)
+        if (ICompositionFramework* composition = m_compositionFrameworkFactory->getCompositionFramework(session))
         {
-            TraceLoggingWriteTagged(local, "Overlay::ToggleOverlay", TLArg(true, "Overlay_Active"));
-
-            std::unique_lock lock(m_DrawMutex);
-            try
+            composition->serializePreComposition();
+            if (m_Initialized && m_OverlayActive)
             {
-                m_BaseLayerVector =
-                    std::vector(chainFrameEndInfo->layers, chainFrameEndInfo->layers + chainFrameEndInfo->layerCount);
-                XrCompositionLayerProjection const* lastProjectionLayer{};
-                for (auto layer : m_BaseLayerVector)
+                TraceLoggingWriteTagged(local, "Overlay::DrawOverlay", TLArg(true, "Overlay_Active"));
+
+                std::unique_lock lock(m_DrawMutex);
+                try
                 {
-                    if (XR_TYPE_COMPOSITION_LAYER_PROJECTION == layer->type)
+                    m_BaseLayerVector = std::vector(chainFrameEndInfo->layers,
+                                                    chainFrameEndInfo->layers + chainFrameEndInfo->layerCount);
+                    XrCompositionLayerProjection const* lastProjectionLayer{};
+                    for (auto layer : m_BaseLayerVector)
                     {
-                        lastProjectionLayer = reinterpret_cast<const XrCompositionLayerProjection*>(layer);
+                        if (XR_TYPE_COMPOSITION_LAYER_PROJECTION == layer->type)
+                        {
+                            lastProjectionLayer = reinterpret_cast<const XrCompositionLayerProjection*>(layer);
+                        }
                     }
-                }
-                if (lastProjectionLayer)
-                {
-                    if (ICompositionFramework* composition =
-                            m_compositionFrameworkFactory->getCompositionFramework(session))
+                    if (lastProjectionLayer)
                     {
                         auto graphicsDevice = composition->getCompositionDevice();
 
@@ -225,7 +225,7 @@ namespace openxr_api_layer::graphics
                                     composition->getCompositionDevice()->createTexture(markerInfo));
 
                                 TraceLoggingWriteTagged(local,
-                                                        "Overlay::ToggleOverlay_CreateSwapcahin",
+                                                        "Overlay::DrawOverlay_CreateSwapcahin",
                                                         TLPArg(m_MarkerSwapchains[eye].get(), "Swapchain"),
                                                         TLPArg(m_MarkerDepthTextures[eye].get(), "DepthTexture"));
                             }
@@ -345,14 +345,15 @@ namespace openxr_api_layer::graphics
                         chainFrameEndInfo->layers = m_BaseLayerVector.data();
                     }
                 }
+                catch (std::exception& e)
+                {
+                    ErrorLog("%s: encountered exception: %s", __FUNCTION__, e.what());
+                    m_Initialized = false;
+                }
             }
-            catch (std::exception& e)
-            {
-                ErrorLog("%s: encountered exception: %s", __FUNCTION__, e.what());
-                m_Initialized = false;
-            }
+            composition->serializePostComposition();
         }
-        TraceLoggingWriteStop(local, "Overlay::ToggleOverlay");
+        TraceLoggingWriteStop(local, "Overlay::DrawOverlay");
     }
 
     void Overlay::DeleteResources()

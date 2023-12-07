@@ -51,8 +51,8 @@ namespace openxr_api_layer
     {
       public:
         OpenXrLayer() = default;
+        ~OpenXrLayer() = default;
 
-        virtual ~OpenXrLayer() override;
         XrResult xrDestroyInstance(XrInstance instance) override;
         XrResult xrCreateInstance(const XrInstanceCreateInfo* createInfo) override;
         XrResult xrGetSystem(XrInstance instance, const XrSystemGetInfo* getInfo, XrSystemId* systemId) override;
@@ -155,7 +155,6 @@ namespace openxr_api_layer
         std::set<XrSpace> m_ActionSpaces{};
         std::vector<XrView> m_EyeOffsets{};
         XrViewConfigurationType m_ViewConfigType{XR_VIEW_CONFIGURATION_TYPE_MAX_ENUM};
-        Tracker::TrackerBase* m_Tracker{nullptr};
         Tracker::ViveTrackerInfo m_ViveTracker;
         Input::ButtonPath m_ButtonPath;
         utility::Cache<XrPosef> m_DeltaCache{"delta", xr::math::Pose::Identity()};
@@ -165,6 +164,7 @@ namespace openxr_api_layer
                                                                              xr::math::Pose::Identity(),
                                                                              xr::math::Pose::Identity()}};
         std::mutex m_FrameLock;
+        std::unique_ptr<Tracker::TrackerBase> m_Tracker{};
         std::unique_ptr<graphics::Overlay> m_Overlay{};
         std::shared_ptr<Input::InputHandler> m_Input{};
         std::unique_ptr<utility::AutoActivator> m_AutoActivator{};
