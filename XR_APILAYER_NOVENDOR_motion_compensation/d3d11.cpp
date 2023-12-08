@@ -496,18 +496,6 @@ namespace
         {
             TraceLocalActivity(local);
             TraceLoggingWriteStart(local, "D3D11GraphicsDevice_Destroy", TLPArg(this, "Device"));
-
-            m_deviceForFencesAndNtHandles.Reset();
-            m_DepthNoStencilTest.Reset();
-            m_meshVertexShader.Reset();
-            m_meshPixelShader.Reset();
-            m_meshInputLayout.Reset();
-            m_meshViewProjectionBuffer.reset();
-            m_meshModelBuffer.reset();
-            m_context->ClearState();
-            m_context->Flush();
-            m_context.Reset();
-
             TraceLoggingWriteStop(local, "D3D11GraphicsDevice_Destroy");
         }
 

@@ -60,16 +60,13 @@ namespace openxr_api_layer::graphics
     class Overlay
     {
       public:
-        Overlay() = default;
-        void Init(const XrInstanceCreateInfo& instanceInfo,
-                XrInstance instance,
-                PFN_xrGetInstanceProcAddr xrGetInstanceProcAddr);
-        void CreateSession(const XrSessionCreateInfo* createInfo, XrSession session);
+ 
         void DestroySession(XrSession session);
         void SetMarkerSize();
         bool ToggleOverlay();
         void DrawOverlay(XrSession session,
                          XrFrameEndInfo* chainFrameEndInfo,
+                         std::shared_ptr<ICompositionFrameworkFactory> factory,
                          const XrPosef& referenceTrackerPose,
                          const XrPosef& reversedManipulation,
                          bool mcActivated);
@@ -90,7 +87,6 @@ namespace openxr_api_layer::graphics
 
         bool m_OverlayActive{false};
         XrVector3f m_MarkerSize{0.1f, 0.1f, 0.1f};
-        std::shared_ptr<ICompositionFrameworkFactory> m_compositionFrameworkFactory{};
         std::shared_ptr<ISimpleMesh> m_MeshRGB{}, m_MeshCMY{};
         std::vector<std::shared_ptr<ISwapchain>> m_MarkerSwapchains{};
         std::vector<std::shared_ptr<IGraphicsTexture>> m_MarkerDepthTextures{};
@@ -98,5 +94,6 @@ namespace openxr_api_layer::graphics
         XrCompositionLayerProjection* m_CreatedProjectionLayer{};
         std::vector<const XrCompositionLayerBaseHeader*> m_BaseLayerVector{};
         std::mutex m_DrawMutex;
+        std::set<XrSession> m_InitializedSessions{};
     };
 } // namespace openxr_api_layer::graphics

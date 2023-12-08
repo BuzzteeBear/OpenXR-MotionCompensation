@@ -1021,15 +1021,57 @@ namespace
 
         ICompositionFramework* getCompositionFramework(XrSession session) override
         {
+            TraceLocalActivity(local);
+            TraceLoggingWriteStart(local, "CompositionFrameworkFactory_getCompositionFramework");
             std::unique_lock lock(m_sessionsMutex);
 
             auto it = m_sessions.find(session);
             if (it == m_sessions.end())
             {
-                // The session (likely) could not be handled.
-                return nullptr;
+                auto infoIt = m_SessionCreateInfos.find(session);
+                if (infoIt != m_SessionCreateInfos.end())
+                {
+                    try
+                    {
+                        m_sessions.insert_or_assign(
+                            session,
+                            std::move(std::make_unique<CompositionFramework>(m_instanceInfo,
+                                                                             m_instance,
+                                                                             xrGetInstanceProcAddr,
+                                                                             infoIt->second,
+                                                                             session,
+                                                                             m_compositionApi)));
+                        it = m_sessions.find(session);
+                        if (it == m_sessions.end())
+                        {
+                            ErrorLog("%s: creating composition framework failed, for session %d",
+                                     __FUNCTION__,
+                                     session);
+                            TraceLoggingWriteStop(local,
+                                                  "CompositionFrameworkFactory_getCompositionFramework",
+                                                  TLArg(false, "FrameworkCreation"));
+                            return nullptr;
+                        }
+                    }
+                    catch (std::exception& exc)
+                    {
+                        TraceLoggingWriteTagged(local,
+                                                "CompositionFrameworkFactory_getCompositionFramework",
+                                                TLArg(exc.what(), "Error"));
+                        ErrorLog(fmt::format("xrCreateSession: {}", exc.what()));
+                    }
+                }
+                else
+                {
+                    // The session (likely) could not be handled.
+                    ErrorLog("%s: unknown session %d", __FUNCTION__, session);
+                    TraceLoggingWriteStop(local,
+                                          "CompositionFrameworkFactory_getCompositionFramework",
+                                          TLArg(false, "SessionKnown"));
+                    return nullptr;
+                }
             }
-
+            TraceLoggingWriteStop(local, "CompositionFrameworkFactory_getCompositionFramework", TLArg(true, "Success"));
             return it->second.get();
         }
 
@@ -1039,23 +1081,7 @@ namespace
             TraceLoggingWriteStart(local, "CompositionFrameworkFactory_CreateSession");
 
             std::unique_lock lock(m_sessionsMutex);
-            try
-            {
-                m_sessions.insert_or_assign(session,
-                                            std::move(std::make_unique<CompositionFramework>(m_instanceInfo,
-                                                                                             m_instance,
-                                                                                             xrGetInstanceProcAddr,
-                                                                                             *createInfo,
-                                                                                             session,
-                                                                                             m_compositionApi)));
-            }
-            catch (std::exception& exc)
-            {
-                TraceLoggingWriteTagged(local,
-                                        "CompositionFrameworkFactory_CreateSession_Error",
-                                        TLArg(exc.what(), "Error"));
-                ErrorLog(fmt::format("xrCreateSession: {}", exc.what()));
-            }
+            m_SessionCreateInfos.insert({session, *createInfo});
 
             TraceLoggingWriteStop(local, "CompositionFrameworkFactory_CreateSession", TLXArg(session, "Session"));
         }
@@ -1074,6 +1100,7 @@ namespace
                     m_sessions.erase(it);
                 }
             }
+            m_SessionCreateInfos.erase(session);
 
             TraceLoggingWriteStop(local, "CompositionFrameworkFactory_DestroySession");
         }
@@ -1087,6 +1114,7 @@ namespace
 
         std::mutex m_sessionsMutex;
         std::unordered_map<XrSession, std::unique_ptr<CompositionFramework>> m_sessions;
+        std::unordered_map<XrSession, XrSessionCreateInfo> m_SessionCreateInfos{};
 
         static inline std::mutex factoryMutex;
         static inline CompositionFrameworkFactory* factory{nullptr};

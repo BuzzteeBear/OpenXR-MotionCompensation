@@ -205,7 +205,11 @@ namespace openxr_api_layer
             // Needed by DirectXTex.
             CoInitializeEx(nullptr, COINIT_MULTITHREADED);
             m_Overlay = std::make_unique<graphics::Overlay>();
-            m_Overlay->Init(*createInfo, GetXrInstance(), m_xrGetInstanceProcAddr);
+            m_compositionFrameworkFactory = createCompositionFrameworkFactory(*createInfo,
+                                                                              GetXrInstance(),
+                                                                              m_xrGetInstanceProcAddr,
+                                                                              graphics::CompositionApi::D3D11);
+            m_Overlay->m_Initialized = true;
         }
         else
         {
@@ -315,9 +319,9 @@ namespace openxr_api_layer
                 m_Session = *session;
                 m_LastFrameTime = 0;
 
-                if (m_Overlay)
+                if (m_OverlayEnabled && m_Overlay && m_Overlay->m_Initialized)
                 {
-                    m_Overlay->CreateSession(createInfo, m_Session);
+                    m_compositionFrameworkFactory->CreateSession(createInfo, *session);
                 }
 
                 if (bool earlyPhysicalInit; m_PhysicalEnabled &&
@@ -427,8 +431,11 @@ namespace openxr_api_layer
         {
             m_Overlay->DestroySession(session);
         }
+        m_compositionFrameworkFactory->DestroySession(session);
 
         const XrResult result = OpenXrApi::xrDestroySession(session);
+
+        m_Session = XR_NULL_HANDLE;
 
         TraceLoggingWriteStop(local, "OpenXrLayer::xrDestroySession", TLArg(xr::ToCString(result), "Result"));
 
@@ -1272,6 +1279,7 @@ namespace openxr_api_layer
         {
             m_Overlay->DrawOverlay(session,
                                    &chainFrameEndInfo,
+                                   m_compositionFrameworkFactory,
                                    m_Tracker->GetReferencePose(),
                                    reversedManipulation,
                                    m_Activated);
@@ -1289,7 +1297,7 @@ namespace openxr_api_layer
             }
             TraceLoggingWriteStop(local,
                                   "OpenXrLayer::xrEndFrame",
-                                  TLArg(false, "Activsted"),
+                                  TLArg(false, "Activated"),
                                   TLArg(xr::ToCString(result), "Result"));
             return result;
         }
@@ -1435,7 +1443,7 @@ namespace openxr_api_layer
 
         TraceLoggingWriteStop(local,
                               "OpenXrLayer::xrEndFrame",
-                              TLArg(true, "Activsted"),
+                              TLArg(true, "Activated"),
                               TLArg(xr::ToCString(result), "Result"));
         return result;
     }

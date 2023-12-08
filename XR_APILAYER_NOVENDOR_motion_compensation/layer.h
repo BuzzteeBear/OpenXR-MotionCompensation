@@ -47,11 +47,10 @@ namespace openxr_api_layer
     const std::string LayerName = "XR_APILAYER_NOVENDOR_motion_compensation";
     const std::string VersionString = std::string(VERSION_STRING) + " (" + VERSION_NUMBER + ")";
 
-    class OpenXrLayer : public openxr_api_layer::OpenXrApi
+    class OpenXrLayer final : public openxr_api_layer::OpenXrApi
     {
       public:
         OpenXrLayer() = default;
-        ~OpenXrLayer() = default;
 
         XrResult xrDestroyInstance(XrInstance instance) override;
         XrResult xrCreateInstance(const XrInstanceCreateInfo* createInfo) override;
@@ -169,6 +168,7 @@ namespace openxr_api_layer
         std::shared_ptr<Input::InputHandler> m_Input{};
         std::unique_ptr<utility::AutoActivator> m_AutoActivator{};
         std::unique_ptr<Modifier::HmdModifier> m_HmdModifier{};
+        std::shared_ptr<graphics::ICompositionFrameworkFactory> m_compositionFrameworkFactory{};
 
         // connection recovery
         XrTime m_RecoveryWait{3000000000}; // 3 sec default timeout
