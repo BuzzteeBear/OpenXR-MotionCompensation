@@ -970,6 +970,9 @@ namespace openxr_api_layer
             if (!m_EyeToHmd)
             {
                 // determine eye poses
+                std::vector<XrView> eyeViews;
+                eyeViews.resize(*viewCountOutput, {XR_TYPE_VIEW});
+
                 const XrViewLocateInfo offsetViewLocateInfo{viewLocateInfo->type,
                                                             nullptr,
                                                             viewLocateInfo->viewConfigurationType,
@@ -981,11 +984,11 @@ namespace openxr_api_layer
                                                                       viewState,
                                                                       viewCapacityInput,
                                                                       viewCountOutput,
-                                                                      views);
+                                                                      eyeViews.data());
 
                 if (SUCCEEDED(toHmdResult) && 0 < *viewCountOutput)
                 {
-                    m_EyeToHmd = std::make_unique<XrPosef>(Pose::Invert(views[0].pose));
+                    m_EyeToHmd = std::make_unique<XrPosef>(Pose::Invert(eyeViews[0].pose));
                     TraceLoggingWriteTagged(local,
                                             "OpenXrLayer::xrLocateViews",
                                             TLArg(xr::ToString(*m_EyeToHmd).c_str(), "EyeToHmd"));
@@ -1003,7 +1006,7 @@ namespace openxr_api_layer
                 XrPosef refToStage, stageToRef;
                 if (GetRefToStage(refSpace, &refToStage, &stageToRef))
                 {
-                    if (m_EyeToHmd && 0 < *viewCountOutput)
+                    if (m_ModifierActive && m_EyeToHmd && 0 < *viewCountOutput)
                     {
                         // apply hmd pose modifier on delta
                         const XrPosef hmdPoseStage =
