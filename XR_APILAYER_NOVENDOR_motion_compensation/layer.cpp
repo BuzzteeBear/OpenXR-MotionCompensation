@@ -953,6 +953,8 @@ namespace openxr_api_layer
             return result;
         }
 
+        std::unique_lock lock(m_FrameLock);
+
         // store eye poses to avoid recalculation in xrEndFrame
         std::vector<XrPosef> originalEyePoses{};
         for (uint32_t i = 0; i < *viewCountOutput; i++)
@@ -965,8 +967,6 @@ namespace openxr_api_layer
 
         if (!m_LegacyMode)
         {
-            std::unique_lock lock(m_FrameLock);
-
             if (!m_EyeToHmd)
             {
                 // determine eye poses
@@ -1072,6 +1072,9 @@ namespace openxr_api_layer
                 }
             }
         }
+
+        // unlock for xrLocateSpace
+        lock.unlock();
 
         // manipulate reference space location
         XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
