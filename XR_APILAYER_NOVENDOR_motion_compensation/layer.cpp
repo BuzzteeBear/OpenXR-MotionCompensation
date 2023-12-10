@@ -1283,12 +1283,12 @@ namespace openxr_api_layer
 
         if (m_OverlayEnabled)
         {
-            m_Overlay->DrawOverlay(session,
-                                   &chainFrameEndInfo,
-                                   m_compositionFrameworkFactory,
-                                   m_Tracker->GetReferencePose(),
+            m_Overlay->DrawOverlay(m_Tracker->GetReferencePose(),
                                    reversedManipulation,
-                                   m_Activated);
+                                   m_Activated,
+                                   session,
+                                   &chainFrameEndInfo,
+                                   this);
         }
 
         m_Tracker->m_XrSyncCalled = false;
@@ -1506,6 +1506,11 @@ namespace openxr_api_layer
         }
         TraceLoggingWriteStop(local, "OpenXrLayer::GetRefToStage", TLArg(true, "Success"));
         return true;
+    }
+
+    std::shared_ptr<graphics::ICompositionFrameworkFactory> OpenXrLayer::GetCompositionFactory()
+    {
+        return m_compositionFrameworkFactory;
     }
 
     // private

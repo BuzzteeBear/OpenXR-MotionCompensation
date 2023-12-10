@@ -64,33 +64,32 @@ namespace openxr_api_layer::graphics
         void DestroySession(XrSession session);
         void SetMarkerSize();
         bool ToggleOverlay();
-        void DrawOverlay(XrSession session,
-                         XrFrameEndInfo* chainFrameEndInfo,
-                         std::shared_ptr<ICompositionFrameworkFactory> factory,
-                         const XrPosef& referenceTrackerPose,
+        void DrawOverlay(const XrPosef& referenceTrackerPose,
                          const XrPosef& reversedManipulation,
-                         bool mcActivated);
+                         bool mcActivated,
+                         XrSession session,
+                         XrFrameEndInfo* chainFrameEndInfo,
+                         OpenXrLayer* layer);
         void DeleteResources();
 
         bool m_Initialized{false};
 
       private:
         static std::vector<SimpleMeshVertex> CreateMarker(bool reference);
-        static std::vector<SimpleMeshVertex> CreateConeMesh(const XrVector3f& top,
+        static std::vector<SimpleMeshVertex> CreateMarkerMesh(const XrVector3f& top,
                                                             const XrVector3f& innerMiddle,
                                                             const XrVector3f& outerMiddle,
                                                             const XrVector3f& bottom,
                                                             const XrVector3f& darkColor,
                                                             const XrVector3f& pureColor,
                                                             const XrVector3f& lightColor);
-        static std::vector<unsigned short> CreateIndices(size_t amount);
 
         bool m_OverlayActive{false};
         XrVector3f m_MarkerSize{0.1f, 0.1f, 0.1f};
         std::shared_ptr<ISimpleMesh> m_MeshRGB{}, m_MeshCMY{};
         std::vector<std::shared_ptr<ISwapchain>> m_MarkerSwapchains{};
         std::vector<std::shared_ptr<IGraphicsTexture>> m_MarkerDepthTextures{};
-        std::vector<std::vector<XrCompositionLayerProjectionView>*> m_CreatedViews{};
+        std::vector<XrCompositionLayerProjectionView>* m_CreatedViews{nullptr};
         XrCompositionLayerProjection* m_CreatedProjectionLayer{};
         std::vector<const XrCompositionLayerBaseHeader*> m_BaseLayerVector{};
         std::mutex m_DrawMutex;

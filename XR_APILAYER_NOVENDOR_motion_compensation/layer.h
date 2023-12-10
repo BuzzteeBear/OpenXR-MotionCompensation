@@ -91,6 +91,7 @@ namespace openxr_api_layer
         
         void SetForwardRotation(const XrPosef& pose) const;
         bool GetRefToStage(XrSpace space, XrPosef* refToStage, XrPosef* stageToRef);
+        std::shared_ptr<graphics::ICompositionFrameworkFactory> GetCompositionFactory();
 
         XrActionSet m_ActionSet{XR_NULL_HANDLE};
         XrAction m_PoseAction{XR_NULL_HANDLE};

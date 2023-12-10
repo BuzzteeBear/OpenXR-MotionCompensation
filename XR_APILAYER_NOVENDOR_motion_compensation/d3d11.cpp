@@ -554,6 +554,7 @@ namespace
             TraceLoggingWriteStart(local,
                                    "D3D11GraphicsDevice_createTexture",
                                    TLArg(info.format, "Format"),
+                                   TLArg(info.width, "Width"),
                                    TLArg(info.height, "Height"),
                                    TLArg(info.arraySize, "ArraySize"),
                                    TLArg(info.mipCount, "MipCount"),

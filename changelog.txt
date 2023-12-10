@@ -34,7 +34,6 @@ Version 0.2.8
 	- compensation of motion controller pose does not work properly in MSFS main menu (controller movement gets blocked)
 	- graphical overlay conflicts:
 		- does not properly work with OpenXR Toolkit v1.3.2 (black screen instead of game, bug already reported to mbucchia)
-		- iRacing displays marker only in left eye (under investigation)
 		- MSFS hangs when game is shut down from within VR after having activated the overlay (workaround: switch to 2D before exiting or do not use overlay)
 
 
