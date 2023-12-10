@@ -82,8 +82,10 @@ According to user feedback following constraints seem to be working:</p>
 <li>but it is (or at least was at some point) putting its registry key in <code>...HKEY_CURRENT_USER/...</code> while OXRMC uses <code>...HKEY_LOCAL_MACHINE/...</code> . So if you're having trouble changing the loading order, try moving the key for OpenKneeboard from <code>Computer\HKEY_CURRENT_USER\SOFTWARE\Khronos\OpenXR\1\ApiLayers\Implicit</code> to <code>Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\OpenXR\1\ApiLayers\Implicit</code>.</li>
 </ul>
 </li>
-<li>if you install one of the above with after OXRMC, you can just run the OXRMC installer afterwards to modify loading order.</li>
+<li>if you install one of the above after OXRMC, you can just run the OXRMC installer afterwards to modify loading order.</li>
+<li><strong>Quad-Views-Foveated</strong>, <strong>Varjo-Foveated</strong> and <strong>OpenXR-Toolkit</strong> need to be installed/loaded after OXRMC, but the installer usually should ensure that automatically.</li>
 </ul>
+<p>If you encounter any additional layer ordering constraints, please feel free to reach out to the oxrmc developer with that information.</p>
 <h3 id="optional-confirm-correct-installation">Optional: Confirm correct installation</h3>
 <p>You can use the application <a href="https://github.com/maluoi/openxr-explorer/releases">OpenXR Explorer</a> to verify the correct installation:</p>
 <ul>

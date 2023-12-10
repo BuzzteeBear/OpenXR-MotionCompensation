@@ -211,11 +211,11 @@ begin
       begin
         if RegDeleteValue(HKLM, Path, Name) then
         begin
-          Log(Format('Deleted old registry key: %s', ['Computer\HKEY_LOCAL_MACHINE' + Path + Name] ));
+          Log(Format('Deleted old registry key: %s', ['Computer\HKEY_LOCAL_MACHINE' + Path + '\' + Name] ));
         end
         else
         begin
-          MsgBox('Unable to delete old registry key: Computer\HKEY_LOCAL_MACHINE ' + Path + Name, mbError, MB_OK);
+          MsgBox('Unable to delete old registry key: Computer\HKEY_LOCAL_MACHINE ' + Path + '\' + Name, mbError, MB_OK);
         end;
       end;
     end;
@@ -274,7 +274,7 @@ end;
 procedure ReorderApiLayerRegEntries;
 var
   Names: TArrayOfString;
-  Name, Path, ToolkitKey, LeapMotionKey, VarjoFoveatedKey: string;
+  Name, Path, ToolkitKey, LeapMotionKey, VarjoFoveatedKey, QuadViewsKey: string;
   I: Integer;
   Value: Cardinal;
 begin
@@ -286,6 +286,10 @@ begin
     for I := 0 to GetArrayLength(Names) - 1 do
     begin
       Name := Names[I];
+      if EndsWith('OpenXR-Quad-Views-Foveated\openxr-api-layer.json', Name) then
+      begin
+        QuadViewsKey := Name;
+      end;
       if EndsWith('XR_APILAYER_NOVENDOR_toolkit.json', Name) or EndsWith('XR_APILAYER_MBUCCHIA_toolkit.json', Name) then
       begin
         ToolkitKey := Name;
@@ -297,6 +301,24 @@ begin
       if EndsWith('XR_APILAYER_MBUCCHIA_varjo_foveated.json', Name) then
       begin
         VarjoFoveatedKey := Name;
+      end;
+    end;
+    if QuadViewsKey <> '' then
+    begin
+      if RegQueryDWordValue(HKLM, Path, QuadViewsKey, Value) then
+      begin
+        if RegDeleteValue(HKLM, Path, QuadViewsKey) and RegWriteDWordValue(HKLM, Path, QuadViewsKey, Value) then
+        begin
+          Log(Format('Recreated registry key: %s = %d', ['Computer\HKEY_LOCAL_MACHINE' + Path + QuadViewsKey, Value]));
+        end
+        else
+        begin
+          MsgBox('Unable to recreate registry key: Computer\HKEY_LOCAL_MACHINE ' + Path + QuadViewsKey, mbError, MB_OK);
+        end;
+      end
+      else
+      begin
+        MsgBox('Unable to read registry key value: Computer\HKEY_LOCAL_MACHINE ' + Path +  QuadViewsKey, mbError, MB_OK);
       end;
     end;
     if ToolkitKey <> '' then
