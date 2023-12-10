@@ -274,7 +274,7 @@ end;
 procedure ReorderApiLayerRegEntries;
 var
   Names: TArrayOfString;
-  Name, Path, ToolkitKey, LeapMotionKey, VarjoFoveatedKey, QuadViewsKey: string;
+  Name, Path, EyeTrackersKey, QuadViewsKey, ToolkitKey, LeapMotionKey, VarjoFoveatedKey: string;
   I: Integer;
   Value: Cardinal;
 begin
@@ -286,6 +286,10 @@ begin
     for I := 0 to GetArrayLength(Names) - 1 do
     begin
       Name := Names[I];
+      if EndsWith('OpenXR-Eye-Trackers\openxr-api-layer.json', Name) then
+      begin
+        EyeTrackersKey := Name;
+      end;
       if EndsWith('OpenXR-Quad-Views-Foveated\openxr-api-layer.json', Name) then
       begin
         QuadViewsKey := Name;
@@ -303,22 +307,40 @@ begin
         VarjoFoveatedKey := Name;
       end;
     end;
+    if EyeTrackersKey <> '' then
+    begin
+      if RegQueryDWordValue(HKLM, Path, EyeTrackersKey, Value) then
+      begin
+        if RegDeleteValue(HKLM, Path, EyeTrackersKey) and RegWriteDWordValue(HKLM, Path, EyeTrackersKey, Value) then
+        begin
+          Log(Format('Recreated registry key: %s = %d', ['Computer\HKEY_LOCAL_MACHINE' + Path + '\' +EyeTrackersKey, Value]));
+        end
+        else
+        begin
+          MsgBox('Unable to recreate registry key: Computer\HKEY_LOCAL_MACHINE ' + Path + '\' +EyeTrackersKey, mbError, MB_OK);
+        end;
+      end
+      else
+      begin
+        MsgBox('Unable to read registry key value: Computer\HKEY_LOCAL_MACHINE ' + Path + '\' + EyeTrackersKey, mbError, MB_OK);
+      end;
+    end;
     if QuadViewsKey <> '' then
     begin
       if RegQueryDWordValue(HKLM, Path, QuadViewsKey, Value) then
       begin
         if RegDeleteValue(HKLM, Path, QuadViewsKey) and RegWriteDWordValue(HKLM, Path, QuadViewsKey, Value) then
         begin
-          Log(Format('Recreated registry key: %s = %d', ['Computer\HKEY_LOCAL_MACHINE' + Path + QuadViewsKey, Value]));
+          Log(Format('Recreated registry key: %s = %d', ['Computer\HKEY_LOCAL_MACHINE' + Path + '\' +QuadViewsKey, Value]));
         end
         else
         begin
-          MsgBox('Unable to recreate registry key: Computer\HKEY_LOCAL_MACHINE ' + Path + QuadViewsKey, mbError, MB_OK);
+          MsgBox('Unable to recreate registry key: Computer\HKEY_LOCAL_MACHINE ' + Path + '\' +QuadViewsKey, mbError, MB_OK);
         end;
       end
       else
       begin
-        MsgBox('Unable to read registry key value: Computer\HKEY_LOCAL_MACHINE ' + Path +  QuadViewsKey, mbError, MB_OK);
+        MsgBox('Unable to read registry key value: Computer\HKEY_LOCAL_MACHINE ' + Path + '\' + QuadViewsKey, mbError, MB_OK);
       end;
     end;
     if ToolkitKey <> '' then
@@ -327,34 +349,34 @@ begin
       begin
         if RegDeleteValue(HKLM, Path, ToolkitKey) and RegWriteDWordValue(HKLM, Path, ToolkitKey, Value) then
         begin
-          Log(Format('Recreated registry key: %s = %d', ['Computer\HKEY_LOCAL_MACHINE' + Path + ToolkitKey, Value]));
+          Log(Format('Recreated registry key: %s = %d', ['Computer\HKEY_LOCAL_MACHINE' + Path + '\' +ToolkitKey, Value]));
           if LeapMotionKey <> '' then
           begin
             if RegQueryDWordValue(HKLM, Path, LeapMotionKey, Value) then
             begin
               if RegDeleteValue(HKLM, Path, LeapMotionKey) and RegWriteDWordValue(HKLM, Path, LeapMotionKey, Value) then
               begin
-                Log(Format('Recreated registry key: %s = %d', ['Computer\HKEY_LOCAL_MACHINE' + Path + LeapMotionKey, Value]));
+                Log(Format('Recreated registry key: %s = %d', ['Computer\HKEY_LOCAL_MACHINE' + Path + '\' +LeapMotionKey, Value]));
               end
               else
               begin
-                MsgBox('Unable to recreate registry key: Computer\HKEY_LOCAL_MACHINE ' + Path + LeapMotionKey, mbError, MB_OK);
+                MsgBox('Unable to recreate registry key: Computer\HKEY_LOCAL_MACHINE ' + Path + '\' +LeapMotionKey, mbError, MB_OK);
               end;
             end
             else
             begin
-              MsgBox('Unable to read registry key value: Computer\HKEY_LOCAL_MACHINE ' + Path +  LeapMotionKey, mbError, MB_OK);
+              MsgBox('Unable to read registry key value: Computer\HKEY_LOCAL_MACHINE ' + Path + '\' + LeapMotionKey, mbError, MB_OK);
             end;
           end;
         end
         else
         begin
-          MsgBox('Unable to recreate registry key: Computer\HKEY_LOCAL_MACHINE ' + Path + ToolkitKey, mbError, MB_OK);
+          MsgBox('Unable to recreate registry key: Computer\HKEY_LOCAL_MACHINE ' + Path + '\' +ToolkitKey, mbError, MB_OK);
         end;
       end
       else
       begin
-        MsgBox('Unable to read registry key value: Computer\HKEY_LOCAL_MACHINE ' + Path + ToolkitKey, mbError, MB_OK);
+        MsgBox('Unable to read registry key value: Computer\HKEY_LOCAL_MACHINE ' + Path + '\' +ToolkitKey, mbError, MB_OK);
       end;
     end;
     if VarjoFoveatedKey <> '' then
@@ -363,16 +385,16 @@ begin
       begin
         if RegDeleteValue(HKLM, Path, VarjoFoveatedKey) and RegWriteDWordValue(HKLM, Path, VarjoFoveatedKey, Value) then
         begin
-          Log(Format('Recreated registry key: %s = %d', ['Computer\HKEY_LOCAL_MACHINE' + Path + VarjoFoveatedKey, Value]));
+          Log(Format('Recreated registry key: %s = %d', ['Computer\HKEY_LOCAL_MACHINE' + Path + '\' +VarjoFoveatedKey, Value]));
         end
         else
         begin
-          MsgBox('Unable to recreate registry key: Computer\HKEY_LOCAL_MACHINE ' + Path + VarjoFoveatedKey, mbError, MB_OK);
+          MsgBox('Unable to recreate registry key: Computer\HKEY_LOCAL_MACHINE ' + Path + '\' +VarjoFoveatedKey, mbError, MB_OK);
         end;
       end
       else
       begin
-        MsgBox('Unable to read registry key value: Computer\HKEY_LOCAL_MACHINE ' + Path +  VarjoFoveatedKey, mbError, MB_OK);
+        MsgBox('Unable to read registry key value: Computer\HKEY_LOCAL_MACHINE ' + Path + '\' + VarjoFoveatedKey, mbError, MB_OK);
       end;
     end;
   end;
