@@ -91,8 +91,8 @@ namespace openxr_api_layer::graphics
         return true;
     }
 
-    void Overlay::DrawOverlay(const XrPosef& referenceTrackerPose,
-                              const XrPosef& reversedManipulation,
+    void Overlay::DrawOverlay(const XrPosef& referencePose,
+                              const XrPosef& deltaInverse,
                               bool mcActivated,
                               XrSession session,
                               XrFrameEndInfo* chainFrameEndInfo,
@@ -102,8 +102,8 @@ namespace openxr_api_layer::graphics
         TraceLoggingWriteStart(local,
                                "Overlay::DrawOverlay",
                                TLArg(chainFrameEndInfo->displayTime, "Time"),
-                               TLArg(xr::ToString(referenceTrackerPose).c_str(), "ReferencePose"),
-                               TLArg(xr::ToString(reversedManipulation).c_str(), "ReversedManipulation"),
+                               TLArg(xr::ToString(referencePose).c_str(), "ReferencePose"),
+                               TLArg(xr::ToString(deltaInverse).c_str(), "DeltaInverse"),
                                TLArg(mcActivated, "MC_Activated"));
 
         if (auto factory = layer->GetCompositionFactory(); m_Initialized && m_OverlayActive && factory)
@@ -118,6 +118,9 @@ namespace openxr_api_layer::graphics
                 TraceLoggingWriteStop(local, "Overlay::DrawOverlay", TLArg(false, "CompositionFramework"));
                 return;
             }
+
+            std::unique_lock lock(m_DrawMutex);
+            composition->serializePreComposition();
 
             if (!m_InitializedSessions.contains(session))
             {
@@ -136,10 +139,6 @@ namespace openxr_api_layer::graphics
                                         TLPArg(m_MeshCMY.get(), "MeshCMY"));
                 m_InitializedSessions.insert(session);
             }
-
-            composition->serializePreComposition();
-
-            std::unique_lock lock(m_DrawMutex);
 
             try
             {
@@ -180,7 +179,6 @@ namespace openxr_api_layer::graphics
                         }
                         m_CreatedViews = viewsForMarker;
 
-                        DebugLog("%s: viewsForMarker.size = %d", __FUNCTION__, viewsForMarker->size());
                         for (size_t eye = 0; eye < viewsForMarker->size(); ++eye)
                         {
                             auto& view = (*viewsForMarker)[eye];
@@ -287,13 +285,13 @@ namespace openxr_api_layer::graphics
 
                             // transfer trackerPose into projection reference space
 
-                            const XrPosef trackerPoseRef = xr::math::Pose::Multiply(referenceTrackerPose, refToStage);
+                            const XrPosef trackerPoseRef = xr::math::Pose::Multiply(referencePose, refToStage);
 
                             // draw reference pose marker
                             const XrPosef referencePose =
-                                mcActivated ? xr::math::Pose::Multiply(trackerPoseRef,
-                                                                       xr::math::Pose::Invert(reversedManipulation))
-                                            : trackerPoseRef;
+                                mcActivated
+                                    ? xr::math::Pose::Multiply(trackerPoseRef, xr::math::Pose::Invert(deltaInverse))
+                                    : trackerPoseRef;
                             graphicsDevice->draw(m_MeshRGB, referencePose, m_MarkerSize);
 
                             // draw tracker marker

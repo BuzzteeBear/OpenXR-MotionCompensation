@@ -52,12 +52,16 @@ namespace utility
             {
                 if (!override)
                 {
-                    DebugLog("AddSample(%s): sample omitted: %u", m_SampleType.c_str(), time);
+                    DebugLog("AddSample_%s(%u): omitted", m_SampleType.c_str(), time);
                     TraceLoggingWriteStop(local, "Cache::AddSample", TLArg(true, "Omitted"));
                     return;
                 }
-                DebugLog("AddSample(%s): sample overriden: %u", m_SampleType.c_str(), time);
+                DebugLog("AddSample_%s(%u): overriden", m_SampleType.c_str(), time);
                 TraceLoggingWriteTagged(local, "Cache::AddSample", TLArg(true, "Override"));
+            }
+            else
+            {
+                DebugLog("AddSample_%s(%u): inserted", m_SampleType.c_str(), time); 
             }
             m_Cache[time] = sample;
             TraceLoggingWriteStop(local, "Cache::AddSample");
@@ -70,8 +74,6 @@ namespace utility
             TraceLoggingWriteStart(local, "Cache::GetSample", TLArg(m_SampleType.c_str(), "Type"), TLArg(time, "Time"));
 
             std::unique_lock lock(m_CacheLock);
-
-            DebugLog("GetSample(%s): %u", m_SampleType.c_str(), time);
 
             auto it = m_Cache.lower_bound(time);
             const bool itIsEnd = m_Cache.end() == it;
@@ -86,7 +88,7 @@ namespace utility
                                           TLArg("Exact", "Match"),
                                           TLArg(it->first, "Time"));
 
-                    DebugLog("GetSample(%s): exact match found", m_SampleType.c_str());
+                    DebugLog("GetSample_%s(%u): exact match found", m_SampleType.c_str(), time);
 
                     return it->second;
                 }
@@ -98,7 +100,7 @@ namespace utility
                                           TLArg(m_SampleType.c_str(), "Type"),
                                           TLArg("Later", "Match"),
                                           TLArg(it->first, "Time"));
-                    DebugLog("GetSample(%s): later match found: %u", m_SampleType.c_str(), it->first);
+                    DebugLog("GetSample_%s(%u): later match found: %u", m_SampleType.c_str(), time, it->first);
 
                     return it->second;
                 }
@@ -116,7 +118,7 @@ namespace utility
                                           TLArg(m_SampleType.c_str(), "Type"),
                                           TLArg("Earlier", "Match"),
                                           TLArg(lowerIt->first, "Time"));
-                    DebugLog("GetSample(%s): earlier match found: %u", m_SampleType.c_str(), lowerIt->first);
+                    DebugLog("GetSample_%s(%u): earlier match found: %u", m_SampleType.c_str(), time, lowerIt->first);
 
                     return lowerIt->second;
                 }
@@ -138,7 +140,7 @@ namespace utility
                                           TLArg(m_SampleType.c_str(), "Type"),
                                           TLArg("Estimated Both", "Match"),
                                           TLArg(it->first, "Time"));
-                    ErrorLog("Using best match: t = %u ", returnIt->first);
+                    ErrorLog("GetSample_%s(%u): using best match: %u ", m_SampleType.c_str(), time, returnIt->first);
 
                     return returnIt->second;
                 }
@@ -149,7 +151,7 @@ namespace utility
                                       TLArg(m_SampleType.c_str(), "Type"),
                                       TLArg("Estimated Later", "Match"),
                                       TLArg(it->first, "Time"));
-                ErrorLog("Using best match: t = %u ", it->first);
+                ErrorLog("GetSample_%s(%u): using best match: t = %u ", m_SampleType.c_str(), time, it->first);
                 return it->second;
             }
             if (!itIsBegin)
@@ -157,7 +159,7 @@ namespace utility
                 auto lowerIt = it;
                 --lowerIt;
                 // lower entry is last in cache-> use it
-                ErrorLog("Using best match: t = %u ", lowerIt->first);
+                ErrorLog("GetSample_%s(%u): using best match: t = %u ", m_SampleType.c_str(), time, lowerIt->first);
                 TraceLoggingWriteStop(local,
                                       "Cache::GetSample",
                                       TLArg(m_SampleType.c_str(), "Type"),
@@ -166,7 +168,7 @@ namespace utility
                 return lowerIt->second;
             }
             // cache is empty -> return fallback
-            ErrorLog("Using fallback!!!", time);
+            ErrorLog("GetSample_%s(%u): using fallback!!!", m_SampleType.c_str(), time);
             TraceLoggingWriteStop(local,
                                   "Cache::GetSample",
                                   TLArg(m_SampleType.c_str(), "Type"),

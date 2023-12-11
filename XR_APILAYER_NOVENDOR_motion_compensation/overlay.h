@@ -64,8 +64,8 @@ namespace openxr_api_layer::graphics
         void DestroySession(XrSession session);
         void SetMarkerSize();
         bool ToggleOverlay();
-        void DrawOverlay(const XrPosef& referenceTrackerPose,
-                         const XrPosef& reversedManipulation,
+        void DrawOverlay(const XrPosef& referencePose,
+                         const XrPosef& deltaInverse,
                          bool mcActivated,
                          XrSession session,
                          XrFrameEndInfo* chainFrameEndInfo,

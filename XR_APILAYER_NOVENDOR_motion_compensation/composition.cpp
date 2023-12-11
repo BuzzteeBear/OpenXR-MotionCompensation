@@ -1042,7 +1042,11 @@ namespace
                                                                              session,
                                                                              m_compositionApi)));
                         it = m_sessions.find(session);
-                        if (it == m_sessions.end())
+                        if (it != m_sessions.end())
+                        {
+                            Log("created composition framework for overlay");
+                        }
+                        else
                         {
                             ErrorLog("%s: creating composition framework failed, for session %d",
                                      __FUNCTION__,

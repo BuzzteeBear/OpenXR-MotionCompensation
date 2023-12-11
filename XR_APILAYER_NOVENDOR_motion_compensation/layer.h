@@ -113,7 +113,7 @@ namespace openxr_api_layer
         void AddStaticRefSpace(XrSpace space);
         std::optional<XrPosef> LocateRefSpace(XrSpace space);
         bool CreateTrackerActions(const std::string& caller);
-        void DestroyTrackerActions(const std::string& caller);
+        void DestroyTrackerActions();
         bool AttachActionSet(const std::string& caller);
         void SuggestInteractionProfiles(const std::string& caller);
         bool LazyInit(XrTime time);

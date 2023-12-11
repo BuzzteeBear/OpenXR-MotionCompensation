@@ -392,16 +392,6 @@ namespace Tracker
                               TLArg(amount, "Amount"));
     }
 
-    void TrackerBase::AdjustReferencePose(const XrPosef& pose)
-    {
-        TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "TrackerBase::AdjustReferencePose", TLArg(xr::ToString(pose).c_str(), "Pose"));
-
-        SetReferencePose(Pose::Multiply(m_ReferencePose, pose));
-
-        TraceLoggingWriteStop(local, "TrackerBase::AdjustReferencePose");
-    }
-
     XrPosef TrackerBase::GetReferencePose() const
     {
         TraceLocalActivity(local);
