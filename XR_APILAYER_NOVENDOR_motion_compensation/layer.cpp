@@ -282,6 +282,19 @@ namespace openxr_api_layer
         m_VarjoPollWorkaround = false;
         const XrResult result = OpenXrApi::xrPollEvent(instance, eventData);
 
+        if (m_Enabled && XR_TYPE_EVENT_DATA_REFERENCE_SPACE_CHANGE_PENDING == eventData->type)
+        {
+            if (const auto event = reinterpret_cast<const XrEventDataReferenceSpaceChangePending*>(eventData);
+                event && XR_REFERENCE_SPACE_TYPE_STAGE == event->referenceSpaceType ||
+                XR_REFERENCE_SPACE_TYPE_LOCAL == event->referenceSpaceType)
+            {
+                // trigger re-location of static reference spaces
+                std::unique_lock lock(m_FrameLock);
+                Log("change of stage/local reference space location detected", event->changeTime);
+                m_UpdateRefSpaceTime = std::max(event->changeTime, m_LastFrameTime);
+            }
+        }
+
         TraceLoggingWriteStop(local, "OpenXrLayer::xrPollEvent", TLArg(xr::ToCString(result), "Result"));
 
         return result;
@@ -318,6 +331,7 @@ namespace openxr_api_layer
             {
                 m_Session = *session;
                 m_LastFrameTime = 0;
+                m_UpdateRefSpaceTime = 0;
 
                 if (m_OverlayEnabled && m_Overlay && m_Overlay->m_Initialized)
                 {
@@ -1260,8 +1274,11 @@ namespace openxr_api_layer
 
         std::unique_lock lock(m_FrameLock);
 
-        if (0 == std::exchange(m_LastFrameTime, frameEndInfo->displayTime))
+        // update last frame time
+        if (m_UpdateRefSpaceTime >= std::exchange(m_LastFrameTime, frameEndInfo->displayTime) &&
+            m_UpdateRefSpaceTime < frameEndInfo->displayTime)
         {
+           // (re)locate all static reference spaces
            for (const XrSpace& space : m_StaticRefSpaces)
            {
                 LocateRefSpace(space);

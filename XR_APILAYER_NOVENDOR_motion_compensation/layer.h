@@ -145,6 +145,7 @@ namespace openxr_api_layer
         bool m_LegacyMode{false};
         bool m_VarjoPollWorkaround{false};
         XrTime m_LastFrameTime{0};
+        XrTime m_UpdateRefSpaceTime{0};
         std::set<XrSpace> m_StaticRefSpaces{};
         std::map<XrSpace, std::pair<XrPosef, XrPosef>> m_RefToStageMap{};
         std::unique_ptr<XrPosef> m_EyeToHmd{};
