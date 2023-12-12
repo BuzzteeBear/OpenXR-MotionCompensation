@@ -989,8 +989,8 @@ namespace Tracker
             return false;
        }
 
-       DebugLog("YawData:\n\tyaw: %f, pitch: %f, roll: %f\n\tbattery: %f, rotationHeight: %f, "
-                "rotationForwardHead: %f\n\tsixDof: %d, usePos: %d, autoX: %f, autoY: %f",
+       DebugLog("YawData: yaw: %f, pitch: %f, roll: %f, battery: %f, height: %f, headDistance: %f, sixDof: %d, usePos: "
+                "%d, autoX: %f, autoY: %f",
                 data.yaw,
                 data.pitch,
                 data.roll,
@@ -1048,7 +1048,7 @@ namespace Tracker
             return false;
         }
 
-        DebugLog("MotionData:\n\tyaw: %f, pitch: %f, roll: %f\n\tsway: %f, surge: %f, heave: %f",
+        DebugLog("MotionData: yaw: %f, pitch: %f, roll: %f, sway: %f, surge: %f, heave: %f",
                  data.yaw,
                  data.pitch,
                  data.roll,

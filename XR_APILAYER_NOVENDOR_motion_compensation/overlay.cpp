@@ -138,6 +138,7 @@ namespace openxr_api_layer::graphics
                                         TLPArg(m_MeshRGB.get(), "MeshRGB"),
                                         TLPArg(m_MeshCMY.get(), "MeshCMY"));
                 m_InitializedSessions.insert(session);
+                DebugLog("initialized marker meshes");
             }
 
             try
@@ -157,6 +158,10 @@ namespace openxr_api_layer::graphics
                     XrPosef refToStage;
                     if (layer->GetRefToStage(lastProjectionLayer->space, &refToStage, nullptr))
                     {
+                        DebugLog("overlay last projection layer space: %d, pose to stage: %s",
+                                 lastProjectionLayer->space,
+                                 xr::ToString(refToStage).c_str());
+
                         auto graphicsDevice = composition->getCompositionDevice();
 
                         ID3D11Device* const device = composition->getCompositionDevice()->getNativeDevice<D3D11>();
@@ -222,6 +227,10 @@ namespace openxr_api_layer::graphics
                                 m_MarkerDepthTextures.push_back(
                                     composition->getCompositionDevice()->createTexture(markerInfo));
 
+                                DebugLog("overlay(%u) created swapchain and depth texture: %u x %u",
+                                         eye,
+                                         markerInfo.width,
+                                         markerInfo.height);
                                 TraceLoggingWriteTagged(local,
                                                         "Overlay::DrawOverlay_CreateSwapcahin",
                                                         TLPArg(m_MarkerSwapchains[eye].get(), "Swapchain"),
@@ -274,6 +283,11 @@ namespace openxr_api_layer::graphics
                             viewProjection.Fov = view.fov;
                             viewProjection.NearFar = xr::math::NearFar{0.001f, 100.f};
                             graphicsDevice->setViewProjection(viewProjection);
+                            DebugLog("overlay(%u) view projection: pose = %s, fov = %s",
+                                     eye,
+                                     xr::ToString(viewProjection.Pose).c_str(),
+                                     xr::ToString(viewProjection.Fov).c_str());
+
 
                             // set viewport to match resolution
                             D3D11_VIEWPORT viewport{};
@@ -282,22 +296,28 @@ namespace openxr_api_layer::graphics
                             viewport.Height = static_cast<float>(viewPort->extent.height);
                             viewport.MaxDepth = 1.0f;
                             context->RSSetViewports(1, &viewport);
+                            DebugLog("overlay(%u) viewport: width = %d, height = %d",
+                                     eye,
+                                     viewPort->extent.width,
+                                     viewPort->extent.height);
 
                             // transfer trackerPose into projection reference space
 
-                            const XrPosef trackerPoseRef = xr::math::Pose::Multiply(referencePose, refToStage);
+                            const XrPosef trackerPose = xr::math::Pose::Multiply(referencePose, refToStage);
 
                             // draw reference pose marker
-                            const XrPosef referencePose =
+                            const XrPosef refPose =
                                 mcActivated
-                                    ? xr::math::Pose::Multiply(trackerPoseRef, xr::math::Pose::Invert(deltaInverse))
-                                    : trackerPoseRef;
-                            graphicsDevice->draw(m_MeshRGB, referencePose, m_MarkerSize);
+                                    ? xr::math::Pose::Multiply(trackerPose, xr::math::Pose::Invert(deltaInverse))
+                                    : trackerPose;
+                            graphicsDevice->draw(m_MeshRGB, refPose, m_MarkerSize);
+                            DebugLog("overlay(%u) reference pose: %s", eye, xr::ToString(refPose).c_str());
 
                             // draw tracker marker
                             if (mcActivated)
                             {
-                                graphicsDevice->draw(m_MeshCMY, trackerPoseRef, m_MarkerSize);
+                                graphicsDevice->draw(m_MeshCMY, trackerPose, m_MarkerSize);
+                                DebugLog("overlay(%u) tracker pose: %s", eye, xr::ToString(trackerPose).c_str());
                             }
 
                             m_MarkerSwapchains[eye]->releaseImage();
