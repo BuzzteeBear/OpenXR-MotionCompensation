@@ -250,5 +250,6 @@
     <Media Include="sounds\modifier_off.wav">
       <Filter>Sounds</Filter>
     </Media>
+    <Media Include="sounds\calibration_lost.wav" />
   </ItemGroup>
 </Project>

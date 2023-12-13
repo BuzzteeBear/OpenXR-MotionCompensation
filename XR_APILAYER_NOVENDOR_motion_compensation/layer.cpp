@@ -282,19 +282,38 @@ namespace openxr_api_layer
         m_VarjoPollWorkaround = false;
         const XrResult result = OpenXrApi::xrPollEvent(instance, eventData);
 
-        if (m_Enabled && XR_TYPE_EVENT_DATA_REFERENCE_SPACE_CHANGE_PENDING == eventData->type)
+        if (m_Enabled)
         {
-            if (const auto event = reinterpret_cast<const XrEventDataReferenceSpaceChangePending*>(eventData);
-                event && XR_REFERENCE_SPACE_TYPE_STAGE == event->referenceSpaceType ||
-                XR_REFERENCE_SPACE_TYPE_LOCAL == event->referenceSpaceType)
+            TraceLoggingWriteTagged(local,
+                                    "OpenXrLayer::xrPollEvent",
+                                    TLArg(static_cast<int>(eventData->type), "EventType"));
+            if (XR_TYPE_EVENT_DATA_REFERENCE_SPACE_CHANGE_PENDING == eventData->type)
             {
-                // trigger re-location of static reference spaces
-                std::unique_lock lock(m_FrameLock);
-                Log("change of stage/local reference space location detected", event->changeTime);
-                m_UpdateRefSpaceTime = std::max(event->changeTime, m_LastFrameTime);
+                if (const auto event = reinterpret_cast<const XrEventDataReferenceSpaceChangePending*>(eventData);
+                    event && XR_REFERENCE_SPACE_TYPE_STAGE == event->referenceSpaceType ||
+                    XR_REFERENCE_SPACE_TYPE_LOCAL == event->referenceSpaceType)
+                {
+                    // trigger re-location of static reference spaces
+                    std::unique_lock lock(m_FrameLock);
+                    Log("change of stage/local reference space location detected", event->changeTime);
+                    m_UpdateRefSpaceTime = std::max(event->changeTime, m_LastFrameTime);
+
+                    // reset tracker calibration and activation state
+                    if (m_Tracker->m_Calibrated)
+                    {
+                        Log("tracker calibration lost");
+                        m_Tracker->m_Calibrated = false;
+                        AudioOut::Execute(Event::CalibrationLost);
+
+                        if (m_Activated)
+                        {
+                            Log("motion compensation deactivated");
+                            m_Activated = false;
+                        }
+                    }
+                }
             }
         }
-
         TraceLoggingWriteStop(local, "OpenXrLayer::xrPollEvent", TLArg(xr::ToCString(result), "Result"));
 
         return result;
