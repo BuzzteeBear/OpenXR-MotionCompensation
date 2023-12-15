@@ -29,6 +29,10 @@ Limitations:
 
 DISCLAIMER: This software is distributed as-is, without any warranties or conditions of any kind. Use at your own risks.
 
+## Special Thanks
+- This project wouldn't exist without the helpful advice and base source code provided by [Matthieu Bucchianeri](https://github.com/mbucchia), so we're very grateful for that. Kudos for his excellent contributions to the VR community.
+- [JetBrains s.r.o.](https://www.jetbrains.com/) has been so kind to provide the project, free of charge, with an open source software development license for their Resharper products. They have proven very helpful and greatly integrated into the Visual Studio IDE, that's used to develop this software.
+
 ## Customization
 The easiest way to get a uable project set up is to use the `Clone a repository` function of Visual Studio with the url of this github repository. Make sure the project path does not contain any whitespaces (or the call of the python script for source code generation will fail). Also ensure that the [Visual Studio git client can handle LFS](https://stackoverflow.com/a/47921547) for the external sdk dependencies below. 
 
