@@ -118,6 +118,8 @@ What you can modify in a configuration file:
     - offset values are meant to be modified to specify how far away the cor is in terms of up/down, forward/backward left/right, and up/down direction relative to your headset. The yaw angle defines a counterclockwise rotation of the forward vector after positioning of the cor on calibration.
     - `load_ref_pose_from_file` can be enabled to reuse the exact cor position within vr playspace for the next sessions, independent of offset values and hmd position at calibration time.
     - values starting with `cor_` are not meant for manual editing in the config file but are instead populated on saving the current configuration.  
+  - `use_yaw_ge_offset` enables the use of offset values defined in Yaw Game Engine instead of the ones specified in the config file.
+  - `constant_pitch_angle` compensates for a constant pitch offset in the input data of a virtual tracker. This may be helpful on a yaw2 motion simulator, if you decide to have a more reclined neutral position by adding a constant on the pitch axis telemetry, but still want to use the built-in sensors for motion compensation.
   - `marker_size` sets the size of the cor / reference tracker marker displayed in the overlay. The value corresponds to the length of one arrow in cm.
   - `connection_timeout` sets the time (in seconds) the tracker needs to be unresponsive before motion compensation is automatically deactivated. Setting a negative value disables automatic deactivation.
   - `connection_check` is only relevant for virtual trackers and determines the period (in seconds) for checking whether the memory mapped file used for data input is actually still actively used. Setting a negative value disables the check
