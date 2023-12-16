@@ -352,7 +352,7 @@ namespace openxr_api_layer
                 m_LastFrameTime = 0;
                 m_UpdateRefSpaceTime = 0;
 
-                if (m_OverlayEnabled && m_Overlay && m_Overlay->m_Initialized)
+                if (m_OverlayEnabled && m_Overlay && m_Overlay->m_Initialized && m_compositionFrameworkFactory)
                 {
                     m_compositionFrameworkFactory->CreateSession(createInfo, *session);
                 }
@@ -464,7 +464,10 @@ namespace openxr_api_layer
         {
             m_Overlay->DestroySession(session);
         }
-        m_compositionFrameworkFactory->DestroySession(session);
+        if (m_compositionFrameworkFactory)
+        {
+            m_compositionFrameworkFactory->DestroySession(session);
+        }
 
         const XrResult result = OpenXrApi::xrDestroySession(session);
 
