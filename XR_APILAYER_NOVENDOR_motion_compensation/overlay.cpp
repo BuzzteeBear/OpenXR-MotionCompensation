@@ -158,7 +158,7 @@ namespace openxr_api_layer::graphics
                     XrPosef refToStage;
                     if (layer->GetRefToStage(lastProjectionLayer->space, &refToStage, nullptr))
                     {
-                        DebugLog("overlay last projection layer space: %d, pose to stage: %s",
+                        DebugLog("overlay last projection layer space: %u, pose to stage: %s",
                                  lastProjectionLayer->space,
                                  xr::ToString(refToStage).c_str());
 
@@ -296,10 +296,12 @@ namespace openxr_api_layer::graphics
                             viewport.Height = static_cast<float>(viewPort->extent.height);
                             viewport.MaxDepth = 1.0f;
                             context->RSSetViewports(1, &viewport);
-                            DebugLog("overlay(%u) viewport: width = %d, height = %d",
+                            DebugLog("overlay(%u) viewport: width = %d, height = %d, offset x: %d, offset y: %d",
                                      eye,
                                      viewPort->extent.width,
-                                     viewPort->extent.height);
+                                     viewPort->extent.height,
+                                     viewPort->offset.x,
+                                     viewPort->offset.y);
 
                             // transfer trackerPose into projection reference space
 
