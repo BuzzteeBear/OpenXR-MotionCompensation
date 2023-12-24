@@ -459,32 +459,16 @@ namespace openxr_api_layer::graphics
                                 throw std::runtime_error(fmt::format("unable to find swapchain state for: {}",
                                                                      reinterpret_cast<std::uintptr_t>(swapchain)));
                             }
+                            const auto& swapchainState = m_Swapchains[swapchain];
 
                             if (m_MarkerSwapchains.size() <= eye)
                             {
-                                // determine format
-                                DXGI_FORMAT format;
-                                if (m_Swapchains.contains(swapchain))
-                                {
-                                    format = m_Swapchains[swapchain].format;
-                                }
-                                else
-                                {
-                                    ErrorLog("%s: unable to obtain texture format for swapchain: $u, using best guess "
-                                             "instead",
-                                             __FUNCTION__,
-                                             swapchain);
-                                    format = static_cast<DXGI_FORMAT>(
-                                        composition->getPreferredSwapchainFormatOnApplicationDevice(
-                                            XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT));
-                                }
-
                                 // create swapchain for marker
                                 XrSwapchainCreateInfo markerInfo{XR_TYPE_SWAPCHAIN_CREATE_INFO,
                                                                  nullptr,
                                                                  0,
                                                                  XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT,
-                                                                 format,
+                                                                 swapchainState.format,
                                                                  1,
                                                                  static_cast<uint32_t>(viewPort->extent.width),
                                                                  static_cast<uint32_t>(viewPort->extent.height),
@@ -516,95 +500,14 @@ namespace openxr_api_layer::graphics
                                 markerImage->getTextureForWrite()->getNativeTexture<D3D11>();
 
                             // copy application texture
-                            {
-                                // TODO: keep sharedTexture instead of recreate
-                                // TODO: differentiate D3D12 / move to GraphicDevice?
-                                // TODO: clean up resources
-                                if (!m_Swapchains.contains(swapchain))
-                                {
-                                    throw std::runtime_error(
-                                        fmt::format("unable to find acquired index for swapchain {}",
-                                                    reinterpret_cast<std::uintptr_t>(swapchain)));
-                                }
-                                const auto& swapchainState = m_Swapchains[swapchain];
-                                if (swapchainState.index >= swapchainState.texturesD3D11.size())
-                                {
-                                    throw std::runtime_error(
-                                        fmt::format("invalid to texture index {} for swapchain {}, max: {}",
-                                                    swapchainState.index,
-                                                    reinterpret_cast<std::uintptr_t>(swapchain),
-                                                    swapchainState.texturesD3D11.size() - 1));
-                                }
-                                auto appTexture = swapchainState.texturesD3D11[swapchainState.index];
+                            CopyAppTexture(composition->getApplicationDevice(),
+                                           swapchain,
+                                           swapchainState,
+                                           device,
+                                           context,
+                                           rgbTexture);
 
-                                D3D11_TEXTURE2D_DESC desc;
-                                appTexture->GetDesc(&desc);
-                                desc.Format = swapchainState.format;
-                                desc.MiscFlags = D3D11_RESOURCE_MISC_SHARED_KEYEDMUTEX;
-
-                                auto appDevice = composition->getApplicationDevice();
-
-                                ComPtr<ID3D11Texture2D> shareTexture;
-                                CHECK_HRCMD(appDevice->getNativeDevice<D3D11>()->CreateTexture2D(
-                                    &desc,
-                                    nullptr,
-                                    shareTexture.ReleaseAndGetAddressOf()));
-
-                                ComPtr<IDXGIKeyedMutex> appMutex;
-                                CHECK_HRCMD(
-                                    shareTexture->QueryInterface(IID_PPV_ARGS(appMutex.ReleaseAndGetAddressOf())));
-                                if (!appMutex || WAIT_OBJECT_0 != appMutex->AcquireSync(0, 10))
-                                {
-                                    throw std::runtime_error(fmt::format(
-                                        "unable to acquire mutex for shared texture on app device for swapchain {}",
-                                        reinterpret_cast<std::uintptr_t>(swapchain)));
-                                }
-
-                                auto appContext = appDevice->getNativeContext<D3D11>();
-                                appContext->CopyResource(shareTexture.Get(), appTexture);
-                                appContext->Flush();
-                                if (!appMutex || WAIT_OBJECT_0 != appMutex->ReleaseSync(1))
-                                {
-                                    throw std::runtime_error(fmt::format(
-                                        "unable release mutex for shared texture on app device for swapchain {}",
-                                        reinterpret_cast<std::uintptr_t>(swapchain)));
-                                }
-
-                                ComPtr<IDXGIResource1> dxgiResource;
-                                CHECK_HRCMD(
-                                    shareTexture->QueryInterface(IID_PPV_ARGS(dxgiResource.ReleaseAndGetAddressOf())));
-
-                                ShareableHandle sharedHandle{};
-                                CHECK_HRCMD(dxgiResource->GetSharedHandle(&sharedHandle.handle));
-
-                                CHECK_HRCMD(device->OpenSharedResource(
-                                    sharedHandle.handle,
-                                    IID_ID3D11Texture2D,
-                                    reinterpret_cast<void**>(shareTexture.ReleaseAndGetAddressOf())));
-
-                                ComPtr<IDXGIKeyedMutex> compositionMutex;
-                                CHECK_HRCMD(shareTexture->QueryInterface(
-                                    IID_PPV_ARGS(compositionMutex.ReleaseAndGetAddressOf())));
-
-                                if (!compositionMutex || WAIT_OBJECT_0 != compositionMutex->AcquireSync(1, 10))
-                                {
-                                    throw std::runtime_error(fmt::format("unable acquire mutex for shared texture on "
-                                                                         "composition device for swapchain {}",
-                                                                         reinterpret_cast<std::uintptr_t>(swapchain)));
-                                }
-                                context->CopyResource(rgbTexture, shareTexture.Get());
-                                context->Flush();
-                                if (!compositionMutex || WAIT_OBJECT_0 != compositionMutex->ReleaseSync(0))
-                                {
-                                    throw std::runtime_error(
-                                        fmt::format("unable to release mutex for shared texture on "
-                                                    "composition device for swapchain {}",
-                                                    reinterpret_cast<std::uintptr_t>(swapchain)));
-                                }
-
-                                dxgiResource->Release();
-                                dxgiResource.Reset();
-                            }
+                            // prepare marker rendering
                             const XrSwapchainCreateInfo& markerSwapchainCreateInfo =
                                 m_MarkerSwapchains[eye]->getInfoOnCompositionDevice();
 
@@ -746,6 +649,84 @@ namespace openxr_api_layer::graphics
             }
         }
         TraceLoggingWriteStop(local, "Overlay::DrawOverlay");
+    }
+
+    void Overlay::CopyAppTexture(IGraphicsDevice* appDevice,
+                                 XrSwapchain swapchain,
+                                 const SwapchainState& swapchainState,
+                                 ID3D11Device* const device,
+                                 ID3D11DeviceContext* const context,
+                                 ID3D11Texture2D* const rgbTexture)
+    {
+        // TODO: keep sharedTexture instead of recreate
+        // TODO: differentiate D3D12 / move to GraphicDevice?
+        // TODO: clean up resources
+        if (swapchainState.index >= swapchainState.texturesD3D11.size())
+        {
+            throw std::runtime_error(fmt::format("invalid to texture index {} for swapchain {}, max: {}",
+                                                 swapchainState.index,
+                                                 reinterpret_cast<std::uintptr_t>(swapchain),
+                                                 swapchainState.texturesD3D11.size() - 1));
+        }
+        auto appTexture = swapchainState.texturesD3D11[swapchainState.index];
+
+        D3D11_TEXTURE2D_DESC desc;
+        appTexture->GetDesc(&desc);
+        desc.Format = swapchainState.format;
+        desc.MiscFlags = D3D11_RESOURCE_MISC_SHARED_KEYEDMUTEX;
+
+        ComPtr<ID3D11Texture2D> shareTexture;
+        CHECK_HRCMD(appDevice->getNativeDevice<D3D11>()->CreateTexture2D(&desc,
+                                                                         nullptr,
+                                                                         shareTexture.ReleaseAndGetAddressOf()));
+
+        ComPtr<IDXGIKeyedMutex> appMutex;
+        CHECK_HRCMD(shareTexture->QueryInterface(IID_PPV_ARGS(appMutex.ReleaseAndGetAddressOf())));
+        if (!appMutex || WAIT_OBJECT_0 != appMutex->AcquireSync(0, 20))
+        {
+            throw std::runtime_error(
+                fmt::format("unable to acquire mutex for shared texture on app device for swapchain {}",
+                            reinterpret_cast<std::uintptr_t>(swapchain)));
+        }
+
+        auto appContext = appDevice->getNativeContext<D3D11>();
+        appContext->CopyResource(shareTexture.Get(), appTexture);
+        appContext->Flush();
+        if (!appMutex || WAIT_OBJECT_0 != appMutex->ReleaseSync(1))
+        {
+            throw std::runtime_error(
+                fmt::format("unable release mutex for shared texture on app device for swapchain {}",
+                            reinterpret_cast<std::uintptr_t>(swapchain)));
+        }
+
+        ComPtr<IDXGIResource1> dxgiResource;
+        CHECK_HRCMD(shareTexture->QueryInterface(IID_PPV_ARGS(dxgiResource.ReleaseAndGetAddressOf())));
+
+        ShareableHandle sharedHandle{};
+        CHECK_HRCMD(dxgiResource->GetSharedHandle(&sharedHandle.handle));
+        dxgiResource->Release();
+
+        CHECK_HRCMD(device->OpenSharedResource(sharedHandle.handle,
+                                               IID_ID3D11Texture2D,
+                                               reinterpret_cast<void**>(shareTexture.ReleaseAndGetAddressOf())));
+
+        ComPtr<IDXGIKeyedMutex> compositionMutex;
+        CHECK_HRCMD(shareTexture->QueryInterface(IID_PPV_ARGS(compositionMutex.ReleaseAndGetAddressOf())));
+
+        if (!compositionMutex || WAIT_OBJECT_0 != compositionMutex->AcquireSync(1, 20))
+        {
+            throw std::runtime_error(fmt::format("unable acquire mutex for shared texture on "
+                                                 "composition device for swapchain {}",
+                                                 reinterpret_cast<std::uintptr_t>(swapchain)));
+        }
+        context->CopyResource(rgbTexture, shareTexture.Get());
+        context->Flush();
+        if (!compositionMutex || WAIT_OBJECT_0 != compositionMutex->ReleaseSync(0))
+        {
+            throw std::runtime_error(fmt::format("unable to release mutex for shared texture on "
+                                                 "composition device for swapchain {}",
+                                                 reinterpret_cast<std::uintptr_t>(swapchain)));
+        }
     }
 
     void Overlay::DeleteResources()
