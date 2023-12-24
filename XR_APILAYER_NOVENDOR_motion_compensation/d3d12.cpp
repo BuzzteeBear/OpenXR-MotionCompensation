@@ -314,7 +314,10 @@ namespace {
             return result;
         }
 
-        std::shared_ptr<IGraphicsTexture> createTexture(const XrSwapchainCreateInfo& info, bool shareable) override {
+        std::shared_ptr<IGraphicsTexture> createTexture(const XrSwapchainCreateInfo& info,
+                                                        bool shareable,
+                                                        bool mutexed) override
+        {
             D3D12_RESOURCE_DESC desc{};
             desc.Format = (DXGI_FORMAT)info.format;
             desc.Width = info.width;
@@ -411,6 +414,17 @@ namespace {
         {
             ErrorLog("%s: function not implemented!", __FUNCTION__);
             return std::shared_ptr<ISimpleMesh>();
+        }
+
+        bool CopyAppTexture(const XrSwapchain,
+                            const SwapchainState& swapchainState,
+                            ID3D11Device* device,
+                            ID3D11DeviceContext* context,
+                            ID3D11Texture2D* rgbTexture) override
+        {
+            //TODO: implement
+            ErrorLog("%s: function not implemented!", __FUNCTION__);
+            return false;
         }
         void setViewProjection(const xr::math::ViewProjection& view) override
         {

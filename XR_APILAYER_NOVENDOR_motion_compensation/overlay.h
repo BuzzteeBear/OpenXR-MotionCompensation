@@ -50,17 +50,13 @@ namespace openxr_api_layer::graphics
         std::vector<std::shared_ptr<IGraphicsTexture>> chain{};
     };
 
-    struct SwapchainState
-    {
-        std::vector<SwapchainImages> images{};
-        uint32_t acquiredImageIndex{0};
-        bool delayedRelease{false};
-    };
-
     class Overlay
     {
       public:
         void DestroySession(XrSession session);
+        // I'd rather have that swapchain tracking stuff in composition/device space. But to not interfere when overlay
+        // isn't even used, decided to go for lazy init of composition framework, which unfortunately is too late to
+        // capture swapchain creation
         void CreateSwapchain(XrSwapchain swapchain, const XrSwapchainCreateInfo* createInfo);
         void DestroySwapchain(XrSwapchain swapchain);
         XrResult AcquireSwapchainImage(XrSwapchain swapchain,
@@ -82,18 +78,7 @@ namespace openxr_api_layer::graphics
         bool m_Initialized{false};
 
       private:
-        // I'd rather have that swapchain tracking stuff in composition/device space. But to not interfere when overlay
-        // isn't even used, decided to go for lazy init of composition framework, which unfortunately is too late to
-        // capture swapchain creation
-        struct SwapchainState
-        {
-            std::vector<ID3D11Texture2D*> texturesD3D11;
-            std::vector<ID3D12Resource*> texturesD3D12;
-            DXGI_FORMAT format;
-            uint32_t index;
-            bool doRelease;
-        };
-
+        
         static std::vector<SimpleMeshVertex> CreateMarker(bool reference);
         static std::vector<SimpleMeshVertex> CreateMarkerMesh(const XrVector3f& top,
                                                               const XrVector3f& innerMiddle,
@@ -102,12 +87,6 @@ namespace openxr_api_layer::graphics
                                                               const XrVector3f& darkColor,
                                                               const XrVector3f& pureColor,
                                                               const XrVector3f& lightColor);
-        void CopyAppTexture(IGraphicsDevice* appDevice,
-                            XrSwapchain swapchain,
-                            const SwapchainState& swapchainState,
-                            ID3D11Device* device,
-                            ID3D11DeviceContext* context,
-                            ID3D11Texture2D* rgbTexture);
 
         bool m_OverlayActive{false};
         XrVector3f m_MarkerSize{0.1f, 0.1f, 0.1f};

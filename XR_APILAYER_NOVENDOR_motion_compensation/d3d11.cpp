@@ -291,7 +291,7 @@ namespace
             }
 
             // Identify the shareability.
-            if (desc.MiscFlags & D3D11_RESOURCE_MISC_SHARED)
+            if (desc.MiscFlags & D3D11_RESOURCE_MISC_SHARED || desc.MiscFlags & D3D11_RESOURCE_MISC_SHARED_KEYEDMUTEX)
             {
                 m_isShareable = true;
                 if (desc.MiscFlags & D3D11_RESOURCE_MISC_SHARED_NTHANDLE)
@@ -548,7 +548,9 @@ namespace
             return result;
         }
 
-        std::shared_ptr<IGraphicsTexture> createTexture(const XrSwapchainCreateInfo& info, bool shareable) override
+        std::shared_ptr<IGraphicsTexture> createTexture(const XrSwapchainCreateInfo& info,
+                                                        bool shareable,
+                                                        bool mutexed) override
         {
             TraceLocalActivity(local);
             TraceLoggingWriteStart(local,
@@ -586,9 +588,10 @@ namespace
                 desc.BindFlags |= D3D11_BIND_UNORDERED_ACCESS;
             }
             // Mark as shareable if needed.
-            desc.MiscFlags =
-                shareable ? (D3D11_RESOURCE_MISC_SHARED | (PreferNtHandle ? D3D11_RESOURCE_MISC_SHARED_NTHANDLE : 0))
-                          : 0;
+            desc.MiscFlags = shareable ? mutexed ? D3D11_RESOURCE_MISC_SHARED_KEYEDMUTEX
+                                                 : (D3D11_RESOURCE_MISC_SHARED |
+                                                    (PreferNtHandle ? D3D11_RESOURCE_MISC_SHARED_NTHANDLE : 0))
+                                       : 0;
 
             ComPtr<ID3D11Texture2D> texture;
             CHECK_HRCMD(m_device->CreateTexture2D(&desc, nullptr, texture.ReleaseAndGetAddressOf()));
@@ -718,6 +721,85 @@ namespace
             TraceLoggingWriteStop(local, "D3D11GraphicsDevice_createSimpleMesh", TLPArg(mesh.get(), "mesh"));
 
             return mesh;
+        }
+
+        bool CopyAppTexture(const XrSwapchain swapchain,
+                            const SwapchainState& swapchainState,
+                            ID3D11Device* device,
+                            ID3D11DeviceContext* context,
+                            ID3D11Texture2D* output) override
+        {
+            // TODO: add trace outputs
+            if (swapchainState.index >= swapchainState.texturesD3D11.size())
+            {
+                ErrorLog("%s: invalid to texture index %u for swapchain(%u), max: %u",
+                         __FUNCTION__,
+                         swapchainState.index,
+                         swapchain,
+                         swapchainState.texturesD3D11.size() - 1);
+                return false;
+            }
+            const auto& appTexture = swapchainState.texturesD3D11[swapchainState.index];
+
+            if (!m_SharedTextures.contains(swapchain))
+            {
+                D3D11_TEXTURE2D_DESC desc;
+                appTexture->GetDesc(&desc);
+                const XrSwapchainCreateInfo createInfo{XR_TYPE_SWAPCHAIN_CREATE_INFO,
+                                                       nullptr,
+                                                       0,
+                                                       XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT,
+                                                       swapchainState.format,
+                                                       desc.SampleDesc.Count,
+                                                       desc.Width,
+                                                       desc.Height,
+                                                       1,
+                                                       desc.ArraySize,
+                                                       desc.MipLevels};
+                auto sharedTexture = createTexture(createInfo, true, true);
+                m_SharedTextures[swapchain] = std::move(sharedTexture);
+            }
+            const auto& appDestination = m_SharedTextures[swapchain];
+
+            // copy to shared texture on this device
+            CHECK_HRCMD(appDestination->getNativeTexture<D3D11>()->QueryInterface(
+                IID_PPV_ARGS(m_AppMutex.ReleaseAndGetAddressOf())));
+            if (!m_AppMutex || WAIT_OBJECT_0 != m_AppMutex->AcquireSync(0, 20))
+            {
+                ErrorLog("%s: unable to acquire mutex on app device for swapchain %u", __FUNCTION__, swapchain);
+                return false;
+            }
+            m_context->CopyResource(appDestination->getNativeTexture<D3D11>(), appTexture);
+            m_context->Flush();
+            if (!m_AppMutex || WAIT_OBJECT_0 != m_AppMutex->ReleaseSync(1))
+            {
+                ErrorLog("%s: unable to release mutex on app device for swapchain %u", __FUNCTION__, swapchain);
+                return false;
+            }
+
+            // open shared texture on composition device
+            const auto sharedHandle = appDestination->getTextureHandle();
+            CHECK_HRCMD(
+                device->OpenSharedResource(sharedHandle.handle,
+                                           IID_ID3D11Texture2D,
+                                           reinterpret_cast<void**>(m_CompositionSource.ReleaseAndGetAddressOf())));
+
+            CHECK_HRCMD(m_CompositionSource->QueryInterface(IID_PPV_ARGS(m_CompositionMutex.ReleaseAndGetAddressOf())));
+
+            // copy texture on composition device
+            if (!m_CompositionMutex || WAIT_OBJECT_0 != m_CompositionMutex->AcquireSync(1, 20))
+            {
+                ErrorLog("%s: unable to acquire mutex on composition device for swapchain %u", __FUNCTION__, swapchain);
+                return false;
+            }
+            context->CopyResource(output, m_CompositionSource.Get());
+            context->Flush();
+            if (!m_CompositionMutex || WAIT_OBJECT_0 != m_CompositionMutex->ReleaseSync(0))
+            {
+                ErrorLog("%s: unable to release mutex on composition device for swapchain %u", __FUNCTION__, swapchain);
+                return false;
+            }
+            return true;
         }
 
         void setViewProjection(const xr::math::ViewProjection& view) override
@@ -929,6 +1011,11 @@ namespace
 
         std::shared_ptr<IShaderBuffer> m_meshViewProjectionBuffer;
         std::shared_ptr<IShaderBuffer> m_meshModelBuffer;
+
+        std::map<XrSwapchain, std::shared_ptr<IGraphicsTexture>> m_SharedTextures{};
+        ComPtr<IDXGIKeyedMutex> m_AppMutex;
+        ComPtr<IDXGIKeyedMutex> m_CompositionMutex;
+        ComPtr<ID3D11Texture2D> m_CompositionSource;
     };
 
 } // namespace

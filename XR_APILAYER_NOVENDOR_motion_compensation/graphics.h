@@ -163,6 +163,15 @@ float4 psMain(VSOutput input) : SV_TARGET {
     // We (arbitrarily) use DXGI as a common conversion point for all graphics APIs.
     using GenericFormat = DXGI_FORMAT;
 
+    struct SwapchainState
+    {
+        std::vector<ID3D11Texture2D*> texturesD3D11;
+        std::vector<ID3D12Resource*> texturesD3D12;
+        DXGI_FORMAT format;
+        uint32_t index;
+        bool doRelease;
+    };
+
     struct ShareableHandle {
         wil::unique_handle ntHandle;
         HANDLE handle{nullptr};
@@ -262,7 +271,7 @@ float4 psMain(VSOutput input) : SV_TARGET {
         virtual std::shared_ptr<IGraphicsFence> createFence(bool shareable = true) = 0;
         virtual std::shared_ptr<IGraphicsFence> openFence(const ShareableHandle& handle) = 0;
         virtual std::shared_ptr<IGraphicsTexture> createTexture(const XrSwapchainCreateInfo& info,
-                                                                bool shareable = true) = 0;
+                                                                bool shareable = true, bool mutexed = false) = 0;
         virtual std::shared_ptr<IGraphicsTexture> openTexture(const ShareableHandle& handle,
                                                               const XrSwapchainCreateInfo& info) = 0;
         virtual std::shared_ptr<IGraphicsTexture> openTexturePtr(void* nativeTexturePtr,
@@ -278,6 +287,11 @@ float4 psMain(VSOutput input) : SV_TARGET {
         virtual std::shared_ptr<ISimpleMesh> createSimpleMesh(std::vector<SimpleMeshVertex>& vertices,
                                                               std::vector<uint16_t>& indices,
                                                               std::string_view debugName) = 0;
+        virtual bool CopyAppTexture(const XrSwapchain,
+                                    const SwapchainState& swapchainState,
+                                    ID3D11Device* device,
+                                    ID3D11DeviceContext* context,
+                                    ID3D11Texture2D* rgbTexture) = 0;
 
         virtual void setViewProjection(const xr::math::ViewProjection& view) = 0;
         virtual void draw(std::shared_ptr<ISimpleMesh> mesh,
