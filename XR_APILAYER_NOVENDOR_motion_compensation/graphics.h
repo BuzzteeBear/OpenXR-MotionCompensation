@@ -414,6 +414,7 @@ float4 psMain(VSOutput input) : SV_TARGET {
         virtual void DestroySession(XrSession session) = 0;
 
         virtual ICompositionFramework* getCompositionFramework(XrSession session) = 0;
+        virtual bool IsUsingD3D12(XrSession session) = 0;
     };
 
     std::shared_ptr<ICompositionFrameworkFactory>

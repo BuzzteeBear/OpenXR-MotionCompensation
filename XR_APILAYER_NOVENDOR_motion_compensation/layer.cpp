@@ -205,7 +205,7 @@ namespace openxr_api_layer
             // Needed by DirectXTex.
             CoInitializeEx(nullptr, COINIT_MULTITHREADED);
             m_Overlay = std::make_unique<graphics::Overlay>();
-            m_compositionFrameworkFactory = createCompositionFrameworkFactory(*createInfo,
+            m_CompositionFrameworkFactory = createCompositionFrameworkFactory(*createInfo,
                                                                               GetXrInstance(),
                                                                               m_xrGetInstanceProcAddr,
                                                                               graphics::CompositionApi::D3D11);
@@ -352,9 +352,10 @@ namespace openxr_api_layer
                 m_LastFrameTime = 0;
                 m_UpdateRefSpaceTime = 0;
 
-                if (m_OverlayEnabled && m_Overlay && m_Overlay->m_Initialized && m_compositionFrameworkFactory)
+                if (m_OverlayEnabled && m_Overlay && m_Overlay->m_Initialized && m_CompositionFrameworkFactory)
                 {
-                    m_compositionFrameworkFactory->CreateSession(createInfo, *session);
+                    m_CompositionFrameworkFactory->CreateSession(createInfo, *session);
+                    m_Overlay->m_D3D12inUse = m_CompositionFrameworkFactory->IsUsingD3D12(*session);
                 }
 
                 if (bool earlyPhysicalInit; m_PhysicalEnabled &&
@@ -464,9 +465,9 @@ namespace openxr_api_layer
         {
             m_Overlay->DestroySession(session);
         }
-        if (m_compositionFrameworkFactory)
+        if (m_CompositionFrameworkFactory)
         {
-            m_compositionFrameworkFactory->DestroySession(session);
+            m_CompositionFrameworkFactory->DestroySession(session);
         }
 
         const XrResult result = OpenXrApi::xrDestroySession(session);
@@ -475,6 +476,153 @@ namespace openxr_api_layer
 
         TraceLoggingWriteStop(local, "OpenXrLayer::xrDestroySession", TLArg(xr::ToCString(result), "Result"));
 
+        return result;
+    }
+
+    XrResult OpenXrLayer::xrCreateSwapchain(XrSession session,
+                                            const XrSwapchainCreateInfo* createInfo,
+                                            XrSwapchain* swapchain)
+    {
+        const XrResult result = OpenXrApi::xrCreateSwapchain(session, createInfo, swapchain);
+        if (!m_Enabled || !m_OverlayEnabled)
+        {
+            return result;
+        }
+
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "OpenXrLayer::xrCreateSwapchain", TLPArg(session, "Session"));
+
+        if (createInfo->type != XR_TYPE_SWAPCHAIN_CREATE_INFO)
+        {
+            TraceLoggingWriteStop(local, "OpenXrLayer::xrAttachSessionActionSets", TLArg(false, "TypeCheck"));
+
+            return XR_ERROR_VALIDATION_FAILURE;
+        }
+        TraceLoggingWriteTagged(local,
+                               "OpenXrLayer::xrCreateSwapchain",
+                               TLArg(createInfo->arraySize, "ArraySize"),
+                               TLArg(createInfo->width, "Width"),
+                               TLArg(createInfo->height, "Height"),
+                               TLArg(createInfo->createFlags, "CreateFlags"),
+                               TLArg(createInfo->format, "Format"),
+                               TLArg(createInfo->faceCount, "FaceCount"),
+                               TLArg(createInfo->mipCount, "MipCount"),
+                               TLArg(createInfo->sampleCount, "SampleCount"),
+                               TLArg(createInfo->usageFlags, "UsageFlags"));
+        if (XR_FAILED(result))
+        {
+            TraceLoggingWriteStop(local, "OpenXrLayer::xrCreateSwapchain", TLArg(xr::ToCString(result), "Result"));
+
+            return result;
+        }
+        Log("created swapchain (%u) with dimensions=%ux%u, arraySize=%u, mipCount=%u, sampleCount=%u, format=%d, "
+            "usage=0x%x",
+            *swapchain,
+            createInfo->width,
+            createInfo->height,
+            createInfo->arraySize,
+            createInfo->mipCount,
+            createInfo->sampleCount,
+            createInfo->format,
+            createInfo->usageFlags);
+        if (!m_Overlay|| ! m_Overlay->m_Initialized)
+        {
+            ErrorLog("%s: overlay not properly initialized", __FUNCTION__);
+            TraceLoggingWriteStop(local, "OpenXrLayer::xrCreateSwapchain", TLArg(false, "Overlay_Initialized"));
+            return result;
+        }
+        if (!m_CompositionFrameworkFactory)
+        {
+            ErrorLog("%s: composition framework not properly initialized", __FUNCTION__);
+            TraceLoggingWriteStop(local, "OpenXrLayer::xrCreateSwapchain", TLArg(false, "Factory_Initialized"));
+
+            return result;
+        }
+        if (createInfo->usageFlags & XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT)
+        {
+            m_Overlay->CreateSwapchain(*swapchain, createInfo);
+        }
+        TraceLoggingWriteStop(local,
+                                   "OpenXrLayer::xrCreateSwapchain",
+                                   TLPArg(session, "Session"),
+                                   TLArg(xr::ToCString(result), "Result"));
+        return result;
+    }
+
+    XrResult OpenXrLayer::xrDestroySwapchain(XrSwapchain swapchain)
+    {
+        const XrResult result = OpenXrApi::xrDestroySwapchain(swapchain);
+        if (!m_Enabled || !m_OverlayEnabled)
+        {
+            return result;
+        }
+
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "OpenXrLayer::xrDestroySwapchain", TLPArg(swapchain, "Swapchain"));
+        DebugLog("xrDestroySwapchain %u", swapchain);
+        
+        if (XR_SUCCEEDED(result))
+        {
+            m_Overlay->DestroySwapchain(swapchain);
+        }
+        TraceLoggingWriteStop(local, "OpenXrLayer::xrDestroySwapchain", TLArg(xr::ToCString(result), "Result"));
+        return result;
+    }
+
+    XrResult OpenXrLayer::xrAcquireSwapchainImage(XrSwapchain swapchain,
+                                                  const XrSwapchainImageAcquireInfo* acquireInfo,
+                                                  uint32_t* index)
+    {
+        if (!m_Enabled || !m_OverlayEnabled)
+        {
+            return OpenXrApi::xrAcquireSwapchainImage(swapchain, acquireInfo, index);
+        }
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local,
+                               "OpenXrLayer::xrAcquireSwapchainImage",
+                               TLPArg(swapchain, "Swapchain"));
+
+        if (!m_Overlay || !m_Overlay->m_Initialized)
+        {
+            const XrResult result = OpenXrApi::xrAcquireSwapchainImage(swapchain, acquireInfo, index);
+            TraceLoggingWriteStop(local,
+                                  "OpenXrLayer::xrAcquireSwapchainImage",
+                                  TLArg(false, "Overlay_Initialized"),
+                                  TLArg(*index, "Index"),
+                                  TLArg(xr::ToCString(result), "Result"));
+            return result;
+        }
+        const XrResult result = m_Overlay->AcquireSwapchainImage(swapchain, acquireInfo, index);
+
+        TraceLoggingWriteStop(local,
+                              "OpenXrLayer::xrAcquireSwapchainImage",
+                              TLArg(*index, "Index"),
+                              TLArg(xr::ToCString(result), "Result"));
+        return result;
+    }
+
+    XrResult OpenXrLayer::xrReleaseSwapchainImage(XrSwapchain swapchain, const XrSwapchainImageReleaseInfo* releaseInfo)
+    {
+        if (!m_Enabled || !m_OverlayEnabled)
+        {
+            return OpenXrApi::xrReleaseSwapchainImage(swapchain, releaseInfo);
+        }
+
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "OpenXrLayer::xrReleaseSwapchainImage", TLPArg(swapchain, "Swapchain"));
+        if (!m_Overlay || !m_Overlay->m_Initialized)
+        {
+            const XrResult result = OpenXrApi::xrReleaseSwapchainImage(swapchain, releaseInfo);
+            TraceLoggingWriteStop(local,
+                                  "OpenXrLayer::xrReleaseSwapchainImage",
+                                  TLArg(false, "Overlay_Initialized"),
+                                  TLArg(xr::ToCString(result), "Result"));
+            return result;
+        }
+        const XrResult result = m_Overlay->ReleaseSwapchainImage(swapchain, releaseInfo);
+        TraceLoggingWriteStop(local,
+                              "OpenXrLayer::xrReleaseSwapchainImage",
+                              TLArg(xr::ToCString(result), "Result"));
         return result;
     }
 
@@ -1248,12 +1396,6 @@ namespace openxr_api_layer
         TraceLoggingWriteStart(local, "OpenXrLayer::xrBeginFrame", TLPArg(session, "Session"));
         DebugLog("xrBeginFrame");
 
-        if (frameBeginInfo && frameBeginInfo->type != XR_TYPE_FRAME_BEGIN_INFO)
-        {
-           TraceLoggingWriteStop(local, "OpenXrLayer::xrBeginFrame", TLArg(false, "TypeCheck"));
-           return XR_ERROR_VALIDATION_FAILURE;
-        }
-
         std::unique_lock lock(m_FrameLock);
 
         if (m_VarjoPollWorkaround && m_Enabled && m_PhysicalEnabled && !m_SuppressInteraction)
@@ -1263,6 +1405,11 @@ namespace openxr_api_layer
            // call xrPollEvent (if the app hasn't already) to acquire focus
            XrEventDataBuffer buf{XR_TYPE_EVENT_DATA_BUFFER};
            OpenXrApi::xrPollEvent(GetXrInstance(), &buf);
+        }
+
+        if (m_OverlayEnabled && m_Overlay && m_Overlay->m_Initialized)
+        {
+           m_Overlay->BeginFrame();
         }
 
         const XrResult result = OpenXrApi::xrBeginFrame(session, frameBeginInfo);
@@ -1314,11 +1461,13 @@ namespace openxr_api_layer
 
         XrFrameEndInfo chainFrameEndInfo = *frameEndInfo;
 
+        XrPosef delta{Pose::Identity()};
         XrPosef deltaInverse{Pose::Identity()};
         std::vector<XrPosef> cachedEyePoses;
         if (m_Activated)
         {
-           deltaInverse = Pose::Invert(m_DeltaCache.GetSample(chainFrameEndInfo.displayTime));
+           delta = m_DeltaCache.GetSample(chainFrameEndInfo.displayTime);
+           deltaInverse = Pose::Invert(delta);
            m_DeltaCache.CleanUp(chainFrameEndInfo.displayTime);
            cachedEyePoses =
                m_UseEyeCache ? m_EyeCache.GetSample(chainFrameEndInfo.displayTime) : std::vector<XrPosef>();
@@ -1332,7 +1481,7 @@ namespace openxr_api_layer
         if (m_OverlayEnabled)
         {
            m_Overlay->DrawOverlay(m_Tracker->GetReferencePose(),
-                                  deltaInverse,
+                                  delta,
                                   m_Activated,
                                   session,
                                   &chainFrameEndInfo,
@@ -1384,10 +1533,6 @@ namespace openxr_api_layer
                 memcpy(projectionViews->data(),
                        projectionLayer->views,
                        projectionLayer->viewCount * sizeof(XrCompositionLayerProjectionView));
-
-                TraceLoggingWriteTagged(local,
-                                        "OpenXrLayer::xrEndFrame_View",
-                                        TLArg(xr::ToString(deltaInverse).c_str(), "DeltaInverse"));
 
                 for (uint32_t j = 0; j < projectionLayer->viewCount; j++)
                 {
@@ -1557,7 +1702,7 @@ namespace openxr_api_layer
 
     std::shared_ptr<graphics::ICompositionFrameworkFactory> OpenXrLayer::GetCompositionFactory()
     {
-        return m_compositionFrameworkFactory;
+        return m_CompositionFrameworkFactory;
     }
 
     // private

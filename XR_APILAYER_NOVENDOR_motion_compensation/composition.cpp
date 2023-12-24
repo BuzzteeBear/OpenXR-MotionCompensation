@@ -1079,6 +1079,69 @@ namespace
             return it->second.get();
         }
 
+        bool IsUsingD3D12(const XrSession session) override
+        {
+            TraceLocalActivity(local);
+            TraceLoggingWriteStart(local, "CompositionFrameworkFactory_IsUsingD3D12", TLPArg(session, "Session"));
+#ifndef XR_USE_GRAPHICS_API_D3D12
+            TraceLoggingWriteStop(local, "CompositionFrameworkFactory_IsUsingD3D12", TLArg(false, "Compiler_Enabled_D3D12"));
+            return false;
+#else
+            bool d3d11Enabled{false};
+            bool d3d12Enabled{false};
+            for (uint32_t i = 0; i < m_instanceInfo.enabledExtensionCount; i++)
+            {
+                const std::string_view extensionName(m_instanceInfo.enabledExtensionNames[i]);
+                if (extensionName == XR_KHR_D3D11_ENABLE_EXTENSION_NAME)
+                {
+                    d3d11Enabled = true;
+                }
+                if (extensionName == XR_KHR_D3D12_ENABLE_EXTENSION_NAME)
+                {
+                    d3d12Enabled = true;
+                }
+            }
+            if (!d3d12Enabled)
+            {
+                TraceLoggingWriteStop(local,
+                                      "CompositionFrameworkFactory_IsUsingD3D12",
+                                      TLArg(false, "Extension_Enabled"));
+                return false;
+            }
+
+            const auto infoIt = m_SessionCreateInfos.find(session);
+            if (infoIt == m_SessionCreateInfos.end())
+            {
+                TraceLoggingWriteStop(local, "CompositionFrameworkFactory_IsUsingD3D12", TLArg(false, "Session_Registered"));
+                return false;
+            }
+
+            auto entry = static_cast<const XrBaseInStructure*>(infoIt->second.next);
+            while (entry)
+            {
+                if (d3d11Enabled && entry->type == XR_TYPE_GRAPHICS_BINDING_D3D11_KHR)
+                {
+                    TraceLoggingWriteStop(local,
+                                          "CompositionFrameworkFactory_IsUsingD3D12",
+                                          TLArg(true, "D3D11_Binding_Found"));
+                    return false;
+                }
+                if (entry->type == XR_TYPE_GRAPHICS_BINDING_D3D12_KHR)
+                {
+                    TraceLoggingWriteStop(local,
+                                          "CompositionFrameworkFactory_IsUsingD3D12",
+                                          TLArg(true, "D3D12_Binding_Found"));
+                    return true;
+                }
+
+                entry = entry->next;
+            }
+
+            TraceLoggingWriteStop(local, "CompositionFrameworkFactory_IsUsingD3D12", TLArg(false, "Binding_Found"));
+            return false;
+#endif
+        }
+
         void CreateSession(const XrSessionCreateInfo* createInfo, XrSession session) override
         {
             TraceLocalActivity(local);

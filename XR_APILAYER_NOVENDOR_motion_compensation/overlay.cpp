@@ -44,11 +44,258 @@ namespace openxr_api_layer::graphics
         DeleteResources();
         m_MarkerSwapchains.clear();
         m_MarkerDepthTextures.clear();
+        m_Swapchains.clear();
         m_MeshRGB.reset();
         m_MeshCMY.reset();
         m_InitializedSessions.erase(session);
 
         TraceLoggingWriteStop(local, "Overlay::DestroySession");
+    }
+    void Overlay::CreateSwapchain(XrSwapchain swapchain, const XrSwapchainCreateInfo* createInfo)
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local,
+                               "Overlay::CreateSwapchain",
+                               TLPArg(swapchain, "Swapchain"),
+                               TLArg(m_D3D12inUse, "D3D12inUse"));
+
+        uint32_t imageCount;
+        if (const XrResult result = GetInstance()->xrEnumerateSwapchainImages(swapchain, 0, &imageCount, nullptr); XR_FAILED(result))
+        {
+            TraceLoggingWriteStop(local, "Overlay::CreateSwapchain", TLArg(xr::ToCString(result),"EnumerateImages_Count"));
+            return;
+        }
+        if (imageCount == 0)
+        {
+            TraceLoggingWriteStop(local, "Overlay::CreateSwapchain", TLArg(imageCount, "Image_Count"));
+            return;
+        }
+
+        if (!m_D3D12inUse)
+        {
+            std::vector<XrSwapchainImageD3D11KHR> d3dImages(imageCount, {XR_TYPE_SWAPCHAIN_IMAGE_D3D11_KHR});
+            if (const XrResult result = GetInstance()->OpenXrApi::xrEnumerateSwapchainImages(
+                    swapchain,
+                    imageCount,
+                    &imageCount,
+                    reinterpret_cast<XrSwapchainImageBaseHeader*>(d3dImages.data())))
+            {
+                TraceLoggingWriteStop(local,
+                                      "Overlay::CreateSwapchain",
+                                      TLArg(xr::ToCString(result), "EnumerateImages_Images"));
+                return;
+            }
+
+            if (d3dImages[0].type != XR_TYPE_SWAPCHAIN_IMAGE_D3D11_KHR)
+            {
+                ErrorLog("%s: image type %d is not matching XR_TYPE_SWAPCHAIN_IMAGE_D3D11_KHR (%d)",
+                         __FUNCTION__,
+                         d3dImages[0].type,
+                         XR_TYPE_SWAPCHAIN_IMAGE_D3D11_KHR);
+                TraceLoggingWriteStop(local, "Overlay::CreateSwapchain", TLArg(false, "ImageType_Match"));
+                return;
+
+            }
+            // dump the descriptor for the first texture returned by the runtime for debug purposes.
+            {
+                D3D11_TEXTURE2D_DESC desc;
+                d3dImages[0].texture->GetDesc(&desc);
+                TraceLoggingWriteTagged(local,
+                                  "Overlay::CreateSwapchain",
+                                  TLArg(desc.Width, "Width"),
+                                  TLArg(desc.Height, "Height"),
+                                  TLArg(desc.ArraySize, "ArraySize"),
+                                  TLArg(desc.MipLevels, "MipCount"),
+                                  TLArg(desc.SampleDesc.Count, "SampleCount"),
+                                  TLArg((int)desc.Format, "Format"),
+                                  TLArg((int)desc.Usage, "Usage"),
+                                  TLArg(desc.BindFlags, "BindFlags"),
+                                  TLArg(desc.CPUAccessFlags, "CPUAccessFlags"),
+                                  TLArg(desc.MiscFlags, "MiscFlags"));
+            }
+
+            std::vector<ID3D11Texture2D*> textures{};
+            for (uint32_t i = 0; i < imageCount; i++)
+            {
+                TraceLoggingWriteTagged(local,
+                                        "Overlay::CreateSwapchain",
+                                        TLArg(i, "Index"),
+                                        TLPArg(d3dImages[i].texture, "Texture"));
+                textures.push_back(d3dImages[i].texture);
+            }
+            m_Swapchains[swapchain] = {textures,
+                                       std::vector<ID3D12Resource*>(),
+                                       static_cast<DXGI_FORMAT>(createInfo->format),
+                                       0,
+                                       false};
+        }
+        else
+        {
+            std::vector<XrSwapchainImageD3D12KHR> d3dImages(imageCount, {XR_TYPE_SWAPCHAIN_IMAGE_D3D12_KHR});
+            if (const XrResult result = GetInstance()->OpenXrApi::xrEnumerateSwapchainImages(
+                    swapchain,
+                    imageCount,
+                    &imageCount,
+                    reinterpret_cast<XrSwapchainImageBaseHeader*>(d3dImages.data())))
+            {
+                TraceLoggingWriteStop(local,
+                                      "Overlay::CreateSwapchain",
+                                      TLArg(xr::ToCString(result), "EnumerateImages_Images"));
+                return;
+            }
+
+            if (d3dImages[0].type != XR_TYPE_SWAPCHAIN_IMAGE_D3D12_KHR)
+            {
+                ErrorLog("%s: image type %d is not matching XR_TYPE_SWAPCHAIN_IMAGE_D3D12_KHR (%d)",
+                         __FUNCTION__,
+                         d3dImages[0].type,
+                         XR_TYPE_SWAPCHAIN_IMAGE_D3D12_KHR);
+                TraceLoggingWriteStop(local, "Overlay::CreateSwapchain", TLArg(false, "ImageType_Match"));
+                return;
+            }
+            // Dump the descriptor for the first texture returned by the runtime for debug purposes.
+            {
+                const auto& desc = d3dImages[0].texture->GetDesc();
+                TraceLoggingWrite(g_traceProvider,
+                                  "RuntimeSwapchain",
+                                  TLArg(desc.Width, "Width"),
+                                  TLArg(desc.Height, "Height"),
+                                  TLArg(desc.DepthOrArraySize, "ArraySize"),
+                                  TLArg(desc.MipLevels, "MipCount"),
+                                  TLArg(desc.SampleDesc.Count, "SampleCount"),
+                                  TLArg((int)desc.Format, "Format"),
+                                  TLArg((int)desc.Flags, "Flags"));
+            }
+
+            std::vector<ID3D12Resource*> textures{};
+            for (uint32_t i = 0; i < imageCount; i++)
+            {
+                TraceLoggingWriteTagged(local,
+                                        "Overlay::CreateSwapchain",
+                                        TLArg(i, "Index"),
+                                        TLPArg(d3dImages[i].texture, "Texture"));
+                textures.push_back(d3dImages[i].texture);
+            }
+            m_Swapchains[swapchain] = {std::vector<ID3D11Texture2D*>(),
+                                       textures,
+                                       static_cast<DXGI_FORMAT>(createInfo->format),
+                                       0,
+                                       false};
+        }
+        TraceLoggingWriteStop(local, "Overlay::CreateSwapchain", TLArg(true, "Success"));
+    }
+
+    void Overlay::DestroySwapchain(const XrSwapchain swapchain)
+    {
+        m_Swapchains.erase(swapchain);
+    }
+
+    XrResult Overlay::AcquireSwapchainImage(XrSwapchain swapchain,
+                                            const XrSwapchainImageAcquireInfo* acquireInfo,
+                                            uint32_t* index)
+    {
+        std::unique_lock lock(m_DrawMutex);
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "Overlay::AcquireSwapchainImage", TLPArg(swapchain, "Swapchain"));
+        const auto swapchainIt = m_Swapchains.find(swapchain);
+        if (swapchainIt != m_Swapchains.end())
+        {
+            // Perform the release now in case it was delayed.
+            if (swapchainIt->second.doRelease)
+            {
+                TraceLoggingWriteTagged(local, "Overlay::AcquireSwapchainImage", TLArg(true, "Delayed_Release"));
+
+                swapchainIt->second.doRelease = false;
+                constexpr XrSwapchainImageReleaseInfo releaseInfo{XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO, nullptr};
+                if (const XrResult result = GetInstance()->OpenXrApi::xrReleaseSwapchainImage(swapchain, &releaseInfo);
+                    XR_SUCCEEDED(result))
+                {
+                    DebugLog("AcquireSwapchainImage: swapchain(%u) released", swapchain);
+                    TraceLoggingWriteTagged(local,
+                                            "Overlay::AcquireSwapchainImage",
+                                            TLPArg(swapchain, "Swapchain_Released"));
+                }
+                else
+                {
+                    ErrorLog("%s: xrReleaseSwapchainImage(%u) failed: %d",
+                             __FUNCTION__,
+                             swapchain,
+                             xr::ToCString(result));
+                }               
+            }
+        }
+
+        const XrResult result = GetInstance()->OpenXrApi::xrAcquireSwapchainImage(swapchain, acquireInfo, index);
+        if (XR_SUCCEEDED(result))
+        {
+            // Record the index so we know which texture to use in xrEndFrame().
+            if (swapchainIt != m_Swapchains.end())
+            {
+                DebugLog("AcquireSwapchainImage(%u): index = %u", swapchain, *index);
+                TraceLoggingWriteTagged(local, "Overlay::AcquireSwapchainImage", TLArg(*index, "Acquired_Index"));
+                swapchainIt->second.index = *index;
+            }
+        }
+        TraceLoggingWriteStop(local,
+                              "Overlay::AcquireSwapchainImage",
+                              TLArg(*index, "Index"),
+                              TLArg(xr::ToCString(result), "Result"));
+        return result;
+    }
+
+    XrResult Overlay::ReleaseSwapchainImage(XrSwapchain swapchain, const XrSwapchainImageReleaseInfo* releaseInfo)
+    {
+        std::unique_lock lock(m_DrawMutex);
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "Overlay::ReleaseSwapchainImage", TLPArg(swapchain, "Swapchain"));
+
+        const auto swapchainIt = m_Swapchains.find(swapchain);
+        if (m_OverlayActive && swapchainIt != m_Swapchains.end())
+        {
+            // Perform a delayed release: we still need to copy the texture in DrawOverlay()
+            swapchainIt->second.doRelease = true;
+            DebugLog("ReleaseSwapchainImage(%u): release postponed", swapchain);
+            TraceLoggingWriteStop(local, "Overlay::ReleaseSwapchainImage", TLArg(true, "Release_Postponed"));
+            return XR_SUCCESS;
+        }
+        
+        const XrResult result = GetInstance()->OpenXrApi::xrReleaseSwapchainImage(swapchain, releaseInfo);
+        TraceLoggingWriteStop(local, "Overlay::ReleaseSwapchainImage", TLArg(xr::ToCString(result), "Result"));
+        return result;
+    }
+
+    void Overlay::BeginFrame()
+    {
+        std::unique_lock lock(m_DrawMutex);
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "Overlay::BeginFrame");
+
+        // Release the swapchain images. Some runtimes don't seem to lock cross-frame releasing and this can happen
+        // when a frame is discarded.
+        for (auto& swapchain : m_Swapchains)
+        {
+            if (swapchain.second.doRelease)
+            {
+                TraceLoggingWriteTagged(local, "Overlay::BeginFrame", TLPArg(swapchain.first, "Swapchain_Release"));
+
+                constexpr XrSwapchainImageReleaseInfo releaseInfo{XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO, nullptr};
+                swapchain.second.doRelease = false;
+                if (const XrResult result = GetInstance()->xrReleaseSwapchainImage(swapchain.first, &releaseInfo);
+                    XR_SUCCEEDED(result))
+                {
+                    DebugLog("BeginFrame: swapchain(%u) released", swapchain.first);
+                    TraceLoggingWriteTagged(local, "Overlay::BeginFrame", TLPArg(swapchain.first, "Swapchain_Released"));
+                }
+                else
+                {
+                    ErrorLog("%s: xrReleaseSwapchainImage(%u) failed: %s",
+                             __FUNCTION__,
+                             swapchain.first,
+                             xr::ToCString(result));
+                }
+            }
+        }
+        TraceLoggingWriteStop(local, "Overlay::BeginFrame");
     }
 
     void Overlay::SetMarkerSize()
@@ -92,21 +339,21 @@ namespace openxr_api_layer::graphics
     }
 
     void Overlay::DrawOverlay(const XrPosef& referencePose,
-                              const XrPosef& deltaInverse,
+                              const XrPosef& delta,
                               bool mcActivated,
                               XrSession session,
                               XrFrameEndInfo* chainFrameEndInfo,
-                              OpenXrLayer* layer)
+                              OpenXrLayer* openXrLayer)
     {
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local,
                                "Overlay::DrawOverlay",
                                TLArg(chainFrameEndInfo->displayTime, "Time"),
                                TLArg(xr::ToString(referencePose).c_str(), "ReferencePose"),
-                               TLArg(xr::ToString(deltaInverse).c_str(), "DeltaInverse"),
+                               TLArg(xr::ToString(delta).c_str(), "Delta"),
                                TLArg(mcActivated, "MC_Activated"));
 
-        if (auto factory = layer->GetCompositionFactory(); m_Initialized && m_OverlayActive && factory)
+        if (auto factory = openXrLayer->GetCompositionFactory(); m_Initialized && m_OverlayActive && factory)
         {
             TraceLoggingWriteTagged(local, "Overlay::DrawOverlay", TLArg(true, "Overlay_Active"));
 
@@ -156,16 +403,21 @@ namespace openxr_api_layer::graphics
                 if (lastProjectionLayer)
                 {
                     XrPosef refToStage;
-                    if (layer->GetRefToStage(lastProjectionLayer->space, &refToStage, nullptr))
+                    if (openXrLayer->GetRefToStage(lastProjectionLayer->space, &refToStage, nullptr))
                     {
                         DebugLog("overlay last projection layer space: %u, pose to stage: %s",
                                  lastProjectionLayer->space,
                                  xr::ToString(refToStage).c_str());
 
+                        // transfer trackerPose into projection reference space
+                        const XrPosef trackerPose = xr::math::Pose::Multiply(referencePose, refToStage);
+
+                        // determine reference pose
+                        const XrPosef refPose =
+                            mcActivated ? xr::math::Pose::Multiply(trackerPose, delta) : trackerPose;
+
                         auto graphicsDevice = composition->getCompositionDevice();
-
                         ID3D11Device* const device = composition->getCompositionDevice()->getNativeDevice<D3D11>();
-
                         ID3D11DeviceContext* const context =
                             composition->getCompositionDevice()->getNativeContext<D3D11>();
                         // draw marker
@@ -187,6 +439,7 @@ namespace openxr_api_layer::graphics
                         for (size_t eye = 0; eye < viewsForMarker->size(); ++eye)
                         {
                             auto& view = (*viewsForMarker)[eye];
+                            XrSwapchain swapchain = view.subImage.swapchain;
                             const XrRect2Di* viewPort = &view.subImage.imageRect;
 
                             TraceLoggingWriteTagged(local,
@@ -201,22 +454,43 @@ namespace openxr_api_layer::graphics
                                                     TLArg(xr::ToString(view.fov).c_str(), "Fov"),
                                                     TLPArg(view.next, "Next"));
 
+                            if (!m_Swapchains.contains(swapchain))
+                            {
+                                throw std::runtime_error(fmt::format("unable to find swapchain state for: {}",
+                                                                     reinterpret_cast<std::uintptr_t>(swapchain)));
+                            }
+
                             if (m_MarkerSwapchains.size() <= eye)
                             {
+                                // determine format
+                                DXGI_FORMAT format;
+                                if (m_Swapchains.contains(swapchain))
+                                {
+                                    format = m_Swapchains[swapchain].format;
+                                }
+                                else
+                                {
+                                    ErrorLog("%s: unable to obtain texture format for swapchain: $u, using best guess "
+                                             "instead",
+                                             __FUNCTION__,
+                                             swapchain);
+                                    format = static_cast<DXGI_FORMAT>(
+                                        composition->getPreferredSwapchainFormatOnApplicationDevice(
+                                            XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT));
+                                }
+
                                 // create swapchain for marker
-                                XrSwapchainCreateInfo markerInfo{
-                                    XR_TYPE_SWAPCHAIN_CREATE_INFO,
-                                    nullptr,
-                                    0,
-                                    XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT,
-                                    composition->getPreferredSwapchainFormatOnApplicationDevice(
-                                        XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT),
-                                    1,
-                                    static_cast<uint32_t>(viewPort->extent.width),
-                                    static_cast<uint32_t>(viewPort->extent.height),
-                                    1,
-                                    1,
-                                    1};
+                                XrSwapchainCreateInfo markerInfo{XR_TYPE_SWAPCHAIN_CREATE_INFO,
+                                                                 nullptr,
+                                                                 0,
+                                                                 XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT,
+                                                                 format,
+                                                                 1,
+                                                                 static_cast<uint32_t>(viewPort->extent.width),
+                                                                 static_cast<uint32_t>(viewPort->extent.height),
+                                                                 1,
+                                                                 1,
+                                                                 1};
                                 m_MarkerSwapchains.push_back(
                                     composition->createSwapchain(markerInfo,
                                                                  SwapchainMode::Write | SwapchainMode::Submit));
@@ -241,6 +515,96 @@ namespace openxr_api_layer::graphics
                             ID3D11Texture2D* const rgbTexture =
                                 markerImage->getTextureForWrite()->getNativeTexture<D3D11>();
 
+                            // copy application texture
+                            {
+                                // TODO: keep sharedTexture instead of recreate
+                                // TODO: differentiate D3D12 / move to GraphicDevice?
+                                // TODO: clean up resources
+                                if (!m_Swapchains.contains(swapchain))
+                                {
+                                    throw std::runtime_error(
+                                        fmt::format("unable to find acquired index for swapchain {}",
+                                                    reinterpret_cast<std::uintptr_t>(swapchain)));
+                                }
+                                const auto& swapchainState = m_Swapchains[swapchain];
+                                if (swapchainState.index >= swapchainState.texturesD3D11.size())
+                                {
+                                    throw std::runtime_error(
+                                        fmt::format("invalid to texture index {} for swapchain {}, max: {}",
+                                                    swapchainState.index,
+                                                    reinterpret_cast<std::uintptr_t>(swapchain),
+                                                    swapchainState.texturesD3D11.size() - 1));
+                                }
+                                auto appTexture = swapchainState.texturesD3D11[swapchainState.index];
+
+                                D3D11_TEXTURE2D_DESC desc;
+                                appTexture->GetDesc(&desc);
+                                desc.Format = swapchainState.format;
+                                desc.MiscFlags = D3D11_RESOURCE_MISC_SHARED_KEYEDMUTEX;
+
+                                auto appDevice = composition->getApplicationDevice();
+
+                                ComPtr<ID3D11Texture2D> shareTexture;
+                                CHECK_HRCMD(appDevice->getNativeDevice<D3D11>()->CreateTexture2D(
+                                    &desc,
+                                    nullptr,
+                                    shareTexture.ReleaseAndGetAddressOf()));
+
+                                ComPtr<IDXGIKeyedMutex> appMutex;
+                                CHECK_HRCMD(
+                                    shareTexture->QueryInterface(IID_PPV_ARGS(appMutex.ReleaseAndGetAddressOf())));
+                                if (!appMutex || WAIT_OBJECT_0 != appMutex->AcquireSync(0, 10))
+                                {
+                                    throw std::runtime_error(fmt::format(
+                                        "unable to acquire mutex for shared texture on app device for swapchain {}",
+                                        reinterpret_cast<std::uintptr_t>(swapchain)));
+                                }
+
+                                auto appContext = appDevice->getNativeContext<D3D11>();
+                                appContext->CopyResource(shareTexture.Get(), appTexture);
+                                appContext->Flush();
+                                if (!appMutex || WAIT_OBJECT_0 != appMutex->ReleaseSync(1))
+                                {
+                                    throw std::runtime_error(fmt::format(
+                                        "unable release mutex for shared texture on app device for swapchain {}",
+                                        reinterpret_cast<std::uintptr_t>(swapchain)));
+                                }
+
+                                ComPtr<IDXGIResource1> dxgiResource;
+                                CHECK_HRCMD(
+                                    shareTexture->QueryInterface(IID_PPV_ARGS(dxgiResource.ReleaseAndGetAddressOf())));
+
+                                ShareableHandle sharedHandle{};
+                                CHECK_HRCMD(dxgiResource->GetSharedHandle(&sharedHandle.handle));
+
+                                CHECK_HRCMD(device->OpenSharedResource(
+                                    sharedHandle.handle,
+                                    IID_ID3D11Texture2D,
+                                    reinterpret_cast<void**>(shareTexture.ReleaseAndGetAddressOf())));
+
+                                ComPtr<IDXGIKeyedMutex> compositionMutex;
+                                CHECK_HRCMD(shareTexture->QueryInterface(
+                                    IID_PPV_ARGS(compositionMutex.ReleaseAndGetAddressOf())));
+
+                                if (!compositionMutex || WAIT_OBJECT_0 != compositionMutex->AcquireSync(1, 10))
+                                {
+                                    throw std::runtime_error(fmt::format("unable acquire mutex for shared texture on "
+                                                                         "composition device for swapchain {}",
+                                                                         reinterpret_cast<std::uintptr_t>(swapchain)));
+                                }
+                                context->CopyResource(rgbTexture, shareTexture.Get());
+                                context->Flush();
+                                if (!compositionMutex || WAIT_OBJECT_0 != compositionMutex->ReleaseSync(0))
+                                {
+                                    throw std::runtime_error(
+                                        fmt::format("unable to release mutex for shared texture on "
+                                                    "composition device for swapchain {}",
+                                                    reinterpret_cast<std::uintptr_t>(swapchain)));
+                                }
+
+                                dxgiResource->Release();
+                                dxgiResource.Reset();
+                            }
                             const XrSwapchainCreateInfo& markerSwapchainCreateInfo =
                                 m_MarkerSwapchains[eye]->getInfoOnCompositionDevice();
 
@@ -270,10 +634,6 @@ namespace openxr_api_layer::graphics
 
                             context->OMSetRenderTargets(1, renderTargetView.GetAddressOf(), get(depthStencilView));
 
-                            // clear render target
-                            constexpr float background[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-                            context->ClearRenderTargetView(renderTargetView.Get(), background);
-
                             // clear depth buffer
                             context->ClearDepthStencilView(depthStencilView.Get(), D3D11_CLEAR_DEPTH, 1.f, 0);
 
@@ -287,7 +647,6 @@ namespace openxr_api_layer::graphics
                                      eye,
                                      xr::ToString(viewProjection.Pose).c_str(),
                                      xr::ToString(viewProjection.Fov).c_str());
-
 
                             // set viewport to match resolution
                             D3D11_VIEWPORT viewport{};
@@ -303,15 +662,7 @@ namespace openxr_api_layer::graphics
                                      viewPort->offset.x,
                                      viewPort->offset.y);
 
-                            // transfer trackerPose into projection reference space
-
-                            const XrPosef trackerPose = xr::math::Pose::Multiply(referencePose, refToStage);
-
-                            // draw reference pose marker
-                            const XrPosef refPose =
-                                mcActivated
-                                    ? xr::math::Pose::Multiply(trackerPose, xr::math::Pose::Invert(deltaInverse))
-                                    : trackerPose;
+                            // draw reference/cor position
                             graphicsDevice->draw(m_MeshRGB, refPose, m_MarkerSize);
                             DebugLog("overlay(%u) reference pose: %s", eye, xr::ToString(refPose).c_str());
 
@@ -321,6 +672,7 @@ namespace openxr_api_layer::graphics
                                 graphicsDevice->draw(m_MeshCMY, trackerPose, m_MarkerSize);
                                 DebugLog("overlay(%u) tracker pose: %s", eye, xr::ToString(trackerPose).c_str());
                             }
+                            context->Flush();
 
                             m_MarkerSwapchains[eye]->releaseImage();
                             m_MarkerSwapchains[eye]->commitLastReleasedImage();
@@ -338,8 +690,11 @@ namespace openxr_api_layer::graphics
                             lastProjectionLayer->viewCount,
                             viewsForMarker->data()};
 
-                        m_BaseLayerVector.push_back(
-                            reinterpret_cast<XrCompositionLayerBaseHeader*>(m_CreatedProjectionLayer));
+                        // replace last projection layer
+                        std::ranges::replace(
+                            m_BaseLayerVector,
+                            reinterpret_cast<XrCompositionLayerBaseHeader const*>(lastProjectionLayer),
+                            reinterpret_cast<XrCompositionLayerBaseHeader const*>(m_CreatedProjectionLayer));
                         chainFrameEndInfo->layerCount = static_cast<uint32_t>(m_BaseLayerVector.size());
                         chainFrameEndInfo->layers = m_BaseLayerVector.data();
                     }
@@ -359,6 +714,36 @@ namespace openxr_api_layer::graphics
             }
 
             composition->serializePostComposition();
+        }
+        // release all the swapchain images now, as we are really done this time
+        for (auto& swapchain : m_Swapchains)
+        {
+            if (swapchain.second.doRelease)
+            {
+                TraceLoggingWriteTagged(local,
+                                        "Overlay::DrawOverlay",
+                                        TLArg(true, "Delayed_Release"),
+                                        TLPArg(swapchain.first, "Swapchain"));
+
+                XrSwapchainImageReleaseInfo releaseInfo{XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};
+                swapchain.second.doRelease = false;
+                const XrResult result =
+                    GetInstance()->OpenXrApi::xrReleaseSwapchainImage(swapchain.first, &releaseInfo);
+                if (XR_SUCCEEDED(result))
+                {
+                    DebugLog("DrawOverlay: swapchain(%u) released", swapchain.first);
+                    TraceLoggingWriteTagged(local,
+                                            "Overlay::AcquireSwapchainImage",
+                                            TLPArg(swapchain.first, "Swapchain_Released"));
+                }
+                else
+                {
+                    ErrorLog("%s: xrReleaseSwapchainImage(%u) failed: %d",
+                             __FUNCTION__,
+                             swapchain,
+                             xr::ToCString(result));
+                }
+            }
         }
         TraceLoggingWriteStop(local, "Overlay::DrawOverlay");
     }

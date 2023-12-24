@@ -60,33 +60,53 @@ namespace openxr_api_layer::graphics
     class Overlay
     {
       public:
- 
         void DestroySession(XrSession session);
+        void CreateSwapchain(XrSwapchain swapchain, const XrSwapchainCreateInfo* createInfo);
+        void DestroySwapchain(XrSwapchain swapchain);
+        XrResult AcquireSwapchainImage(XrSwapchain swapchain,
+                                       const XrSwapchainImageAcquireInfo* acquireInfo,
+                                       uint32_t* index);
+        XrResult ReleaseSwapchainImage(XrSwapchain swapchain, const XrSwapchainImageReleaseInfo* releaseInfo);
+        void BeginFrame();
         void SetMarkerSize();
         bool ToggleOverlay();
         void DrawOverlay(const XrPosef& referencePose,
-                         const XrPosef& deltaInverse,
+                         const XrPosef& delta,
                          bool mcActivated,
                          XrSession session,
                          XrFrameEndInfo* chainFrameEndInfo,
-                         OpenXrLayer* layer);
+                         OpenXrLayer* openXrLayer);
         void DeleteResources();
 
+        bool m_D3D12inUse{false};
         bool m_Initialized{false};
 
       private:
         static std::vector<SimpleMeshVertex> CreateMarker(bool reference);
         static std::vector<SimpleMeshVertex> CreateMarkerMesh(const XrVector3f& top,
-                                                            const XrVector3f& innerMiddle,
-                                                            const XrVector3f& outerMiddle,
-                                                            const XrVector3f& bottom,
-                                                            const XrVector3f& darkColor,
-                                                            const XrVector3f& pureColor,
-                                                            const XrVector3f& lightColor);
+                                                              const XrVector3f& innerMiddle,
+                                                              const XrVector3f& outerMiddle,
+                                                              const XrVector3f& bottom,
+                                                              const XrVector3f& darkColor,
+                                                              const XrVector3f& pureColor,
+                                                              const XrVector3f& lightColor);
+
+        // I'd rather have that swapchain tracking stuff in composition/device space. But to not interfere when overlay
+        // isn't even used, decided to go for lazy init of composition framework, which unfortunately is too late to
+        // capture swapchain creation
+        struct SwapchainState
+        {
+            std::vector<ID3D11Texture2D*> texturesD3D11;
+            std::vector<ID3D12Resource*> texturesD3D12;
+            DXGI_FORMAT format;
+            uint32_t index;
+            bool doRelease;
+        };
 
         bool m_OverlayActive{false};
         XrVector3f m_MarkerSize{0.1f, 0.1f, 0.1f};
         std::shared_ptr<ISimpleMesh> m_MeshRGB{}, m_MeshCMY{};
+        std::map<XrSwapchain, SwapchainState> m_Swapchains{};
         std::vector<std::shared_ptr<ISwapchain>> m_MarkerSwapchains{};
         std::vector<std::shared_ptr<IGraphicsTexture>> m_MarkerDepthTextures{};
         std::vector<XrCompositionLayerProjectionView>* m_CreatedViews{nullptr};

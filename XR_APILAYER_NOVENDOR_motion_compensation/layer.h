@@ -62,6 +62,15 @@ namespace openxr_api_layer
         XrResult xrBeginSession(XrSession session, const XrSessionBeginInfo* beginInfo) override;
         XrResult xrEndSession(XrSession session) override;
         XrResult xrDestroySession(XrSession session) override;
+        XrResult xrCreateSwapchain(XrSession session,
+                                   const XrSwapchainCreateInfo* createInfo,
+                                   XrSwapchain* swapchain) override;
+        XrResult xrDestroySwapchain(XrSwapchain swapchain) override;
+        XrResult xrAcquireSwapchainImage(XrSwapchain swapchain,
+                                         const XrSwapchainImageAcquireInfo* acquireInfo,
+                                         uint32_t* index) override;
+        XrResult xrReleaseSwapchainImage(XrSwapchain swapchain,
+                                         const XrSwapchainImageReleaseInfo* releaseInfo) override;
         XrResult xrGetCurrentInteractionProfile(XrSession session,
                                                 XrPath topLevelUserPath,
                                                 XrInteractionProfileState* interactionProfile) override;
@@ -170,7 +179,7 @@ namespace openxr_api_layer
         std::shared_ptr<Input::InputHandler> m_Input{};
         std::unique_ptr<utility::AutoActivator> m_AutoActivator{};
         std::unique_ptr<Modifier::HmdModifier> m_HmdModifier{};
-        std::shared_ptr<graphics::ICompositionFrameworkFactory> m_compositionFrameworkFactory{};
+        std::shared_ptr<graphics::ICompositionFrameworkFactory> m_CompositionFrameworkFactory{};
 
         // connection recovery
         XrTime m_RecoveryWait{3000000000}; // 3 sec default timeout
