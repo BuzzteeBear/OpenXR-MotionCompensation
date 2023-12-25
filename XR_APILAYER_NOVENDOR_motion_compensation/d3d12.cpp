@@ -355,8 +355,7 @@ namespace {
             return std::make_shared<D3D12Texture>(texture.Get());
         }
 
-        std::shared_ptr<IGraphicsTexture> openTexture(const ShareableHandle& handle,
-                                                      const XrSwapchainCreateInfo& info) override {
+        std::shared_ptr<IGraphicsTexture> openTexture(const ShareableHandle& handle) override {
             TraceLocalActivity(local);
             TraceLoggingWriteStart(local,
                                    "D3D12Texture_Import",

@@ -272,8 +272,7 @@ float4 psMain(VSOutput input) : SV_TARGET {
         virtual std::shared_ptr<IGraphicsFence> openFence(const ShareableHandle& handle) = 0;
         virtual std::shared_ptr<IGraphicsTexture> createTexture(const XrSwapchainCreateInfo& info,
                                                                 bool shareable = true, bool mutexed = false) = 0;
-        virtual std::shared_ptr<IGraphicsTexture> openTexture(const ShareableHandle& handle,
-                                                              const XrSwapchainCreateInfo& info) = 0;
+        virtual std::shared_ptr<IGraphicsTexture> openTexture(const ShareableHandle& handle) = 0;
         virtual std::shared_ptr<IGraphicsTexture> openTexturePtr(void* nativeTexturePtr,
                                                                  const XrSwapchainCreateInfo& info) = 0;
 

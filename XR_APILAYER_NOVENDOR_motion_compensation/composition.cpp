@@ -206,8 +206,7 @@ namespace
                 if (overrideShareable.value_or(true) && textureOnApplicationDevice->isShareable())
                 {
                     const std::shared_ptr<IGraphicsTexture> textureOnCompositionDevice =
-                        m_compositionDevice->openTexture(textureOnApplicationDevice->getTextureHandle(),
-                                                         m_infoOnCompositionDevice);
+                        m_compositionDevice->openTexture(textureOnApplicationDevice->getTextureHandle());
                     image =
                         std::make_unique<SwapchainImage>(textureOnApplicationDevice, textureOnCompositionDevice, index);
                 }
@@ -221,8 +220,7 @@ namespace
                         m_bounceBufferOnCompositionDevice =
                             m_compositionDevice->createTexture(m_infoOnCompositionDevice, true /* shareable */);
                         m_bounceBufferOnApplicationDevice =
-                            m_applicationDevice->openTexture(m_bounceBufferOnCompositionDevice->getTextureHandle(),
-                                                             infoOnApplicationDevice);
+                            m_applicationDevice->openTexture(m_bounceBufferOnCompositionDevice->getTextureHandle());
                     }
                     image = std::make_unique<SwapchainImage>(textureOnApplicationDevice,
                                                              m_bounceBufferOnCompositionDevice,
@@ -500,8 +498,7 @@ namespace
                 const std::shared_ptr<IGraphicsTexture> textureOnCompositionDevice =
                     compositionDevice->createTexture(m_infoOnCompositionDevice, true /* shareable */);
                 const std::shared_ptr<IGraphicsTexture> textureOnApplicationDevice =
-                    applicationDevice->openTexture(textureOnCompositionDevice->getTextureHandle(),
-                                                   infoOnApplicationDevice);
+                    applicationDevice->openTexture(textureOnCompositionDevice->getTextureHandle());
                 std::unique_ptr<SwapchainImage> image =
                     std::make_unique<SwapchainImage>(textureOnApplicationDevice, textureOnCompositionDevice, i);
 

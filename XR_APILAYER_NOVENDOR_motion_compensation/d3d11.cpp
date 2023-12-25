@@ -600,8 +600,7 @@ namespace
             return std::make_shared<D3D11Texture>(texture.Get());
         }
 
-        std::shared_ptr<IGraphicsTexture> openTexture(const ShareableHandle& handle,
-                                                      const XrSwapchainCreateInfo& info) override
+        std::shared_ptr<IGraphicsTexture> openTexture(const ShareableHandle& handle) override
         {
             TraceLocalActivity(local);
             TraceLoggingWriteStart(local,
@@ -729,7 +728,18 @@ namespace
                             ID3D11DeviceContext* context,
                             ID3D11Texture2D* output) override
         {
-            // TODO: add trace outputs
+            TraceLocalActivity(local);
+            TraceLoggingWriteStart(local,
+                                   "D3D11GraphicsDevice_CopyAppTexture",
+                                   TLPArg(swapchain, "Swapchain"),
+                                   TLArg(swapchainState.index, "Index"),
+                                   TLArg(static_cast<uint32_t>(swapchainState.format), "Format"),
+                                   TLArg(swapchainState.doRelease, "DoRelease"),
+                                   TLArg(swapchainState.texturesD3D11.size(), "Size"),
+                                   TLPArg(device, "Device"),
+                                   TLPArg(context, "Context"),
+                                   TLPArg(output, "Output"));
+
             if (swapchainState.index >= swapchainState.texturesD3D11.size())
             {
                 ErrorLog("%s: invalid to texture index %u for swapchain(%u), max: %u",
@@ -737,11 +747,12 @@ namespace
                          swapchainState.index,
                          swapchain,
                          swapchainState.texturesD3D11.size() - 1);
+                TraceLoggingWriteStop(local, "D3D11GraphicsDevice_CopyAppTexture", TLArg(false, "Index_In_Range"));
                 return false;
             }
             const auto& appTexture = swapchainState.texturesD3D11[swapchainState.index];
 
-            if (!m_SharedTextures.contains(swapchain))
+            if (!m_SharedAppTextures.contains(swapchain))
             {
                 D3D11_TEXTURE2D_DESC desc;
                 appTexture->GetDesc(&desc);
@@ -757,9 +768,15 @@ namespace
                                                        desc.ArraySize,
                                                        desc.MipLevels};
                 auto sharedTexture = createTexture(createInfo, true, true);
-                m_SharedTextures[swapchain] = std::move(sharedTexture);
+                m_SharedAppTextures[swapchain] = std::move(sharedTexture);
+                TraceLoggingWriteTagged(local,
+                                        "D3D11GraphicsDevice_CopyAppTexture",
+                                        TLPArg(sharedTexture.get(), "Shared_AppTexture_Created"));
             }
-            const auto& appDestination = m_SharedTextures[swapchain];
+            const auto& appDestination = m_SharedAppTextures[swapchain];
+            TraceLoggingWriteTagged(local,
+                                    "D3D11GraphicsDevice_CopyAppTexture",
+                                    TLPArg(appDestination.get(), "AppDestination"));
 
             // copy to shared texture on this device
             CHECK_HRCMD(appDestination->getNativeTexture<D3D11>()->QueryInterface(
@@ -767,6 +784,7 @@ namespace
             if (!m_AppMutex || WAIT_OBJECT_0 != m_AppMutex->AcquireSync(0, 20))
             {
                 ErrorLog("%s: unable to acquire mutex on app device for swapchain %u", __FUNCTION__, swapchain);
+                TraceLoggingWriteStop(local, "D3D11GraphicsDevice_CopyAppTexture", TLArg(false, "Acquire_AppMutex"));
                 return false;
             }
             m_context->CopyResource(appDestination->getNativeTexture<D3D11>(), appTexture);
@@ -774,31 +792,54 @@ namespace
             if (!m_AppMutex || WAIT_OBJECT_0 != m_AppMutex->ReleaseSync(1))
             {
                 ErrorLog("%s: unable to release mutex on app device for swapchain %u", __FUNCTION__, swapchain);
+                TraceLoggingWriteStop(local, "D3D11GraphicsDevice_CopyAppTexture", TLArg(false, "Release_AppMutex"));
                 return false;
             }
 
-            // open shared texture on composition device
-            const auto sharedHandle = appDestination->getTextureHandle();
-            CHECK_HRCMD(
-                device->OpenSharedResource(sharedHandle.handle,
-                                           IID_ID3D11Texture2D,
-                                           reinterpret_cast<void**>(m_CompositionSource.ReleaseAndGetAddressOf())));
+            if (!m_SharedCompositionTextures.contains(swapchain))
+            {
+                // open shared texture on composition device
+                const auto sharedHandle = appDestination->getTextureHandle();
+                ComPtr<ID3D11Texture2D> sharedTexture;
+                CHECK_HRCMD(
+                    device->OpenSharedResource(sharedHandle.handle,
+                                               IID_ID3D11Texture2D,
+                                               reinterpret_cast<void**>(sharedTexture.GetAddressOf())));
+                m_SharedCompositionTextures[swapchain] = sharedTexture;
+                TraceLoggingWriteTagged(local,
+                                        "D3D11GraphicsDevice_CopyAppTexture",
+                                        TLPArg(sharedTexture.Get(), "Shared_CompositionTexture_Created"));
+            }
+            const auto& compositionSource = m_SharedCompositionTextures[swapchain];
+            TraceLoggingWriteTagged(local,
+                                    "D3D11GraphicsDevice_CopyAppTexture",
+                                    TLPArg(compositionSource.Get(), "CompositionSource"));
 
-            CHECK_HRCMD(m_CompositionSource->QueryInterface(IID_PPV_ARGS(m_CompositionMutex.ReleaseAndGetAddressOf())));
+            CHECK_HRCMD(compositionSource->QueryInterface(
+                IID_PPV_ARGS(m_CompositionMutex.ReleaseAndGetAddressOf())));
 
             // copy texture on composition device
             if (!m_CompositionMutex || WAIT_OBJECT_0 != m_CompositionMutex->AcquireSync(1, 20))
             {
                 ErrorLog("%s: unable to acquire mutex on composition device for swapchain %u", __FUNCTION__, swapchain);
+                TraceLoggingWriteStop(local,
+                                      "D3D11GraphicsDevice_CopyAppTexture",
+                                      TLArg(false, "Acquire_CompositionMutex"));
                 return false;
             }
-            context->CopyResource(output, m_CompositionSource.Get());
+            context->CopyResource(output, compositionSource.Get());
             context->Flush();
             if (!m_CompositionMutex || WAIT_OBJECT_0 != m_CompositionMutex->ReleaseSync(0))
             {
                 ErrorLog("%s: unable to release mutex on composition device for swapchain %u", __FUNCTION__, swapchain);
+                TraceLoggingWriteStop(local,
+                                      "D3D11GraphicsDevice_CopyAppTexture",
+                                      TLArg(false, "Acquire_CompositionMutex"));
                 return false;
             }
+            TraceLoggingWriteStop(local,
+                                  "D3D11GraphicsDevice_CopyAppTexture",
+                                  TLArg(true, "Success"));
             return true;
         }
 
@@ -1012,10 +1053,10 @@ namespace
         std::shared_ptr<IShaderBuffer> m_meshViewProjectionBuffer;
         std::shared_ptr<IShaderBuffer> m_meshModelBuffer;
 
-        std::map<XrSwapchain, std::shared_ptr<IGraphicsTexture>> m_SharedTextures{};
+        std::map<XrSwapchain, std::shared_ptr<IGraphicsTexture>> m_SharedAppTextures{};
+        std::map<XrSwapchain, ComPtr<ID3D11Texture2D>> m_SharedCompositionTextures{};
         ComPtr<IDXGIKeyedMutex> m_AppMutex;
         ComPtr<IDXGIKeyedMutex> m_CompositionMutex;
-        ComPtr<ID3D11Texture2D> m_CompositionSource;
     };
 
 } // namespace
