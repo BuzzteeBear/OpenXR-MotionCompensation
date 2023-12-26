@@ -721,7 +721,8 @@ namespace
         }
 
         bool CopyAppTexture(const SwapchainState& swapchainState,
-                            IGraphicsTexture* target) override
+                            std::shared_ptr<IGraphicsTexture> target,
+                            bool fromApp) override
         {
             TraceLocalActivity(local);
             TraceLoggingWriteStart(local,
@@ -730,7 +731,7 @@ namespace
                                    TLArg(static_cast<uint32_t>(swapchainState.format), "Format"),
                                    TLArg(swapchainState.doRelease, "DoRelease"),
                                    TLArg(swapchainState.texturesD3D11.size(), "Size"),
-                                   TLPArg(target, "Output"));
+                                   TLPArg(target.get(), "Target"));
 
             if (swapchainState.index >= swapchainState.texturesD3D11.size())
             {
@@ -742,12 +743,24 @@ namespace
                 return false;
             }
 
-            const auto handle = target->getTextureHandle();
-            const auto sharedTexture = openTexture(handle);
-            m_context->CopyResource(sharedTexture->getNativeTexture<D3D11>(),
-                                    swapchainState.texturesD3D11[swapchainState.index]);
+            if (!m_SwapchainTextures.contains(swapchainState.swapchain))
+            {
+                const auto handle = target->getTextureHandle();
+                m_SwapchainTextures[swapchainState.swapchain] = openTexture(handle);
+            }
+            const auto sharedTexture = m_SwapchainTextures[swapchainState.swapchain];
+            if (fromApp)
+            {
+                m_context->CopyResource(sharedTexture->getNativeTexture<D3D11>(),
+                                        swapchainState.texturesD3D11[swapchainState.index]);
+            }
+            else
+            {
+                m_context->CopyResource(swapchainState.texturesD3D11[swapchainState.index],
+                                        sharedTexture->getNativeTexture<D3D11>());
+            }
             m_context->Flush();
-           
+
             return true;
         }
 
@@ -960,6 +973,8 @@ namespace
 
         std::shared_ptr<IShaderBuffer> m_meshViewProjectionBuffer;
         std::shared_ptr<IShaderBuffer> m_meshModelBuffer;
+
+        std::map<XrSwapchain, std::shared_ptr<IGraphicsTexture>> m_SwapchainTextures;
     };
 
 } // namespace

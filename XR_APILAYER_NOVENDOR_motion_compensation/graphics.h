@@ -165,8 +165,11 @@ float4 psMain(VSOutput input) : SV_TARGET {
 
     struct SwapchainState
     {
+        XrSwapchain swapchain{XR_NULL_HANDLE};
         std::vector<ID3D11Texture2D*> texturesD3D11;
         std::vector<ID3D12Resource*> texturesD3D12;
+        uint32_t width{0};
+        uint32_t height{0};
         DXGI_FORMAT format{DXGI_FORMAT_UNKNOWN};
         uint32_t index{0};
         bool doRelease{false};
@@ -287,7 +290,8 @@ float4 psMain(VSOutput input) : SV_TARGET {
                                                               std::vector<uint16_t>& indices,
                                                               std::string_view debugName) = 0;
         virtual bool CopyAppTexture(const SwapchainState& swapchainState,
-                                    IGraphicsTexture* target) = 0;
+                                    std::shared_ptr<IGraphicsTexture> target,
+                                    bool fromApp) = 0;
 
         virtual void setViewProjection(const xr::math::ViewProjection& view) = 0;
         virtual void draw(std::shared_ptr<ISimpleMesh> mesh,

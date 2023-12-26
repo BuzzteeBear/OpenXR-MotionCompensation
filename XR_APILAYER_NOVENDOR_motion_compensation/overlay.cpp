@@ -41,9 +41,7 @@ namespace openxr_api_layer::graphics
         TraceLoggingWriteStart(local, "Overlay::DestroySession", TLPArg(session, "Session"));
 
         std::unique_lock lock(m_DrawMutex);
-        ClearResources();
-        m_MarkerSwapchains.clear();
-        m_MarkerDepthTextures.clear();
+        m_Textures.clear();
         m_Swapchains.clear();
         m_MeshRGB.reset();
         m_MeshCMY.reset();
@@ -123,8 +121,11 @@ namespace openxr_api_layer::graphics
                                         TLPArg(d3dImages[i].texture, "Texture"));
                 textures.push_back(d3dImages[i].texture);
             }
-            m_Swapchains[swapchain] = {textures,
+            m_Swapchains[swapchain] = {swapchain,
+                                       textures,
                                        std::vector<ID3D12Resource*>(),
+                                       createInfo->width,
+                                       createInfo->height,
                                        static_cast<DXGI_FORMAT>(createInfo->format),
                                        0,
                                        false};
@@ -176,8 +177,11 @@ namespace openxr_api_layer::graphics
                                         TLPArg(d3dImages[i].texture, "Texture"));
                 textures.push_back(d3dImages[i].texture);
             }
-            m_Swapchains[swapchain] = {std::vector<ID3D11Texture2D*>(),
+            m_Swapchains[swapchain] = {swapchain,
+                                       std::vector<ID3D11Texture2D*>(),
                                        textures,
+                                       createInfo->width,
+                                       createInfo->height,
                                        static_cast<DXGI_FORMAT>(createInfo->format),
                                        0,
                                        false};
@@ -356,11 +360,7 @@ namespace openxr_api_layer::graphics
                                TLArg(xr::ToString(referencePose).c_str(), "ReferencePose"),
                                TLArg(xr::ToString(delta).c_str(), "Delta"),
                                TLArg(mcActivated, "MC_Activated"));
-        // clean up memory
-        ClearResources();
-
-        
-        if (!(m_Initialized && m_OverlayActive))
+       if (!(m_Initialized && m_OverlayActive))
         {
             TraceLoggingWriteStop(local, "Overlay::DrawOverlay", TLArg(false, "CompositionFramework"));
             return;
@@ -408,11 +408,10 @@ namespace openxr_api_layer::graphics
 
         try
         {
-            m_BaseLayerVector =
-                std::vector(chainFrameEndInfo->layers, chainFrameEndInfo->layers + chainFrameEndInfo->layerCount);
-            XrCompositionLayerProjection const* lastProjectionLayer{};
-            for (auto layer : m_BaseLayerVector)
+            const XrCompositionLayerProjection* lastProjectionLayer{};
+            for (uint32_t i = 0; i < chainFrameEndInfo->layerCount; i++)
             {
+                auto layer = chainFrameEndInfo->layers[i];
                 if (XR_TYPE_COMPOSITION_LAYER_PROJECTION == layer->type)
                 {
                     lastProjectionLayer = reinterpret_cast<const XrCompositionLayerProjection*>(layer);
@@ -422,28 +421,6 @@ namespace openxr_api_layer::graphics
             {
                 ErrorLog("%s: no projection layer found", __FUNCTION__);
                 TraceLoggingWriteStop(local, "Overlay::DrawOverlay", TLArg(false, "CompositionFramework"));
-                return;
-            }
-            
-
-            // acquire last projection layer data
-            auto viewsForMarker = new std::vector<XrCompositionLayerProjectionView>{};
-            for (uint32_t eye = 0; eye < lastProjectionLayer->viewCount; eye++)
-            {
-                auto lastView = lastProjectionLayer->views[eye];
-                XrCompositionLayerProjectionView view{lastView.type,
-                                                      nullptr,
-                                                      lastView.pose,
-                                                      lastView.fov,
-                                                      lastView.subImage};
-                viewsForMarker->push_back(view);
-            }
-            m_CreatedViews = viewsForMarker;
-
-            if (!CopyAppTextures(viewsForMarker, composition))
-            {
-                m_Initialized = false;
-                TraceLoggingWriteStop(local, "Overlay::DrawOverlay", TLArg(false, "AppTexture_Copied"));
                 return;
             }
 
@@ -475,112 +452,118 @@ namespace openxr_api_layer::graphics
                 DebugLog("overlay tracker pose: %s", xr::ToString(trackerPose).c_str());
             }
 
-            // draw marker on copied texture
-            RenderMarkers(viewsForMarker, refPose, trackerPose, mcActivated, composition);
+            for (uint32_t eye = 0; eye < lastProjectionLayer->viewCount; eye++)
+            {
+                auto& view = lastProjectionLayer->views[eye];
+                const XrSwapchain swapchain = view.subImage.swapchain;
+                const XrRect2Di* viewPort = &view.subImage.imageRect;
 
-            // wrap views in new Projection layer
-            m_CreatedProjectionLayer = new XrCompositionLayerProjection{
-                XR_TYPE_COMPOSITION_LAYER_PROJECTION,
-                nullptr,
-                lastProjectionLayer->layerFlags | XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT,
-                lastProjectionLayer->space,
-                lastProjectionLayer->viewCount,
-                viewsForMarker->data()};
+                TraceLoggingWriteTagged(local,
+                                        "Overlay::DrawOverlay",
+                                        TLArg(eye, "Eye"),
+                                        TLArg(viewPort->extent.width, "Width"),
+                                        TLArg(viewPort->extent.height, "Heigth"),
+                                        TLArg(viewPort->offset.x, "OffsetX"),
+                                        TLArg(viewPort->offset.y, "OffsetY"),
+                                        TLArg(view.subImage.imageArrayIndex, "ArrayIndex"),
+                                        TLArg(xr::ToString(view.pose).c_str(), "Pose"),
+                                        TLArg(xr::ToString(view.fov).c_str(), "Fov"),
+                                        TLPArg(view.next, "Next"));
 
-            // replace last projection layer
-            std::ranges::replace(m_BaseLayerVector,
-                                 reinterpret_cast<XrCompositionLayerBaseHeader const*>(lastProjectionLayer),
-                                 reinterpret_cast<XrCompositionLayerBaseHeader const*>(m_CreatedProjectionLayer));
-            chainFrameEndInfo->layerCount = static_cast<uint32_t>(m_BaseLayerVector.size());
-            chainFrameEndInfo->layers = m_BaseLayerVector.data();
+                if (!InitializeSwapchains(eye, swapchain, composition))
+                {
+                    m_Initialized = false;
+                    TraceLoggingWriteStop(local, "Overlay::DrawOverlay", TLArg(false, "AppTexture_Copied"));
+                    return;
+                }
+
+                const auto colorTexture = m_Textures[eye].first;
+
+                // copy from application texture
+                if (!composition->getApplicationDevice()->CopyAppTexture(m_Swapchains[swapchain], colorTexture, true))
+                {
+                    ErrorLog("$s: unable to copy app texture for swapchain: %u", __FUNCTION__, swapchain);
+                    m_Initialized = false;
+                    TraceLoggingWriteStop(local, "Overlay::InitializeSwapchains", TLArg(false, "AppTexure_Copied"));
+                    return;
+                }
+
+                composition->serializePreComposition();
+
+                // draw marker on copied texture
+                RenderMarkers(view, eye, refPose, trackerPose, mcActivated, composition);
+
+                composition->serializePostComposition();
+
+                // copy back to application texture
+                if (!composition->getApplicationDevice()->CopyAppTexture(m_Swapchains[swapchain], colorTexture, false))
+                {
+                    ErrorLog("$s: unable to copy app texture for swapchain: %u", __FUNCTION__, swapchain);
+                    m_Initialized = false;
+                    TraceLoggingWriteStop(local, "Overlay::InitializeSwapchains", TLArg(false, "AppTexure_Copied"));
+                    return;
+                }
+            }
         }
         catch (std::exception& e)
         {
             ErrorLog("%s: encountered exception: %s", __FUNCTION__, e.what());
             m_Initialized = false;
         }
+        TraceLoggingWriteStop(local, "Overlay::DrawOverlay", TLArg(true, "Success"));
     }
     
-    bool Overlay::CopyAppTextures(std::vector<XrCompositionLayerProjectionView>* viewsForMarker,
-                                  ICompositionFramework* composition)
+    bool Overlay::InitializeSwapchains(size_t eye, XrSwapchain swapchain, ICompositionFramework* composition)
     {
         TraceLoggingActivity<g_traceProvider> local;
-        TraceLoggingWriteStart(local, "Overlay::CopyAppTextures");
+        TraceLoggingWriteStart(local, "Overlay::InitializeSwapchains");
 
-        for (size_t eye = 0; eye < viewsForMarker->size(); ++eye)
+        if (!m_Swapchains.contains(swapchain))
         {
-            auto& view = (*viewsForMarker)[eye];
-            XrSwapchain swapchain = view.subImage.swapchain;
-            const XrRect2Di* viewPort = &view.subImage.imageRect;
-
-            TraceLoggingWriteTagged(local,
-                                    "Overlay::CopyAppTextures",
-                                    TLArg(eye, "Eye"),
-                                    TLArg(viewPort->extent.width, "Width"),
-                                    TLArg(viewPort->extent.height, "Heigth"),
-                                    TLArg(viewPort->offset.x, "OffsetX"),
-                                    TLArg(viewPort->offset.y, "OffsetY"),
-                                    TLArg(view.subImage.imageArrayIndex, "ArrayIndex"),
-                                    TLArg(xr::ToString(view.pose).c_str(), "Pose"),
-                                    TLArg(xr::ToString(view.fov).c_str(), "Fov"),
-                                    TLPArg(view.next, "Next"));
-
-            if (!m_Swapchains.contains(swapchain))
-            {
-                ErrorLog("%s: unable to find state for swapchain: %u", __FUNCTION__, swapchain);
-                TraceLoggingWriteStop(local, "Overlay::CopyAppTextures", TLArg(false, "SwapchainState_Found"));
-                return false;
-            }
-
-            // initialize internal swapchains
-            if (m_MarkerSwapchains.size() <= eye)
-            {
-                // create swapchain for marker
-                XrSwapchainCreateInfo createInfo{XR_TYPE_SWAPCHAIN_CREATE_INFO,
-                                                 nullptr,
-                                                 0,
-                                                 XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT,
-                                                 m_Swapchains[swapchain].format,
-                                                 1,
-                                                 static_cast<uint32_t>(viewPort->extent.width),
-                                                 static_cast<uint32_t>(viewPort->extent.height),
-                                                 1,
-                                                 1,
-                                                 1};
-                m_MarkerSwapchains.push_back(
-                    composition->createSwapchain(createInfo, SwapchainMode::Write | SwapchainMode::Submit));
-
-                // create depth texture
-                createInfo.usageFlags = XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-                createInfo.format = DXGI_FORMAT_D32_FLOAT;
-                m_MarkerDepthTextures.push_back(composition->getCompositionDevice()->createTexture(createInfo));
-
-                DebugLog("overlay(%u) created swapchain and depth texture: %u x %u",
-                         eye,
-                         createInfo.width,
-                         createInfo.height);
-                TraceLoggingWriteTagged(local,
-                                        "Overlay::CopyAppTextures",
-                                        TLPArg(m_MarkerSwapchains[eye].get(), "Swapchain"),
-                                        TLPArg(m_MarkerDepthTextures[eye].get(), "DepthTexture"));
-            }
-
-            const auto markerImage = m_MarkerSwapchains[eye]->acquireImage();
-
-            // copy application texture
-            if (!composition->getApplicationDevice()->CopyAppTexture(m_Swapchains[swapchain],
-                                                                     markerImage->getTextureForWrite()))
-            {
-                ErrorLog("$s: unable to copy app texture for swapchain: %u",__FUNCTION__, swapchain);
-                TraceLoggingWriteStop(local, "Overlay::CopyAppTextures", TLArg(false, "AppTexure_Copied"));
-                return false;
-            }
+            ErrorLog("%s: unable to find state for swapchain: %u", __FUNCTION__, swapchain);
+            TraceLoggingWriteStop(local, "Overlay::InitializeSwapchains", TLArg(false, "SwapchainState_Found"));
+            return false;
         }
-        TraceLoggingWriteStop(local, "Overlay::CopyAppTextures", TLArg(true, "Success"));
+
+        // initialize internal swapchains
+        if (m_Textures.size() <= eye)
+        {
+            // create color texture for marker
+            XrSwapchainCreateInfo createInfo{XR_TYPE_SWAPCHAIN_CREATE_INFO,
+                                             nullptr,
+                                             0,
+                                             XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT,
+                                             m_Swapchains[swapchain].format,
+                                             1,
+                                             m_Swapchains[swapchain].width,
+                                             m_Swapchains[swapchain].height,
+                                             1,
+                                             1,
+                                             1};
+            auto colorTexture = composition->getCompositionDevice()->createTexture(createInfo);
+  
+            // create depth texture
+            createInfo.usageFlags = XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+            createInfo.format = DXGI_FORMAT_D32_FLOAT;
+            auto depthTexture = composition->getCompositionDevice()->createTexture(createInfo);
+            m_Textures.push_back({colorTexture, depthTexture});
+
+            DebugLog("overlay(%u) created swapchain and depth texture: %u x %u",
+                     eye,
+                     createInfo.width,
+                     createInfo.height);
+            TraceLoggingWriteTagged(local,
+                                    "Overlay::InitializeSwapchains",
+                                    TLPArg(colorTexture.get(), "ColorTexture"),
+                                    TLPArg(depthTexture.get(), "DepthTexture"));
+        }
+
+        TraceLoggingWriteStop(local, "Overlay::InitializeSwapchains", TLArg(true, "Success"));
         return true;
     }
 
-    void Overlay::RenderMarkers(std::vector<XrCompositionLayerProjectionView>* viewsForMarker,
+    void Overlay::RenderMarkers(const XrCompositionLayerProjectionView& view,
+                                size_t eye,
                                 const XrPosef& refPose,
                                 const XrPosef& trackerPose,
                                 bool mcActivated,
@@ -591,106 +574,74 @@ namespace openxr_api_layer::graphics
         ID3D11DeviceContext* const context = composition->getCompositionDevice()->getNativeContext<D3D11>();
 
         // perform actual renering
-        for (size_t eye = 0; eye < viewsForMarker->size(); ++eye)
+        XrSwapchain swapchain = view.subImage.swapchain;
+        const XrRect2Di* viewPort = &view.subImage.imageRect;
+
+        // create ephemeral render target view for the drawing.
+        auto renderTargetView = ComPtr<ID3D11RenderTargetView>();
+        D3D11_RENDER_TARGET_VIEW_DESC rtvDesc{};
+        rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+        rtvDesc.Format = m_Swapchains[view.subImage.swapchain].format;
+        rtvDesc.Texture2DArray.ArraySize = 1;
+        rtvDesc.Texture2DArray.FirstArraySlice = -1;
+        rtvDesc.Texture2D.MipSlice = D3D11CalcSubresource(0, 0, 1);
+        CHECK_HRCMD(device->CreateRenderTargetView(m_Textures[eye].first->getNativeTexture<D3D11>(),
+                                                   &rtvDesc,
+                                                   set(renderTargetView)));
+
+        // create ephemeral depth stencil view for depth testing / occlusion.
+        auto depthStencilView = ComPtr<ID3D11DepthStencilView>();
+        D3D11_DEPTH_STENCIL_VIEW_DESC depthDesc{};
+        depthDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+        depthDesc.Format = DXGI_FORMAT_D32_FLOAT;
+        depthDesc.Texture2DArray.ArraySize = 1;
+        depthDesc.Texture2DArray.FirstArraySlice = -1;
+        depthDesc.Texture2D.MipSlice = D3D11CalcSubresource(0, 0, 1);
+        CHECK_HRCMD(device->CreateDepthStencilView(m_Textures[eye].second->getNativeTexture<D3D11>(),
+                                                   &depthDesc,
+                                                   set(depthStencilView)));
+
+        context->OMSetRenderTargets(1, renderTargetView.GetAddressOf(), get(depthStencilView));
+
+        // clear depth buffer
+        context->ClearDepthStencilView(depthStencilView.Get(), D3D11_CLEAR_DEPTH, 1.f, 0);
+
+        // take over view projection
+        xr::math::ViewProjection viewProjection{};
+        viewProjection.Pose = view.pose;
+        viewProjection.Fov = view.fov;
+        viewProjection.NearFar = xr::math::NearFar{0.001f, 100.f};
+        graphicsDevice->setViewProjection(viewProjection);
+        DebugLog("overlay(%u) view projection: pose = %s, fov = %s",
+                 eye,
+                 xr::ToString(viewProjection.Pose).c_str(),
+                 xr::ToString(viewProjection.Fov).c_str());
+
+        // set viewport to match resolution
+        D3D11_VIEWPORT viewport{};
+        viewport.TopLeftX = static_cast<float>(viewPort->offset.x);
+        viewport.TopLeftY = static_cast<float>(viewPort->offset.y);
+        viewport.Width = static_cast<float>(viewPort->extent.width);
+        viewport.Height = static_cast<float>(viewPort->extent.height);
+        viewport.MaxDepth = 1.0f;
+        context->RSSetViewports(1, &viewport);
+        DebugLog("overlay(%u) viewport: width = %d, height = %d, offset x: %d, offset y: %d",
+                 eye,
+                 viewPort->extent.width,
+                 viewPort->extent.height,
+                 viewPort->offset.x,
+                 viewPort->offset.y);
+
+        // draw reference/cor position
+        graphicsDevice->draw(m_MeshRGB, refPose, m_MarkerSize);
+
+        // draw tracker marker
+        if (mcActivated)
         {
-            auto& view = (*viewsForMarker)[eye];
-            XrSwapchain swapchain = view.subImage.swapchain;
-            const XrRect2Di* viewPort = &view.subImage.imageRect;
-
-            // create ephemeral render target view for the drawing.
-            auto renderTargetView = ComPtr<ID3D11RenderTargetView>();
-
-            D3D11_RENDER_TARGET_VIEW_DESC rtvDesc{};
-            rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
-            rtvDesc.Format = m_Swapchains[view.subImage.swapchain].format;
-            rtvDesc.Texture2DArray.ArraySize = 1;
-            rtvDesc.Texture2DArray.FirstArraySlice = -1;
-            rtvDesc.Texture2D.MipSlice = D3D11CalcSubresource(0, 0, 1);
-            CHECK_HRCMD(device->CreateRenderTargetView(
-                m_MarkerSwapchains[eye]->getAcquiredImage()->getTextureForWrite()->getNativeTexture<D3D11>(),
-                &rtvDesc,
-                set(renderTargetView)));
-
-            // create ephemeral depth stencil view for depth testing / occlusion.
-            auto depthStencilView = ComPtr<ID3D11DepthStencilView>();
-            D3D11_DEPTH_STENCIL_VIEW_DESC depthDesc{};
-            depthDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-            depthDesc.Format = DXGI_FORMAT_D32_FLOAT;
-            depthDesc.Texture2DArray.ArraySize = 1;
-            depthDesc.Texture2DArray.FirstArraySlice = -1;
-            depthDesc.Texture2D.MipSlice = D3D11CalcSubresource(0, 0, 1);
-            CHECK_HRCMD(device->CreateDepthStencilView(m_MarkerDepthTextures[eye]->getNativeTexture<D3D11>(),
-                                                       &depthDesc,
-                                                       set(depthStencilView)));
-
-            context->OMSetRenderTargets(1, renderTargetView.GetAddressOf(), get(depthStencilView));
-
-            // clear depth buffer
-            context->ClearDepthStencilView(depthStencilView.Get(), D3D11_CLEAR_DEPTH, 1.f, 0);
-
-            // take over view projection
-            xr::math::ViewProjection viewProjection{};
-            viewProjection.Pose = view.pose;
-            viewProjection.Fov = view.fov;
-            viewProjection.NearFar = xr::math::NearFar{0.001f, 100.f};
-            graphicsDevice->setViewProjection(viewProjection);
-            DebugLog("overlay(%u) view projection: pose = %s, fov = %s",
-                     eye,
-                     xr::ToString(viewProjection.Pose).c_str(),
-                     xr::ToString(viewProjection.Fov).c_str());
-
-            // set viewport to match resolution
-            D3D11_VIEWPORT viewport{};
-            viewport.TopLeftX = viewport.TopLeftY = 0;
-            viewport.Width = static_cast<float>(viewPort->extent.width);
-            viewport.Height = static_cast<float>(viewPort->extent.height);
-            viewport.MaxDepth = 1.0f;
-            context->RSSetViewports(1, &viewport);
-            DebugLog("overlay(%u) viewport: width = %d, height = %d, offset x: %d, offset y: %d",
-                     eye,
-                     viewPort->extent.width,
-                     viewPort->extent.height,
-                     viewPort->offset.x,
-                     viewPort->offset.y);
-
-            // draw reference/cor position
-            graphicsDevice->draw(m_MeshRGB, refPose, m_MarkerSize);
-
-            // draw tracker marker
-            if (mcActivated)
-            {
-                graphicsDevice->draw(m_MeshCMY, trackerPose, m_MarkerSize);
-            }
-
-            context->Flush();
-
-            m_MarkerSwapchains[eye]->releaseImage();
-            m_MarkerSwapchains[eye]->commitLastReleasedImage();
-
-            view.subImage = m_MarkerSwapchains[eye]->getSubImage();
+            graphicsDevice->draw(m_MeshCMY, trackerPose, m_MarkerSize);
         }
 
-        graphicsDevice->UnsetDrawResources();
-    }
-
-    void Overlay::ClearResources()
-    {
-        TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "Overlay::ClearResources");
-
-        if (m_CreatedProjectionLayer)
-        {
-            delete m_CreatedProjectionLayer;
-            m_CreatedProjectionLayer = nullptr;
-        }
-        if (m_CreatedViews)
-        {
-            delete m_CreatedViews;
-            m_CreatedViews = nullptr;
-        }
-        m_BaseLayerVector.clear();
-
-        TraceLoggingWriteStop(local, "Overlay::ClearResources");
+        context->Flush();
     }
 
     std::vector<SimpleMeshVertex> Overlay::CreateMarker(bool reference)

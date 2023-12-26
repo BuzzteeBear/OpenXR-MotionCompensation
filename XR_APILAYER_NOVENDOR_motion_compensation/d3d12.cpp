@@ -415,11 +415,47 @@ namespace {
         }
 
         bool CopyAppTexture(const SwapchainState& swapchainState,
-                            IGraphicsTexture* target) override
+                            std::shared_ptr<IGraphicsTexture> target,
+                            bool fromApp) override
         {
-            //TODO: implement
-            ErrorLog("%s: function not implemented!", __FUNCTION__);
-            return false;
+            TraceLocalActivity(local);
+            TraceLoggingWriteStart(local,
+                                   "D3D11GraphicsDevice_CopyAppTexture",
+                                   TLArg(swapchainState.index, "Index"),
+                                   TLArg(static_cast<uint32_t>(swapchainState.format), "Format"),
+                                   TLArg(swapchainState.doRelease, "DoRelease"),
+                                   TLArg(swapchainState.texturesD3D12.size(), "Size"),
+                                   TLPArg(target.get(), "Target"));
+
+            if (swapchainState.index >= swapchainState.texturesD3D12.size())
+            {
+                ErrorLog("%s: invalid to texture index %u, max: %u",
+                         __FUNCTION__,
+                         swapchainState.index,
+                         swapchainState.texturesD3D12.size() - 1);
+                TraceLoggingWriteStop(local, "D3D11GraphicsDevice_CopyAppTexture", TLArg(false, "Index_In_Range"));
+                return false;
+            }
+
+            if (!m_SwapchainTextures.contains(swapchainState.swapchain))
+            {
+                const auto handle = target->getTextureHandle();
+                m_SwapchainTextures[swapchainState.swapchain] = openTexture(handle);
+            }
+            const auto sharedTexture = m_SwapchainTextures[swapchainState.swapchain];
+            D3D12ReusableCommandList commandList = getCommandList();
+            if (fromApp)
+            {
+                commandList.commandList->CopyResource(sharedTexture->getNativeTexture<D3D12>(),
+                                                      swapchainState.texturesD3D12[swapchainState.index]);
+            }
+            else
+            {
+                commandList.commandList->CopyResource(swapchainState.texturesD3D12[swapchainState.index],
+                                                      sharedTexture->getNativeTexture<D3D12>());
+            }
+            submitCommandList(std::move(commandList));
+            return true;
         }
         void setViewProjection(const xr::math::ViewProjection& view) override
         {
@@ -501,6 +537,8 @@ namespace {
         std::deque<D3D12ReusableCommandList> m_pendingCommandList;
         ComPtr<ID3D12Fence> m_commandListPoolFence;
         uint32_t m_commandListPoolFenceValue{0};
+
+        std::map<XrSwapchain, std::shared_ptr<IGraphicsTexture>> m_SwapchainTextures;
     };
 
 } // namespace

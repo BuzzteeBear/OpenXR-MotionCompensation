@@ -317,7 +317,7 @@ namespace Input
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "InputHandler::ToggleOverlay");
 
-        if (!m_Layer->m_OverlayEnabled)
+        if (!m_Layer->m_Overlay)
         {
             AudioOut::Execute(Event::Error);
             ErrorLog("overlay is deactivated in config file and cannot be activated");
