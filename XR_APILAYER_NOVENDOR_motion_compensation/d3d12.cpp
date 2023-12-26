@@ -440,7 +440,7 @@ namespace {
                 return false;
             }
 
-            // we need separate handles for same swapchain if app renders both eyes to a single texture
+            // we need separate handles for the same swapchain if the app renders both eyes to a single texture
             const std::pair<XrSwapchain, uint32_t> key{swapchainState.swapchain, eye};
             if (!m_SwapchainTextures.contains(key))
             {
