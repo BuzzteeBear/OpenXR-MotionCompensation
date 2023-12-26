@@ -1366,12 +1366,6 @@ namespace openxr_api_layer
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "OpenXrLayer::xrWaitFrame", TLPArg(session, "Session"));
 
-        if (frameWaitInfo->type != XR_TYPE_FRAME_WAIT_INFO)
-        {
-           TraceLoggingWriteStop(local, "OpenXrLayer::xrWaitFrame", TLArg(false, "TypeCheck"));
-           return XR_ERROR_VALIDATION_FAILURE;
-        }
-
         const XrResult result = OpenXrApi::xrWaitFrame(session, frameWaitInfo, frameState);
 
         DebugLog("xrWaitFrame predicted time: %u, predicted period: %d",
