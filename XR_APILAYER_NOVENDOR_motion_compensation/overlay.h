@@ -63,22 +63,28 @@ namespace openxr_api_layer::graphics
                                        const XrSwapchainImageAcquireInfo* acquireInfo,
                                        uint32_t* index);
         XrResult ReleaseSwapchainImage(XrSwapchain swapchain, const XrSwapchainImageReleaseInfo* releaseInfo);
-        void BeginFrame();
+        void ReleaseAllSwapChainImages();
         void SetMarkerSize();
-        bool ToggleOverlay();        
+        bool ToggleOverlay();
         void DrawOverlay(const XrPosef& referencePose,
                          const XrPosef& delta,
                          bool mcActivated,
                          XrSession session,
                          XrFrameEndInfo* chainFrameEndInfo,
                          OpenXrLayer* openXrLayer);
-        void DeleteResources();
 
         bool m_D3D12inUse{false};
-        bool m_Initialized{false};
+        bool m_Initialized{true};
 
       private:
-        
+        bool CopyAppTextures(std::vector<XrCompositionLayerProjectionView>* viewsForMarker,
+                             ICompositionFramework* composition);
+        void RenderMarkers(std::vector<XrCompositionLayerProjectionView>* viewsForMarker,
+                           const XrPosef& refPose,
+                           const XrPosef& trackerPose,
+                           bool mcActivated,
+                           ICompositionFramework* composition);
+        void ClearResources();
         static std::vector<SimpleMeshVertex> CreateMarker(bool reference);
         static std::vector<SimpleMeshVertex> CreateMarkerMesh(const XrVector3f& top,
                                                               const XrVector3f& innerMiddle,

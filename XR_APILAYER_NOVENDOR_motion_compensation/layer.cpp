@@ -209,7 +209,6 @@ namespace openxr_api_layer
                                                                               GetXrInstance(),
                                                                               m_xrGetInstanceProcAddr,
                                                                               graphics::CompositionApi::D3D11);
-            m_Overlay->m_Initialized = true;
         }
         else
         {
@@ -1409,7 +1408,7 @@ namespace openxr_api_layer
 
         if (m_OverlayEnabled && m_Overlay && m_Overlay->m_Initialized)
         {
-           m_Overlay->BeginFrame();
+           m_Overlay->ReleaseAllSwapChainImages();
         }
 
         const XrResult result = OpenXrApi::xrBeginFrame(session, frameBeginInfo);
@@ -1472,13 +1471,17 @@ namespace openxr_api_layer
            cachedEyePoses =
                m_UseEyeCache ? m_EyeCache.GetSample(chainFrameEndInfo.displayTime) : std::vector<XrPosef>();
            m_EyeCache.CleanUp(chainFrameEndInfo.displayTime);
+           if (m_Overlay)
+           {
+                m_Overlay->ReleaseAllSwapChainImages();
+           }
         }
         else if (m_Tracker->m_Calibrated && !m_SuppressInteraction)
         {
            m_Tracker->ApplyCorManipulation(session, chainFrameEndInfo.displayTime);
         }
 
-        if (m_OverlayEnabled)
+        if (m_OverlayEnabled && m_Overlay)
         {
            m_Overlay->DrawOverlay(m_Tracker->GetReferencePose(),
                                   delta,
@@ -1486,6 +1489,7 @@ namespace openxr_api_layer
                                   session,
                                   &chainFrameEndInfo,
                                   this);
+           m_Overlay->ReleaseAllSwapChainImages();
         }
 
         m_Tracker->m_XrSyncCalled = false;
@@ -1494,10 +1498,7 @@ namespace openxr_api_layer
         {
            m_Input->HandleKeyboardInput(chainFrameEndInfo.displayTime);
            XrResult result = OpenXrApi::xrEndFrame(session, &chainFrameEndInfo);
-           if (m_OverlayEnabled)
-           {
-                m_Overlay->DeleteResources();
-           }
+
            TraceLoggingWriteStop(local,
                                  "OpenXrLayer::xrEndFrame",
                                  TLArg(false, "Activated"),
@@ -1622,10 +1623,6 @@ namespace openxr_api_layer
         XrResult result = OpenXrApi::xrEndFrame(session, &resetFrameEndInfo);
 
         // clean up memory
-        if (m_Overlay)
-        {
-           m_Overlay->DeleteResources();
-        }
         for (auto projection : resetProjectionLayers)
         {
            delete projection;

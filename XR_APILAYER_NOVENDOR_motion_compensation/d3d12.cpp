@@ -315,8 +315,7 @@ namespace {
         }
 
         std::shared_ptr<IGraphicsTexture> createTexture(const XrSwapchainCreateInfo& info,
-                                                        bool shareable,
-                                                        bool mutexed) override
+                                                        bool shareable) override
         {
             D3D12_RESOURCE_DESC desc{};
             desc.Format = (DXGI_FORMAT)info.format;
@@ -415,11 +414,8 @@ namespace {
             return std::shared_ptr<ISimpleMesh>();
         }
 
-        bool CopyAppTexture(const XrSwapchain,
-                            const SwapchainState& swapchainState,
-                            ID3D11Device* device,
-                            ID3D11DeviceContext* context,
-                            ID3D11Texture2D* rgbTexture) override
+        bool CopyAppTexture(const SwapchainState& swapchainState,
+                            IGraphicsTexture* target) override
         {
             //TODO: implement
             ErrorLog("%s: function not implemented!", __FUNCTION__);

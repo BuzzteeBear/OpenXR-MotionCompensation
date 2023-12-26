@@ -295,6 +295,15 @@ namespace
             return image;
         }
 
+        ISwapchainImage* getAcquiredImage() override
+        {
+            if (m_acquiredImages.empty())
+            {
+                throw std::runtime_error("No image was acquired");
+            }
+            return m_images[m_acquiredImages.front()].get();
+        }
+
         void waitImage() override
         {
             TraceLocalActivity(local);
@@ -540,6 +549,15 @@ namespace
                                   TLPArg(image, "Image"));
 
             return image;
+        }
+
+        ISwapchainImage* getAcquiredImage() override
+        {
+            if (m_acquiredImages.empty())
+            {
+                throw std::runtime_error("No image was acquired");
+            }
+            return m_images[m_acquiredImages.front()].get();
         }
 
         void waitImage() override
