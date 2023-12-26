@@ -447,9 +447,6 @@ namespace openxr_api_layer::graphics
                 return;
             }
 
-            // instruct composition device to wait on texture copy
-            //composition->serializePostComposition();
-
             // transfer tracker poses into projection reference space
             XrPosef refToStage;
             if (!openXrLayer->GetRefToStage(lastProjectionLayer->space, &refToStage, nullptr))

@@ -138,7 +138,6 @@ namespace openxr_api_layer
         std::string m_RuntimeName;
         bool m_Enabled{false};
         bool m_PhysicalEnabled{false};
-        bool m_OverlayEnabled{false};
         bool m_VirtualTrackerUsed{false};
         bool m_CompensateControllers{false};
         bool m_SuppressInteraction{false};
