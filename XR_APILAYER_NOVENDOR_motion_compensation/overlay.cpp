@@ -470,7 +470,7 @@ namespace openxr_api_layer::graphics
                                         TLArg(xr::ToString(view.fov).c_str(), "Fov"),
                                         TLPArg(view.next, "Next"));
 
-                if (!InitializeSwapchains(eye, swapchain, composition))
+                if (!InitializeTextures(eye, swapchain, composition))
                 {
                     m_Initialized = false;
                     TraceLoggingWriteStop(local, "Overlay::DrawOverlay", TLArg(false, "AppTexture_Copied"));
@@ -480,11 +480,11 @@ namespace openxr_api_layer::graphics
                 const auto colorTexture = m_Textures[eye].first;
 
                 // copy from application texture
-                if (!composition->getApplicationDevice()->CopyAppTexture(m_Swapchains[swapchain], colorTexture, true))
+                if (!composition->getApplicationDevice()->CopyAppTexture(m_Swapchains[swapchain], eye, colorTexture, true))
                 {
                     ErrorLog("$s: unable to copy app texture for swapchain: %u", __FUNCTION__, swapchain);
                     m_Initialized = false;
-                    TraceLoggingWriteStop(local, "Overlay::InitializeSwapchains", TLArg(false, "AppTexure_Copied"));
+                    TraceLoggingWriteStop(local, "Overlay::InitializeTextures", TLArg(false, "AppTexure_Copied"));
                     return;
                 }
 
@@ -496,11 +496,11 @@ namespace openxr_api_layer::graphics
                 composition->serializePostComposition();
 
                 // copy back to application texture
-                if (!composition->getApplicationDevice()->CopyAppTexture(m_Swapchains[swapchain], colorTexture, false))
+                if (!composition->getApplicationDevice()->CopyAppTexture(m_Swapchains[swapchain], eye, colorTexture, false))
                 {
                     ErrorLog("$s: unable to copy app texture for swapchain: %u", __FUNCTION__, swapchain);
                     m_Initialized = false;
-                    TraceLoggingWriteStop(local, "Overlay::InitializeSwapchains", TLArg(false, "AppTexure_Copied"));
+                    TraceLoggingWriteStop(local, "Overlay::InitializeTextures", TLArg(false, "AppTexure_Copied"));
                     return;
                 }
             }
@@ -513,15 +513,15 @@ namespace openxr_api_layer::graphics
         TraceLoggingWriteStop(local, "Overlay::DrawOverlay", TLArg(true, "Success"));
     }
     
-    bool Overlay::InitializeSwapchains(size_t eye, XrSwapchain swapchain, ICompositionFramework* composition)
+    bool Overlay::InitializeTextures(uint32_t eye, XrSwapchain swapchain, const ICompositionFramework* composition)
     {
         TraceLoggingActivity<g_traceProvider> local;
-        TraceLoggingWriteStart(local, "Overlay::InitializeSwapchains");
+        TraceLoggingWriteStart(local, "Overlay::InitializeTextures");
 
         if (!m_Swapchains.contains(swapchain))
         {
             ErrorLog("%s: unable to find state for swapchain: %u", __FUNCTION__, swapchain);
-            TraceLoggingWriteStop(local, "Overlay::InitializeSwapchains", TLArg(false, "SwapchainState_Found"));
+            TraceLoggingWriteStop(local, "Overlay::InitializeTextures", TLArg(false, "SwapchainState_Found"));
             return false;
         }
 
@@ -548,34 +548,31 @@ namespace openxr_api_layer::graphics
             auto depthTexture = composition->getCompositionDevice()->createTexture(createInfo);
             m_Textures.push_back({colorTexture, depthTexture});
 
-            DebugLog("overlay(%u) created swapchain and depth texture: %u x %u",
+            DebugLog("overlay(%u) color and depth texture created: %u x %u",
                      eye,
                      createInfo.width,
                      createInfo.height);
             TraceLoggingWriteTagged(local,
-                                    "Overlay::InitializeSwapchains",
+                                    "Overlay::InitializeTextures",
                                     TLPArg(colorTexture.get(), "ColorTexture"),
                                     TLPArg(depthTexture.get(), "DepthTexture"));
         }
 
-        TraceLoggingWriteStop(local, "Overlay::InitializeSwapchains", TLArg(true, "Success"));
+        TraceLoggingWriteStop(local, "Overlay::InitializeTextures", TLArg(true, "Success"));
         return true;
     }
 
     void Overlay::RenderMarkers(const XrCompositionLayerProjectionView& view,
-                                size_t eye,
+                                uint32_t eye,
                                 const XrPosef& refPose,
                                 const XrPosef& trackerPose,
                                 bool mcActivated,
                                 ICompositionFramework* composition)
     {
+        // perform actual rendering
         auto graphicsDevice = composition->getCompositionDevice();
         ID3D11Device* const device = composition->getCompositionDevice()->getNativeDevice<D3D11>();
         ID3D11DeviceContext* const context = composition->getCompositionDevice()->getNativeContext<D3D11>();
-
-        // perform actual renering
-        XrSwapchain swapchain = view.subImage.swapchain;
-        const XrRect2Di* viewPort = &view.subImage.imageRect;
 
         // create ephemeral render target view for the drawing.
         auto renderTargetView = ComPtr<ID3D11RenderTargetView>();
@@ -618,19 +615,20 @@ namespace openxr_api_layer::graphics
                  xr::ToString(viewProjection.Fov).c_str());
 
         // set viewport to match resolution
+        const XrRect2Di* imageRect = &view.subImage.imageRect;
         D3D11_VIEWPORT viewport{};
-        viewport.TopLeftX = static_cast<float>(viewPort->offset.x);
-        viewport.TopLeftY = static_cast<float>(viewPort->offset.y);
-        viewport.Width = static_cast<float>(viewPort->extent.width);
-        viewport.Height = static_cast<float>(viewPort->extent.height);
+        viewport.TopLeftX = static_cast<float>(imageRect->offset.x);
+        viewport.TopLeftY = static_cast<float>(imageRect->offset.y);
+        viewport.Width = static_cast<float>(imageRect->extent.width);
+        viewport.Height = static_cast<float>(imageRect->extent.height);
         viewport.MaxDepth = 1.0f;
         context->RSSetViewports(1, &viewport);
         DebugLog("overlay(%u) viewport: width = %d, height = %d, offset x: %d, offset y: %d",
                  eye,
-                 viewPort->extent.width,
-                 viewPort->extent.height,
-                 viewPort->offset.x,
-                 viewPort->offset.y);
+                 imageRect->extent.width,
+                 imageRect->extent.height,
+                 imageRect->offset.x,
+                 imageRect->offset.y);
 
         // draw reference/cor position
         graphicsDevice->draw(m_MeshRGB, refPose, m_MarkerSize);

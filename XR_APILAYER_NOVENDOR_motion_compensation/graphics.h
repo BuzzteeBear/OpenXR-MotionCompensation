@@ -290,6 +290,7 @@ float4 psMain(VSOutput input) : SV_TARGET {
                                                               std::vector<uint16_t>& indices,
                                                               std::string_view debugName) = 0;
         virtual bool CopyAppTexture(const SwapchainState& swapchainState,
+                                    uint32_t eye,
                                     std::shared_ptr<IGraphicsTexture> target,
                                     bool fromApp) = 0;
 

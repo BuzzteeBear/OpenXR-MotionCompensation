@@ -77,9 +77,9 @@ namespace openxr_api_layer::graphics
         bool m_Initialized{true};
 
       private:
-        bool InitializeSwapchains(size_t eye, XrSwapchain swapchain, ICompositionFramework* composition);
+        bool InitializeTextures(uint32_t eye, XrSwapchain swapchain, const ICompositionFramework* composition);
         void RenderMarkers(const XrCompositionLayerProjectionView& view,
-                           size_t eye,
+                           uint32_t eye,
                            const XrPosef& refPose,
                            const XrPosef& trackerPose,
                            bool mcActivated,

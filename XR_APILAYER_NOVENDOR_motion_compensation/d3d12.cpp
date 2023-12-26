@@ -415,6 +415,7 @@ namespace {
         }
 
         bool CopyAppTexture(const SwapchainState& swapchainState,
+                            uint32_t eye,
                             std::shared_ptr<IGraphicsTexture> target,
                             bool fromApp) override
         {
@@ -425,7 +426,9 @@ namespace {
                                    TLArg(static_cast<uint32_t>(swapchainState.format), "Format"),
                                    TLArg(swapchainState.doRelease, "DoRelease"),
                                    TLArg(swapchainState.texturesD3D12.size(), "Size"),
-                                   TLPArg(target.get(), "Target"));
+                                   TLArg(eye, "Eye"),
+                                   TLPArg(target.get(), "Target"),
+                                   TLArg(fromApp, "FromApp"));
 
             if (swapchainState.index >= swapchainState.texturesD3D12.size())
             {
@@ -437,12 +440,14 @@ namespace {
                 return false;
             }
 
-            if (!m_SwapchainTextures.contains(swapchainState.swapchain))
+            // we need separate handles for same swapchain if app renders both eyes to a single texture
+            const std::pair<XrSwapchain, uint32_t> key{swapchainState.swapchain, eye};
+            if (!m_SwapchainTextures.contains(key))
             {
                 const auto handle = target->getTextureHandle();
-                m_SwapchainTextures[swapchainState.swapchain] = openTexture(handle);
+                m_SwapchainTextures[key] = openTexture(handle);
             }
-            const auto sharedTexture = m_SwapchainTextures[swapchainState.swapchain];
+            const auto sharedTexture = m_SwapchainTextures[key];
             D3D12ReusableCommandList commandList = getCommandList();
             if (fromApp)
             {
@@ -538,7 +543,7 @@ namespace {
         ComPtr<ID3D12Fence> m_commandListPoolFence;
         uint32_t m_commandListPoolFenceValue{0};
 
-        std::map<XrSwapchain, std::shared_ptr<IGraphicsTexture>> m_SwapchainTextures;
+        std::map<std::pair<XrSwapchain, uint32_t>, std::shared_ptr<IGraphicsTexture>> m_SwapchainTextures;
     };
 
 } // namespace
