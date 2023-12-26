@@ -22,8 +22,6 @@
 
 #include "pch.h"
 
-#ifdef XR_USE_GRAPHICS_API_D3D11
-
 #include "graphics.h"
 #include <log.h>
 #include <util.h>
@@ -1032,5 +1030,3 @@ namespace openxr_api_layer::graphics::internal
         return std::make_shared<D3D11GraphicsDevice>(bindings.device);
     }
 }  // namespace openxr_api_layer::graphics::internal
-
-#endif

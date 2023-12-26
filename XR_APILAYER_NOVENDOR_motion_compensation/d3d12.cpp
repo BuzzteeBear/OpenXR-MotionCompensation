@@ -22,8 +22,6 @@
 
 #include "pch.h"
 
-#ifdef XR_USE_GRAPHICS_API_D3D12
-
 #include "log.h"
 #include "graphics.h"
 
@@ -555,5 +553,3 @@ namespace openxr_api_layer::graphics::internal {
     }
 
 } // namespace openxr_api_layer::utils::graphics::internal
-
-#endif

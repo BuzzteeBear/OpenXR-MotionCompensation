@@ -26,22 +26,16 @@
 #include "log.h"
 #include "dxgidebug.h"
 
-#if defined(XR_USE_GRAPHICS_API_D3D11) || defined(XR_USE_GRAPHICS_API_D3D12)
-
 namespace xr {
 
     using namespace openxr_api_layer::graphics;
 
     static inline std::string ToString(Api api) {
         switch (api) {
-#ifdef XR_USE_GRAPHICS_API_D3D11
         case Api::D3D11:
             return "D3D11";
-#endif
-#ifdef XR_USE_GRAPHICS_API_D3D12
         case Api::D3D12:
             return "D3D12";
-#endif
         };
 
         return "";
@@ -49,10 +43,8 @@ namespace xr {
 
     static inline std::string ToString(CompositionApi api) {
         switch (api) {
-#ifdef XR_USE_GRAPHICS_API_D3D11
         case CompositionApi::D3D11:
             return "D3D11";
-#endif
         };
 
         return "";
@@ -166,7 +158,6 @@ namespace
             std::vector<std::shared_ptr<IGraphicsTexture>> textures;
             switch (m_applicationDevice->getApi())
             {
-#ifdef XR_USE_GRAPHICS_API_D3D11
             case Api::D3D11: {
                 std::vector<XrSwapchainImageD3D11KHR> images(imagesCount, {XR_TYPE_SWAPCHAIN_IMAGE_D3D11_KHR});
                 CHECK_XRCMD(xrEnumerateSwapchainImages(m_swapchain,
@@ -179,8 +170,6 @@ namespace
                 }
             }
             break;
-#endif
-#ifdef XR_USE_GRAPHICS_API_D3D12
             case Api::D3D12: {
                 std::vector<XrSwapchainImageD3D12KHR> images(imagesCount, {XR_TYPE_SWAPCHAIN_IMAGE_D3D12_KHR});
                 CHECK_XRCMD(xrEnumerateSwapchainImages(m_swapchain,
@@ -193,7 +182,6 @@ namespace
                 }
             }
             break;
-#endif
             default:
                 throw std::runtime_error("Composition graphics API is not supported");
             }
@@ -691,50 +679,39 @@ namespace
                                               reinterpret_cast<PFN_xrVoidFunction*>(&xrCreateSwapchain)));
 
             // Detect which graphics bindings to look for.
-#ifdef XR_USE_GRAPHICS_API_D3D11
             bool has_XR_KHR_D3D11_enable = false;
-#endif
-#ifdef XR_USE_GRAPHICS_API_D3D12
             bool has_XR_KHR_D3D12_enable = false;
-#endif
             for (uint32_t i = 0; i < instanceInfo.enabledExtensionCount; i++)
             {
                 const std::string_view extensionName(instanceInfo.enabledExtensionNames[i]);
 
-#ifdef XR_USE_GRAPHICS_API_D3D11
+
                 if (extensionName == XR_KHR_D3D11_ENABLE_EXTENSION_NAME)
                 {
                     has_XR_KHR_D3D11_enable = true;
                 }
-#endif
-#ifdef XR_USE_GRAPHICS_API_D3D12
                 if (extensionName == XR_KHR_D3D12_ENABLE_EXTENSION_NAME)
                 {
                     has_XR_KHR_D3D12_enable = true;
                 }
-#endif
             }
 
             // Wrap the application device.
             const XrBaseInStructure* entry = reinterpret_cast<const XrBaseInStructure*>(sessionInfo.next);
             while (entry && !m_applicationDevice)
             {
-#ifdef XR_USE_GRAPHICS_API_D3D11
                 if (has_XR_KHR_D3D11_enable && entry->type == XR_TYPE_GRAPHICS_BINDING_D3D11_KHR)
                 {
                     m_applicationDevice =
                         internal::wrapApplicationDevice(*reinterpret_cast<const XrGraphicsBindingD3D11KHR*>(entry));
                     break;
                 }
-#endif
-#ifdef XR_USE_GRAPHICS_API_D3D12
                 if (has_XR_KHR_D3D12_enable && entry->type == XR_TYPE_GRAPHICS_BINDING_D3D12_KHR)
                 {
                     m_applicationDevice =
                         internal::wrapApplicationDevice(*reinterpret_cast<const XrGraphicsBindingD3D12KHR*>(entry));
                     break;
                 }
-#endif
                 entry = entry->next;
             }
 
@@ -746,11 +723,9 @@ namespace
             // Create the device for composition according to the API layer's request.
             switch (compositionApi)
             {
-#ifdef XR_USE_GRAPHICS_API_D3D11
             case CompositionApi::D3D11:
                 m_compositionDevice = internal::createD3D11CompositionDevice(m_applicationDevice->getAdapterLuid());
                 break;
-#endif
             default:
                 throw std::runtime_error("Composition graphics API is not supported");
             }
@@ -766,13 +741,11 @@ namespace
             XrInstanceProperties instanceProperties{XR_TYPE_INSTANCE_PROPERTIES};
             CHECK_XRCMD(xrGetInstanceProperties(instance, &instanceProperties));
             const std::string_view runtimeName(instanceProperties.runtimeName);
-#ifdef XR_USE_GRAPHICS_API_D3D12
             if (m_applicationDevice->getApi() == Api::D3D12)
             {
                 // despite of D3D12 textures having the shareable flag, they are not shareable with D3D11.
                 m_overrideShareable = false;
             }
-#endif
 
             // Get the preferred formats for swapchains.
             PFN_xrEnumerateSwapchainFormats xrEnumerateSwapchainFormats;
@@ -1077,7 +1050,8 @@ namespace
                         TraceLoggingWriteTagged(local,
                                                 "CompositionFrameworkFactory_getCompositionFramework",
                                                 TLArg(exc.what(), "Error"));
-                        ErrorLog(fmt::format("xrCreateSession: {}", exc.what()));
+                        ErrorLog("%s: exception on framework creation: %s", __FUNCTION__, exc.what());
+                        return nullptr;
                     }
                 }
                 else
@@ -1098,10 +1072,7 @@ namespace
         {
             TraceLocalActivity(local);
             TraceLoggingWriteStart(local, "CompositionFrameworkFactory_IsUsingD3D12", TLPArg(session, "Session"));
-#ifndef XR_USE_GRAPHICS_API_D3D12
-            TraceLoggingWriteStop(local, "CompositionFrameworkFactory_IsUsingD3D12", TLArg(false, "Compiler_Enabled_D3D12"));
-            return false;
-#else
+
             bool d3d11Enabled{false};
             bool d3d12Enabled{false};
             for (uint32_t i = 0; i < m_instanceInfo.enabledExtensionCount; i++)
@@ -1154,7 +1125,6 @@ namespace
 
             TraceLoggingWriteStop(local, "CompositionFrameworkFactory_IsUsingD3D12", TLArg(false, "Binding_Found"));
             return false;
-#endif
         }
 
         void CreateSession(const XrSessionCreateInfo* createInfo, XrSession session) override
@@ -1216,5 +1186,3 @@ namespace openxr_api_layer::graphics {
     }
 
 } // namespace openxr_api_layer::graphics
-
-#endif

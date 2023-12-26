@@ -73,22 +73,15 @@ float4 psMain(VSOutput input) : SV_TARGET {
     inline constexpr bool is_any_of_v = std::disjunction_v<std::is_same<T, Types>...>;
 
     enum class Api {
-#ifdef XR_USE_GRAPHICS_API_D3D11
         D3D11,
-#endif
-#ifdef XR_USE_GRAPHICS_API_D3D12
         D3D12,
-#endif
     };
     enum class CompositionApi {
-#ifdef XR_USE_GRAPHICS_API_D3D11
         D3D11,
-#endif
     };
 
     // Type traits for all graphics APIs.
 
-#ifdef XR_USE_GRAPHICS_API_D3D11
     struct D3D11 {
         static constexpr Api Api = Api::D3D11;
 
@@ -115,9 +108,7 @@ float4 psMain(VSOutput input) : SV_TARGET {
               Device, Context, Texture, Buffer, Mesh, PixelShader, RenderTargetView, DepthStencilView>;
         // clang-format on
     };
-#endif
 
-#ifdef XR_USE_GRAPHICS_API_D3D12
     struct D3D12 {
         static constexpr Api Api = Api::D3D12;
 
@@ -147,16 +138,11 @@ float4 psMain(VSOutput input) : SV_TARGET {
               Device, Context, Texture, Buffer, Mesh, PixelShader, RenderTargetView, DepthStencilView>;
         // clang-format on
     };
-#endif
 
     // Graphics API helper
     template <typename ConcreteType, typename InterfaceType>
     inline auto GetAs(const InterfaceType* pInterface) {
-#ifndef XR_USE_GRAPHICS_API_D3D12
-        constexpr auto api = Api::D3D11;
-#else 
         constexpr auto api = D3D12::is_concrete_api_v<ConcreteType> ? Api::D3D12 : Api::D3D11;
-#endif 
         return reinterpret_cast<ConcreteType>(api == pInterface->getApi() ? pInterface->getNativePtr() : nullptr);
     }
 
@@ -440,16 +426,9 @@ float4 psMain(VSOutput input) : SV_TARGET {
                                       CompositionApi compositionApi);
 
     namespace internal {
-
-#ifdef XR_USE_GRAPHICS_API_D3D11
         std::shared_ptr<IGraphicsDevice> createD3D11CompositionDevice(LUID adapterLuid);
         std::shared_ptr<IGraphicsDevice> wrapApplicationDevice(const XrGraphicsBindingD3D11KHR& bindings);
-#endif
-
-#ifdef XR_USE_GRAPHICS_API_D3D12
         std::shared_ptr<IGraphicsDevice> wrapApplicationDevice(const XrGraphicsBindingD3D12KHR& bindings);
-#endif
-
     } // namespace internal
 
 } // namespace openxr_api_layer::graphics
