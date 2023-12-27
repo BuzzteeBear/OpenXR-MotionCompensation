@@ -18,7 +18,7 @@ namespace Filter
         virtual float SetStrength(const float strength)
         {
             const float limitedStrength = std::min(1.0f, std::max(0.0f, strength));
-            openxr_api_layer::log::DebugLog("%s filter strength set: %f", m_Type, limitedStrength);
+            openxr_api_layer::log::DebugLog("%s filter strength set: %f", m_Type.c_str(), limitedStrength);
             m_Strength = limitedStrength;
             return m_Strength;
         }

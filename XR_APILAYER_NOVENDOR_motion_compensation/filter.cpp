@@ -18,7 +18,7 @@ namespace Filter
 
         GetConfig()->GetFloat(Cfg::TransVerticalFactor, m_VerticalFactor);
         m_VerticalFactor = std::max(0.0f, m_VerticalFactor);
-        openxr_api_layer::log::DebugLog("%s filter vertical factor set: %f", m_Type, m_VerticalFactor);
+        openxr_api_layer::log::DebugLog("%s filter vertical factor set: %f", m_Type.c_str(), m_VerticalFactor);
         SingleEmaFilter::SetStrength(m_Strength);
 
         TraceLoggingWriteStop(local, "SingleEmaFilter::SingleEmaFilter", TLArg(m_VerticalFactor, "VerticalFactor"));

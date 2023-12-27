@@ -1030,7 +1030,7 @@ namespace openxr_api_layer
             if (!m_TestRotation && ((apply = m_Tracker->GetPoseDelta(trackerDelta, m_Session, time))))
             {
                 XrPosef refToStage, stageToRef;
-                if (!GetRefToStage(refSpaceForCompensation, &refToStage, &stageToRef))
+                if (GetRefToStage(refSpaceForCompensation, &refToStage, &stageToRef))
                 {
                     if (m_ModifierActive && (spaceView || baseView))
                     {
