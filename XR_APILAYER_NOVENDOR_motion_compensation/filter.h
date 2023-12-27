@@ -6,12 +6,11 @@
 
 namespace Filter
 {
-    // TODO: compensate for non-equidistant sample timing?
     template <typename Value>
     class FilterBase
     {
       public:
-        explicit FilterBase(const float strength)
+        explicit FilterBase(const float strength, const std::string& type) : m_Type(type)
         {
             FilterBase<Value>::SetStrength(strength);
         }
@@ -19,7 +18,7 @@ namespace Filter
         virtual float SetStrength(const float strength)
         {
             const float limitedStrength = std::min(1.0f, std::max(0.0f, strength));
-            openxr_api_layer::log::DebugLog("Filter(%s) set strength: %f", typeid(Value).name(), limitedStrength);
+            openxr_api_layer::log::DebugLog("%s filter strength set: %f", m_Type, limitedStrength);
             m_Strength = limitedStrength;
             return m_Strength;
         }
@@ -35,6 +34,7 @@ namespace Filter
 
       protected:
         float m_Strength;
+        std::string m_Type;
     };
 
     // translational filters
@@ -81,7 +81,7 @@ namespace Filter
     class SingleSlerpFilter : public FilterBase<XrQuaternionf>
     {
       public:
-        explicit SingleSlerpFilter(const float strength) : FilterBase(strength){};
+        explicit SingleSlerpFilter(const float strength) : FilterBase(strength, "rotational"){};
         void ApplyFilter(XrQuaternionf& rotation) override;
         void Reset(const XrQuaternionf& rotation) override;
 

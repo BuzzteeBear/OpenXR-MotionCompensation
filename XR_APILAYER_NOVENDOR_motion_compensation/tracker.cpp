@@ -312,7 +312,7 @@ namespace Tracker
             !GetConfig()->GetFloat(Cfg::TransStrength, strengthTrans) ||
             !GetConfig()->GetFloat(Cfg::RotStrength, strengthRot))
         {
-            ErrorLog("%s: error reading configured values for filters", __FUNCTION__);
+            ErrorLog("%s: unable to read configured values for filters", __FUNCTION__);
         }
         if (1 > orderTrans || 3 < orderTrans)
         {
@@ -1416,31 +1416,31 @@ namespace Tracker
         {
             if ("yaw" == trackerType)
             {
-                Log("using Yaw Game Engine memory mapped file as tracker");
+                Log("Yaw Game Engine memory mapped file is used as reference tracker");
                 TraceLoggingWriteStop(local, "GetTracker", TLPArg(trackerType.c_str(), "Tracker"));
                 return std::make_unique<YawTracker>();
             }
             if ("srs" == trackerType)
             {
-                Log("using SRS memory mapped file as tracker");
+                Log("SRS memory mapped file is used as reference tracker");
                 TraceLoggingWriteStop(local, "GetTracker", TLPArg(trackerType.c_str(), "Tracker"));
                 return std::make_unique<SrsTracker>();
             }
             if ("flypt" == trackerType)
             {
-                Log("using FlyPT Mover memory mapped file as tracker");
+                Log("FlyPT Mover memory mapped file is used as reference tracker");
                 TraceLoggingWriteStop(local, "GetTracker", TLPArg(trackerType.c_str(), "Tracker"));
                 return std::make_unique<FlyPtTracker>();
             }
             if ("controller" == trackerType)
             {
-                Log("using motion controller as tracker");
+                Log("motion controller is used as reference tracker");
                 TraceLoggingWriteStop(local, "GetTracker", TLPArg(trackerType.c_str(), "Tracker"));
                 return std::make_unique<OpenXrTracker>();
             }
             if ("vive" == trackerType)
             {
-                Log("using vive tracker as tracker");
+                Log("vive tracker is used as reference tracker");
                 TraceLoggingWriteStop(local, "GetTracker", TLPArg(trackerType.c_str(), "Tracker"));
                 return std::make_unique<OpenXrTracker>();
             }

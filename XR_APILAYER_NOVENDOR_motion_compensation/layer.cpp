@@ -974,7 +974,7 @@ namespace openxr_api_layer
                                TLPArg(space, "Space"),
                                TLPArg(baseSpace, "BaseSpace"),
                                TLArg(time, "Time"));
-        DebugLog("xrLocateSpace(%u): %u %u", time, space, baseSpace);
+        DebugLog("xrLocateSpace(%u): space = %u, baseSpace = %u", time, space, baseSpace);
 
         if (location->type != XR_TYPE_SPACE_LOCATION)
         {
@@ -1014,6 +1014,7 @@ namespace openxr_api_layer
 
         if (m_Activated && ((spaceComp && !baseComp) || (!spaceComp && baseComp)))
         {
+            DebugLog("xrLocateSpace(%u): original pose = %s", time, xr::ToString(location->pose).c_str());
             TraceLoggingWriteTagged(local,
                                     "OpenXrLayerxrLocateSpace",
                                     TLArg(xr::ToString(location->pose).c_str(), "OriginalPose"),
@@ -1029,13 +1030,19 @@ namespace openxr_api_layer
             if (!m_TestRotation && ((apply = m_Tracker->GetPoseDelta(trackerDelta, m_Session, time))))
             {
                 XrPosef refToStage, stageToRef;
-                GetRefToStage(refSpaceForCompensation, &refToStage, &stageToRef);
-                if (m_ModifierActive && (spaceView || baseView))
+                if (!GetRefToStage(refSpaceForCompensation, &refToStage, &stageToRef))
                 {
-                    const XrPosef poseStage = Pose::Multiply(poseToCompensate, stageToRef);
-                    m_HmdModifier->Apply(trackerDelta, poseStage);
+                    if (m_ModifierActive && (spaceView || baseView))
+                    {
+                        const XrPosef poseStage = Pose::Multiply(poseToCompensate, stageToRef);
+                        m_HmdModifier->Apply(trackerDelta, poseStage);
+                    }
+                    trackerDelta = Pose::Multiply(Pose::Multiply(stageToRef, trackerDelta), refToStage);
                 }
-                trackerDelta = Pose::Multiply(Pose::Multiply(stageToRef, trackerDelta), refToStage);
+                else
+                {
+                    trackerDelta = Pose::Identity();
+                }
             }
             else
             {
@@ -1076,6 +1083,7 @@ namespace openxr_api_layer
                 // save pose for use in xrEndFrame, if there isn't one from xrLocateViews already
                 m_DeltaCache.AddSample(time, trackerDelta, false);
             }
+            DebugLog("xrLocateSpace(%u): compensated pose = %s", time, xr::ToString(location->pose).c_str());
             TraceLoggingWriteTagged(local,
                                     "OpenXrLayerxrLocateSpace",
                                     TLArg(xr::ToString(location->pose).c_str(), "CompensatedPose"));
@@ -1113,7 +1121,7 @@ namespace openxr_api_layer
         const XrTime displayTime = viewLocateInfo->displayTime;
         const XrSpace refSpace = viewLocateInfo->space;
 
-        DebugLog("xrLocateViews(%u): %u", displayTime, refSpace);
+        DebugLog("xrLocateViews(%u): reference space = %u", displayTime, refSpace);
         TraceLoggingWriteTagged(local,
                                 "OpenXrLayer::xrLocateViews",
                                 TLArg(xr::ToCString(viewLocateInfo->viewConfigurationType), "ViewConfigurationType"),
@@ -1469,10 +1477,6 @@ namespace openxr_api_layer
            cachedEyePoses =
                m_UseEyeCache ? m_EyeCache.GetSample(chainFrameEndInfo.displayTime) : std::vector<XrPosef>();
            m_EyeCache.CleanUp(chainFrameEndInfo.displayTime);
-           if (m_Overlay)
-           {
-                m_Overlay->ReleaseAllSwapChainImages();
-           }
         }
         else if (m_Tracker->m_Calibrated && !m_SuppressInteraction)
         {
@@ -1516,7 +1520,7 @@ namespace openxr_api_layer
            XrCompositionLayerBaseHeader* resetBaseHeader{nullptr};
            if (XR_TYPE_COMPOSITION_LAYER_PROJECTION == baseHeader.type)
            {
-                DebugLog("xrEndFrame: projection layer %u, space: %u", i, baseHeader.space);
+                DebugLog("xrEndFrame: projection layer index: %u, space: %u", i, baseHeader.space);
 
                 const auto* projectionLayer =
                     reinterpret_cast<const XrCompositionLayerProjection*>(chainFrameEndInfo.layers[i]);
@@ -1535,6 +1539,9 @@ namespace openxr_api_layer
 
                 for (uint32_t j = 0; j < projectionLayer->viewCount; j++)
                 {
+                    DebugLog("xrEndFrame: original view(%u) pose = %s",
+                             j,
+                             xr::ToString((*projectionViews)[j].pose).c_str());
                     TraceLoggingWriteTagged(
                         local,
                         "OpenXrLayer::xrEndFrame",
@@ -1549,7 +1556,7 @@ namespace openxr_api_layer
                         m_UseEyeCache ? cachedEyePoses[j] : Pose::Multiply((*projectionViews)[j].pose, deltaInverse);
 
                     (*projectionViews)[j].pose = revertedEyePose;
-
+                    DebugLog("xrEndFrame: reverted view(%u) pose = %s", j, xr::ToString(revertedEyePose).c_str());
                     TraceLoggingWriteTagged(
                         local,
                         "OpenXrLayer::xrEndFrame",
@@ -1570,10 +1577,11 @@ namespace openxr_api_layer
            else if (XR_TYPE_COMPOSITION_LAYER_QUAD == baseHeader.type && !isViewSpace(baseHeader.space))
            {
                 // compensate quad layers unless they are relative to view space
-                DebugLog("xrEndFrame: quad layer %u, space: %u", i, baseHeader.space);
+                DebugLog("xrEndFrame: quad layer index: %u, space: %u", i, baseHeader.space);
 
                 const auto* quadLayer = reinterpret_cast<const XrCompositionLayerQuad*>(chainFrameEndInfo.layers[i]);
 
+                DebugLog("xrEndFrame: original quad layer pose = %s", xr::ToString(quadLayer->pose).c_str());
                 TraceLoggingWriteTagged(local,
                                         "OpenXrLayer::xrEndFrame",
                                         TLArg("QuadLayer", "Type"),
@@ -1584,6 +1592,7 @@ namespace openxr_api_layer
                 // apply reverse manipulation to quad layer pose
                 XrPosef revertedPose = Pose::Multiply(quadLayer->pose, deltaInverse);
 
+                DebugLog("xrEndFrame: reverted quad layer pose = %s", xr::ToString(revertedPose).c_str());
                 TraceLoggingWriteTagged(local,
                                         "OpenXrLayer::xrEndFrame",
                                         TLArg(xr::ToString(revertedPose).c_str(), "QuadLayerRevertedPose"));
@@ -1674,6 +1683,7 @@ namespace openxr_api_layer
                 TraceLoggingWriteStop(local, "OpenXrLayer::GetRefToStage", TLArg(true, "Fallback"));
                 return true;
             }
+            ErrorLog("%s: unable to locate reference space");
             TraceLoggingWriteStop(local, "OpenXrLayer::GetRefToStage", TLArg(false, "Fallback"));
             return false;
         }

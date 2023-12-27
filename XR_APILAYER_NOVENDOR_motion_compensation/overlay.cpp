@@ -486,7 +486,7 @@ namespace openxr_api_layer::graphics
                 {
                     ErrorLog("$s: unable to copy app texture for swapchain: %u", __FUNCTION__, swapchain);
                     m_Initialized = false;
-                    TraceLoggingWriteStop(local, "Overlay::InitializeTextures", TLArg(false, "AppTexure_Copied"));
+                    TraceLoggingWriteStop(local, "Overlay::DrawOverlay", TLArg(false, "AppTexure_Copied"));
                     return;
                 }
 
