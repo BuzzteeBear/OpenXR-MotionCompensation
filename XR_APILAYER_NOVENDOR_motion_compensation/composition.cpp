@@ -666,7 +666,7 @@ namespace
         CompositionFramework(const XrInstanceCreateInfo& instanceInfo,
                              XrInstance instance,
                              PFN_xrGetInstanceProcAddr xrGetInstanceProcAddr_,
-                             const XrSessionCreateInfo& sessionInfo,
+                             XrBaseInStructure* binding,
                              XrSession session,
                              CompositionApi compositionApi)
             : m_instance(instance), xrGetInstanceProcAddr(xrGetInstanceProcAddr_), m_session(session)
@@ -678,41 +678,16 @@ namespace
                                               "xrCreateSwapchain",
                                               reinterpret_cast<PFN_xrVoidFunction*>(&xrCreateSwapchain)));
 
-            // Detect which graphics bindings to look for.
-            bool has_XR_KHR_D3D11_enable = false;
-            bool has_XR_KHR_D3D12_enable = false;
-            for (uint32_t i = 0; i < instanceInfo.enabledExtensionCount; i++)
-            {
-                const std::string_view extensionName(instanceInfo.enabledExtensionNames[i]);
-
-
-                if (extensionName == XR_KHR_D3D11_ENABLE_EXTENSION_NAME)
-                {
-                    has_XR_KHR_D3D11_enable = true;
-                }
-                if (extensionName == XR_KHR_D3D12_ENABLE_EXTENSION_NAME)
-                {
-                    has_XR_KHR_D3D12_enable = true;
-                }
-            }
-
             // Wrap the application device.
-            const XrBaseInStructure* entry = reinterpret_cast<const XrBaseInStructure*>(sessionInfo.next);
-            while (entry && !m_applicationDevice)
+            if (binding->type == XR_TYPE_GRAPHICS_BINDING_D3D11_KHR)
             {
-                if (has_XR_KHR_D3D11_enable && entry->type == XR_TYPE_GRAPHICS_BINDING_D3D11_KHR)
-                {
-                    m_applicationDevice =
-                        internal::wrapApplicationDevice(*reinterpret_cast<const XrGraphicsBindingD3D11KHR*>(entry));
-                    break;
-                }
-                if (has_XR_KHR_D3D12_enable && entry->type == XR_TYPE_GRAPHICS_BINDING_D3D12_KHR)
-                {
-                    m_applicationDevice =
-                        internal::wrapApplicationDevice(*reinterpret_cast<const XrGraphicsBindingD3D12KHR*>(entry));
-                    break;
-                }
-                entry = entry->next;
+                m_applicationDevice =
+                    internal::wrapApplicationDevice(*reinterpret_cast<const XrGraphicsBindingD3D11KHR*>(binding));
+            }
+            else if (binding->type == XR_TYPE_GRAPHICS_BINDING_D3D12_KHR)
+            {
+                m_applicationDevice =
+                    internal::wrapApplicationDevice(*reinterpret_cast<const XrGraphicsBindingD3D12KHR*>(binding));
             }
 
             if (!m_applicationDevice)
@@ -1016,8 +991,8 @@ namespace
             auto it = m_sessions.find(session);
             if (it == m_sessions.end())
             {
-                auto infoIt = m_SessionCreateInfos.find(session);
-                if (infoIt != m_SessionCreateInfos.end())
+                auto bindingIt = m_applicationBindings.find(session);
+                if (bindingIt != m_applicationBindings.end())
                 {
                     try
                     {
@@ -1026,7 +1001,7 @@ namespace
                             std::move(std::make_unique<CompositionFramework>(m_instanceInfo,
                                                                              m_instance,
                                                                              xrGetInstanceProcAddr,
-                                                                             infoIt->second,
+                                                                             bindingIt->second,
                                                                              session,
                                                                              m_compositionApi)));
                         it = m_sessions.find(session);
@@ -1057,7 +1032,7 @@ namespace
                 else
                 {
                     // The session (likely) could not be handled.
-                    ErrorLog("%s: unknown session %d", __FUNCTION__, session);
+                    ErrorLog("%s: no graphics binding found for session %u, graphical overlay will not work", __FUNCTION__, session);
                     TraceLoggingWriteStop(local,
                                           "CompositionFrameworkFactory_getCompositionFramework",
                                           TLArg(false, "SessionKnown"));
@@ -1073,57 +1048,31 @@ namespace
             TraceLocalActivity(local);
             TraceLoggingWriteStart(local, "CompositionFrameworkFactory_IsUsingD3D12", TLPArg(session, "Session"));
 
-            bool d3d11Enabled{false};
-            bool d3d12Enabled{false};
-            for (uint32_t i = 0; i < m_instanceInfo.enabledExtensionCount; i++)
+            auto binding = m_applicationBindings.find(session);
+            if (m_applicationBindings.end() == binding)
             {
-                const std::string_view extensionName(m_instanceInfo.enabledExtensionNames[i]);
-                if (extensionName == XR_KHR_D3D11_ENABLE_EXTENSION_NAME)
-                {
-                    d3d11Enabled = true;
-                }
-                if (extensionName == XR_KHR_D3D12_ENABLE_EXTENSION_NAME)
-                {
-                    d3d12Enabled = true;
-                }
+                ErrorLog("%s: no suitable d3d binding found, defaulting to d3d11", __FUNCTION__);
+                TraceLoggingWriteStop(local,
+                                      "CompositionFrameworkFactory_IsUsingD3D12",
+                                      TLArg(false, "Binding_Found"));
+                return false;
             }
-            if (!d3d12Enabled)
+            if (binding->second->type == XR_TYPE_GRAPHICS_BINDING_D3D12_KHR)
             {
                 TraceLoggingWriteStop(local,
                                       "CompositionFrameworkFactory_IsUsingD3D12",
-                                      TLArg(false, "Extension_Enabled"));
+                                      TLArg(true, "D3D12_Binding_Found"));
+                return true;
+            }
+            else if (binding->second->type == XR_TYPE_GRAPHICS_BINDING_D3D11_KHR)
+            {
+                TraceLoggingWriteStop(local,
+                                      "CompositionFrameworkFactory_IsUsingD3D12",
+                                      TLArg(true, "D3D11_Binding_Found"));
                 return false;
             }
 
-            const auto infoIt = m_SessionCreateInfos.find(session);
-            if (infoIt == m_SessionCreateInfos.end())
-            {
-                TraceLoggingWriteStop(local, "CompositionFrameworkFactory_IsUsingD3D12", TLArg(false, "Session_Registered"));
-                return false;
-            }
-
-            auto entry = static_cast<const XrBaseInStructure*>(infoIt->second.next);
-            while (entry)
-            {
-                if (d3d11Enabled && entry->type == XR_TYPE_GRAPHICS_BINDING_D3D11_KHR)
-                {
-                    TraceLoggingWriteStop(local,
-                                          "CompositionFrameworkFactory_IsUsingD3D12",
-                                          TLArg(true, "D3D11_Binding_Found"));
-                    return false;
-                }
-                if (entry->type == XR_TYPE_GRAPHICS_BINDING_D3D12_KHR)
-                {
-                    TraceLoggingWriteStop(local,
-                                          "CompositionFrameworkFactory_IsUsingD3D12",
-                                          TLArg(true, "D3D12_Binding_Found"));
-                    return true;
-                }
-
-                entry = entry->next;
-            }
-
-            TraceLoggingWriteStop(local, "CompositionFrameworkFactory_IsUsingD3D12", TLArg(false, "Binding_Found"));
+            TraceLoggingWriteStop(local, "CompositionFrameworkFactory_IsUsingD3D12", TLArg(false, "Binding_Type"));
             return false;
         }
 
@@ -1133,7 +1082,58 @@ namespace
             TraceLoggingWriteStart(local, "CompositionFrameworkFactory_CreateSession");
 
             std::unique_lock lock(m_sessionsMutex);
-            m_SessionCreateInfos.insert({session, *createInfo});
+
+            // Detect which graphics bindings to look for.
+            bool has_XR_KHR_D3D11_enable = false;
+            bool has_XR_KHR_D3D12_enable = false;
+            for (uint32_t i = 0; i < m_instanceInfo.enabledExtensionCount; i++)
+            {
+                const std::string_view extensionName(m_instanceInfo.enabledExtensionNames[i]);
+
+                if (extensionName == XR_KHR_D3D11_ENABLE_EXTENSION_NAME)
+                {
+                    has_XR_KHR_D3D11_enable = true;
+                    Log("session %u has D3D11 extension enabled", session);
+                }
+                if (extensionName == XR_KHR_D3D12_ENABLE_EXTENSION_NAME)
+                {
+                    has_XR_KHR_D3D12_enable = true;
+                    Log("session %u has D3D12 extension enabled", session);
+                }
+            }
+
+            // save binding for later use
+            auto entry = static_cast<const XrBaseInStructure*>(createInfo->next);
+            while (entry)
+            {
+                if (has_XR_KHR_D3D11_enable && entry->type == XR_TYPE_GRAPHICS_BINDING_D3D11_KHR)
+                {
+                    Log("session %u is using D3D11 graphics binding", session);
+                    auto* binding = new XrGraphicsBindingD3D11KHR{
+                        XR_TYPE_GRAPHICS_BINDING_D3D11_KHR,
+                        nullptr,
+                        reinterpret_cast<const XrGraphicsBindingD3D11KHR*>(entry)->device};
+                    m_applicationBindings[session] = reinterpret_cast<XrBaseInStructure*> (binding);
+                    break;
+
+                }
+                if (has_XR_KHR_D3D12_enable && entry->type == XR_TYPE_GRAPHICS_BINDING_D3D12_KHR)
+                {
+                    Log("session %u is using D3D12 graphics binding", session);
+                    auto* binding =
+                        new XrGraphicsBindingD3D12KHR{XR_TYPE_GRAPHICS_BINDING_D3D12_KHR,
+                                                      nullptr,
+                                                      reinterpret_cast<const XrGraphicsBindingD3D12KHR*>(entry)->device,
+                                                      reinterpret_cast<const XrGraphicsBindingD3D12KHR*>(entry)->queue};
+                    m_applicationBindings[session] = reinterpret_cast<XrBaseInStructure*>(binding);
+                    break;
+                }
+                entry = entry->next;
+            }
+            if (!m_applicationBindings.contains(session))
+            {
+                Log("session %u is using neither D3D11 nor D3D12 graphics binding", session);
+            }
 
             TraceLoggingWriteStop(local, "CompositionFrameworkFactory_CreateSession", TLXArg(session, "Session"));
         }
@@ -1151,8 +1151,14 @@ namespace
                 {
                     m_sessions.erase(it);
                 }
+                auto binding = m_applicationBindings.find(session);
+                if (binding != m_applicationBindings.end())
+                {
+                    delete binding->second;
+                    m_applicationBindings.erase(binding);
+                }
             }
-            m_SessionCreateInfos.erase(session);
+            
 
             TraceLoggingWriteStop(local, "CompositionFrameworkFactory_DestroySession");
         }
@@ -1165,8 +1171,8 @@ namespace
         std::vector<const char*> m_instanceExtensionsArray;
 
         std::mutex m_sessionsMutex;
-        std::unordered_map<XrSession, std::unique_ptr<CompositionFramework>> m_sessions;
-        std::unordered_map<XrSession, XrSessionCreateInfo> m_SessionCreateInfos{};
+        std::unordered_map<XrSession, std::unique_ptr<CompositionFramework>> m_sessions{};
+        std::unordered_map<XrSession, XrBaseInStructure*> m_applicationBindings{};
 
         static inline std::mutex factoryMutex;
         static inline CompositionFrameworkFactory* factory{nullptr};

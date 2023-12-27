@@ -601,7 +601,7 @@ namespace Tracker
         {
             success = false;
         }
-        Log("Virtual tracker is%s upside down", m_UpsideDown ? "" : " not");
+        Log("virtual tracker is%s upside down", m_UpsideDown ? "" : " not");
         float value;
         if (GetConfig()->GetFloat(Cfg::TrackerOffsetForward, value))
         {

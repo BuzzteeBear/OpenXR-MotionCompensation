@@ -949,7 +949,7 @@ namespace openxr_api_layer
 
         if (m_CompensateControllers)
         {
-            Log("added action space for motion controller compensation: %u", *space);
+            Log("action space for motion controller compensation added: %u", *space);
             m_ActionSpaces.insert(*space);
         }
 
