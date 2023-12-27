@@ -499,33 +499,37 @@ namespace openxr_api_layer
             return XR_ERROR_VALIDATION_FAILURE;
         }
         TraceLoggingWriteTagged(local,
-                               "OpenXrLayer::xrCreateSwapchain",
-                               TLArg(createInfo->arraySize, "ArraySize"),
-                               TLArg(createInfo->width, "Width"),
-                               TLArg(createInfo->height, "Height"),
-                               TLArg(createInfo->createFlags, "CreateFlags"),
-                               TLArg(createInfo->format, "Format"),
-                               TLArg(createInfo->faceCount, "FaceCount"),
-                               TLArg(createInfo->mipCount, "MipCount"),
-                               TLArg(createInfo->sampleCount, "SampleCount"),
-                               TLArg(createInfo->usageFlags, "UsageFlags"));
+                                "OpenXrLayer::xrCreateSwapchain",
+                                TLArg(createInfo->createFlags, "CreateFlags"),
+                                TLArg(createInfo->usageFlags, "UsageFlags"),
+                                TLArg(createInfo->format, "Format"),
+                                TLArg(createInfo->sampleCount, "SampleCount"),
+                                TLArg(createInfo->width, "Width"),
+                                TLArg(createInfo->height, "Height"),
+                                TLArg(createInfo->faceCount, "FaceCount"),
+                                TLArg(createInfo->arraySize, "ArraySize"),
+                                TLArg(createInfo->mipCount, "MipCount"));
+ 
         if (XR_FAILED(result))
         {
             TraceLoggingWriteStop(local, "OpenXrLayer::xrCreateSwapchain", TLArg(xr::ToCString(result), "Result"));
 
             return result;
         }
-        Log("created swapchain (%u) with dimensions=%ux%u, arraySize=%u, mipCount=%u, sampleCount=%u, format=%d, "
-            "usage=0x%x",
+        Log("swapchain (%u) created, with dimensions=%ux%u, format=%d, "
+            "createFlags=0x%x, usageFlags=0x%x, faceCount=%u, arraySize=%u, mipCount=%u, sampleCount=%u",
             *swapchain,
             createInfo->width,
             createInfo->height,
+            createInfo->format,
+            createInfo->createFlags,
+            createInfo->usageFlags,
+            createInfo->faceCount,
             createInfo->arraySize,
             createInfo->mipCount,
-            createInfo->sampleCount,
-            createInfo->format,
-            createInfo->usageFlags);
-        if (!m_Overlay|| ! m_Overlay->m_Initialized)
+            createInfo->sampleCount);
+
+        if (!m_Overlay->m_Initialized)
         {
             ErrorLog("%s: overlay not properly initialized", __FUNCTION__);
             TraceLoggingWriteStop(local, "OpenXrLayer::xrCreateSwapchain", TLArg(false, "Overlay_Initialized"));
@@ -538,10 +542,9 @@ namespace openxr_api_layer
 
             return result;
         }
-        if (createInfo->usageFlags & XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT)
-        {
-            m_Overlay->CreateSwapchain(*swapchain, createInfo);
-        }
+
+        m_Overlay->CreateSwapchain(*swapchain, createInfo);
+        
         TraceLoggingWriteStop(local,
                                    "OpenXrLayer::xrCreateSwapchain",
                                    TLPArg(session, "Session"),

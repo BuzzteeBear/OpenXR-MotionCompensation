@@ -129,6 +129,7 @@ namespace openxr_api_layer::graphics
                                        static_cast<DXGI_FORMAT>(createInfo->format),
                                        0,
                                        false};
+            Log("swapchain %u: access to %u D3D11 textures added to overlay", swapchain, textures.size());
         }
         else
         {
@@ -185,6 +186,7 @@ namespace openxr_api_layer::graphics
                                        static_cast<DXGI_FORMAT>(createInfo->format),
                                        0,
                                        false};
+            Log("swapchain %u: access to %u D3D12 textures added to overlay", swapchain, textures.size());
         }
         TraceLoggingWriteStop(local, "Overlay::CreateSwapchain", TLArg(true, "Success"));
     }
@@ -456,15 +458,15 @@ namespace openxr_api_layer::graphics
             {
                 auto& view = lastProjectionLayer->views[eye];
                 const XrSwapchain swapchain = view.subImage.swapchain;
-                const XrRect2Di* viewPort = &view.subImage.imageRect;
+                const XrRect2Di* imageRect = &view.subImage.imageRect;
 
                 TraceLoggingWriteTagged(local,
                                         "Overlay::DrawOverlay",
                                         TLArg(eye, "Eye"),
-                                        TLArg(viewPort->extent.width, "Width"),
-                                        TLArg(viewPort->extent.height, "Heigth"),
-                                        TLArg(viewPort->offset.x, "OffsetX"),
-                                        TLArg(viewPort->offset.y, "OffsetY"),
+                                        TLArg(imageRect->extent.width, "Width"),
+                                        TLArg(imageRect->extent.height, "Heigth"),
+                                        TLArg(imageRect->offset.x, "OffsetX"),
+                                        TLArg(imageRect->offset.y, "OffsetY"),
                                         TLArg(view.subImage.imageArrayIndex, "ArrayIndex"),
                                         TLArg(xr::ToString(view.pose).c_str(), "Pose"),
                                         TLArg(xr::ToString(view.fov).c_str(), "Fov"),
