@@ -22,17 +22,21 @@ Version 0.2.8
 	MmfReader
 	- added ability to write values to csv file
 	
-	Miscellaneous
-	- renamed some config file keys to (hopefully) mprove readability
+	Bugfixes
 	- simplified/improved handling of in-game recenter events
-	- added config option to enable debug level logging
 	- added support for X-Plane 12
 	- modified mc application technique to avoid glitching at XR_ERROR_TIME_INVALID on calling xrLocateSpace
+	
+	Miscellaneous
+	- renamed some config file keys to (hopefully) improve readability
+	- added config option to enable debug level logging (including keyboard shortcut toggle)
 	- increased default tolerance for eye/pose reconstruction cache to 500ms (only when installing without previous default config file present)
 	
 	Known issues
 	- compensation of motion controller pose does not work properly in MSFS main menu (controller movement gets blocked)
-	- MSFS hangs on shut down from within VR after having activated the overlay (workaround: switch to 2D before exiting or do not use overlay)
+	- graphical overlay
+		- MSFS hangs on shut down from within VR after having activated the overlay (workaround: switch to 2D before exiting or do not use overlay)
+		- marker shows jiggling artifact when used in combination with varjo foveated or quad views API layer and turbo mode enabled 
 
 
 Version 0.2.7

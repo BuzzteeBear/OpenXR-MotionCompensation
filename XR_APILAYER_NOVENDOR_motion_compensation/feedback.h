@@ -34,7 +34,9 @@ namespace Feedback
         OverlayOff,
         ModifierOn,
         ModifierOff,
-        CalibrationLost
+        CalibrationLost,
+        VerboseOn,
+        VerboseOff
     };
 
     class AudioOut
@@ -70,7 +72,9 @@ namespace Feedback
                                                                   {Event::OverlayOff, OVERLAY_OFF_WAV},
                                                                   {Event::ModifierOn, MODIFIER_ON_WAV},
                                                                   {Event::ModifierOff, MODIFIER_OFF_WAV},
-                                                                  {Event::CalibrationLost, CALIBRATION_LOST_WAV}};
+                                                                  {Event::CalibrationLost, CALIBRATION_LOST_WAV},
+                                                                  {Event::VerboseOn, VERBOSE_ON_WAV},
+                                                                  {Event::VerboseOff, VERBOSE_OFF_WAV}};
 
     };
 

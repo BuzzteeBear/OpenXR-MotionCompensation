@@ -129,7 +129,7 @@ namespace openxr_api_layer::graphics
                                        static_cast<DXGI_FORMAT>(createInfo->format),
                                        0,
                                        false};
-            Log("swapchain %u: access to %u D3D11 textures added to overlay", swapchain, textures.size());
+            Log("swapchain (%u): access to %u D3D11 textures added to overlay", swapchain, textures.size());
         }
         else
         {
@@ -186,7 +186,7 @@ namespace openxr_api_layer::graphics
                                        static_cast<DXGI_FORMAT>(createInfo->format),
                                        0,
                                        false};
-            Log("swapchain %u: access to %u D3D12 textures added to overlay", swapchain, textures.size());
+            Log("swapchain (%u): access to %u D3D12 textures added to overlay", swapchain, textures.size());
         }
         TraceLoggingWriteStop(local, "Overlay::CreateSwapchain", TLArg(true, "Success"));
     }

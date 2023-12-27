@@ -84,7 +84,7 @@ What you can modify in a configuration file:
 **Note that all keys and values in the configuration file(s) are case sensitive. That means all [keyboard shortcuts](#list-of-keyboard-bindings) must only contain capital letters, numbers and/or underscores**
 
 ### Sections in configuration file
-- `startup`: You can modify oxrmc's behavior on application start, e.g. disable a specific feature by setting the corresponding key to 0. 
+- `[startup]`: You can modify oxrmc's behavior on application start, e.g. disable a specific feature by setting the corresponding key to 0. 
   - `enabled`: you can disable all functionality globally or for a single application. Note that you cannot enable a single application if oxrmc is disabled globally in the default config file. Modifying this setting requires an application restart.
   - `physical_enabled`: initialization of physical tracker (motion controller or vive tracker) on startup can be skipped (e.g. if you're using a virtual tracker). Modifying this setting requires an application restart.
   - `overlay_enabled`: enable initialization of the graphical overlay (for example if it's not required because of using a physical tracker or if the position of the center of rotation is successfully setup and `load_ref_pose_from_file` = 1 is used). Changing this value requires the VR session to be restarted.
@@ -94,7 +94,7 @@ What you can modify in a configuration file:
   - `auto_activate_delay`: delay auto-activation by specified number of seconds. The required time for successful activation may vary, depending on application and tracker type used.
   - `auto_activate_countdown`: enable audible countdown for the last 10 seconds before auto-activation. This is supposed to allow getting to neutral position and timely centering of in-game view.
   - `compensate_controllers`: enable motion compensation for motion controllers (that are not used as reference trackers). **This feature is considered to be in experimental state**. Note that enabling this feature will disable cor manipulation via motion controller. Changing this value requires the application top be restarted.
-- `tracker`: 
+- `[tracker]`: 
   - The following tracker `type` keys are available:
     - `controller`: use either the left or the right motion controller as reference tracker. Valid options for the key `side` are `left` and `right` (**Note that changing the side or switching between motion controller and vive tracker requires a restart of the vr session**)
     - `vive`: use a vive tracker as reference for motion compensation. The key `side` has to match the role assigned to the tracker. Valid options for that are:
@@ -124,15 +124,15 @@ What you can modify in a configuration file:
   - `connection_timeout` sets the time (in seconds) the tracker needs to be unresponsive before motion compensation is automatically deactivated. Setting a negative value disables automatic deactivation.
   - `connection_check` is only relevant for virtual trackers and determines the period (in seconds) for checking whether the memory mapped file used for data input is actually still actively used. Setting a negative value disables the check
   - `legacy mode` reverts the internal pose manipulation technique to the way it was prior to version 0.3.0
-- `translational_filter` and `rotational_filter`: set the filtering magnitude (key `strength` with valid options between **0.0** and **1.0**) number of filtering stages (key `order`with valid options: **1, 2, 3**).  
+- `[translational_filter]` and `[rotational_filter]`: set the filtering magnitude (key `strength` with valid options between **0.0** and **1.0**) number of filtering stages (key `order`with valid options: **1, 2, 3**).  
   The key `vertical_factor` is applied to translational filter strength in vertical/heave direction only (Note that the filter strength is multiplied by the factor and the resulting product of strength * vertical_factor is clamped internally between 0.0 and 1.0).
-- `pose_modifier`: you can use the [pose modifier](#pose-modifier) to increase or decrease the compensation effect for different degrees of freedom  
+- `[pose_modifier]`: you can use the [pose modifier](#pose-modifier) to increase or decrease the compensation effect for different degrees of freedom  
   - `apply` - turn pose modifier on/off. Can also be toggled in-game with the correspopnding keyboard shorcut
   - the other values are the factors that are to be applied to the corresponding degree of freedom, if the pose modifier is activated
-- `cache`: you can modify the cache used for reverting the motion corrected pose on frame submission:
+- `[cache]`: you can modify the cache used for reverting the motion corrected pose on frame submission:
   - `use_eye_cache` - choose between calculating eye poses (0 = default) or use cached eye poses (1, was default up until version 0.1.4). Either one might work better with some games or hmds if you encounter jitter with mc activated. You can also modify this setting (and subsequently save it to config file) during runtime with the corresponding shortcut below.
   - `tolerance` - modify the time values are kept in cache for before deletion. This may affect eye calculation as well as cached eye positions.
-- `shortcuts`: can be used to configure shortcuts for different commands (See [List of keyboard bindings](#list-of-keyboard-bindings) for valid values):
+- `[shortcuts]`: can be used to configure shortcuts for different commands (See [List of keyboard bindings](#list-of-keyboard-bindings) for valid values):
   - `activate`- turn motion compensation on or off. Note that this implicitly triggers the calibration action (`calibrate`) if that hasn't been executed before.
   - `calibrate` - calibrate the neutral reference pose of the tracker
   - `translation_increase`, `translation_decrease` - modify the strength of the translational filter. Changes made during runtime can be saved by using a save command (see below).
@@ -146,12 +146,10 @@ What you can modify in a configuration file:
   - `toggle_pose_modifier` - enable/disable application of factors on the motion compensation effect
   - `save_config_app` -  write current filter strength and cor offsets to application specific config file. Note that values in this file will precedent values in the global config file. 
   - `reload_config` - read in and apply configuration for current app from config files. For technical reasons motion compensation is automatically deactivated and the reference tracker pose is invalidated upon configuration reload.
-  - `log_tracker_pose` - write the current tracker reference pose (and tracker pose, if obtainable) into the log file, after having it calibrated.
-  - `log_interaction_profile` - (only for physical tracker: `controller` or `vive`): write the current interaction profile bound to the reference tracker into the log file.
-  - Note that there are some immutable keyboard shortcuts:
-    - `ctrl + shift + alt + i`: logs your current interaction profile, which can be useful when debugging issues with a physical tracker.
-    - `ctrl + shift + alt + t`: logs the current pose of the reference tracker, can also be used for the purpose of troubleshooting. 
-- `debug`: 
+  - `toggle_vebose_logging` - enable/disable verbose logging mode. Note that verbose logging includes per-frame log outputs, which (negatively) affects performance and log file size.
+  - `log_tracker_pose` - write the current tracker reference pose (and tracker pose, if obtainable) into the log file, after having it calibrated. Can be useful when debugging issues with a physical tracker.
+  - `log_interaction_profile` - (only for physical tracker: `controller` or `vive`): write the current interaction profile bound to the reference tracker into the log file, can also be used for the purpose of troubleshooting.
+- `[debug]`: 
   - `log_verbose` - enables debug level entries in log file. Note that activating this option may have a negative impact on performance.
   - `testrotation` - for debugging reasons you can check, if the motion compensation functionality generally works on your system without using tracker input from the motion controllers at all by setting this value to `1` and reloading the configuration. You should be able to see the world rotating around you after pressing the activation shortcut.  
 **Beware that this can be a nauseating experience because your eyes suggest that your head is turning in the virtual world, while your inner ear tells your brain otherwise. You can stop motion compensation at any time by pressing the activation shortcut again!** 

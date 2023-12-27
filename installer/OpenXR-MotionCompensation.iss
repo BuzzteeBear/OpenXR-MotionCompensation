@@ -142,9 +142,10 @@ Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key:
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "toggle_pose_modifier"; String: "CTRL+P"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "save_config"; String: "CTRL+SHIFT+S"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "save_config_app"; String: "CTRL+SHIFT+A"; Flags: createkeyifdoesntexist
-Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "reload_config"; String: "CTRL+SHIFT+L"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "reload_config"; String: "CTRL+SHIFT+L"; Flags: createkeyifdoesntexist  
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "toggle_verbose_logging"; String: "CTRL+SHIFT+V"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "log_tracker_pose"; String: "CTRL+SHIFT+T"; Flags: createkeyifdoesntexist
-Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "log_interaction_profile"; String: "CTRL+SHIFT+I"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "log_interaction_profile"; String: "CTRL+SHIFT+I"; Flags: createkeyifdoesntexist 
 
 ; [debug]
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "debug"; Key: "log_verbose"; String: "0"; Flags: createkeyifdoesntexist

@@ -117,7 +117,7 @@ Upon starting an OpenXR application with the API layer active for the first time
 </ul>
 <h3 id="sections-in-configuration-file">Sections in configuration file</h3>
 <ul>
-<li><code>startup</code>: You can modify oxrmc's behavior on application start, e.g. disable a specific feature by setting the corresponding key to 0.
+<li><code>[startup]</code>: You can modify oxrmc's behavior on application start, e.g. disable a specific feature by setting the corresponding key to 0.
 <ul>
 <li><code>enabled</code>: you can disable all functionality globally or for a single application. Note that you cannot enable a single application if oxrmc is disabled globally in the default config file. Modifying this setting requires an application restart.</li>
 <li><code>physical_enabled</code>: initialization of physical tracker (motion controller or vive tracker) on startup can be skipped (e.g. if you're using a virtual tracker). Modifying this setting requires an application restart.</li>
@@ -130,7 +130,7 @@ Upon starting an OpenXR application with the API layer active for the first time
 <li><code>compensate_controllers</code>: enable motion compensation for motion controllers (that are not used as reference trackers). <strong>This feature is considered to be in experimental state</strong>. Note that enabling this feature will disable cor manipulation via motion controller. Changing this value requires the application top be restarted.</li>
 </ul>
 </li>
-<li><code>tracker</code>:
+<li><code>[tracker]</code>:
 <ul>
 <li>The following tracker <code>type</code> keys are available:
 <ul>
@@ -172,21 +172,21 @@ Upon starting an OpenXR application with the API layer active for the first time
 <li><code>legacy mode</code> reverts the internal pose manipulation technique to the way it was prior to version 0.3.0</li>
 </ul>
 </li>
-<li><code>translational_filter</code> and <code>rotational_filter</code>: set the filtering magnitude (key <code>strength</code> with valid options between <strong>0.0</strong> and <strong>1.0</strong>) number of filtering stages (key <code>order</code>with valid options: <strong>1, 2, 3</strong>).<br />
+<li><code>[translational_filter]</code> and <code>[rotational_filter]</code>: set the filtering magnitude (key <code>strength</code> with valid options between <strong>0.0</strong> and <strong>1.0</strong>) number of filtering stages (key <code>order</code>with valid options: <strong>1, 2, 3</strong>).<br />
 The key <code>vertical_factor</code> is applied to translational filter strength in vertical/heave direction only (Note that the filter strength is multiplied by the factor and the resulting product of strength * vertical_factor is clamped internally between 0.0 and 1.0).</li>
-<li><code>pose_modifier</code>: you can use the <a href="#pose-modifier">pose modifier</a> to increase or decrease the compensation effect for different degrees of freedom
+<li><code>[pose_modifier]</code>: you can use the <a href="#pose-modifier">pose modifier</a> to increase or decrease the compensation effect for different degrees of freedom
 <ul>
 <li><code>apply</code> - turn pose modifier on/off. Can also be toggled in-game with the correspopnding keyboard shorcut</li>
 <li>the other values are the factors that are to be applied to the corresponding degree of freedom, if the pose modifier is activated</li>
 </ul>
 </li>
-<li><code>cache</code>: you can modify the cache used for reverting the motion corrected pose on frame submission:
+<li><code>[cache]</code>: you can modify the cache used for reverting the motion corrected pose on frame submission:
 <ul>
 <li><code>use_eye_cache</code> - choose between calculating eye poses (0 = default) or use cached eye poses (1, was default up until version 0.1.4). Either one might work better with some games or hmds if you encounter jitter with mc activated. You can also modify this setting (and subsequently save it to config file) during runtime with the corresponding shortcut below.</li>
 <li><code>tolerance</code> - modify the time values are kept in cache for before deletion. This may affect eye calculation as well as cached eye positions.</li>
 </ul>
 </li>
-<li><code>shortcuts</code>: can be used to configure shortcuts for different commands (See <a href="#list-of-keyboard-bindings">List of keyboard bindings</a> for valid values):
+<li><code>[shortcuts]</code>: can be used to configure shortcuts for different commands (See <a href="#list-of-keyboard-bindings">List of keyboard bindings</a> for valid values):
 <ul>
 <li><code>activate</code>- turn motion compensation on or off. Note that this implicitly triggers the calibration action (<code>calibrate</code>) if that hasn't been executed before.</li>
 <li><code>calibrate</code> - calibrate the neutral reference pose of the tracker</li>
@@ -201,17 +201,12 @@ The key <code>vertical_factor</code> is applied to translational filter strength
 <li><code>toggle_pose_modifier</code> - enable/disable application of factors on the motion compensation effect</li>
 <li><code>save_config_app</code> -  write current filter strength and cor offsets to application specific config file. Note that values in this file will precedent values in the global config file.</li>
 <li><code>reload_config</code> - read in and apply configuration for current app from config files. For technical reasons motion compensation is automatically deactivated and the reference tracker pose is invalidated upon configuration reload.</li>
-<li><code>log_tracker_pose</code> - write the current tracker reference pose (and tracker pose, if obtainable) into the log file, after having it calibrated.</li>
-<li><code>log_interaction_profile</code> - (only for physical tracker: <code>controller</code> or <code>vive</code>): write the current interaction profile bound to the reference tracker into the log file.</li>
-<li>Note that there are some immutable keyboard shortcuts:
-<ul>
-<li><code>ctrl + shift + alt + i</code>: logs your current interaction profile, which can be useful when debugging issues with a physical tracker.</li>
-<li><code>ctrl + shift + alt + t</code>: logs the current pose of the reference tracker, can also be used for the purpose of troubleshooting.</li>
+<li><code>toggle_vebose_logging</code> - enable/disable verbose logging mode. Note that verbose logging includes per-frame log outputs, which (negatively) affects performance and log file size.</li>
+<li><code>log_tracker_pose</code> - write the current tracker reference pose (and tracker pose, if obtainable) into the log file, after having it calibrated. Can be useful when debugging issues with a physical tracker.</li>
+<li><code>log_interaction_profile</code> - (only for physical tracker: <code>controller</code> or <code>vive</code>): write the current interaction profile bound to the reference tracker into the log file, can also be used for the purpose of troubleshooting.</li>
 </ul>
 </li>
-</ul>
-</li>
-<li><code>debug</code>:
+<li><code>[debug]</code>:
 <ul>
 <li><code>log_verbose</code> - enables debug level entries in log file. Note that activating this option may have a negative impact on performance.</li>
 <li><code>testrotation</code> - for debugging reasons you can check, if the motion compensation functionality generally works on your system without using tracker input from the motion controllers at all by setting this value to <code>1</code> and reloading the configuration. You should be able to see the world rotating around you after pressing the activation shortcut.<br />

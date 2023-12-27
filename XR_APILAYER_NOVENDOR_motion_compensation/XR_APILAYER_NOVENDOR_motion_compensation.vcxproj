@@ -254,6 +254,8 @@ xcopy "$(SolutionDir)\scripts\Uninstall-$(SolutionName).ps1" "$(OutDir)" /y /q</
     <Media Include="sounds\rot_right.wav" />
     <Media Include="sounds\saved.wav" />
     <Media Include="sounds\up.wav" />
+    <Media Include="sounds\verbose_off.wav" />
+    <Media Include="sounds\verbose_on.wav" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

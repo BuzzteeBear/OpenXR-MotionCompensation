@@ -24,7 +24,7 @@ namespace Input
             Cfg::KeyRotDec,       Cfg::KeyOffForward, Cfg::KeyOffBack,      Cfg::KeyOffUp,      Cfg::KeyOffDown,
             Cfg::KeyOffRight,     Cfg::KeyOffLeft,    Cfg::KeyRotRight,     Cfg::KeyRotLeft,    Cfg::KeyOverlay,
             Cfg::KeyCache,        Cfg::KeyModifier,   Cfg::KeyFastModifier, Cfg::KeySaveConfig, Cfg::KeySaveConfigApp,
-            Cfg::KeyReloadConfig, Cfg::KeyLogTracker, Cfg::KeyLogProfile};
+            Cfg::KeyReloadConfig, Cfg::KeyVerbose,    Cfg::KeyLogTracker,   Cfg::KeyLogProfile};
         const std::set<int> modifiers{VK_CONTROL, VK_SHIFT, VK_MENU};
         std::set<int> fastModifiers{};
         GetConfig()->GetShortcut(Cfg::KeyFastModifier, fastModifiers);
@@ -164,6 +164,10 @@ namespace Input
         if (m_Input.GetKeyState(Cfg::KeyReloadConfig, isRepeat) && !isRepeat)
         {
             ReloadConfig();
+        }
+        if (m_Input.GetKeyState(Cfg::KeyVerbose, isRepeat) && !isRepeat)
+        {
+            ToggleVerbose();
         }
         if (m_Input.GetKeyState(Cfg::KeyLogProfile, isRepeat) && !isRepeat)
         {
@@ -447,6 +451,18 @@ namespace Input
         GetConfig()->WriteConfig(forApp);
 
         TraceLoggingWriteStop(local, "InputHandler::SaveConfig");
+    }
+
+    void InputHandler::ToggleVerbose()
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "InputHandler::ToggleVerbose");
+
+        logVerbose = !logVerbose;
+        Log("verbose logging %s\n", logVerbose ? "activated" : "off");
+        AudioOut::Execute(logVerbose ? Event::VerboseOn : Event::VerboseOff);
+
+        TraceLoggingWriteStop(local, "InputHandler::ToggleVerbose", TLArg(logVerbose, "LogVerbose"));
     }
 
     std::string ButtonPath::GetSubPath(const std::string& profile, int index)

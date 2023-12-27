@@ -74,6 +74,7 @@ enum class Cfg
     KeySaveConfig,
     KeySaveConfigApp,
     KeyReloadConfig,
+    KeyVerbose,
     KeyLogTracker,
     KeyLogProfile,
     TestRotation,
@@ -194,7 +195,8 @@ class ConfigManager
         {Cfg::KeySaveConfig, {"shortcuts", "save_config"}},
         {Cfg::KeySaveConfigApp, {"shortcuts", "save_config_app"}},
         {Cfg::KeyReloadConfig, {"shortcuts", "reload_config"}},
-
+       
+        {Cfg::KeyVerbose, {"shortcuts", "toggle_verbose_logging"}},
         {Cfg::KeyLogTracker, {"shortcuts", "log_tracker_pose"}},
         {Cfg::KeyLogProfile, {"shortcuts", "log_interaction_profile"}},
 

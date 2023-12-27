@@ -65,8 +65,9 @@ namespace Input
         void ChangeOffset(::Input::InputHandler::Direction dir, bool fast) const;
         void ReloadConfig() const;
         void SaveConfig(XrTime time, bool forApp) const;
+        static void ToggleVerbose();
 
-      private:
+    private:
         openxr_api_layer::OpenXrLayer* m_Layer;
         KeyboardInput m_Input;
     };

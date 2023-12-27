@@ -130,6 +130,10 @@ MODIFIER_OFF_WAV        WAVE                    "sounds\\modifier_off.wav"
 
 CALIBRATION_LOST_WAV    WAVE                    "sounds\\calibration_lost.wav"
 
+VERBOSE_ON_WAV          WAVE                    "sounds\\verbose_on.wav"
+
+VERBOSE_OFF_WAV         WAVE                    "sounds\\verbose_off.wav"
+
 #endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////
 
