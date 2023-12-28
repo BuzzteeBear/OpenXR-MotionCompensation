@@ -646,6 +646,8 @@ namespace Tracker
 
         LogOffsetValues();
 
+        Log("constant pitch value = %.3f deg", m_PitchConstant / angleToRadian);
+
         if (GetConfig()->GetBool(Cfg::LoadRefPoseFromFile, m_LoadPoseFromFile))
         {
             Log("center of rotation is %s read from config file", m_LoadPoseFromFile ? "" : "not");

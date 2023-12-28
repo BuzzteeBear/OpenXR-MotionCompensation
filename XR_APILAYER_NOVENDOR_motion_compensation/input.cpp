@@ -340,6 +340,7 @@ namespace Input
 
         m_Layer->m_UseEyeCache = !m_Layer->m_UseEyeCache;
         GetConfig()->SetValue(Cfg::CacheUseEye, m_Layer->m_UseEyeCache);
+        Log("%s is used for reconstruction of eye positions", m_Layer->m_UseEyeCache ? "caching" : "calculation");
         AudioOut::Execute(m_Layer->m_UseEyeCache ? Event::EyeCached : Event::EyeCalculated);
 
         TraceLoggingWriteStop(local, "InputHandler::ToggleCache", TLArg(m_Layer->m_UseEyeCache, "Eye Cache"));
@@ -421,6 +422,7 @@ namespace Input
             GetConfig()->GetBool(Cfg::LogVerbose, logVerbose);
             GetConfig()->GetBool(Cfg::TestRotation, m_Layer->m_TestRotation);
             GetConfig()->GetBool(Cfg::CacheUseEye, m_Layer->m_UseEyeCache);
+            Log("%s is used for reconstruction of eye positions", m_Layer->m_UseEyeCache ? "caching" : "calculation");
             GetConfig()->GetBool(Cfg::LegacyMode, m_Layer->m_LegacyMode);
             Log("legacy mode is %s", m_Layer->m_LegacyMode ? "activated" : "off");
             m_Layer->m_AutoActivator =

@@ -2,8 +2,8 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros">
-    <VersionNumber>0.2.8</VersionNumber>
-    <VersionString>alpha</VersionString>
+    <VersionNumber>0.3.0</VersionNumber>
+    <VersionString>beta</VersionString>
   </PropertyGroup>
   <PropertyGroup />
   <ItemDefinitionGroup />

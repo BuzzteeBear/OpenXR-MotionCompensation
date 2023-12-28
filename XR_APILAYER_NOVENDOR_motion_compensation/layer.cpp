@@ -111,91 +111,44 @@ namespace openxr_api_layer
 
         // set log level
         GetConfig()->GetBool(Cfg::LogVerbose, logVerbose);
+        Log("verbose logging %s\n", logVerbose ? "activated" : "off");
 
-        m_VirtualTrackerUsed = GetConfig()->IsVirtualTracker();
-
-        if (m_Initialized)
+        if (!m_Initialized)
         {
-            GetConfig()->GetBool(Cfg::Enabled, m_Enabled);
-            if (!m_Enabled)
-            {
-                Log("motion compensation disabled in config file");
-                return result;
-            }
+            ErrorLog("%s: initialization failed - config file missing or incomplete", __FUNCTION__);
+            AudioOut::Execute(Event::Error);
+            TraceLoggingWriteStop(local,
+                                  "OpenXrLayer::xrCreateInstance",
+                                  TLArg(false, "Config_Valid"),
+                                  TLArg(xr::ToCString(result), "Result"));
+            return result;
+        }
 
+        GetConfig()->GetBool(Cfg::Enabled, m_Enabled);
+        if (!m_Enabled)
+        {
+            Log("motion compensation disabled in config file");
+            TraceLoggingWriteStop(local,
+                                  "OpenXrLayer::xrCreateInstance",
+                                  TLArg(false, "Enabled"),
+                                  TLArg(xr::ToCString(result), "Result"));
+            return result;
+        }
+
+        m_Tracker = Tracker::GetTracker();
+
+        // enable / disable physical tracker initialization
+        GetConfig()->GetBool(Cfg::PhysicalEnabled, m_PhysicalEnabled);
+        if (!m_PhysicalEnabled)
+        {
+            Log("initialization of physical tracker disabled in config file");
+        }
+        else
+        {
             if (!m_ViveTracker.Init())
             {
                 m_Initialized = false;
             }
-
-            // enable / disable physical tracker initialization
-            GetConfig()->GetBool(Cfg::PhysicalEnabled, m_PhysicalEnabled);
-            GetConfig()->GetBool(Cfg::CompensateControllers, m_CompensateControllers);
-            if (!m_PhysicalEnabled)
-            {
-                Log("initialization of physical tracker disabled in config file");
-            }
-            else
-            {
-                if (m_CompensateControllers)
-                {
-                    Log("compensation of motion controllers is activated (experimental)");
-                    m_SuppressInteraction = m_VirtualTrackerUsed;
-                }
-                if (!m_SuppressInteraction)
-                {
-                    m_SubActionPath =
-                        m_ViveTracker.active ? m_ViveTracker.role : "/user/hand/" + GetConfig()->GetControllerSide();
-                    if (const XrResult pathResult =
-                            xrStringToPath(GetXrInstance(), m_SubActionPath.c_str(), &m_XrSubActionPath);
-                        XR_FAILED(result))
-                    {
-                        ErrorLog("%s: unable to create XrPath for sub action path %s: %s",
-                                 __FUNCTION__,
-                                 m_SubActionPath.c_str(),
-                                 xr::ToCString(pathResult));
-                        m_SuppressInteraction = true;
-                    }
-                }
-            }
-
-            // use legacy mode
-            GetConfig()->GetBool(Cfg::LegacyMode, m_LegacyMode);
-            Log("legacy mode is %s", m_LegacyMode ? "activated" : "off");
-
-            // enable debug test rotation
-            GetConfig()->GetBool(Cfg::TestRotation, m_TestRotation);
-
-            // choose cache for reverting pose in xrEndFrame
-            GetConfig()->GetBool(Cfg::CacheUseEye, m_UseEyeCache);
-
-            float timeout;
-            if (GetConfig()->GetFloat(Cfg::TrackerTimeout, timeout))
-            {
-                m_RecoveryWait = static_cast<XrTime>(timeout * 1000000000.0);
-            }
-            Log("tracker timeout is set to %.3f ms", static_cast<double>(m_RecoveryWait) / 1000000.0);
-
-            float cacheTolerance{2.0};
-            GetConfig()->GetFloat(Cfg::CacheTolerance, cacheTolerance);
-            Log("cache tolerance is set to %.3f ms", cacheTolerance);
-            const auto toleranceTime = static_cast<XrTime>(cacheTolerance * 1000000.0);
-            m_DeltaCache.SetTolerance(toleranceTime);
-            m_EyeCache.SetTolerance(toleranceTime);
-        }
-
-        // initialize tracker
-        m_Tracker = Tracker::GetTracker();
-        if (!m_Tracker->Init())
-        {
-            m_Initialized = false;
-        }
-
-        // initialize keyboard input handler
-        m_Input = std::make_shared<Input::InputHandler>(Input::InputHandler(this));
-        if (!m_Input->Init())
-        {
-            m_Initialized = false;
         }
 
         // enable / disable graphical overlay initialization
@@ -211,23 +164,84 @@ namespace openxr_api_layer
                                                                               m_xrGetInstanceProcAddr,
                                                                               graphics::CompositionApi::D3D11);
         }
-        else
-        {
-            Log("graphical overlay disabled in config file");
-        }
+        Log("graphical overlay is %s", overlayEnabled ? "enabled" : "disabled in config file");
 
         // initialize auto activator
         m_AutoActivator = std::make_unique<utility::AutoActivator>(utility::AutoActivator(m_Input));
+
+        m_VirtualTrackerUsed = GetConfig()->IsVirtualTracker();
+        if (m_PhysicalEnabled)
+        {
+            GetConfig()->GetBool(Cfg::CompensateControllers, m_CompensateControllers);
+            if (m_CompensateControllers)
+            {
+                Log("compensation of motion controllers is activated (experimental)");
+                m_SuppressInteraction = m_VirtualTrackerUsed;
+            }
+            if (!m_SuppressInteraction)
+            {
+                m_SubActionPath =
+                    m_ViveTracker.active ? m_ViveTracker.role : "/user/hand/" + GetConfig()->GetControllerSide();
+                if (const XrResult pathResult =
+                        xrStringToPath(GetXrInstance(), m_SubActionPath.c_str(), &m_XrSubActionPath);
+                    XR_FAILED(result))
+                {
+                    ErrorLog("%s: unable to create XrPath for sub action path %s: %s",
+                             __FUNCTION__,
+                             m_SubActionPath.c_str(),
+                             xr::ToCString(pathResult));
+                    m_SuppressInteraction = true;
+                }
+            }
+        }
+
+        // initialize tracker
+        if (!m_Tracker->Init())
+        {
+            m_Initialized = false;
+        }
+
+        if (float timeout; GetConfig()->GetFloat(Cfg::TrackerTimeout, timeout))
+        {
+            m_RecoveryWait = static_cast<XrTime>(timeout * 1000000000.0);
+        }
+        Log("tracker timeout is set to %.3f ms", static_cast<double>(m_RecoveryWait) / 1000000.0);
+
+        // use legacy mode
+        GetConfig()->GetBool(Cfg::LegacyMode, m_LegacyMode);
+        Log("legacy mode is %s", m_LegacyMode ? "activated" : "off");
 
         // initialize hmd modifier
         m_HmdModifier = std::make_unique<Modifier::HmdModifier>();
         GetConfig()->GetBool(Cfg::FactorEnabled, m_ModifierActive);
 
+        // choose cache for reverting pose in xrEndFrame
+        GetConfig()->GetBool(Cfg::CacheUseEye, m_UseEyeCache);
+        Log("%s is used for reconstruction of eye positions", m_UseEyeCache ? "caching" : "calculation");
+
+        float cacheTolerance{2.0};
+        GetConfig()->GetFloat(Cfg::CacheTolerance, cacheTolerance);
+        Log("cache tolerance is set to %.3f ms", cacheTolerance);
+        const auto toleranceTime = static_cast<XrTime>(cacheTolerance * 1000000.0);
+        m_DeltaCache.SetTolerance(toleranceTime);
+        m_EyeCache.SetTolerance(toleranceTime);
+
+        
+        // initialize keyboard input handler
+        m_Input = std::make_shared<Input::InputHandler>(Input::InputHandler(this));
+        if (!m_Input->Init())
+        {
+            m_Initialized = false;
+        }
+
+        // enable debug test rotation
+        GetConfig()->GetBool(Cfg::TestRotation, m_TestRotation);
+
+        Log("layer initialization completed\n");
         TraceLoggingWriteStop(local,
                               "OpenXrLayer::xrCreateInstance",
-                              TLArg(xr::ToCString(result), "Result"),
-                              TLArg(m_Initialized, "Initialized"));
-
+                              TLArg(m_Initialized, "Initialized"),
+                              TLArg(xr::ToCString(result), "Result"));
         return result;
     }
 
@@ -362,6 +376,7 @@ namespace openxr_api_layer
                                             GetConfig()->GetBool(Cfg::PhysicalEarly, earlyPhysicalInit) &&
                                             earlyPhysicalInit)
                 {
+                    Log("preforming early initialization of physical tracker");
                     // initialize everything except tracker
                     LazyInit(0);
                 }
@@ -373,8 +388,8 @@ namespace openxr_api_layer
 
         TraceLoggingWriteStop(local,
                               "OpenXrLayer::xrCreateSession",
-                              TLArg(xr::ToCString(result), "Result"),
-                              TLPArg(*session, "Session"));
+                              TLPArg(*session, "Session"),
+                              TLArg(xr::ToCString(result), "Result"));
 
         return result;
     }
@@ -650,11 +665,11 @@ namespace openxr_api_layer
 
         TraceLoggingWriteStop(local,
                               "OpenXrLayer::xrGetCurrentInteractionProfile",
-                              TLArg(xr::ToCString(result), "Result"),
                               TLArg((XR_NULL_PATH != interactionProfile->interactionProfile
                                          ? getXrPath(interactionProfile->interactionProfile).c_str()
                                          : "XR_NULL_PATH"),
-                                    "Profile"));
+                                    "Profile"),
+                              TLArg(xr::ToCString(result), "Result"));
 
         return result;
     }
@@ -918,8 +933,8 @@ namespace openxr_api_layer
 
         TraceLoggingWriteStop(local,
                               "OpenXrLayer::xrCreateReferenceSpace",
-                              TLArg(xr::ToCString(result), "Result"),
-                              TLPArg(*space, "Space"));
+                              TLPArg(*space, "Space"),
+                              TLArg(xr::ToCString(result), "Result"));
         return result;
     }
 
@@ -1167,7 +1182,6 @@ namespace openxr_api_layer
         // assumption: the first xrLocateView call within a frame is the one used for rendering
         m_EyeCache.AddSample(displayTime, originalEyePoses, false);
 
-
         if (!m_LegacyMode)
         {
             if (!m_EyeToHmd)
@@ -1219,6 +1233,10 @@ namespace openxr_api_layer
                     trackerDelta = Pose::Multiply(Pose::Multiply(stageToRef, trackerDelta), refToStage);
                     for (uint32_t i = 0; i < *viewCountOutput; i++)
                     {
+                        DebugLog("xrLocateView(%u): eye (%u) original pose = %s",
+                                 time,
+                                 i,
+                                 xr::ToString(views[i].pose).c_str());
                         TraceLoggingWriteTagged(local,
                                                 "OpenXrLayer::xrLocateViews",
                                                 TLArg(i, "Index"),
@@ -1228,6 +1246,10 @@ namespace openxr_api_layer
                         // apply manipulation
                         views[i].pose = Pose::Multiply(views[i].pose, trackerDelta);
 
+                        DebugLog("xrLocateView(%u): eye (%u) compensated pose = %s",
+                                 time,
+                                 i,
+                                 xr::ToString(views[i].pose).c_str());
                         TraceLoggingWriteTagged(local,
                                                 "OpenXrLayer::xrLocateViews",
                                                 TLArg(i, "Index"),
@@ -1285,6 +1307,7 @@ namespace openxr_api_layer
         {
             for (uint32_t i = 0; i < *viewCountOutput; i++)
             {
+                DebugLog("xrLocateView(%u): eye (%u) original pose = %s", time, i, xr::ToString(views[i].pose).c_str());
                 TraceLoggingWriteTagged(local,
                                         "OpenXrLayer::xrLocateViews",
                                         TLArg(i, "Index"),
@@ -1294,6 +1317,7 @@ namespace openxr_api_layer
                 // apply manipulation
                 views[i].pose = Pose::Multiply(m_EyeOffsets[i].pose, location.pose);
 
+                DebugLog("xrLocateView(%u): eye (%u) compensated pose = %s", time, i, xr::ToString(views[i].pose).c_str());
                 TraceLoggingWriteTagged(local,
                                         "OpenXrLayer::xrLocateViews",
                                         TLArg(i, "Index"),
@@ -1384,10 +1408,10 @@ namespace openxr_api_layer
                  frameState->predictedDisplayPeriod);
         TraceLoggingWriteStop(local,
                               "OpenXrLayer::xrWaitFrame",
-                              TLArg(xr::ToCString(result), "Result"),
                               TLArg(frameState->predictedDisplayTime, "PredictedTime"),
                               TLArg(frameState->predictedDisplayPeriod, "PredictedPPeriod"),
-                              TLArg(frameState->shouldRender, "ShouldRender"));
+                              TLArg(frameState->shouldRender, "ShouldRender"),
+                              TLArg(xr::ToCString(result), "Result"));
         return result;
     }
 
@@ -2087,7 +2111,7 @@ namespace openxr_api_layer
                     DebugLog("SuggestInteractionProfiles: added binding for %s action (%d) with path: %s",
                              action,
                              binding.action,
-                             path);
+                             path.c_str());
                     return true;
                 };
 
@@ -2186,6 +2210,8 @@ namespace openxr_api_layer
         m_ModifierActive = !m_ModifierActive;
         m_Tracker->SetModifierActive(m_ModifierActive);
         m_HmdModifier->SetActive(m_ModifierActive);
+
+        Log("pose modifier globally %s", m_ModifierActive ? "activated" : "off");
 
         TraceLoggingWriteStop(local, "OpenXrLayer::ToggleModifierActive", TLArg(m_ModifierActive, "ModifierActive"));
 

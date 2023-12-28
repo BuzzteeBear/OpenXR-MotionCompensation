@@ -1,6 +1,6 @@
 OpenXR-MotionCompensation Changelog
 
-Version 0.2.8
+Version 0.3.0
 
 	Motion controller interaction
 	- added ability to compensate controller position (experimental)
@@ -29,7 +29,8 @@ Version 0.2.8
 	
 	Miscellaneous
 	- renamed some config file keys to (hopefully) improve readability
-	- added config option to enable debug level logging (including keyboard shortcut toggle)
+	- added config option to enable verbose (debug level) logging, including toggle keyboard shortcut 
+	- added configurable constant pitch offset for virtual trackers
 	- increased default tolerance for eye/pose reconstruction cache to 500ms (only when installing without previous default config file present)
 	
 	Known issues
