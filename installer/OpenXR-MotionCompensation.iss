@@ -103,7 +103,7 @@ Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "rotation_filter"
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "rotation_filter"; Key: "order"; String: "2"; Flags: createkeyifdoesntexist
 
 ; [pose_modifier]
-Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "pose_modifier"; Key: "apply"; String: "0"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "pose_modifier"; Key: "enabled"; String: "0"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "pose_modifier"; Key: "tracker_roll"; String: "1.0"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "pose_modifier"; Key: "tracker_pitch"; String: "1.0"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "pose_modifier"; Key: "tracker_yaw"; String: "1.0"; Flags: createkeyifdoesntexist
