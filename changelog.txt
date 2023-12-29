@@ -1,5 +1,11 @@
 OpenXR-MotionCompensation Changelog
 
+Version 0.3.1
+
+	Hotfixes
+	- fixed installer config key creation (add [pose_modifer] `enabled` instead of `apply`)
+	- fixed automatic activation (caused ctd instead of activating)
+
 Version 0.3.0
 
 	Motion controller interaction

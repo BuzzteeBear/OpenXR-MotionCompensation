@@ -136,6 +136,7 @@ namespace openxr_api_layer
         }
 
         m_Tracker = Tracker::GetTracker();
+        m_Input = std::make_shared<Input::InputHandler>(Input::InputHandler(this));
 
         // enable / disable physical tracker initialization
         GetConfig()->GetBool(Cfg::PhysicalEnabled, m_PhysicalEnabled);
@@ -228,7 +229,6 @@ namespace openxr_api_layer
 
         
         // initialize keyboard input handler
-        m_Input = std::make_shared<Input::InputHandler>(Input::InputHandler(this));
         if (!m_Input->Init())
         {
             m_Initialized = false;
