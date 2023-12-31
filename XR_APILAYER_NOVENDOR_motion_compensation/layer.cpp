@@ -1483,11 +1483,6 @@ namespace openxr_api_layer
            }
         }
 
-        if (m_AutoActivator)
-        {
-           m_AutoActivator->ActivateIfNecessary(frameEndInfo->displayTime);
-        }
-
         XrFrameEndInfo chainFrameEndInfo = *frameEndInfo;
 
         XrPosef delta{Pose::Identity()};
@@ -1523,6 +1518,10 @@ namespace openxr_api_layer
         if (!m_Activated)
         {
            m_Input->HandleKeyboardInput(chainFrameEndInfo.displayTime);
+           if (m_AutoActivator)
+           {
+                m_AutoActivator->ActivateIfNecessary(frameEndInfo->displayTime);
+           }
            XrResult result = OpenXrApi::xrEndFrame(session, &chainFrameEndInfo);
 
            TraceLoggingWriteStop(local,

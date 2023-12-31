@@ -47,25 +47,27 @@ namespace Feedback
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "AudioOut::CountDown", TLArg(seconds, "Seconds"));
 
-        if (seconds > 0 && seconds <= 10 &&
-            (PlaySound(nullptr, nullptr, 0) && PlaySound(MAKEINTRESOURCE(COUNT0_WAV + static_cast<uint64_t>(seconds)),
-                                                         openxr_api_layer::dllModule,
-                                                         SND_RESOURCE | SND_ASYNC)))
+        if (seconds > 0 && seconds <= 10)
         {
+            if (PlaySound(nullptr, nullptr, 0) &&
+                PlaySound(MAKEINTRESOURCE(COUNT0_WAV + static_cast<uint64_t>(seconds)),
+                          openxr_api_layer::dllModule,
+                          SND_RESOURCE | SND_ASYNC))
+
             {
                 TraceLoggingWriteTagged(local,
                                         "AudioOut::CountDown",
                                         TLArg(seconds, "Seconds"),
                                         TLArg(COUNT0_WAV + seconds, "Resource"));
             }
-        }
-        else
-        {
-            ErrorLog("%s: unable to play sound (%d : % d): %s",
-                     __FUNCTION__,
-                     -seconds,
-                     COUNT0_WAV + seconds,
-                     utility::LastErrorMsg().c_str());
+            else
+            {
+                ErrorLog("%s: unable to play sound (%d : % d): %s",
+                         __FUNCTION__,
+                         -seconds,
+                         COUNT0_WAV + seconds,
+                         utility::LastErrorMsg().c_str());
+            }
         }
         TraceLoggingWriteStop(local, "AudioOut::CountDown");
     }
