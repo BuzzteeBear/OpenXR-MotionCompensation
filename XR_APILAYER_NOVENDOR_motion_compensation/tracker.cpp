@@ -341,7 +341,7 @@ namespace Tracker
                                           : new Filter::TripleEmaFilter(m_TransStrength);
 
         Log("rotational filter stages: %d", orderRot);
-        Log("rotational filter strength: %f", m_TransStrength);
+        Log("rotational filter strength: %f", m_RotStrength);
         m_RotFilter = 1 == orderRot   ? new Filter::SingleSlerpFilter(m_RotStrength)
                       : 2 == orderRot ? new Filter::DoubleSlerpFilter(m_RotStrength)
                                       : new Filter::TripleSlerpFilter(m_RotStrength);
