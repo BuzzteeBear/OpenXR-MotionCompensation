@@ -110,9 +110,7 @@ namespace Tracker
 
         std::string m_Filename;
         utility::Mmf m_Mmf;
-        float m_OffsetForward{0.0f}, m_OffsetDown{0.0f}, m_OffsetRight{0.0f}, m_OffsetYaw{0.0f}, m_PitchConstant{0.0f};
-        bool m_UpsideDown{false};
-        
+        float m_OffsetForward{0.0f}, m_OffsetDown{0.0f}, m_OffsetRight{0.0f}, m_OffsetYaw{0.0f}, m_PitchConstant{0.0f};        
 
       private:
         bool LoadReferencePose(XrSession session, XrTime time);

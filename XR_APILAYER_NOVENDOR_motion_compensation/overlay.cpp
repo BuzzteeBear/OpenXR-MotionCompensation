@@ -660,22 +660,20 @@ namespace openxr_api_layer::graphics
             point05 = 0.0475f;
             bottom = 0.005f;
         }
-        bool upsideDown;
-        GetConfig()->GetBool(Cfg::UpsideDown, upsideDown);
 
         // right
-        std::vector<SimpleMeshVertex> vertices = CreateMarkerMesh({upsideDown ? tip : -tip, 0.f, 0.f},
-                                                                {upsideDown ? point65 : -point65, point05, 0.f},
-                                                                {upsideDown ? point6 : -point6, point1, 0.f},
-                                                                {upsideDown ? bottom : -bottom, 0.f, 0.f},
+        std::vector<SimpleMeshVertex> vertices = CreateMarkerMesh({-tip, 0.f, 0.f},
+                                                                {-point65, point05, 0.f},
+                                                                {-point6, point1, 0.f},
+                                                                {-bottom, 0.f, 0.f},
                                                                 reference ? DarkRed : DarkMagenta,
                                                                 reference ? Red : Magenta,
                                                                 reference ? LightRed : LightMagenta);
         // up
-        std::vector<SimpleMeshVertex> top = CreateMarkerMesh({0.f, upsideDown ? -tip : tip, 0.f},
-                                                           {0.f, upsideDown ? -point65 : point65, point05},
-                                                           {0.f, upsideDown ? -point6 : point6, point1},
-                                                           {0.f, upsideDown ? -bottom : bottom, 0.f},
+        std::vector<SimpleMeshVertex> top = CreateMarkerMesh({0.f, tip, 0.f},
+                                                           {0.f, point65, point05},
+                                                           {0.f, point6, point1},
+                                                           {0.f, bottom, 0.f},
                                                            reference ? DarkBlue : DarkCyan,
                                                            reference ? Blue : Cyan,
                                                            reference ? LightBlue : LightCyan);

@@ -594,14 +594,8 @@ namespace Tracker
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "VirtualTracker::Init");
 
-        m_Manipulator = std::make_unique<CorManipulator>(CorManipulator(this));
-        m_Manipulator->Init();
         bool success{true};
-        if (!GetConfig()->GetBool(Cfg::UpsideDown, m_UpsideDown))
-        {
-            success = false;
-        }
-        Log("virtual tracker is%s upside down", m_UpsideDown ? "" : " not");
+        
         float value;
         if (GetConfig()->GetFloat(Cfg::TrackerOffsetForward, value))
         {
@@ -660,10 +654,13 @@ namespace Tracker
         {
             success = false;
         }
+
+        m_Manipulator = std::make_unique<CorManipulator>(CorManipulator(this));
+        m_Manipulator->Init();
+
         TraceLoggingWriteStop(local,
                               "VirtualTracker::Init",
                               TLArg(success, "Success"),
-                              TLArg(m_UpsideDown, "UpsideDown"),
                               TLArg(m_OffsetForward, "m_OffsetForward"),
                               TLArg(m_OffsetDown, "m_OffsetDown"),
                               TLArg(m_OffsetRight, "m_OffsetRight"),
@@ -719,12 +716,10 @@ namespace Tracker
             else
             {
                 XrPosef refPose = m_ForwardPose;
-                const float offsetRight = m_UpsideDown ? -m_OffsetRight : m_OffsetRight;
-                const float offsetDown = m_UpsideDown ? -m_OffsetDown : m_OffsetDown;
 
                 // calculate and apply translational offset
                 const XrVector3f offset =
-                    m_OffsetForward * m_Forward + offsetRight * m_Right + XrVector3f{0.0f, -offsetDown, 0.0f};
+                    m_OffsetForward * m_Forward + m_OffsetRight * m_Right + XrVector3f{0.0f, -m_OffsetDown, 0.0f};
                 TraceLoggingWriteTagged(local,
                                         "VirtualTracker::ResetReferencePose",
                                         TLArg(xr::ToString(offset).c_str(), "Offset"));
@@ -767,12 +762,6 @@ namespace Tracker
         GetConfig()->SetValue(Cfg::TrackerOffsetDown, m_OffsetDown * 100.0f);
         GetConfig()->SetValue(Cfg::TrackerOffsetRight, m_OffsetRight * 100.0f);
 
-        if (m_UpsideDown)
-        {
-            modification.y = -modification.y;
-            modification.x = -modification.x;
-        }
-
         const XrPosef adjustment{{Quaternion::Identity()}, modification};
         m_ReferencePose = Pose::Multiply(adjustment, m_ReferencePose);
         TraceLoggingWriteStop(local,
@@ -800,8 +789,7 @@ namespace Tracker
             return false;
         }
         XrPosef adjustment{Pose::Identity()};
-        const float direction = radian * (m_UpsideDown ? -1.0f : 1.0f);
-        m_OffsetYaw += direction;
+        m_OffsetYaw += radian;
         // restrict to +- pi
         m_OffsetYaw = fmod(m_OffsetYaw + floatPi, 2.0f * floatPi) - floatPi;
         const float yawAngle = m_OffsetYaw / angleToRadian;
@@ -809,7 +797,7 @@ namespace Tracker
 
         TraceLoggingWriteTagged(local, "VirtualTracker::ChangeRotation", TLArg(yawAngle, "YawAngle"));
 
-        StoreXrQuaternion(&adjustment.orientation, DirectX::XMQuaternionRotationRollPitchYaw(0.0f, direction, 0.0f));
+        StoreXrQuaternion(&adjustment.orientation, DirectX::XMQuaternionRotationRollPitchYaw(0.0f, radian, 0.0f));
         SetReferencePose(Pose::Multiply(adjustment, m_ReferencePose));
 
         TraceLoggingWriteStop(local,
@@ -1026,11 +1014,6 @@ namespace Tracker
                                TLArg(data.autoX, "AutoX"),
                                TLArg(data.autoY, "AutoY"));
 
-       if (m_UpsideDown)
-       {
-            data.pitch = -data.pitch;
-            data.yaw = -data.yaw;
-       }
        auto rotation = DirectX::XMQuaternionRotationRollPitchYaw(data.pitch * angleToRadian,
                                                                  -data.yaw * angleToRadian,
                                                                  -data.roll * angleToRadian);
@@ -1082,14 +1065,6 @@ namespace Tracker
                                TLArg(data.sway, "Sway"),
                                TLArg(data.surge, "Surge"),
                                TLArg(data.heave, "Heave"));
-
-       if (m_UpsideDown)
-       {
-            data.pitch = -data.pitch;
-            data.yaw = -data.yaw;
-            data.sway = -data.sway;
-            data.heave = -data.heave;
-       }
 
        auto rotation = DirectX::XMQuaternionRotationRollPitchYaw(
            static_cast<float>(data.pitch) * (m_IsSrs ? angleToRadian : -angleToRadian),

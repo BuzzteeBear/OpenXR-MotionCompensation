@@ -89,7 +89,6 @@ What you can modify in a configuration file:
   - `physical_enabled`: initialization of physical tracker (motion controller or vive tracker) on startup can be skipped (e.g. if you're using a virtual tracker). Modifying this setting requires an application restart.
   - `overlay_enabled`: enable initialization of the graphical overlay (for example if it's not required because of using a physical tracker or if the position of the center of rotation is successfully setup and `load_ref_pose_from_file` = 1 is used). Changing this value requires the VR session to be restarted.
   - `physical_early_init`: initialize physical tracker as soon instead of as late as possible. May be required in native OpenXR games / sims that do not support motion controllers input (e.g. iRacing). May avoid conflicts with other OpenXR layers (e.g. eye tracking in OpenXR toolkit). Modifying this setting requires an application restart.
-  - `upside_down`: turn in-game coordinate system upside down by rotating it 180 degrees around the 'forward' axis. Necessary for correct orientation of virtual tracker and motion compensation in some games (automatically set for iRacing). Changing this value requires the VR session to be restarted.
   - `auto_activate`: automatically activate motion compensation on application start and configuration reloading.
   - `auto_activate_delay`: delay auto-activation by specified number of seconds. The required time for successful activation may vary, depending on application and tracker type used.
   - `auto_activate_countdown`: enable audible countdown for the last 10 seconds before auto-activation. This is supposed to allow getting to neutral position and timely centering of in-game view.
@@ -208,7 +207,6 @@ You can enable/disable the overlay using the `toggle_overlay` shortcut. It displ
     - blue arrow points upwards
     - green arrow points forward
     - red arrow points to the right
-    - if blue and red are pointing in the opposite direction, try setting `upside_down` to 1 in the `startup` section of the config file of the corresponding application (or check if it is set to 1 inadvertently). 
   - for a physical tracker (`controller` or `vive`) the orientation of the marker is depending on the runtime implementation and doesn't really matter for functionality
 - the current tracker position, if mc is currently active. This marker's colorcoding uses:
   - cyan instead of blue

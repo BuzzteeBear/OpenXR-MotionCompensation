@@ -39,27 +39,6 @@ bool ConfigManager::Init(const std::string& application)
                      m_ApplicationIni.c_str(),
                      LastErrorMsg().c_str());
         }
-
-        // add upside_down = 1 for iRacing
-        if (application.find("iRacing") != std::string::npos)
-        {
-            const auto& upsideDownKey = m_Keys.find(Cfg::UpsideDown);
-            if (upsideDownKey == m_Keys.cend())
-            {
-                ErrorLog("unable to find internal upside_down entry");
-            }
-            else if (!WritePrivateProfileString(upsideDownKey->second.first.c_str(),
-                                                upsideDownKey->second.second.c_str(),
-                                                "1",
-                                                m_ApplicationIni.c_str()) &&
-                     2 != GetLastError())
-            {
-                ErrorLog("%s: unable to create upside_down key for iRacing in %s, error: %s",
-                         __FUNCTION__,
-                         m_ApplicationIni.c_str(),
-                         LastErrorMsg().c_str());
-            }
-        }
     }
     const std::string coreIni(localAppData.string() + "\\" + "OpenXR-MotionCompensation.ini");
     if ((_access(coreIni.c_str(), 0)) != -1)
