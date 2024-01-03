@@ -2108,7 +2108,7 @@ namespace openxr_api_layer
                     }
                     bindings.push_back(binding);
                     DebugLog("SuggestInteractionProfiles: added binding for %s action (%d) with path: %s",
-                             action,
+                             action.c_str(),
                              binding.action,
                              path.c_str());
                     return true;
