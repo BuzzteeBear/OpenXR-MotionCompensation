@@ -5,7 +5,7 @@
 #include "filter.h"
 #include "modifier.h"
 
-namespace Tracker
+namespace tracker
 {
     class ControllerBase
     {
@@ -74,10 +74,10 @@ namespace Tracker
 
         float m_TransStrength{0.0f};
         float m_RotStrength{0.0f};
-        Filter::FilterBase<XrVector3f>* m_TransFilter = nullptr;
-        Filter::FilterBase<XrQuaternionf>* m_RotFilter = nullptr;
+        filter::FilterBase<XrVector3f>* m_TransFilter = nullptr;
+        filter::FilterBase<XrQuaternionf>* m_RotFilter = nullptr;
 
-        std::shared_ptr<Modifier::TrackerModifier> m_TrackerModifier{};
+        std::shared_ptr<modifier::TrackerModifier> m_TrackerModifier{};
     };
 
     class OpenXrTracker final : public TrackerBase
@@ -220,5 +220,5 @@ namespace Tracker
                                                        "keyboard"};
     };
 
-    std::unique_ptr<Tracker::TrackerBase> GetTracker();
-} // namespace Tracker
+    std::unique_ptr<tracker::TrackerBase> GetTracker();
+} // namespace tracker

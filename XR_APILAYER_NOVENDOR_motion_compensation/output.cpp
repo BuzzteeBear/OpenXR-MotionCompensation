@@ -2,7 +2,7 @@
 
 #include "pch.h"
 
-#include "feedback.h"
+#include "outpuut.h"
 #include "utility.h"
 #include "resource.h"
 #include "layer.h"
@@ -10,7 +10,7 @@
 #include <playsoundapi.h>
 
 using namespace openxr_api_layer::log;
-namespace Feedback
+namespace output
 {
     void AudioOut::Execute(const Event event)
     {
@@ -71,4 +71,4 @@ namespace Feedback
         }
         TraceLoggingWriteStop(local, "AudioOut::CountDown");
     }
-} // namespace Feedback
+} // namespace output

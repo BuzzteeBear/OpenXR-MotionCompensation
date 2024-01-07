@@ -9,7 +9,7 @@ namespace openxr_api_layer
     class OpenXrLayer;
 }
 
-namespace Input
+namespace input
 {
     class KeyboardInput
     {
@@ -62,7 +62,7 @@ namespace Input
         void ToggleOverlay() const;
         void ToggleCache() const;
         void ToggleModifier() const;
-        void ChangeOffset(::Input::InputHandler::Direction dir, bool fast) const;
+        void ChangeOffset(::input::InputHandler::Direction dir, bool fast) const;
         void ReloadConfig() const;
         void SaveConfig(XrTime time, bool forApp) const;
         static void ToggleVerbose();
@@ -93,4 +93,4 @@ namespace Input
             {"/interaction_profiles/htc/vive_cosmos_controller", {"input/trigger", "input/menu"}},
             {"/interaction_profiles/htc/vive_focus3_controller", {"input/trigger", "input/menu"}}};
     };
-} // namespace Input
+} // namespace input

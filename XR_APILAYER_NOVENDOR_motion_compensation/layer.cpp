@@ -24,7 +24,7 @@
 
 #include "layer.h"
 #include "tracker.h"
-#include "feedback.h"
+#include "outpuut.h"
 #include "utility.h"
 #include "config.h"
 #include <log.h>
@@ -32,7 +32,7 @@
 
 
 using namespace openxr_api_layer::log;
-using namespace Feedback;
+using namespace output;
 using namespace xr::math;
 namespace openxr_api_layer
 {
@@ -135,8 +135,8 @@ namespace openxr_api_layer
             return result;
         }
 
-        m_Tracker = Tracker::GetTracker();
-        m_Input = std::make_shared<Input::InputHandler>(Input::InputHandler(this));
+        m_Tracker = tracker::GetTracker();
+        m_Input = std::make_shared<input::InputHandler>(input::InputHandler(this));
 
         // enable / disable physical tracker initialization
         GetConfig()->GetBool(Cfg::PhysicalEnabled, m_PhysicalEnabled);
@@ -213,7 +213,7 @@ namespace openxr_api_layer
         Log("legacy mode is %s", m_LegacyMode ? "activated" : "off");
 
         // initialize hmd modifier
-        m_HmdModifier = std::make_unique<Modifier::HmdModifier>();
+        m_HmdModifier = std::make_unique<modifier::HmdModifier>();
         GetConfig()->GetBool(Cfg::FactorEnabled, m_ModifierActive);
 
         // choose cache for reverting pose in xrEndFrame
@@ -1911,7 +1911,7 @@ namespace openxr_api_layer
             {
                 XrActionSetCreateInfo actionSetCreateInfo{XR_TYPE_ACTION_SET_CREATE_INFO, nullptr};
                 strcpy_s(actionSetCreateInfo.actionSetName, "general_tracker_set");
-                strcpy_s(actionSetCreateInfo.localizedActionSetName, "General Tracker Set");
+                strcpy_s(actionSetCreateInfo.localizedActionSetName, "General tracker Set");
                 actionSetCreateInfo.priority = 0;
                 if (const XrResult result = xrCreateActionSet(GetXrInstance(), &actionSetCreateInfo, &m_ActionSet);
                     XR_SUCCEEDED(result))

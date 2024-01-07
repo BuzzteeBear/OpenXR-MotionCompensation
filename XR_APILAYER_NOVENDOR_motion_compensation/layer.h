@@ -164,8 +164,8 @@ namespace openxr_api_layer
         std::set<XrSpace> m_ActionSpaces{};
         std::vector<XrView> m_EyeOffsets{};
         XrViewConfigurationType m_ViewConfigType{XR_VIEW_CONFIGURATION_TYPE_MAX_ENUM};
-        Tracker::ViveTrackerInfo m_ViveTracker;
-        Input::ButtonPath m_ButtonPath;
+        tracker::ViveTrackerInfo m_ViveTracker;
+        input::ButtonPath m_ButtonPath;
         utility::Cache<XrPosef> m_DeltaCache{"delta", xr::math::Pose::Identity()};
         utility::Cache<std::vector<XrPosef>> m_EyeCache{"eyes",
                                                         std::vector<XrPosef>{xr::math::Pose::Identity(),
@@ -173,11 +173,11 @@ namespace openxr_api_layer
                                                                              xr::math::Pose::Identity(),
                                                                              xr::math::Pose::Identity()}};
         std::mutex m_FrameLock;
-        std::unique_ptr<Tracker::TrackerBase> m_Tracker{};
+        std::unique_ptr<tracker::TrackerBase> m_Tracker{};
         std::unique_ptr<graphics::Overlay> m_Overlay{};
-        std::shared_ptr<Input::InputHandler> m_Input{};
+        std::shared_ptr<input::InputHandler> m_Input{};
         std::unique_ptr<utility::AutoActivator> m_AutoActivator{};
-        std::unique_ptr<Modifier::HmdModifier> m_HmdModifier{};
+        std::unique_ptr<modifier::HmdModifier> m_HmdModifier{};
         std::shared_ptr<graphics::ICompositionFrameworkFactory> m_CompositionFrameworkFactory{};
 
         // connection recovery
@@ -188,7 +188,7 @@ namespace openxr_api_layer
         bool m_TestRotation{false};
         XrTime m_TestRotStart{0};
 
-        friend class Input::InputHandler;
+        friend class input::InputHandler;
     };
 
     // Singleton accessor.

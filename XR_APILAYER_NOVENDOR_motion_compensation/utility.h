@@ -13,14 +13,14 @@ namespace utility
     class AutoActivator
     {
       private:
-        std::shared_ptr<Input::InputHandler> m_Input;
+        std::shared_ptr<input::InputHandler> m_Input;
         bool m_Activate{false};
         bool m_Countdown{false};
         int m_SecondsLeft{0};
         XrTime m_ActivationTime{0};
 
       public:
-        explicit AutoActivator(const std::shared_ptr<Input::InputHandler>& input);
+        explicit AutoActivator(const std::shared_ptr<input::InputHandler>& input);
         void ActivateIfNecessary(XrTime time);
     };
 

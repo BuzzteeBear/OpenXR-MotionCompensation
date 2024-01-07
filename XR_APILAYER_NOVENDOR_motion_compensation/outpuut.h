@@ -3,7 +3,7 @@
 #pragma once
 #include "resource.h"
 
-namespace Feedback
+namespace output
 {
     enum class Event
     {
@@ -78,4 +78,4 @@ namespace Feedback
 
     };
 
-} // namespace Feedback
+} // namespace output

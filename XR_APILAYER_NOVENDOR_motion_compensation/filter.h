@@ -4,7 +4,7 @@
 
 #include <log.h>
 
-namespace Filter
+namespace filter
 {
     template <typename Value>
     class FilterBase
@@ -110,4 +110,4 @@ namespace Filter
       protected:
         XrQuaternionf m_ThirdStage = xr::math::Quaternion::Identity();
     };
-} // namespace Filter
+} // namespace filter

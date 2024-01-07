@@ -25,7 +25,7 @@
 
 #include "overlay.h"
 #include "layer.h"
-#include "feedback.h"
+#include "outpuut.h"
 #include "graphics.h"
 #include <util.h>
 #include <log.h>
@@ -330,7 +330,7 @@ namespace openxr_api_layer::graphics
         {
             m_OverlayActive = false;
             ErrorLog(" %s: graphical overlay is not properly initialized", __FUNCTION__);
-            Feedback::AudioOut::Execute(Feedback::Event::Error);
+            output::AudioOut::Execute(output::Event::Error);
 
             TraceLoggingWriteStop(local,
                                   "Overlay::ToggleOverlay",
@@ -339,7 +339,7 @@ namespace openxr_api_layer::graphics
             return false;
         }
         m_OverlayActive = !m_OverlayActive;
-        Feedback::AudioOut::Execute(m_OverlayActive ? Feedback::Event::OverlayOn : Feedback::Event::OverlayOff);
+        output::AudioOut::Execute(m_OverlayActive ? output::Event::OverlayOn : output::Event::OverlayOff);
 
         TraceLoggingWriteStop(local,
                               "Overlay::ToggleOverlay",

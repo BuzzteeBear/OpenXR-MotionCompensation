@@ -160,7 +160,7 @@ xcopy "$(SolutionDir)\scripts\Uninstall-$(SolutionName).ps1" "$(OutDir)" /y /q</
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="config.h" />
-    <ClInclude Include="feedback.h" />
+    <ClInclude Include="outpuut.h" />
     <ClInclude Include="filter.h" />
     <ClInclude Include="graphics.h" />
     <ClInclude Include="input.h" />
@@ -181,7 +181,7 @@ xcopy "$(SolutionDir)\scripts\Uninstall-$(SolutionName).ps1" "$(OutDir)" /y /q</
     <ClCompile Include="config.cpp" />
     <ClCompile Include="d3d11.cpp" />
     <ClCompile Include="d3d12.cpp" />
-    <ClCompile Include="feedback.cpp" />
+    <ClCompile Include="output.cpp" />
     <ClCompile Include="filter.cpp" />
     <ClCompile Include="input.cpp" />
     <ClCompile Include="overlay.cpp" />

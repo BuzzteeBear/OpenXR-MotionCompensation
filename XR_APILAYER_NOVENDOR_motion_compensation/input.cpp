@@ -4,15 +4,15 @@
 
 #include "input.h"
 #include "layer.h"
-#include "feedback.h"
+#include "outpuut.h"
 #include "utility.h"
 #include <log.h>
 
 using namespace openxr_api_layer;
 using namespace log;
-using namespace Feedback;
+using namespace output;
 
-namespace Input
+namespace input
 {
     bool KeyboardInput::Init()
     {
@@ -427,9 +427,9 @@ namespace Input
             Log("legacy mode is %s", m_Layer->m_LegacyMode ? "activated" : "off");
             m_Layer->m_AutoActivator =
                 std::make_unique<utility::AutoActivator>(utility::AutoActivator(m_Layer->m_Input));
-            m_Layer->m_HmdModifier = std::make_unique<Modifier::HmdModifier>();
+            m_Layer->m_HmdModifier = std::make_unique<modifier::HmdModifier>();
             m_Layer->m_VirtualTrackerUsed = GetConfig()->IsVirtualTracker();
-            m_Layer->m_Tracker = Tracker::GetTracker();
+            m_Layer->m_Tracker = tracker::GetTracker();
             if (!m_Layer->m_Tracker->Init())
             {
                 success = false;
@@ -489,4 +489,4 @@ namespace Input
         return path;
     }
 
-} // namespace Input
+} // namespace input

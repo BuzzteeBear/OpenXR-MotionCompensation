@@ -47,7 +47,7 @@
     <ClInclude Include="filter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="feedback.h">
+    <ClInclude Include="outpuut.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="resource.h">
@@ -97,7 +97,7 @@
     <ClCompile Include="filter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="feedback.cpp">
+    <ClCompile Include="output.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="d3d11.cpp">

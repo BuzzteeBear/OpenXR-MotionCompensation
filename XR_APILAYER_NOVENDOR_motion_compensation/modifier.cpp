@@ -6,7 +6,7 @@
 #include "modifier.h"
 #include "config.h"
 #include "utility.h"
-#include "feedback.h"
+#include "outpuut.h"
 #include <util.h>
 
 using namespace xr::math;
@@ -15,7 +15,7 @@ using namespace DirectX;
 using namespace openxr_api_layer;
 using namespace openxr_api_layer::log;
 
-namespace Modifier
+namespace modifier
 {
     void ModifierBase::SetActive(const bool apply)
     {
@@ -182,7 +182,7 @@ namespace Modifier
             ErrorLog("%s: compensating motion controllers and using pose modifier at hmd position are incompatible",
                      __FUNCTION__);
             Log("pose modifier at hmd position NOT activated");
-            Feedback::AudioOut::Execute(Feedback::Event::Error);
+            output::AudioOut::Execute(output::Event::Error);
 
             // reset values to avoid activation via keyboard shortcut
             m_Pitch = 1.f;
@@ -274,4 +274,4 @@ namespace Modifier
 
         TraceLoggingWriteStop(local, "HmdModifier::Apply", TLArg(xr::ToString(target).c_str(), "Modified Target"));
     }
-} // namespace Modifier
+} // namespace modifier

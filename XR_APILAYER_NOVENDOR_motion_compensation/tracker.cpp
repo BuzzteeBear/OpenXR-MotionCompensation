@@ -3,17 +3,17 @@
 #include "pch.h"
 
 #include "layer.h"
-#include "feedback.h"
+#include "outpuut.h"
 #include <log.h>
 #include <util.h>
 
 using namespace openxr_api_layer;
 using namespace log;
-using namespace Feedback;
+using namespace output;
 using namespace xr::math;
 using namespace utility;
 
-namespace Tracker
+namespace tracker
 {
     bool ControllerBase::Init()
     {
@@ -278,7 +278,7 @@ namespace Tracker
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "TrackerBase::Init");
 
-        m_TrackerModifier = std::make_unique<Modifier::TrackerModifier>();
+        m_TrackerModifier = std::make_unique<modifier::TrackerModifier>();
         ControllerBase::Init();
 
         const bool success = LoadFilters();
@@ -336,15 +336,15 @@ namespace Tracker
 
         Log("translational filter stages: %d", orderTrans);
         Log("translational filter strength: %f", m_TransStrength);
-        m_TransFilter = 1 == orderTrans   ? new Filter::SingleEmaFilter(m_TransStrength)
-                        : 2 == orderTrans ? new Filter::DoubleEmaFilter(m_TransStrength)
-                                          : new Filter::TripleEmaFilter(m_TransStrength);
+        m_TransFilter = 1 == orderTrans   ? new filter::SingleEmaFilter(m_TransStrength)
+                        : 2 == orderTrans ? new filter::DoubleEmaFilter(m_TransStrength)
+                                          : new filter::TripleEmaFilter(m_TransStrength);
 
         Log("rotational filter stages: %d", orderRot);
         Log("rotational filter strength: %f", m_RotStrength);
-        m_RotFilter = 1 == orderRot   ? new Filter::SingleSlerpFilter(m_RotStrength)
-                      : 2 == orderRot ? new Filter::DoubleSlerpFilter(m_RotStrength)
-                                      : new Filter::TripleSlerpFilter(m_RotStrength);
+        m_RotFilter = 1 == orderRot   ? new filter::SingleSlerpFilter(m_RotStrength)
+                      : 2 == orderRot ? new filter::DoubleSlerpFilter(m_RotStrength)
+                                      : new filter::TripleSlerpFilter(m_RotStrength);
 
         TraceLoggingWriteStop(local,
                               "TrackerBase::LoadFilters",
@@ -1286,7 +1286,7 @@ namespace Tracker
          TraceLocalActivity(local);
          TraceLoggingWriteStart(local,
                                 "CorManipulator::ApplyPosition",
-                                TLArg(xr::ToString(this->m_LastPose).c_str(), "Tracker"));
+                                TLArg(xr::ToString(this->m_LastPose).c_str(), "tracker"));
 
          const XrPosef corPose = m_Tracker->GetReferencePose();
          const auto [relativeOrientation, relativePosition] = Pose::Multiply(m_LastPose, Pose::Invert(corPose));
@@ -1304,7 +1304,7 @@ namespace Tracker
         TraceLoggingWriteStart(local,
                                "CorManipulator::ApplyTranslation",
                                TLArg(xr::ToString(this->m_ReferencePose).c_str(), "Reference"),
-                               TLArg(xr::ToString(this->m_LastPose).c_str(), "Tracker"));
+                               TLArg(xr::ToString(this->m_LastPose).c_str(), "tracker"));
 
         const XrPosef corPose = m_Tracker->GetReferencePose();
         const DirectX::XMVECTOR rot = LoadXrQuaternion(corPose.orientation);
@@ -1383,7 +1383,7 @@ namespace Tracker
         return true;
     }
 
-    std::unique_ptr<Tracker::TrackerBase> GetTracker()
+    std::unique_ptr<tracker::TrackerBase> GetTracker()
     {
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "GetTracker");
@@ -1394,31 +1394,31 @@ namespace Tracker
             if ("yaw" == trackerType)
             {
                 Log("Yaw Game Engine memory mapped file is used as reference tracker");
-                TraceLoggingWriteStop(local, "GetTracker", TLPArg(trackerType.c_str(), "Tracker"));
+                TraceLoggingWriteStop(local, "GetTracker", TLPArg(trackerType.c_str(), "tracker"));
                 return std::make_unique<YawTracker>();
             }
             if ("srs" == trackerType)
             {
                 Log("SRS memory mapped file is used as reference tracker");
-                TraceLoggingWriteStop(local, "GetTracker", TLPArg(trackerType.c_str(), "Tracker"));
+                TraceLoggingWriteStop(local, "GetTracker", TLPArg(trackerType.c_str(), "tracker"));
                 return std::make_unique<SrsTracker>();
             }
             if ("flypt" == trackerType)
             {
                 Log("FlyPT Mover memory mapped file is used as reference tracker");
-                TraceLoggingWriteStop(local, "GetTracker", TLPArg(trackerType.c_str(), "Tracker"));
+                TraceLoggingWriteStop(local, "GetTracker", TLPArg(trackerType.c_str(), "tracker"));
                 return std::make_unique<FlyPtTracker>();
             }
             if ("controller" == trackerType)
             {
                 Log("motion controller is used as reference tracker");
-                TraceLoggingWriteStop(local, "GetTracker", TLPArg(trackerType.c_str(), "Tracker"));
+                TraceLoggingWriteStop(local, "GetTracker", TLPArg(trackerType.c_str(), "tracker"));
                 return std::make_unique<OpenXrTracker>();
             }
             if ("vive" == trackerType)
             {
                 Log("vive tracker is used as reference tracker");
-                TraceLoggingWriteStop(local, "GetTracker", TLPArg(trackerType.c_str(), "Tracker"));
+                TraceLoggingWriteStop(local, "GetTracker", TLPArg(trackerType.c_str(), "tracker"));
                 return std::make_unique<OpenXrTracker>();
             }
             ErrorLog("unknown tracker type: %s", trackerType.c_str());
@@ -1428,7 +1428,7 @@ namespace Tracker
             ErrorLog("unable to determine tracker type");
         }
         ErrorLog("defaulting to 'controller'");
-        TraceLoggingWriteStop(local, "GetTracker", TLPArg("Default", "Tracker"));
+        TraceLoggingWriteStop(local, "GetTracker", TLPArg("Default", "tracker"));
         return std::make_unique<OpenXrTracker>();
     }
-} // namespace Tracker
+} // namespace tracker

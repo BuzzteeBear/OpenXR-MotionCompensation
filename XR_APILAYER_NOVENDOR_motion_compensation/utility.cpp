@@ -7,7 +7,7 @@
 #include "utility.h"
 #include "layer.h"
 #include "config.h"
-#include "feedback.h"
+#include "outpuut.h"
 
 using namespace openxr_api_layer;
 using namespace log;
@@ -17,7 +17,7 @@ using namespace DirectX;
 
 namespace utility
 {
-    AutoActivator::AutoActivator(const std::shared_ptr<Input::InputHandler>& input)
+    AutoActivator::AutoActivator(const std::shared_ptr<input::InputHandler>& input)
     {
         m_Input = input;
         GetConfig()->GetBool(Cfg::AutoActive, m_Activate);
@@ -53,7 +53,7 @@ namespace utility
 
             if (m_Countdown && currentlyLeft < m_SecondsLeft)
             {
-                Feedback::AudioOut::CountDown(currentlyLeft);
+                output::AudioOut::CountDown(currentlyLeft);
             }
             m_SecondsLeft = currentlyLeft;
 

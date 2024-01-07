@@ -4,7 +4,7 @@
 
 #include "config.h"
 #include "layer.h"
-#include "feedback.h"
+#include "outpuut.h"
 #include "utility.h"
 #include <log.h>
 
@@ -344,7 +344,7 @@ void ConfigManager::WriteConfig(const bool forApp)
         }
     }
     Log("current configuration %saved to %s", error ? "could not be " : "", configFile.c_str());
-    Feedback::AudioOut::Execute(!error ? Feedback::Event::Save : Feedback::Event::Error);
+    output::AudioOut::Execute(!error ? output::Event::Save : output::Event::Error);
 
     TraceLoggingWriteStop(local, "ConfigManager::WriteConfig", TLArg(!error, "Success"));
 }

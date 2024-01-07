@@ -9,7 +9,7 @@
 using namespace openxr_api_layer::log;
 using namespace xr::math;
 
-namespace Filter
+namespace filter
 {
     SingleEmaFilter::SingleEmaFilter(const float strength) : FilterBase(strength, "translational")
     {
@@ -206,4 +206,4 @@ namespace Filter
         SingleSlerpFilter::Reset(rotation);
         m_ThirdStage = rotation;
     }
-} // namespace Filter
+} // namespace filter

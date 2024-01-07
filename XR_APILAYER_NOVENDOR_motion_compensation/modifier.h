@@ -1,6 +1,6 @@
 #pragma once
 
-namespace Modifier
+namespace modifier
 {
     class ModifierBase
     {
@@ -31,4 +31,4 @@ namespace Modifier
         HmdModifier();
         void Apply(XrPosef& target, const XrPosef& reference) const override;
     };
-} // namespace Modifier
+} // namespace modifier
