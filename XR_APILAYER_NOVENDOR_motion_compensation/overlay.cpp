@@ -25,7 +25,7 @@
 
 #include "overlay.h"
 #include "layer.h"
-#include "outpuut.h"
+#include "output.h"
 #include "graphics.h"
 #include <util.h>
 #include <log.h>

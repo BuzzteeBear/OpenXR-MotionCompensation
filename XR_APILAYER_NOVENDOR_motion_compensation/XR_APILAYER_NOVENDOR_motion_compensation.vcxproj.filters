@@ -47,7 +47,7 @@
     <ClInclude Include="filter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="outpuut.h">
+    <ClInclude Include="output.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="resource.h">

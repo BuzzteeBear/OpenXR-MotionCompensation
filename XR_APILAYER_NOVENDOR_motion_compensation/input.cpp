@@ -4,7 +4,7 @@
 
 #include "input.h"
 #include "layer.h"
-#include "outpuut.h"
+#include "output.h"
 #include "utility.h"
 #include <log.h>
 

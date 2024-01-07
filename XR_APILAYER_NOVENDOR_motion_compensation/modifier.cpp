@@ -6,7 +6,7 @@
 #include "modifier.h"
 #include "config.h"
 #include "utility.h"
-#include "outpuut.h"
+#include "output.h"
 #include <util.h>
 
 using namespace xr::math;
