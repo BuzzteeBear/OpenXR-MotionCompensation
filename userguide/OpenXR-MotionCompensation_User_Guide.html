@@ -44,7 +44,7 @@
 <body>
 	<content><h1 id="openxr-motion-compensation">OpenXR Motion Compensation</h1>
 <p><strong>DISCLAIMER: This software is distributed as-is, without any warranties or conditions of any kind. Use at your own risks!</strong></p>
-<p>Version: 0.3.1</p>
+<p>Version: 0.3.2</p>
 <p><strong>This document contains instructions on how to use OpenXR motion compensation <a href="https://www.khronos.org/registry/OpenXR/specs/1.0/html/xrspec.html#api-layers">API layer</a>.</strong></p>
 <h2 id="purpose-of-openxr-motion-compensation">Purpose of OpenXR Motion Compensation</h2>
 <p>When using a motion rig in combination with a VR headset (hmd) he movement of the rig causes the in-game camera to change along with your position in the real world. In simulations for example you're basically feel being pushed around inside the cockpit when the motion rig moves.<br />
@@ -201,6 +201,7 @@ The key <code>vertical_factor</code> is applied to translational filter strength
 <li><code>save_config_app</code> -  write current filter strength and cor offsets to application specific config file. Note that values in this file will precedent values in the global config file.</li>
 <li><code>reload_config</code> - read in and apply configuration for current app from config files. For technical reasons motion compensation is automatically deactivated and the reference tracker pose is invalidated upon configuration reload.</li>
 <li><code>toggle_vebose_logging</code> - enable/disable verbose logging mode. Note that verbose logging includes per-frame log outputs, which (negatively) affects performance and log file size.</li>
+<li><code>toggle_recording</code> - start/stop recording of tracker values, see (See <a href="#recording">Recording</a> for details). Note that recording (negatively) affects performance.</li>
 <li><code>log_tracker_pose</code> - write the current tracker reference pose (and tracker pose, if obtainable) into the log file, after having it calibrated. Can be useful when debugging issues with a physical tracker.</li>
 <li><code>log_interaction_profile</code> - (only for physical tracker: <code>controller</code> or <code>vive</code>): write the current interaction profile bound to the reference tracker into the log file, can also be used for the purpose of troubleshooting.</li>
 </ul>
@@ -431,6 +432,17 @@ If don't have a clue where the cor of your motion rig is supposed to be, you can
 <li>These files are highly compressible!</li>
 </ul>
 <p>You can send the trace file to the developer or use an application such as <a href="https://apps.microsoft.com/store/detail/tabnalysis/9NQLK2M4RP4J?hl=en-id&amp;gl=ID">Tabnalysis</a> to inspect the content yourself.</p>
+<h3 id="recording">Recording</h3>
+<p>Starting a recording session (via keyboard shortcut <code>toggle_recording</code>) results in the internal tracker values to be written into a comma seperated file named <code>recording_XXX_.csv</code> file where <code>XXX</code> is a timestamp relating to the start time of recording. The content of this file can easily be loaded into excel (or similar software) to generate plots and search for erroneous data. Note that tracker values are only logged while motion compensation is activated.
+The first line of the file contains the labels for the corresponding columns with:</p>
+<ul>
+<li><code>Time</code> representing the internal time used by the OpenXR runtime, in nanoseconds</li>
+<li><code>X_..., Y_..., Z_...</code> denoting the position in global space</li>
+<li><code>A_..., B_..., C_..., D_...</code> describing the quaternion representing the orientation/rotation in global space</li>
+<li><code>..._Input</code> values are based on the raw input data, <code>..._Filtered</code> on the data after being filtered, <code>..._Modified</code> on the values after pose modifier application (at tracker reference position, identical to ..._Filtered when modifier is disabled). <code>..._Reference</code> is refering to the current reference/COR pose and <code>...__Delta</code> is the Pose that's actually multiplied with the hmd real pose for motion compensation.</li>
+<li><code>Sway, Surge, Heave, Yaw, Roll, Pitch,</code> being the input from MMF, when using a virtual tracker.</li>
+</ul>
+<p>If the maximum size of the recording file is exceesed before the recording is stopped, a new file is created and used for recording subsequent values. This is accompanied by the same audible feedback that signals a regular start of recording.</p>
 <h2 id="list-of-keyboard-bindings">List of keyboard bindings</h2>
 <p>To combine multiple keys for a single shortcut they need to be separated by '+' with no spaces in between the key descriptors.</p>
 <p>List of supported shortcut key names:</p>

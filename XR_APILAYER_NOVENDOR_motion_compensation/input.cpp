@@ -24,7 +24,7 @@ namespace input
             Cfg::KeyRotDec,       Cfg::KeyOffForward, Cfg::KeyOffBack,      Cfg::KeyOffUp,      Cfg::KeyOffDown,
             Cfg::KeyOffRight,     Cfg::KeyOffLeft,    Cfg::KeyRotRight,     Cfg::KeyRotLeft,    Cfg::KeyOverlay,
             Cfg::KeyCache,        Cfg::KeyModifier,   Cfg::KeyFastModifier, Cfg::KeySaveConfig, Cfg::KeySaveConfigApp,
-            Cfg::KeyReloadConfig, Cfg::KeyVerbose,    Cfg::KeyLogTracker,   Cfg::KeyLogProfile};
+            Cfg::KeyReloadConfig, Cfg::KeyVerbose,    Cfg::KeyRecorder,     Cfg::KeyLogTracker, Cfg::KeyLogProfile};
         const std::set<int> modifiers{VK_CONTROL, VK_SHIFT, VK_MENU};
         std::set<int> fastModifiers{};
         GetConfig()->GetShortcut(Cfg::KeyFastModifier, fastModifiers);
@@ -168,6 +168,10 @@ namespace input
         if (m_Input.GetKeyState(Cfg::KeyVerbose, isRepeat) && !isRepeat)
         {
             ToggleVerbose();
+        }
+        if (m_Input.GetKeyState(Cfg::KeyRecorder, isRepeat) && !isRepeat)
+        {
+            m_Layer->m_Tracker->ToggleRecording();
         }
         if (m_Input.GetKeyState(Cfg::KeyLogProfile, isRepeat) && !isRepeat)
         {

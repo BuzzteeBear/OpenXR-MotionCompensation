@@ -259,5 +259,11 @@
     <Media Include="sounds\calibration_lost.wav">
       <Filter>Sounds</Filter>
     </Media>
+    <Media Include="sounds\recorder_off.wav">
+      <Filter>Sounds</Filter>
+    </Media>
+    <Media Include="sounds\recorder_on.wav" >
+      <Filter>Sounds</Filter>
+    </Media>
   </ItemGroup>
 </Project>

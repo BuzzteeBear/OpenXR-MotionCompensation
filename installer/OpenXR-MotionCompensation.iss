@@ -4,7 +4,7 @@
 ; make sure to adapt this path to your system before building the installer
 #define SolutionDir "P:\Development\OpenXR-MotionCompensation"
 #define AppName "OpenXR-MotionCompensation"
-#define AppVersion "0.3.1"
+#define AppVersion "0.3.2"
 #define AppPublisher "oxrmc@mailbox.org"
 #define AppURL "https://github.com/BuzzteeBear/OpenXR-MotionCompensation"
 #define AppId "{A6E4E3AB-454E-4B79-BDCD-A11B4E1AAF4D}"
@@ -142,7 +142,8 @@ Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key:
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "save_config"; String: "CTRL+SHIFT+S"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "save_config_app"; String: "CTRL+SHIFT+A"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "reload_config"; String: "CTRL+SHIFT+L"; Flags: createkeyifdoesntexist  
-Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "toggle_verbose_logging"; String: "CTRL+SHIFT+V"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "toggle_verbose_logging"; String: "CTRL+SHIFT+SEMICOLON"; Flags: createkeyifdoesntexist   
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "toggle_recording"; String: "CTRL+SHIFT+PERIOD"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "log_tracker_pose"; String: "CTRL+SHIFT+T"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "log_interaction_profile"; String: "CTRL+SHIFT+I"; Flags: createkeyifdoesntexist 
 

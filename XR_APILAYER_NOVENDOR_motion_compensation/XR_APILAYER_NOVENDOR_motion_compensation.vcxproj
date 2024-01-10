@@ -249,6 +249,8 @@ xcopy "$(SolutionDir)\scripts\Uninstall-$(SolutionName).ps1" "$(OutDir)" /y /q</
     <Media Include="sounds\overlay_on.wav" />
     <Media Include="sounds\plus.wav" />
     <Media Include="sounds\point.wav" />
+    <Media Include="sounds\recorder_off.wav" />
+    <Media Include="sounds\recorder_on.wav" />
     <Media Include="sounds\right.wav" />
     <Media Include="sounds\rot_left.wav" />
     <Media Include="sounds\rot_right.wav" />

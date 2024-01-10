@@ -2,7 +2,7 @@
 
 **DISCLAIMER: This software is distributed as-is, without any warranties or conditions of any kind. Use at your own risks!**
 
-Version: 0.3.1
+Version: 0.3.2
 
 **This document contains instructions on how to use OpenXR motion compensation [API layer](https://www.khronos.org/registry/OpenXR/specs/1.0/html/xrspec.html#api-layers).**
 
@@ -146,6 +146,7 @@ What you can modify in a configuration file:
   - `save_config_app` -  write current filter strength and cor offsets to application specific config file. Note that values in this file will precedent values in the global config file. 
   - `reload_config` - read in and apply configuration for current app from config files. For technical reasons motion compensation is automatically deactivated and the reference tracker pose is invalidated upon configuration reload.
   - `toggle_vebose_logging` - enable/disable verbose logging mode. Note that verbose logging includes per-frame log outputs, which (negatively) affects performance and log file size.
+  - `toggle_recording` - start/stop recording of tracker values, see (See [Recording](#recording) for details). Note that recording (negatively) affects performance. 
   - `log_tracker_pose` - write the current tracker reference pose (and tracker pose, if obtainable) into the log file, after having it calibrated. Can be useful when debugging issues with a physical tracker.
   - `log_interaction_profile` - (only for physical tracker: `controller` or `vive`): write the current interaction profile bound to the reference tracker into the log file, can also be used for the purpose of troubleshooting.
 - `[debug]`: 
@@ -327,6 +328,16 @@ To capture a trace for the API layer:
 
 You can send the trace file to the developer or use an application such as [Tabnalysis](https://apps.microsoft.com/store/detail/tabnalysis/9NQLK2M4RP4J?hl=en-id&gl=ID) to inspect the content yourself.
 
+### Recording
+Starting a recording session (via keyboard shortcut `toggle_recording`) results in the internal tracker values to be written into a comma seperated file named `recording_XXX_.csv` file where `XXX` is a timestamp relating to the start time of recording. The content of this file can easily be loaded into excel (or similar software) to generate plots and search for erroneous data. Note that tracker values are only logged while motion compensation is activated.
+The first line of the file contains the labels for the corresponding columns with:
+- `Time` representing the internal time used by the OpenXR runtime, in nanoseconds
+- `X_..., Y_..., Z_...` denoting the position in global space
+- `A_..., B_..., C_..., D_...` describing the quaternion representing the orientation/rotation in global space
+- `..._Input` values are based on the raw input data, `..._Filtered` on the data after being filtered, `..._Modified` on the values after pose modifier application (at tracker reference position, identical to ..._Filtered when modifier is disabled). `..._Reference` is refering to the current reference/COR pose and `...__Delta` is the Pose that's actually multiplied with the hmd real pose for motion compensation.
+- `Sway, Surge, Heave, Yaw, Roll, Pitch,` being the input from MMF, when using a virtual tracker.
+
+If the maximum size of the recording file is exceesed before the recording is stopped, a new file is created and used for recording subsequent values. This is accompanied by the same audible feedback that signals a regular start of recording.
 
 ## List of keyboard bindings
 To combine multiple keys for a single shortcut they need to be separated by '+' with no spaces in between the key descriptors.

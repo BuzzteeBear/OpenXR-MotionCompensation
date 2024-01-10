@@ -4,6 +4,7 @@
 #include "utility.h"
 #include "filter.h"
 #include "modifier.h"
+#include "output.h"
 
 namespace tracker
 {
@@ -30,6 +31,7 @@ namespace tracker
         XrPosef m_LastPoseDelta{xr::math::Pose::Identity()};
         XrTime m_LastPoseTime{0};
         bool m_FallBackUsed{false};
+        std::shared_ptr<output::RecorderBase> m_Recorder{std::make_shared<output::NoRecorder>()};
         
       private:
         virtual void ApplyFilters(XrPosef& trackerPose){};
@@ -54,6 +56,7 @@ namespace tracker
         virtual bool ChangeRotation(float radian);
         virtual void SaveReferencePose(XrTime time) const{};
         virtual void ApplyCorManipulation(XrSession session, XrTime time){};
+        void ToggleRecording() const;
 
         bool m_SkipLazyInit{false};
         bool m_Calibrated{false};
@@ -83,7 +86,8 @@ namespace tracker
     class OpenXrTracker final : public TrackerBase
     {
       public:
-       bool ResetReferencePose(XrSession session, XrTime time) override;
+        bool Init() override;
+        bool ResetReferencePose(XrSession session, XrTime time) override;
 
       protected:
         bool GetPose(XrPosef& trackerPose, XrSession session, XrTime time) override;

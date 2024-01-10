@@ -66,6 +66,7 @@ namespace input
         void ReloadConfig() const;
         void SaveConfig(XrTime time, bool forApp) const;
         static void ToggleVerbose();
+        static void ToggleRecorder();
 
     private:
         openxr_api_layer::OpenXrLayer* m_Layer;

@@ -39,11 +39,20 @@ namespace tracker
         }
         if (XrPosef curPose{Pose::Identity()}; GetPose(curPose, session, time))
         {
+             m_Recorder->AddPose(m_ReferencePose, Reference);
+             m_Recorder->AddPose(curPose, Input);
+            
             ApplyFilters(curPose);
+            m_Recorder->AddPose(curPose, Filtered);
+            
             ApplyModifier(curPose);
+            m_Recorder->AddPose(curPose, Modified);
 
             // calculate difference toward reference pose
             poseDelta = Pose::Multiply(Pose::Invert(curPose), m_ReferencePose);
+            m_Recorder->AddPose(poseDelta, Delta);
+            m_Recorder->Write(time);
+            
 
             if (!m_FallBackUsed)
             {
@@ -438,6 +447,11 @@ namespace tracker
         return false;
     }
 
+    void TrackerBase::ToggleRecording() const
+    {
+        m_Recorder->Toggle();
+    }
+
     void TrackerBase::SetReferencePose(const XrPosef& pose)
     {
         TraceLocalActivity(local);
@@ -554,6 +568,12 @@ namespace tracker
         TraceLoggingWriteStop(local, "TrackerBase::SetForwardRotation");
     }
 
+    bool OpenXrTracker::Init()
+    {
+        m_Recorder = std::make_shared<output::PoseRecorder>();
+        return TrackerBase::Init();
+    }
+
     bool OpenXrTracker::ResetReferencePose(XrSession session, XrTime time)
     {
         TraceLocalActivity(local);
@@ -658,6 +678,8 @@ namespace tracker
         m_Manipulator = std::make_unique<CorManipulator>(CorManipulator(this));
         m_Manipulator->Init();
 
+        m_Recorder = std::make_shared<output::PoseAndMmfRecorder>(); 
+ 
         TraceLoggingWriteStop(local,
                               "VirtualTracker::Init",
                               TLArg(success, "Success"),
@@ -988,6 +1010,8 @@ namespace tracker
             return false;
        }
 
+       m_Recorder->AddMmfValue({0.0, 0.0, 0.0, data.yaw, data.roll, data.pitch});
+
        DebugLog("YawData: yaw: %f, pitch: %f, roll: %f, battery: %f, height: %f, headDistance: %f, sixDof: %d, usePos: "
                 "%d, autoX: %f, autoY: %f",
                 data.yaw,
@@ -1048,6 +1072,8 @@ namespace tracker
             TraceLoggingWriteStop(local, "SixDofTracker::GetVirtualPose", TLArg(false, "Success"));
             return false;
        }
+
+       m_Recorder->AddMmfValue({data.sway, data.surge, data.heave, data.yaw, data.roll, data.pitch});
 
        DebugLog("MotionData: yaw: %f, pitch: %f, roll: %f, sway: %f, surge: %f, heave: %f",
                 data.yaw,

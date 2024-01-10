@@ -76,6 +76,7 @@ enum class Cfg
     KeyVerbose,
     KeyLogTracker,
     KeyLogProfile,
+    KeyRecorder,
     TestRotation,
     LogVerbose
 };
@@ -195,6 +196,7 @@ class ConfigManager
         {Cfg::KeyReloadConfig, {"shortcuts", "reload_config"}},
        
         {Cfg::KeyVerbose, {"shortcuts", "toggle_verbose_logging"}},
+        {Cfg::KeyRecorder, {"shortcuts", "toggle_recording"}},
         {Cfg::KeyLogTracker, {"shortcuts", "log_tracker_pose"}},
         {Cfg::KeyLogProfile, {"shortcuts", "log_interaction_profile"}},
 

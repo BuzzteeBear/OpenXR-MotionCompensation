@@ -134,6 +134,10 @@ VERBOSE_ON_WAV          WAVE                    "sounds\\verbose_on.wav"
 
 VERBOSE_OFF_WAV         WAVE                    "sounds\\verbose_off.wav"
 
+RECORDER_ON_WAV         WAVE                    "sounds\\recorder_on.wav"
+
+RECORDER_OFF_WAV        WAVE                    "sounds\\recorder_off.wav"
+
 #endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////
 
