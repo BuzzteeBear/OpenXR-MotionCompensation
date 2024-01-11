@@ -433,7 +433,7 @@ If don't have a clue where the cor of your motion rig is supposed to be, you can
 </ul>
 <p>You can send the trace file to the developer or use an application such as <a href="https://apps.microsoft.com/store/detail/tabnalysis/9NQLK2M4RP4J?hl=en-id&amp;gl=ID">Tabnalysis</a> to inspect the content yourself.</p>
 <h3 id="recording">Recording</h3>
-<p>Starting a recording session (via keyboard shortcut <code>toggle_recording</code>) results in the internal tracker values to be written into a comma seperated file named <code>recording_XXX_.csv</code> file where <code>XXX</code> is a timestamp relating to the start time of recording. The content of this file can easily be loaded into excel (or similar software) to generate plots and search for erroneous data. Note that tracker values are only logged while motion compensation is activated.
+<p>Starting a recording session (via keyboard shortcut <code>toggle_recording</code>) results in the internal tracker values to be written into a comma separated file named <code>recording_XXX_.csv</code> file where <code>XXX</code> is a timestamp relating to the start time of recording. The content of this file can easily be loaded into excel (or similar software) to generate plots and search for erroneous data. Note that values are only recorded after the reference tracker is calibrated.
 The first line of the file contains the labels for the corresponding columns with:</p>
 <ul>
 <li><code>Time</code> representing the internal time used by the OpenXR runtime, in nanoseconds</li>

@@ -90,14 +90,14 @@ namespace output
         TraceLoggingWriteStop(local, "PoseRecorder::Destroy");
     }
 
-    void PoseRecorder::Toggle()
+    bool PoseRecorder::Toggle()
     {
         if (!m_Started)
         {
-            Start();
-            return;
+            return Start();
         }
         Stop();
+        return false;
     }
 
     void PoseRecorder::AddPose(const XrPosef& pose, RecorderPoseInput type)
@@ -111,15 +111,6 @@ namespace output
                                "PoseRecorder::AddReference",
                                TLArg(static_cast<uint32_t>(type), "Type"),
                                TLArg(xr::ToString(pose).c_str(), "Pose"));
-        if (m_Counter > m_RecorderMax)
-        {
-            m_Started = NewFileStream();
-            TraceLoggingWriteTagged(local,
-                                    "PoseRecorder::AddReference",
-                                    TLArg(true, "Size_Exceeded"),
-                                    TLArg(m_Started, "Started"));
-        }
-        
         switch (type)
         {
         case Reference:
@@ -152,6 +143,15 @@ namespace output
         }
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "PoseRecorder::Write", TLArg(newLine, "NewLine"));
+
+        if (++m_Counter > m_RecorderMax)
+        {
+            m_Started = Start();
+            TraceLoggingWriteTagged(local,
+                                    "PoseRecorder::AddReference",
+                                    TLArg(true, "Size_Exceeded"),
+                                    TLArg(m_Started, "Started"));
+        }
         if (m_FileStream.is_open())
         {
             const XrVector3f& iP = m_Poses.input.position;            
@@ -180,53 +180,19 @@ namespace output
             }
             m_FileStream.flush();
 
-            m_Counter++;
-
             TraceLoggingWriteStop(local, "PoseRecorder::Write", TLArg(true, "Success"));
             return;
         }
         TraceLoggingWriteStop(local, "PoseRecorder::Write", TLArg(false, "Stream_Open"));
     }
 
-    void PoseRecorder::Start()
+    bool PoseRecorder::Start()
     {
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "PoseRecorder::Start");
-        if ((m_Started = NewFileStream()))
-        {
-            m_FileStream << m_HeadLine << "\n";
-            m_FileStream.flush();
-            TraceLoggingWriteStop(local, "PoseRecorder::Start", TLArg(true, "Success"));
-            return;
-        }
-        TraceLoggingWriteStop(local, "PoseRecorder::Start", TLArg(false, "Success"));
-    }
-
-    void PoseRecorder::Stop()
-    {
-        TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "PoseRecorder::Stop");
-
-        m_Started = false;
         if (m_FileStream.is_open())
         {
-            m_FileStream.close();
-            AudioOut::Execute(Event::RecorderOff);
-            TraceLoggingWriteStop(local, "PoseRecorder::Stop", TLArg(true, "Stream_Closed"));
-            return;
-        }
-        AudioOut::Execute(Event::Error);
-        ErrorLog("%s: recording started but output stream is closed", __FUNCTION__);
-        TraceLoggingWriteStop(local, "PoseRecorder::Stop", TLArg(false, "Stream_Closed"));
-    }
-
-    bool PoseRecorder::NewFileStream()
-    {
-        TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "PoseRecorder::NewFileStream");
-        if (m_FileStream.is_open())
-        {
-            TraceLoggingWriteTagged(local, "PoseRecorder::NewFileStream", TLArg(true, "Previous_Stream_Closed"));
+            TraceLoggingWriteTagged(local, "PoseRecorder::Start", TLArg(true, "Previous_Stream_Closed"));
             m_FileStream.close();
         }
         SYSTEMTIME lt;
@@ -246,19 +212,40 @@ namespace output
         m_FileStream.open(fileName, std::ios_base::ate);
         m_Counter = 0;
 
-        TraceLoggingWriteTagged(local, "PoseRecorder::NewFileStream", TLArg(fileName.c_str(), "Filename"));
-       
+        TraceLoggingWriteTagged(local, "PoseRecorder::Start", TLArg(fileName.c_str(), "Filename"));
+
         if (m_FileStream.is_open())
         {
+            m_FileStream << m_HeadLine << "\n";
+            m_FileStream.flush();
+
             AudioOut::Execute(Event::RecorderOn);
-            TraceLoggingWriteStop(local, "PoseRecorder::NewFileStream", TLArg(true, "Success"));
+            TraceLoggingWriteStop(local, "PoseRecorder::Start", TLArg(true, "Success"));
             return true;
         }
 
         AudioOut::Execute(Event::Error);
         ErrorLog("%s: unable to open output stream for file: %s", __FUNCTION__, fileName.c_str());
-        TraceLoggingWriteStop(local, "PoseRecorder::NewFileStream", TLArg(false, "Success"));
+        TraceLoggingWriteStop(local, "PoseRecorder::Start", TLArg(false, "Success"));
         return false;
+    }
+
+    void PoseRecorder::Stop()
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "PoseRecorder::Stop");
+
+        m_Started = false;
+        if (m_FileStream.is_open())
+        {
+            m_FileStream.close();
+            AudioOut::Execute(Event::RecorderOff);
+            TraceLoggingWriteStop(local, "PoseRecorder::Stop", TLArg(true, "Stream_Closed"));
+            return;
+        }
+        AudioOut::Execute(Event::Error);
+        ErrorLog("%s: recording started but output stream is closed", __FUNCTION__);
+        TraceLoggingWriteStop(local, "PoseRecorder::Stop", TLArg(false, "Stream_Closed"));
     }
 
     void PoseAndMmfRecorder::AddMmfValue(const MmfValueSample& mmfValue)
@@ -283,6 +270,7 @@ namespace output
         }
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "PoseAndMmfRecorder::Write", TLArg(newLine, "NewLine"));
+
         if (m_FileStream.is_open())
         {
             PoseRecorder::Write(time, false);

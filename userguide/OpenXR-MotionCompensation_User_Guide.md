@@ -329,7 +329,7 @@ To capture a trace for the API layer:
 You can send the trace file to the developer or use an application such as [Tabnalysis](https://apps.microsoft.com/store/detail/tabnalysis/9NQLK2M4RP4J?hl=en-id&gl=ID) to inspect the content yourself.
 
 ### Recording
-Starting a recording session (via keyboard shortcut `toggle_recording`) results in the internal tracker values to be written into a comma seperated file named `recording_XXX_.csv` file where `XXX` is a timestamp relating to the start time of recording. The content of this file can easily be loaded into excel (or similar software) to generate plots and search for erroneous data. Note that tracker values are only logged while motion compensation is activated.
+Starting a recording session (via keyboard shortcut `toggle_recording`) results in the internal tracker values to be written into a comma separated file named `recording_XXX_.csv` file where `XXX` is a timestamp relating to the start time of recording. The content of this file can easily be loaded into excel (or similar software) to generate plots and search for erroneous data. Note that values are only recorded after the reference tracker is calibrated.
 The first line of the file contains the labels for the corresponding columns with:
 - `Time` representing the internal time used by the OpenXR runtime, in nanoseconds
 - `X_..., Y_..., Z_...` denoting the position in global space

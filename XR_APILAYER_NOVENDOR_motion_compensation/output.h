@@ -119,7 +119,7 @@ namespace output
       public:
         RecorderBase() = default;
         virtual ~RecorderBase() = default;
-        virtual void Toggle() = 0;
+        virtual bool Toggle() = 0;
         virtual void AddPose(const XrPosef& pose, RecorderPoseInput type) = 0;
         virtual void AddMmfValue(const MmfValueSample& mmfValue) = 0;
         virtual void Write(XrTime time, bool newLine = true) = 0;
@@ -128,7 +128,10 @@ namespace output
     class NoRecorder final : public RecorderBase
     {
       public:
-        void Toggle() override{};
+        bool Toggle() override
+        {
+            return false;
+        };
         void AddPose(const XrPosef& pose, RecorderPoseInput type) override{};
         void AddMmfValue(const MmfValueSample& mmfValue) override{};
         void Write(XrTime time, bool newLine = true) override{};
@@ -139,7 +142,7 @@ namespace output
       public:
         PoseRecorder();
         ~PoseRecorder() override;
-        void Toggle() override;
+        bool Toggle() override;
         void AddPose(const XrPosef& pose, RecorderPoseInput type) override;
         void AddMmfValue(const MmfValueSample& mmfValue) override{};
         void Write(XrTime time, bool newLine = true) override;
@@ -157,9 +160,8 @@ namespace output
                                "D_Input; D_Filtered; D_Modified; D_Reference; D_Delta"};
 
     private:
-        virtual void Start();
+        virtual bool Start();
         virtual void Stop();
-        bool NewFileStream();
 
         PoseSample m_Poses{};
         uint32_t m_Counter{0};

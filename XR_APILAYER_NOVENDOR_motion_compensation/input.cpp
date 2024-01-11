@@ -171,7 +171,7 @@ namespace input
         }
         if (m_Input.GetKeyState(Cfg::KeyRecorder, isRepeat) && !isRepeat)
         {
-            m_Layer->m_Tracker->ToggleRecording();
+            m_Layer->ToggleRecorderActive();
         }
         if (m_Input.GetKeyState(Cfg::KeyLogProfile, isRepeat) && !isRepeat)
         {

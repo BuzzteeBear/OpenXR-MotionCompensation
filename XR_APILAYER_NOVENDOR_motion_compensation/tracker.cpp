@@ -5,6 +5,7 @@
 #include "layer.h"
 #include "output.h"
 #include <log.h>
+#include <stdbool.h>
 #include <util.h>
 
 using namespace openxr_api_layer;
@@ -447,9 +448,9 @@ namespace tracker
         return false;
     }
 
-    void TrackerBase::ToggleRecording() const
+    bool TrackerBase::ToggleRecording() const
     {
-        m_Recorder->Toggle();
+        return m_Recorder->Toggle();
     }
 
     void TrackerBase::SetReferencePose(const XrPosef& pose)

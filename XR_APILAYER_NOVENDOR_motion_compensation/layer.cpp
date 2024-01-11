@@ -1464,22 +1464,24 @@ namespace openxr_api_layer
            return XR_ERROR_VALIDATION_FAILURE;
         }
 
-        DebugLog("xrEndFrame(%u)", frameEndInfo->displayTime);
+        XrTime time = frameEndInfo->displayTime;
+
+        DebugLog("xrEndFrame(%u)", time);
         TraceLoggingWriteTagged(local,
                                 "OpenXrLayer::xrEndFrame",
-                                TLArg(frameEndInfo->displayTime, "DisplayTime"),
+                                TLArg(time, "DisplayTime"),
                                 TLArg(xr::ToCString(frameEndInfo->environmentBlendMode), "EnvironmentBlendMode"));
 
         std::unique_lock lock(m_FrameLock);
 
         // update last frame time
-        if (m_UpdateRefSpaceTime >= std::exchange(m_LastFrameTime, frameEndInfo->displayTime) &&
-            m_UpdateRefSpaceTime < frameEndInfo->displayTime)
+        if (m_UpdateRefSpaceTime >= std::exchange(m_LastFrameTime, time) &&
+            m_UpdateRefSpaceTime < time)
         {
            // (re)locate all static reference spaces
            for (const XrSpace& space : m_StaticRefSpaces)
            {
-                LocateRefSpace(space);
+               LocateRefSpace(space);
            }
         }
 
@@ -1490,16 +1492,12 @@ namespace openxr_api_layer
         std::vector<XrPosef> cachedEyePoses;
         if (m_Activated)
         {
-           delta = m_DeltaCache.GetSample(chainFrameEndInfo.displayTime);
+           delta = m_DeltaCache.GetSample(time);
            deltaInverse = Pose::Invert(delta);
-           m_DeltaCache.CleanUp(chainFrameEndInfo.displayTime);
+           m_DeltaCache.CleanUp(time);
            cachedEyePoses =
-               m_UseEyeCache ? m_EyeCache.GetSample(chainFrameEndInfo.displayTime) : std::vector<XrPosef>();
-           m_EyeCache.CleanUp(chainFrameEndInfo.displayTime);
-        }
-        else if (m_Tracker->m_Calibrated && !m_SuppressInteraction)
-        {
-           m_Tracker->ApplyCorManipulation(session, chainFrameEndInfo.displayTime);
+               m_UseEyeCache ? m_EyeCache.GetSample(time) : std::vector<XrPosef>();
+           m_EyeCache.CleanUp(time);
         }
 
         if (m_Overlay)
@@ -1517,10 +1515,22 @@ namespace openxr_api_layer
 
         if (!m_Activated)
         {
-           m_Input->HandleKeyboardInput(chainFrameEndInfo.displayTime);
+           if (m_Tracker->m_Calibrated)
+           {
+               if (m_RecorderActive)
+               {
+                    // request pose delta to force recording
+                    m_Tracker->GetPoseDelta(delta, session, time);
+               }
+               if (!m_SuppressInteraction)
+               {
+                    m_Tracker->ApplyCorManipulation(session, time);
+               }
+           }
+           m_Input->HandleKeyboardInput(time);
            if (m_AutoActivator)
            {
-                m_AutoActivator->ActivateIfNecessary(frameEndInfo->displayTime);
+                m_AutoActivator->ActivateIfNecessary(time);
            }
            XrResult result = OpenXrApi::xrEndFrame(session, &chainFrameEndInfo);
 
@@ -1641,11 +1651,11 @@ namespace openxr_api_layer
                 resetLayers.push_back(chainFrameEndInfo.layers[i]);
            }
         }
-        m_Input->HandleKeyboardInput(chainFrameEndInfo.displayTime);
+        m_Input->HandleKeyboardInput(time);
 
         XrFrameEndInfo resetFrameEndInfo{chainFrameEndInfo.type,
                                          chainFrameEndInfo.next,
-                                         chainFrameEndInfo.displayTime,
+                                         time,
                                          chainFrameEndInfo.environmentBlendMode,
                                          chainFrameEndInfo.layerCount,
                                          resetLayers.data()};
@@ -2215,6 +2225,16 @@ namespace openxr_api_layer
         TraceLoggingWriteStop(local, "OpenXrLayer::ToggleModifierActive", TLArg(m_ModifierActive, "ModifierActive"));
 
         return m_ModifierActive;
+    }
+
+    void OpenXrLayer::ToggleRecorderActive()
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "OpenXrLayer::ToggleRecorderActive");
+
+        m_RecorderActive = m_Tracker->ToggleRecording();
+
+        TraceLoggingWriteStop(local, "OpenXrLayer::ToggleRecorderActive", TLArg(m_RecorderActive, "RecorderActive"));
     }
 
     std::string OpenXrLayer::getXrPath(const XrPath path)

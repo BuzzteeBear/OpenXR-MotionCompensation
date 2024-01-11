@@ -128,6 +128,7 @@ namespace openxr_api_layer
         bool LazyInit(XrTime time);
         void LogCurrentInteractionProfile();
         bool ToggleModifierActive();
+        void ToggleRecorderActive();
 
         static std::string getXrPath(XrPath path);
 
@@ -151,6 +152,7 @@ namespace openxr_api_layer
         bool m_UseEyeCache{false};
         bool m_ModifierActive{false};
         bool m_LegacyMode{false};
+        bool m_RecorderActive{false};
         bool m_VarjoPollWorkaround{false};
         XrTime m_LastFrameTime{0};
         XrTime m_UpdateRefSpaceTime{0};

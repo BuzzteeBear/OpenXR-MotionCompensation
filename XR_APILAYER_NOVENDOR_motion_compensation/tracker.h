@@ -56,7 +56,7 @@ namespace tracker
         virtual bool ChangeRotation(float radian);
         virtual void SaveReferencePose(XrTime time) const{};
         virtual void ApplyCorManipulation(XrSession session, XrTime time){};
-        void ToggleRecording() const;
+        bool ToggleRecording() const;
 
         bool m_SkipLazyInit{false};
         bool m_Calibrated{false};
