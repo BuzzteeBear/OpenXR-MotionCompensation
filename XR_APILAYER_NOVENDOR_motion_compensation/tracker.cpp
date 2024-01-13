@@ -450,7 +450,7 @@ namespace tracker
 
     bool TrackerBase::ToggleRecording() const
     {
-        return m_Recorder->Toggle();
+        return m_Recorder->Toggle(m_Calibrated);
     }
 
     void TrackerBase::SetReferencePose(const XrPosef& pose)

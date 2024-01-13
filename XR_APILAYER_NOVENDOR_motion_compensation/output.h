@@ -119,7 +119,7 @@ namespace output
       public:
         RecorderBase() = default;
         virtual ~RecorderBase() = default;
-        virtual bool Toggle() = 0;
+        virtual bool Toggle(bool isCalibrated) = 0;
         virtual void AddPose(const XrPosef& pose, RecorderPoseInput type) = 0;
         virtual void AddMmfValue(const MmfValueSample& mmfValue) = 0;
         virtual void Write(XrTime time, bool newLine = true) = 0;
@@ -128,10 +128,7 @@ namespace output
     class NoRecorder final : public RecorderBase
     {
       public:
-        bool Toggle() override
-        {
-            return false;
-        };
+        bool Toggle(bool isCalibrated) override;
         void AddPose(const XrPosef& pose, RecorderPoseInput type) override{};
         void AddMmfValue(const MmfValueSample& mmfValue) override{};
         void Write(XrTime time, bool newLine = true) override{};
@@ -142,7 +139,7 @@ namespace output
       public:
         PoseRecorder();
         ~PoseRecorder() override;
-        bool Toggle() override;
+        bool Toggle(bool isCalibrated) override;
         void AddPose(const XrPosef& pose, RecorderPoseInput type) override;
         void AddMmfValue(const MmfValueSample& mmfValue) override{};
         void Write(XrTime time, bool newLine = true) override;

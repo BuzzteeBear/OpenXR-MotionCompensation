@@ -6,10 +6,9 @@ Version 0.3.2
 	- added ability to log tracker pose values into .CSV-file
 	
 	Bugfixes
-	- removed upside_down workaround for iRacing (no longer required)
-	- removed (false positive) error log entries on auto activation
-	- fixed automatic activation (caused ctd instead of activating)
-	- unified keyboard shortcut for toggling verbose logging (installation/update)
+	- removed upside_down workaround (no longer required for iRacing)
+	- removed false positive error log entries on auto activation
+	- fixed verbose logging toggle shortcut default for updating pre-existing .ini file
 
 Version 0.3.1
 

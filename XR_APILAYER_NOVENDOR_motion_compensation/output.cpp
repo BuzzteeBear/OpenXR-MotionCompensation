@@ -73,6 +73,13 @@ namespace output
         TraceLoggingWriteStop(local, "AudioOut::CountDown");
     }
 
+    bool NoRecorder::Toggle(bool isCalibrated)
+    {
+        ErrorLog("%s: unable to toggle recording", __FUNCTION__);
+        AudioOut::Execute(Event::Error);
+        return false;
+    }
+
     PoseRecorder::PoseRecorder()
     {
         m_FileStream << std::fixed << std::setprecision(5);
@@ -90,11 +97,17 @@ namespace output
         TraceLoggingWriteStop(local, "PoseRecorder::Destroy");
     }
 
-    bool PoseRecorder::Toggle()
+    bool PoseRecorder::Toggle(bool isCalibrated)
     {
-        if (!m_Started)
+        if (!m_Started )
         {
-            return Start();
+            if (isCalibrated)
+            {
+                return Start();
+            }
+            ErrorLog("%s: recording requires the tracker to be calibrated", __FUNCTION__);
+            AudioOut::Execute(Event::Error);
+            return false;
         }
         Stop();
         return false;
@@ -146,11 +159,7 @@ namespace output
 
         if (++m_Counter > m_RecorderMax)
         {
-            m_Started = Start();
-            TraceLoggingWriteTagged(local,
-                                    "PoseRecorder::AddReference",
-                                    TLArg(true, "Size_Exceeded"),
-                                    TLArg(m_Started, "Started"));
+            Start();
         }
         if (m_FileStream.is_open())
         {
@@ -216,6 +225,7 @@ namespace output
 
         if (m_FileStream.is_open())
         {
+            m_Started = true;
             m_FileStream << m_HeadLine << "\n";
             m_FileStream.flush();
 
@@ -244,7 +254,7 @@ namespace output
             return;
         }
         AudioOut::Execute(Event::Error);
-        ErrorLog("%s: recording started but output stream is closed", __FUNCTION__);
+        ErrorLog("%s: recording stopped but output stream is already closed", __FUNCTION__);
         TraceLoggingWriteStop(local, "PoseRecorder::Stop", TLArg(false, "Stream_Closed"));
     }
 
