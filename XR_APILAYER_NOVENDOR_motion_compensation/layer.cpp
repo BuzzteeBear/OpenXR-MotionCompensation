@@ -963,7 +963,10 @@ namespace openxr_api_layer
         TraceLoggingWriteTagged(local,
                                 "OpenXrLayer::xrCreateActionSpace",
                                 TLArg(subActionPath.c_str(), "SubactionPath"));
-        Log("creation of action space detected: %u, sub action path: %s", *space, subActionPath.c_str());
+        Log("creation of action space detected: %u, sub action path: %s, pose: %s",
+            *space,
+            subActionPath.c_str(),
+            xr::ToString(createInfo->poseInActionSpace).c_str());
 
         if (m_CompensateControllers)
         {

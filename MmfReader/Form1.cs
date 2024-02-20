@@ -14,7 +14,7 @@ namespace MmfReader
             WorkerArguments arguments = new WorkerArguments
             {
                 Index = Program.curIndex,
-                Interval = 20
+                Interval = 1
             };
             backgroundWorker1.RunWorkerAsync(arguments);
         }
@@ -62,7 +62,7 @@ namespace MmfReader
             WorkerArguments arguments = new WorkerArguments
             {
                 Index = Program.curIndex,
-                Interval = 20
+                Interval = 1
             };
             backgroundWorker1.RunWorkerAsync(arguments);
         }
