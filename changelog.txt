@@ -1,5 +1,10 @@
 OpenXR-MotionCompensation Changelog
 
+Version 0.3.3
+
+	Bugfixes
+	- fixed non-normalized quaternions causing glitches (e.g. freezes, framerate drops) when using VDXR runtime
+
 Version 0.3.2
 
 	Tracker Recorder
