@@ -69,4 +69,11 @@ namespace xr {
         return fmt::format("x:{}, y:{} w:{} h:{}", rect.offset.x, rect.offset.y, rect.extent.width, rect.extent.height);
     }
 
+    static XrPosef Normalize(const XrPosef& pose)
+    {
+        // normalize quaternion to counteract accumulated calculation error
+        XrQuaternionf normalized;
+        math::StoreXrQuaternion(&normalized, DirectX::XMQuaternionNormalize(math::LoadXrQuaternion(pose.orientation)));
+        return XrPosef{normalized, pose.position};
+    }
 } // namespace xr

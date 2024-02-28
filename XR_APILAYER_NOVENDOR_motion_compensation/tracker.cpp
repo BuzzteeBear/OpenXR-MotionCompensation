@@ -1203,7 +1203,7 @@ namespace tracker
                 {
                     ApplyTranslation();
                     ApplyRotation(poseDelta);
-                    ResetReferencePose(session, time);
+                    SetReferencePose(m_LastPose);
                 }
             }
         }

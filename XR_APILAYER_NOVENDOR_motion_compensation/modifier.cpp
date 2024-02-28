@@ -155,7 +155,7 @@ namespace modifier
             curFwd.position = refFwd.position + translation;
             ;
         }
-        target = Multiply(curFwd, m_FwdToStage);
+        target = xr::Normalize(Multiply(curFwd, m_FwdToStage));
 
         TraceLoggingWriteStop(local, "TrackerModifier::Apply", TLArg(xr::ToString(target).c_str(), "Modified Target"));
     }
@@ -270,7 +270,7 @@ namespace modifier
 
         // calculate modified delta
         const XrPosef newDeltaFwd = Multiply(Invert(poseFwd), compFwd);
-        target = Multiply(Multiply(m_StageToFwd, newDeltaFwd), m_FwdToStage);
+        target = xr::Normalize(Multiply(Multiply(m_StageToFwd, newDeltaFwd), m_FwdToStage));
 
         TraceLoggingWriteStop(local, "HmdModifier::Apply", TLArg(xr::ToString(target).c_str(), "Modified Target"));
     }

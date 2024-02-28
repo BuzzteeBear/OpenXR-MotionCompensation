@@ -1079,6 +1079,8 @@ namespace openxr_api_layer
                     // undo inversion (unswitch roles)
                     location->pose = Pose::Invert(location->pose);
                 }
+
+                location->pose = xr::Normalize(location->pose);
             }
             else
             {
@@ -1247,7 +1249,7 @@ namespace openxr_api_layer
                                                 TLArg(xr::ToString(views[i].pose).c_str(), "OriginalViewPose"));
 
                         // apply manipulation
-                        views[i].pose = Pose::Multiply(views[i].pose, trackerDelta);
+                        views[i].pose = xr::Normalize(Pose::Multiply(views[i].pose, trackerDelta));
 
                         DebugLog("xrLocateView(%u): eye (%u) compensated pose = %s",
                                  time,
@@ -1318,7 +1320,7 @@ namespace openxr_api_layer
                                         TLArg(xr::ToString(views[i].pose).c_str(), "OriginalViewPose"));
 
                 // apply manipulation
-                views[i].pose = Pose::Multiply(m_EyeOffsets[i].pose, location.pose);
+                views[i].pose = xr::Normalize(Pose::Multiply(m_EyeOffsets[i].pose, location.pose));
 
                 DebugLog("xrLocateView(%u): eye (%u) compensated pose = %s", time, i, xr::ToString(views[i].pose).c_str());
                 TraceLoggingWriteTagged(local,
@@ -1589,7 +1591,8 @@ namespace openxr_api_layer
                         TLArg(xr::ToString((*projectionViews)[j].fov).c_str(), "Fov"));
 
                     XrPosef revertedEyePose =
-                        m_UseEyeCache ? cachedEyePoses[j] : Pose::Multiply((*projectionViews)[j].pose, deltaInverse);
+                        m_UseEyeCache ? cachedEyePoses[j]
+                                      : xr::Normalize(Pose::Multiply((*projectionViews)[j].pose, deltaInverse));
 
                     (*projectionViews)[j].pose = revertedEyePose;
                     DebugLog("xrEndFrame: reverted view(%u) pose = %s", j, xr::ToString(revertedEyePose).c_str());
@@ -1626,7 +1629,7 @@ namespace openxr_api_layer
                                         TLArg(xr::ToString(quadLayer->pose).c_str(), "QuadLayerPose"));
 
                 // apply reverse manipulation to quad layer pose
-                XrPosef revertedPose = Pose::Multiply(quadLayer->pose, deltaInverse);
+                XrPosef revertedPose = xr::Normalize(Pose::Multiply(quadLayer->pose, deltaInverse));
 
                 DebugLog("xrEndFrame: reverted quad layer pose = %s", xr::ToString(revertedPose).c_str());
                 TraceLoggingWriteTagged(local,
