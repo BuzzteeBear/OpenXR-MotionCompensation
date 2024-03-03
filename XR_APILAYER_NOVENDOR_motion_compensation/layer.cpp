@@ -1448,6 +1448,8 @@ namespace openxr_api_layer
 
         const XrResult result = OpenXrApi::xrBeginFrame(session, frameBeginInfo);
 
+        m_Tracker->SampleVirtualTracker(m_LastFrameTime);
+
         TraceLoggingWriteStop(local, "OpenXrLayer::xrBeginFrame", TLArg(xr::ToCString(result), "Result"));
 
         return result;
@@ -1478,6 +1480,8 @@ namespace openxr_api_layer
                                 TLArg(xr::ToCString(frameEndInfo->environmentBlendMode), "EnvironmentBlendMode"));
 
         std::unique_lock lock(m_FrameLock);
+
+        m_Tracker->SampleVirtualTracker(time);
 
         // update last frame time
         if (m_UpdateRefSpaceTime >= std::exchange(m_LastFrameTime, time) &&

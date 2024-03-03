@@ -5,7 +5,6 @@
 #include "layer.h"
 #include "output.h"
 #include <log.h>
-#include <stdbool.h>
 #include <util.h>
 
 using namespace openxr_api_layer;
@@ -40,8 +39,8 @@ namespace tracker
         }
         if (XrPosef curPose{Pose::Identity()}; GetPose(curPose, session, time))
         {
-             m_Recorder->AddPose(m_ReferencePose, Reference);
-             m_Recorder->AddPose(curPose, Input);
+            m_Recorder->AddPose(m_ReferencePose, Reference);
+            m_Recorder->AddPose(curPose, Input);
             
             ApplyFilters(curPose);
             m_Recorder->AddPose(curPose, Filtered);
@@ -53,7 +52,6 @@ namespace tracker
             poseDelta = Pose::Multiply(Pose::Invert(curPose), m_ReferencePose);
             m_Recorder->AddPose(poseDelta, Delta);
             m_Recorder->Write(time);
-            
 
             if (!m_FallBackUsed)
             {
@@ -912,6 +910,18 @@ namespace tracker
         TraceLoggingWriteStop(local, "VirtualTracker::ApplyCorManipulation");
     }
 
+    void VirtualTracker::SampleVirtualTracker(XrTime time)
+    {
+        if (m_IsStabilized && m_Calibrated)
+        {
+            VirtualTrackerData pose;
+            if (ReadMmf(time, pose))
+            {
+                m_Stabilizer->InsertSample(pose);
+            }
+        }
+    }
+
     void VirtualTracker::SetReferencePose(const ::XrPosef& pose)
     {
         TraceLocalActivity(local);
@@ -928,21 +938,58 @@ namespace tracker
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "VirtualTracker::GetPose", TLPArg(session, "Session"), TLArg(time, "Time"));
 
-        const bool success = GetVirtualPose(trackerPose, session, time);
+        VirtualTrackerData data;
+        if (!ReadMmf(time, data))
+        {
+            TraceLoggingWriteStop(local, "VirtualTracker::GetPose", TLArg(false, "Success"));
+            return false;
+        }
+
+        DebugLog("MotionData: yaw: %f, pitch: %f, roll: %f, sway: %f, surge: %f, heave: %f",
+                 data.yaw,
+                 data.pitch,
+                 data.roll,
+                 data.sway,
+                 data.surge,
+                 data.heave);
+
+        m_Recorder->AddMmfValue({data.sway, data.surge, data.heave, data.yaw, data.roll, data.pitch});
+
+        TraceLoggingWriteTagged(local,
+                                "VirtualTracker::GetPose",
+                                TLArg(data.yaw, "Yaw"),
+                                TLArg(data.pitch, "Pitch"),
+                                TLArg(data.roll, "Roll"),
+                                TLArg(data.sway, "Sway"),
+                                TLArg(data.surge, "Surge"),
+                                TLArg(data.heave, "Heave"));
+
+        m_Stabilizer->Stabilize(data);
+        // TODO: record stabilized values
+
+        const XrPosef rigPose = DataToPose(data);
+
+        TraceLoggingWriteTagged(local, "VirtualTracker::GetPose", TLArg(xr::ToString(rigPose).c_str(), "RigPose"));
+
+        trackerPose = Pose::Multiply(rigPose, m_ReferencePose);
 
         TraceLoggingWriteStop(local,
                               "VirtualTracker::GetPose",
+                              TLArg(true, "Success"),
                               TLArg(xr::ToString(trackerPose).c_str(), "TrackerPose"));
-        return success;
+        return true;
     }
-    
+
     bool YawTracker::ResetReferencePose(XrSession session, XrTime time)
     {
-       TraceLocalActivity(local);
-       TraceLoggingWriteStart(local, "YawTracker::ResetReferencePose", TLPArg(session, "Session"), TLArg(time, "Time"));
-       bool useGameEngineValues;
-       if (GetConfig()->GetBool(Cfg::UseYawGeOffset, useGameEngineValues) && useGameEngineValues)
-       {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local,
+                               "YawTracker::ResetReferencePose",
+                               TLPArg(session, "Session"),
+                               TLArg(time, "Time"));
+        bool useGameEngineValues;
+        if (GetConfig()->GetBool(Cfg::UseYawGeOffset, useGameEngineValues) && useGameEngineValues)
+        {
             // calculate difference between floor and headset and set offset according to file values
             if (const auto layer = reinterpret_cast<OpenXrLayer*>(GetInstance()))
             {
@@ -991,56 +1038,135 @@ namespace tracker
             {
                 ErrorLog("%s: unable to use Yaw GE offset values: cast of layer failed", __FUNCTION__);
             }
-       }
-       const bool success = VirtualTracker::ResetReferencePose(session, time);
+        }
+        const bool success = VirtualTracker::ResetReferencePose(session, time);
 
-       TraceLoggingWriteStop(local, "YawTracker::ResetReferencePose", TLArg(success, "Success"));
-       return success;
+        TraceLoggingWriteStop(local, "YawTracker::ResetReferencePose", TLArg(success, "Success"));
+        return success;
     }
 
-    bool YawTracker::GetVirtualPose(XrPosef& trackerPose, XrSession session, XrTime time)
+    bool YawTracker::ReadMmf(XrTime time, VirtualTrackerData& data)
     {
-       TraceLocalActivity(local);
-       TraceLoggingWriteStart(local, "YawTracker::GetVirtualPose", TLPArg(session, "Session"), TLArg(time, "Time"));
-
-       YawData data{};
-       XrPosef rigPose{Pose::Identity()};
-       if (!m_Mmf.Read(&data, sizeof(data), time))
-       {
-            TraceLoggingWriteStop(local, "YawTracker::GetVirtualPose", TLArg(false, "Success"));
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "YawTracker::ReadMmf", TLArg(time, "Time"));
+        YawData mmfData{};
+        if (!m_Mmf.Read(&mmfData, sizeof(mmfData), time))
+        {
+            TraceLoggingWriteStop(local, "YawTracker::ReadMmf", TLArg(false, "Success"));
             return false;
+        }
+        DebugLog(
+            "YawData: yaw: %f, pitch: %f, roll: %f, battery: %f, height: %f, headDistance: %f, sixDof: %d, usePos: "
+            "%d, autoX: %f, autoY: %f",
+            mmfData.yaw,
+            mmfData.pitch,
+            mmfData.roll,
+            mmfData.battery,
+            mmfData.rotationHeight,
+            mmfData.rotationForwardHead,
+            mmfData.sixDof,
+            mmfData.usePos,
+            mmfData.autoX,
+            mmfData.autoY);
+
+        TraceLoggingWriteTagged(local,
+                                "YawTracker::GetVirtualPose",
+                                TLArg(mmfData.yaw, "Yaw"),
+                                TLArg(mmfData.pitch, "Pitch"),
+                                TLArg(mmfData.roll, "Yaw"),
+                                TLArg(mmfData.battery, "Battery"),
+                                TLArg(mmfData.rotationHeight, "RotationHeight"),
+                                TLArg(mmfData.rotationForwardHead, "RotationForwardHead"),
+                                TLArg(mmfData.sixDof, "SixDof"),
+                                TLArg(mmfData.usePos, "UsePos"),
+                                TLArg(mmfData.autoX, "AutoX"),
+                                TLArg(mmfData.autoY, "AutoY"));
+
+        data.yaw = mmfData.yaw;
+        data.roll = mmfData.roll;
+        data.pitch = mmfData.pitch;
+       
+        TraceLoggingWriteStop(local, "YawTracker::ReadMmf", TLArg(true, "Success"));
+        return true;
+    }
+
+    XrPosef YawTracker::DataToPose(const VirtualTrackerData& data)
+    {
+        XrPosef rigPose{Pose::Identity()};
+        auto rotation = DirectX::XMQuaternionRotationRollPitchYaw(data.pitch * angleToRadian,
+                                                                  -data.yaw * angleToRadian,
+                                                                  -data.roll * angleToRadian);
+        if (0 != m_PitchConstant)
+        {
+            rotation =
+                DirectX::XMQuaternionMultiply(DirectX::XMQuaternionRotationRollPitchYaw(m_PitchConstant, 0.f, 0.f),
+                                              rotation);
+        }
+        StoreXrQuaternion(&rigPose.orientation, rotation);
+        return rigPose;
+    }
+
+    bool SixDofTracker::ReadMmf(XrTime time, VirtualTrackerData& data)
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "SixDofTracker::ReadMmf", TLArg(time, "Time"));
+        SixDofData mmfData{};
+        if (!m_Mmf.Read(&mmfData, sizeof(mmfData), time))
+        {
+            TraceLoggingWriteStop(local, "YawTracker::ReadMmf", TLArg(false, "Success"));
+            return false;
+        }
+        DebugLog("MotionData: yaw: %f, pitch: %f, roll: %f, sway: %f, surge: %f, heave: %f",
+                 mmfData.yaw,
+                 mmfData.pitch,
+                 mmfData.roll,
+                 mmfData.sway,
+                 mmfData.surge,
+                 mmfData.heave);
+
+        TraceLoggingWriteTagged(local,
+                                "SixDofTracker::GetVirtualPose",
+                                TLArg(mmfData.yaw, "Yaw"),
+                                TLArg(mmfData.pitch, "Pitch"),
+                                TLArg(mmfData.roll, "Roll"),
+                                TLArg(mmfData.sway, "Sway"),
+                                TLArg(mmfData.surge, "Surge"),
+                                TLArg(mmfData.heave, "Heave"));
+
+        data.yaw =  static_cast<float>(mmfData.yaw);
+        data.roll =  static_cast<float>(mmfData.roll);
+        data.pitch =  static_cast<float>(mmfData.pitch);
+        data.sway =  static_cast<float>(mmfData.sway);
+        data.surge =  static_cast<float>(mmfData.surge);
+        data.heave =  static_cast<float>(mmfData.heave);
+
+        TraceLoggingWriteStop(local, "YawTracker::ReadMmf", TLArg(true, "Success"));
+        return true;
+    }
+    
+    XrPosef FlyPtTracker::DataToPose(const VirtualTrackerData& data)
+    {
+       XrPosef rigPose{Pose::Identity()};
+       auto rotation = DirectX::XMQuaternionRotationRollPitchYaw(-data.pitch * angleToRadian,
+                                                                 data.yaw * angleToRadian,
+                                                                 data.roll * angleToRadian);
+       if (0 != m_PitchConstant)
+       {
+            rotation =
+                DirectX::XMQuaternionMultiply(DirectX::XMQuaternionRotationRollPitchYaw(m_PitchConstant, 0.f, 0.f),
+                                              rotation);
        }
+       StoreXrQuaternion(&rigPose.orientation, rotation);
 
-       m_Recorder->AddMmfValue({0.0, 0.0, 0.0, data.yaw, data.roll, data.pitch});
+       rigPose.position = XrVector3f{-data.sway / -1000.f, data.heave / 1000.f, data.surge / 1000.f};
+       return rigPose;
+    }
 
-       DebugLog("YawData: yaw: %f, pitch: %f, roll: %f, battery: %f, height: %f, headDistance: %f, sixDof: %d, usePos: "
-                "%d, autoX: %f, autoY: %f",
-                data.yaw,
-                data.pitch,
-                data.roll,
-                data.battery,
-                data.rotationHeight,
-                data.rotationForwardHead,
-                data.sixDof,
-                data.usePos,
-                data.autoX,
-                data.autoY);
-
-       TraceLoggingWriteTagged(local,
-                               "YawTracker::GetVirtualPose",
-                               TLArg(data.yaw, "Yaw"),
-                               TLArg(data.pitch, "Pitch"),
-                               TLArg(data.roll, "Yaw"),
-                               TLArg(data.battery, "Battery"),
-                               TLArg(data.rotationHeight, "RotationHeight"),
-                               TLArg(data.rotationForwardHead, "RotationForwardHead"),
-                               TLArg(data.sixDof, "SixDof"),
-                               TLArg(data.usePos, "UsePos"),
-                               TLArg(data.autoX, "AutoX"),
-                               TLArg(data.autoY, "AutoY"));
-
+    XrPosef SrsTracker::DataToPose(const VirtualTrackerData& data)
+    {
+       XrPosef rigPose{Pose::Identity()};
        auto rotation = DirectX::XMQuaternionRotationRollPitchYaw(data.pitch * angleToRadian,
-                                                                 -data.yaw * angleToRadian,
+                                                                 data.yaw * angleToRadian,
                                                                  -data.roll * angleToRadian);
        if (0 != m_PitchConstant)
        {
@@ -1048,76 +1174,10 @@ namespace tracker
                 DirectX::XMQuaternionMultiply(DirectX::XMQuaternionRotationRollPitchYaw(m_PitchConstant, 0.f, 0.f),
                                               rotation);
        }
-        
        StoreXrQuaternion(&rigPose.orientation, rotation);
-       
 
-       trackerPose = Pose::Multiply(rigPose, m_ReferencePose);
-
-       TraceLoggingWriteStop(local,
-                             "YawTracker::GetVirtualPose",
-                             TLArg(true, "Success"),
-                             TLArg(xr::ToString(trackerPose).c_str(), "TrackerPose"));
-       return true;
-    }
-
-    bool SixDofTracker::GetVirtualPose(XrPosef& trackerPose, XrSession session, XrTime time)
-    {
-       TraceLocalActivity(local);
-       TraceLoggingWriteStart(local, "SixDofTracker::GetVirtualPose", TLPArg(session, "Session"), TLArg(time, "Time"));
-
-       SixDofData data{};
-       XrPosef rigPose{Pose::Identity()};
-       if (!m_Mmf.Read(&data, sizeof(data), time))
-       {
-            TraceLoggingWriteStop(local, "SixDofTracker::GetVirtualPose", TLArg(false, "Success"));
-            return false;
-       }
-
-       m_Recorder->AddMmfValue({data.sway, data.surge, data.heave, data.yaw, data.roll, data.pitch});
-
-       DebugLog("MotionData: yaw: %f, pitch: %f, roll: %f, sway: %f, surge: %f, heave: %f",
-                data.yaw,
-                data.pitch,
-                data.roll,
-                data.sway,
-                data.surge,
-                data.heave);
-
-       TraceLoggingWriteTagged(local,
-                               "SixDofTracker::GetVirtualPose",
-                               TLArg(data.yaw, "Yaw"),
-                               TLArg(data.pitch, "Pitch"),
-                               TLArg(data.roll, "Roll"),
-                               TLArg(data.sway, "Sway"),
-                               TLArg(data.surge, "Surge"),
-                               TLArg(data.heave, "Heave"));
-
-       auto rotation = DirectX::XMQuaternionRotationRollPitchYaw(
-           static_cast<float>(data.pitch) * (m_IsSrs ? angleToRadian : -angleToRadian),
-           static_cast<float>(data.yaw) * angleToRadian,
-           static_cast<float>(data.roll) * (m_IsSrs ? -angleToRadian : angleToRadian));
-
-       if (0 != m_PitchConstant)
-       {
-            rotation =
-                DirectX::XMQuaternionMultiply(DirectX::XMQuaternionRotationRollPitchYaw(m_PitchConstant, 0.f, 0.f),
-                                              rotation);
-       }
-
-       StoreXrQuaternion(&rigPose.orientation, rotation);
-       rigPose.position = XrVector3f{static_cast<float>(data.sway) / -1000.0f,
-                                     static_cast<float>(data.heave) / 1000.0f,
-                                     static_cast<float>(data.surge) / 1000.0f};
-
-       trackerPose = Pose::Multiply(rigPose, m_ReferencePose);
-
-       TraceLoggingWriteStop(local,
-                             "SixDofTracker::GetVirtualPose",
-                             TLArg(true, "Success"),
-                             TLArg(xr::ToString(trackerPose).c_str(), "TrackerPose"));
-
-       return true;
+       rigPose.position = XrVector3f{-data.sway / -1000.f, data.heave / 1000.f, data.surge / 1000.f};
+       return rigPose;
     }
 
     void CorManipulator::ApplyManipulation(XrSession session, XrTime time)

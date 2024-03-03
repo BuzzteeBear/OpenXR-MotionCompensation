@@ -3,6 +3,7 @@
 #pragma once
 
 #include <log.h>
+#include "utility.h"
 
 namespace filter
 {
@@ -110,4 +111,20 @@ namespace filter
       protected:
         XrQuaternionf m_ThirdStage = xr::math::Quaternion::Identity();
     };
+
+    class StabilizerBase
+    {
+      public:
+        virtual ~StabilizerBase() = default;
+        virtual void InsertSample(utility::VirtualTrackerData& value) = 0;
+        virtual void Stabilize(utility::VirtualTrackerData& value) = 0;
+    };
+
+    class NoStabilizer : public StabilizerBase
+    {
+      public:
+        void InsertSample(utility::VirtualTrackerData& value) override{};
+        void Stabilize(utility::VirtualTrackerData& value) override{};
+    };
+
 } // namespace filter

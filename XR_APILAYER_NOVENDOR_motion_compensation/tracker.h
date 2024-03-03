@@ -56,6 +56,7 @@ namespace tracker
         virtual bool ChangeRotation(float radian);
         virtual void SaveReferencePose(XrTime time) const{};
         virtual void ApplyCorManipulation(XrSession session, XrTime time){};
+        virtual void SampleVirtualTracker(XrTime time){};
         bool ToggleRecording() const;
 
         bool m_SkipLazyInit{false};
@@ -106,15 +107,20 @@ namespace tracker
         void SaveReferencePose(XrTime time) const override;
         void LogOffsetValues() const;
         void ApplyCorManipulation(XrSession session, XrTime time) override;
+        void SampleVirtualTracker(XrTime time) override;
 
       protected:
         void SetReferencePose(const XrPosef& pose) override;
         bool GetPose(XrPosef& trackerPose, XrSession session, XrTime time) override;
-        virtual bool GetVirtualPose(XrPosef& trackerPose, XrSession session, XrTime time) = 0;
+        virtual bool ReadMmf(XrTime time, utility::VirtualTrackerData& data) = 0;
+        virtual XrPosef DataToPose(const utility::VirtualTrackerData& data) = 0;
+
 
         std::string m_Filename;
         utility::Mmf m_Mmf;
-        float m_OffsetForward{0.0f}, m_OffsetDown{0.0f}, m_OffsetRight{0.0f}, m_OffsetYaw{0.0f}, m_PitchConstant{0.0f};        
+        float m_OffsetForward{0.0f}, m_OffsetDown{0.0f}, m_OffsetRight{0.0f}, m_OffsetYaw{0.0f}, m_PitchConstant{0.0f};
+        bool m_IsStabilized{false};
+        std::shared_ptr<filter::StabilizerBase> m_Stabilizer{std::make_shared<filter::NoStabilizer>()};
 
       private:
         bool LoadReferencePose(XrSession session, XrTime time);
@@ -133,7 +139,8 @@ namespace tracker
         bool ResetReferencePose(XrSession session, XrTime time) override;
 
       protected:
-        bool GetVirtualPose(XrPosef& trackerPose, XrSession session, XrTime time) override;
+        bool ReadMmf(XrTime time, utility::VirtualTrackerData& data) override;
+        XrPosef DataToPose(const utility::VirtualTrackerData& data) override;
 
       private:
         struct YawData
@@ -147,9 +154,7 @@ namespace tracker
     class SixDofTracker : public VirtualTracker
     {
       protected:
-        bool GetVirtualPose(XrPosef& trackerPose, XrSession session, XrTime time) override;
-       
-        bool m_IsSrs{false};
+        bool ReadMmf(XrTime time, utility::VirtualTrackerData& data) override;
 
       private:
         struct SixDofData
@@ -169,8 +174,10 @@ namespace tracker
         FlyPtTracker()
         {
             m_Filename = "Local\\motionRigPose";
-            m_IsSrs = false;
         }
+
+      protected:
+        XrPosef DataToPose(const utility::VirtualTrackerData& data) override;
     };
 
     class SrsTracker final : public SixDofTracker
@@ -179,8 +186,10 @@ namespace tracker
         SrsTracker()
         {
             m_Filename = "Local\\SimRacingStudioMotionRigPose";
-            m_IsSrs = true;
         }
+
+      protected:
+        XrPosef DataToPose(const utility::VirtualTrackerData& data) override;
     };
 
     class CorManipulator : public ControllerBase

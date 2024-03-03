@@ -10,6 +10,16 @@ namespace utility
     constexpr float floatPi{static_cast<float>(M_PI)};
     constexpr float angleToRadian{floatPi / 180.0f};
 
+    struct VirtualTrackerData
+    {
+        float sway{0.f};
+        float surge{0.f};
+        float heave{0.f};
+        float yaw{0.f};
+        float roll{0.f};
+        float pitch{0.f};
+    };
+
     class AutoActivator
     {
       private:
