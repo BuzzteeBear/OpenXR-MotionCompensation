@@ -90,6 +90,9 @@ using Microsoft::WRL::ComPtr;
 // FMT formatter.
 #include <fmt/format.h>
 
+// utility
+#include <utility.h>
+
 // Helpers for ComPtr manipulation.
 
 template <typename T>

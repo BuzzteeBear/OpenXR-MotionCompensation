@@ -23,7 +23,6 @@
 #pragma once
 
 #include "log.h"
-#include "utility.h"
 
 #pragma comment(lib, "d3dcompiler.lib")
 #pragma comment(lib, "dxguid.lib")

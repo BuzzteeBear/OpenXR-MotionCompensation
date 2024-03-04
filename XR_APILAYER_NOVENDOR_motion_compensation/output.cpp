@@ -3,7 +3,6 @@
 #include "pch.h"
 
 #include "output.h"
-#include "utility.h"
 #include "resource.h"
 #include "layer.h"
 #include <log.h>
@@ -258,44 +257,57 @@ namespace output
         TraceLoggingWriteStop(local, "PoseRecorder::Stop", TLArg(false, "Stream_Closed"));
     }
 
-    void PoseAndMmfRecorder::AddMmfValue(const MmfValueSample& mmfValue)
+    void PoseAndDofRecorder::AddDofValues(const utility::DofData& dofValues, RecorderDofInput type)
     {
         if (!m_Started)
         {
             return;
         }
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "PoseAndMmfRecorder::AddMmfValue");
+        TraceLoggingWriteStart(local, "PoseAndDofRecorder::AddDofValues", TLArg(static_cast<uint32_t>(type), "Type"));
+
+        switch (type)
+        {
+        case Raw:
+            m_DofValues.raw = dofValues;
+            break;
+        case Stabilized:
+            m_DofValues.stabilized = dofValues;
+            break;
+        default:
+            break;
+        }
         
-        m_MmfValue = std::move(mmfValue);
-        
-        TraceLoggingWriteStop(local, "PoseAndMmfRecorder::AddMmfValue", TLArg(true, "Success"));
+        TraceLoggingWriteStop(local, "PoseAndDofRecorder::AddDofValues", TLArg(true, "Success"));
     }
 
-    void PoseAndMmfRecorder::Write(XrTime time, bool newLine)
+    void PoseAndDofRecorder::Write(XrTime time, bool newLine)
     {
         if (!m_Started)
         {
             return;
         }
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "PoseAndMmfRecorder::Write", TLArg(newLine, "NewLine"));
+        TraceLoggingWriteStart(local, "PoseAndDofRecorder::Write", TLArg(newLine, "NewLine"));
 
         if (m_FileStream.is_open())
         {
             PoseRecorder::Write(time, false);
 
-            m_FileStream << ";" << m_MmfValue.sway << ";" << m_MmfValue.surge << ";" << m_MmfValue.heave << ";"
-                         << m_MmfValue.yaw << ";" << m_MmfValue.roll << ";" << m_MmfValue.pitch;
+            m_FileStream << ";" << m_DofValues.raw.sway << ";" << m_DofValues.raw.surge << ";" << m_DofValues.raw.heave
+                         << ";" << m_DofValues.raw.yaw << ";" << m_DofValues.raw.pitch << ";" << m_DofValues.raw.roll;
+            m_FileStream << ";" << m_DofValues.stabilized.sway << ";" << m_DofValues.stabilized.surge << ";"
+                         << m_DofValues.stabilized.heave << ";" << m_DofValues.stabilized.yaw << ";"
+                         << m_DofValues.stabilized.pitch << ";" << m_DofValues.stabilized.roll;
             if (newLine)
             {
                 m_FileStream << "\n";
             }
             m_FileStream.flush();
 
-            TraceLoggingWriteStop(local, "PoseAndMmfRecorder::Write", TLArg(true, "Success"));
+            TraceLoggingWriteStop(local, "PoseAndDofRecorder::Write", TLArg(true, "Success"));
             return;
         }
-        TraceLoggingWriteStop(local, "PoseAndMmfRecorder::Write", TLArg(false, "Stream_Open"));
+        TraceLoggingWriteStop(local, "PoseAndDofRecorder::Write", TLArg(false, "Stream_Open"));
     }
 } // namespace output

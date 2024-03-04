@@ -10,7 +10,7 @@ namespace utility
     constexpr float floatPi{static_cast<float>(M_PI)};
     constexpr float angleToRadian{floatPi / 180.0f};
 
-    struct VirtualTrackerData
+    struct DofData
     {
         float sway{0.f};
         float surge{0.f};

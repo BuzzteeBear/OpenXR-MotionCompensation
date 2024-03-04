@@ -112,8 +112,8 @@ namespace tracker
       protected:
         void SetReferencePose(const XrPosef& pose) override;
         bool GetPose(XrPosef& trackerPose, XrSession session, XrTime time) override;
-        virtual bool ReadMmf(XrTime time, utility::VirtualTrackerData& data) = 0;
-        virtual XrPosef DataToPose(const utility::VirtualTrackerData& data) = 0;
+        virtual bool ReadMmf(XrTime time, utility::DofData& data) = 0;
+        virtual XrPosef DataToPose(const utility::DofData& data) = 0;
 
 
         std::string m_Filename;
@@ -139,8 +139,8 @@ namespace tracker
         bool ResetReferencePose(XrSession session, XrTime time) override;
 
       protected:
-        bool ReadMmf(XrTime time, utility::VirtualTrackerData& data) override;
-        XrPosef DataToPose(const utility::VirtualTrackerData& data) override;
+        bool ReadMmf(XrTime time, utility::DofData& data) override;
+        XrPosef DataToPose(const utility::DofData& data) override;
 
       private:
         struct YawData
@@ -154,7 +154,7 @@ namespace tracker
     class SixDofTracker : public VirtualTracker
     {
       protected:
-        bool ReadMmf(XrTime time, utility::VirtualTrackerData& data) override;
+        bool ReadMmf(XrTime time, utility::DofData& data) override;
 
       private:
         struct SixDofData
@@ -177,7 +177,7 @@ namespace tracker
         }
 
       protected:
-        XrPosef DataToPose(const utility::VirtualTrackerData& data) override;
+        XrPosef DataToPose(const utility::DofData& data) override;
     };
 
     class SrsTracker final : public SixDofTracker
@@ -189,7 +189,7 @@ namespace tracker
         }
 
       protected:
-        XrPosef DataToPose(const utility::VirtualTrackerData& data) override;
+        XrPosef DataToPose(const utility::DofData& data) override;
     };
 
     class CorManipulator : public ControllerBase

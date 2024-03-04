@@ -4,7 +4,6 @@
 
 #include <DirectXMath.h>
 #include <log.h>
-#include "utility.h"
 #include "layer.h"
 #include "config.h"
 #include "output.h"

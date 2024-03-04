@@ -25,7 +25,6 @@
 #include "layer.h"
 #include "tracker.h"
 #include "output.h"
-#include "utility.h"
 #include "config.h"
 #include <log.h>
 #include <util.h>

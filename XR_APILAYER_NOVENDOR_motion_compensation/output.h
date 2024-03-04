@@ -85,14 +85,25 @@ namespace output
 
     constexpr uint32_t m_RecorderMax{36000}; // max 10 min @ 100 frames/s
 
+    enum RecorderDofInput
+    {
+        Raw = 0,
+        Stabilized 
+    };
+
     enum RecorderPoseInput
     {
-  
         Reference = 0,
         Input,
         Filtered,
         Modified,
         Delta
+    };
+
+    struct DofSample
+    {
+        utility::DofData raw{};
+        utility::DofData stabilized{};
     };
 
     struct PoseSample
@@ -104,16 +115,6 @@ namespace output
         XrPosef reference{};
     };
 
-    struct MmfValueSample
-    {
-        double sway;
-        double surge;
-        double heave;
-        double yaw;
-        double roll;
-        double pitch;
-    };
-
     class RecorderBase
     {
       public:
@@ -121,7 +122,7 @@ namespace output
         virtual ~RecorderBase() = default;
         virtual bool Toggle(bool isCalibrated) = 0;
         virtual void AddPose(const XrPosef& pose, RecorderPoseInput type) = 0;
-        virtual void AddMmfValue(const MmfValueSample& mmfValue) = 0;
+        virtual void AddDofValues(const utility::DofData& dofValues, RecorderDofInput type) = 0;
         virtual void Write(XrTime time, bool newLine = true) = 0;
     };
 
@@ -130,7 +131,7 @@ namespace output
       public:
         bool Toggle(bool isCalibrated) override;
         void AddPose(const XrPosef& pose, RecorderPoseInput type) override{};
-        void AddMmfValue(const MmfValueSample& mmfValue) override{};
+        void AddDofValues(const utility::DofData& dofValues, RecorderDofInput type) override{};
         void Write(XrTime time, bool newLine = true) override{};
     };
 
@@ -141,7 +142,7 @@ namespace output
         ~PoseRecorder() override;
         bool Toggle(bool isCalibrated) override;
         void AddPose(const XrPosef& pose, RecorderPoseInput type) override;
-        void AddMmfValue(const MmfValueSample& mmfValue) override{};
+        void AddDofValues(const utility::DofData& dofValues, RecorderDofInput type) override{};
         void Write(XrTime time, bool newLine = true) override;
 
       protected:
@@ -164,18 +165,20 @@ namespace output
         uint32_t m_Counter{0};
     };
 
-    class PoseAndMmfRecorder final : public PoseRecorder
+    class PoseAndDofRecorder final : public PoseRecorder
     {
       public:
-        PoseAndMmfRecorder()
+        PoseAndDofRecorder()
         {
-            m_HeadLine = m_HeadLine + "; Sway; Surge; Heave; Yaw; Roll; Pitch";
+            m_HeadLine += "; Sway_Raw; Surge_Raw; Heave_Raw; Yaw_Raw; Pitch_Raw; Roll_Raw";
+            m_HeadLine += " Sway_Stabilized; Surge_Stabilized; Heave_Stabilized; Yaw_Stabilized; Pitch_Stabilized; "
+                          "Roll_Stabilized";
         }
-        void AddMmfValue(const MmfValueSample& mmfValue) override;
+        void AddDofValues(const utility::DofData& dofValues, RecorderDofInput type) override;
         void Write(XrTime time, bool newLine = true) override;
 
       private:
-        MmfValueSample m_MmfValue{};
+        DofSample m_DofValues{};
     };
 
 } // namespace output

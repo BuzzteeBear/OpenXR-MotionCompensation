@@ -3,7 +3,6 @@
 #pragma once
 
 #include <log.h>
-#include "utility.h"
 
 namespace filter
 {
@@ -116,15 +115,15 @@ namespace filter
     {
       public:
         virtual ~StabilizerBase() = default;
-        virtual void InsertSample(utility::VirtualTrackerData& value) = 0;
-        virtual void Stabilize(utility::VirtualTrackerData& value) = 0;
+        virtual void InsertSample(utility::DofData& value) = 0;
+        virtual void Stabilize(utility::DofData& value) = 0;
     };
 
     class NoStabilizer : public StabilizerBase
     {
       public:
-        void InsertSample(utility::VirtualTrackerData& value) override{};
-        void Stabilize(utility::VirtualTrackerData& value) override{};
+        void InsertSample(utility::DofData& value) override{};
+        void Stabilize(utility::DofData& value) override{};
     };
 
 } // namespace filter

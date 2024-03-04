@@ -5,7 +5,6 @@
 #include <DirectXMath.h>
 #include "modifier.h"
 #include "config.h"
-#include "utility.h"
 #include "output.h"
 #include <util.h>
 

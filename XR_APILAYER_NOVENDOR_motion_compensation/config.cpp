@@ -5,7 +5,6 @@
 #include "config.h"
 #include "layer.h"
 #include "output.h"
-#include "utility.h"
 #include <log.h>
 
 using namespace openxr_api_layer;
