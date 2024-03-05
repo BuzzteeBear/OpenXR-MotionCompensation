@@ -126,4 +126,31 @@ namespace filter
         void Stabilize(utility::DofData& value) override{};
     };
 
+    class MedianStabilizer : public StabilizerBase
+    {
+      public:
+        MedianStabilizer(bool threeDofOnly);
+        void InsertSample(utility::DofData& sample) override;
+        void InsertSample(utility::DofData& sample, DWORD time);
+        void Stabilize(utility::DofData & data) override;
+
+      private:
+        enum DofValue
+        {
+            sway = 0,
+            surge,
+            heave,
+            yaw,
+            roll,
+            pitch
+        };
+
+        DWORD m_WindowSize{0}, m_WindowHalf{0};
+        std::vector<DofValue> m_RelevantValues;
+
+        std::map<DWORD, std::vector<float>> m_Samples;
+        void RemoveOutdated(DWORD now);
+        std::multimap<float, DWORD> GetSorted(DofValue dof, DWORD now) const;
+    }; 
+
 } // namespace filter

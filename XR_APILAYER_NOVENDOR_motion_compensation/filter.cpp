@@ -206,4 +206,79 @@ namespace filter
         SingleSlerpFilter::Reset(rotation);
         m_ThirdStage = rotation;
     }
+
+    MedianStabilizer::MedianStabilizer(bool threeDofOnly)
+    {
+        // TODO: read config
+        m_WindowSize = 100;
+        m_WindowHalf = m_WindowSize / 2;
+        threeDofOnly ? m_RelevantValues = {yaw, roll, pitch}
+                     : m_RelevantValues = {sway, surge, heave, yaw, roll, pitch};
+    }
+
+    void MedianStabilizer::InsertSample(utility::DofData& sample)
+    {
+        const DWORD now = timeGetTime();
+        InsertSample(sample, now);
+    }
+
+    void MedianStabilizer::InsertSample(utility::DofData& sample, DWORD time)
+    {
+        m_Samples[time] = {
+            sample.sway,
+            sample.surge,
+            sample.heave,
+            sample.yaw,
+            sample.roll,
+            sample.pitch,
+        };
+        RemoveOutdated(time);
+    }
+
+    void MedianStabilizer::Stabilize(utility::DofData& data)
+    {
+        float out[6]{0.f};
+        const DWORD now = timeGetTime();
+        InsertSample(data, now);
+
+        for (const DofValue relevantValue : m_RelevantValues)
+        {
+            auto sorted = GetSorted(relevantValue, now);
+            auto it = sorted.begin();
+            DWORD weightSum = it->second;
+            while (it != sorted.end() && weightSum < m_WindowHalf)
+            {
+                weightSum += (++it)->second;
+            }
+            out[relevantValue] = it->first;
+        }
+        data = {.sway = out[sway],
+                 .surge = out[surge],
+                 .heave = out[heave],
+                 .yaw = out[yaw],
+                 .roll = out[roll],
+                 .pitch = out[pitch]};
+    }
+
+    void MedianStabilizer::RemoveOutdated(const DWORD now)
+    {
+        const DWORD windowBegin = now - m_WindowSize;
+        auto it = m_Samples.cbegin();
+        while (it != m_Samples.cend() && it->first <= windowBegin)
+        {
+            it = m_Samples.erase(it);
+        }
+    }
+
+    std::multimap<float, DWORD> MedianStabilizer::GetSorted(const DofValue dof, const DWORD now) const
+    {
+        std::multimap<float, DWORD> sorted{};
+        DWORD lastTime = now - m_WindowSize;
+        for (const auto& [time, value] : m_Samples)
+        {
+            sorted.insert({value[dof], time - lastTime});
+            lastTime = time;
+        }
+        return sorted;
+    }
 } // namespace filter

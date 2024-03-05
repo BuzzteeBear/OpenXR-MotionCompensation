@@ -135,6 +135,8 @@ namespace tracker
         YawTracker()
         {
             m_Filename = "Local\\YawVRGEFile";
+            m_Stabilizer = std::make_unique<filter::MedianStabilizer>(true);
+            m_IsStabilized = true;
         }
         bool ResetReferencePose(XrSession session, XrTime time) override;
 
