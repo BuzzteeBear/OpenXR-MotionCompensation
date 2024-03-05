@@ -294,11 +294,12 @@ namespace output
         {
             PoseRecorder::Write(time, false);
 
-            m_FileStream << ";" << m_DofValues.raw.sway << ";" << m_DofValues.raw.surge << ";" << m_DofValues.raw.heave
-                         << ";" << m_DofValues.raw.yaw << ";" << m_DofValues.raw.pitch << ";" << m_DofValues.raw.roll;
-            m_FileStream << ";" << m_DofValues.stabilized.sway << ";" << m_DofValues.stabilized.surge << ";"
-                         << m_DofValues.stabilized.heave << ";" << m_DofValues.stabilized.yaw << ";"
-                         << m_DofValues.stabilized.pitch << ";" << m_DofValues.stabilized.roll;
+            m_FileStream << ";" << m_DofValues.raw.sway << ";" << m_DofValues.stabilized.sway
+                         << ";" << m_DofValues.raw.surge << ";" << m_DofValues.stabilized.surge
+                         << ";" << m_DofValues.raw.heave << ";" << m_DofValues.stabilized.heave
+                         << ";" << m_DofValues.raw.yaw << ";" << m_DofValues.stabilized.yaw
+                         << ";" << m_DofValues.raw.pitch << ";" << m_DofValues.stabilized.pitch
+                         << ";" << m_DofValues.raw.roll << ";" << m_DofValues.stabilized.roll;
             if (newLine)
             {
                 m_FileStream << "\n";

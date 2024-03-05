@@ -170,9 +170,8 @@ namespace output
       public:
         PoseAndDofRecorder()
         {
-            m_HeadLine += "; Sway_Raw; Surge_Raw; Heave_Raw; Yaw_Raw; Pitch_Raw; Roll_Raw";
-            m_HeadLine += " Sway_Stabilized; Surge_Stabilized; Heave_Stabilized; Yaw_Stabilized; Pitch_Stabilized; "
-                          "Roll_Stabilized";
+            m_HeadLine += "; Sway_Raw; Sway_Stabilized; Surge_Raw; Surge_Stabilized; Heave_Raw; Heave_Stabilized; "
+                          "Yaw_Raw; Yaw_Stabilized; Pitch_Raw; Pitch_Stabilized; Roll_Raw; Roll_Stabilized";
         }
         void AddDofValues(const utility::DofData& dofValues, RecorderDofInput type) override;
         void Write(XrTime time, bool newLine = true) override;
