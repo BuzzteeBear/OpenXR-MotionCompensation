@@ -1238,7 +1238,7 @@ namespace openxr_api_layer
                     for (uint32_t i = 0; i < *viewCountOutput; i++)
                     {
                         DebugLog("xrLocateView(%u): eye (%u) original pose = %s",
-                                 time,
+                                 displayTime,
                                  i,
                                  xr::ToString(views[i].pose).c_str());
                         TraceLoggingWriteTagged(local,
@@ -1251,7 +1251,7 @@ namespace openxr_api_layer
                         views[i].pose = xr::Normalize(Pose::Multiply(views[i].pose, trackerDelta));
 
                         DebugLog("xrLocateView(%u): eye (%u) compensated pose = %s",
-                                 time,
+                                 displayTime,
                                  i,
                                  xr::ToString(views[i].pose).c_str());
                         TraceLoggingWriteTagged(local,
@@ -1261,6 +1261,21 @@ namespace openxr_api_layer
                     }
                     // sample from xrLocateView potentially overrides previous one
                     m_DeltaCache.AddSample(displayTime, trackerDelta, true);
+                }
+            }
+            else
+            {
+                if (0 == m_RecoveryStart)
+                {
+                    ErrorLog("unable to retrieve tracker pose delta");
+                    m_RecoveryStart = displayTime;
+                }
+                else if (m_RecoveryWait >= 0 && displayTime - m_RecoveryStart > m_RecoveryWait)
+                {
+                    ErrorLog("tracker connection lost");
+                    AudioOut::Execute(Event::ConnectionLost);
+                    m_Activated = false;
+                    m_RecoveryStart = -1;
                 }
             }
             TraceLoggingWriteStop(local,
@@ -1311,7 +1326,7 @@ namespace openxr_api_layer
         {
             for (uint32_t i = 0; i < *viewCountOutput; i++)
             {
-                DebugLog("xrLocateView(%u): eye (%u) original pose = %s", time, i, xr::ToString(views[i].pose).c_str());
+                DebugLog("xrLocateView(%u): eye (%u) original pose = %s", displayTime, i, xr::ToString(views[i].pose).c_str());
                 TraceLoggingWriteTagged(local,
                                         "OpenXrLayer::xrLocateViews",
                                         TLArg(i, "Index"),
@@ -1321,7 +1336,7 @@ namespace openxr_api_layer
                 // apply manipulation
                 views[i].pose = xr::Normalize(Pose::Multiply(m_EyeOffsets[i].pose, location.pose));
 
-                DebugLog("xrLocateView(%u): eye (%u) compensated pose = %s", time, i, xr::ToString(views[i].pose).c_str());
+                DebugLog("xrLocateView(%u): eye (%u) compensated pose = %s", displayTime, i, xr::ToString(views[i].pose).c_str());
                 TraceLoggingWriteTagged(local,
                                         "OpenXrLayer::xrLocateViews",
                                         TLArg(i, "Index"),
