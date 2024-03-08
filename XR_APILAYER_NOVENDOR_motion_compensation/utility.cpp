@@ -86,7 +86,7 @@ namespace utility
         m_Name = name;
     }
 
-    bool Mmf::Open(const XrTime time)
+    bool Mmf::Open(const int64_t time)
     {
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "Mmf::Open", TLArg(time, "Time"));
@@ -125,7 +125,7 @@ namespace utility
         return true;
     }
 
-    bool Mmf::Read(void* buffer, const size_t size, const XrTime time)
+    bool Mmf::Read(void* buffer, const size_t size, const int64_t time)
     {
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "Mmf::Read", TLArg(time, "Time"));

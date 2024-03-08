@@ -315,7 +315,7 @@ namespace openxr_api_layer
                     if (m_Tracker->m_Calibrated)
                     {
                         Log("tracker calibration lost");
-                        m_Tracker->m_Calibrated = false;
+                        m_Tracker->InvalidateCalibration();
                         AudioOut::Execute(Event::CalibrationLost);
 
                         if (m_Activated)

@@ -8,6 +8,7 @@
 
 using namespace openxr_api_layer::log;
 using namespace xr::math;
+using namespace utility;
 
 namespace filter
 {
@@ -216,30 +217,30 @@ namespace filter
                      : m_RelevantValues = {sway, surge, heave, yaw, roll, pitch};
     }
 
-    void MedianStabilizer::InsertSample(utility::DofData& sample)
+    void MedianStabilizer::InsertSample(Dof& dof)
     {
         const DWORD now = timeGetTime();
-        InsertSample(sample, now);
+        InsertSample(dof, now);
     }
 
-    void MedianStabilizer::InsertSample(utility::DofData& sample, DWORD time)
+    void MedianStabilizer::InsertSample(Dof& dof, DWORD time)
     {
+        std::unique_lock lock(m_SampleMutex);
         m_Samples[time] = {
-            sample.sway,
-            sample.surge,
-            sample.heave,
-            sample.yaw,
-            sample.roll,
-            sample.pitch,
+            dof.data[sway],
+            dof.data[surge],
+            dof.data[heave],
+            dof.data[yaw],
+            dof.data[roll],
+            dof.data[pitch],
         };
         RemoveOutdated(time);
     }
 
-    void MedianStabilizer::Stabilize(utility::DofData& data)
+    void MedianStabilizer::Stabilize(Dof& dof)
     {
-        float out[6]{0.f};
         const DWORD now = timeGetTime();
-        InsertSample(data, now);
+        InsertSample(dof, now);
 
         for (const DofValue relevantValue : m_RelevantValues)
         {
@@ -250,35 +251,135 @@ namespace filter
             {
                 weightSum += (++it)->second;
             }
-            out[relevantValue] = it->first;
+            dof.data[relevantValue] = it->first;
         }
-        data = {.sway = out[sway],
-                 .surge = out[surge],
-                 .heave = out[heave],
-                 .yaw = out[yaw],
-                 .roll = out[roll],
-                 .pitch = out[pitch]};
     }
 
     void MedianStabilizer::RemoveOutdated(const DWORD now)
     {
         const DWORD windowBegin = now - m_WindowSize;
-        auto it = m_Samples.cbegin();
-        while (it != m_Samples.cend() && it->first <= windowBegin)
+        auto it = m_Samples.begin();
+        while (it != m_Samples.end() && it->first <= windowBegin)
         {
             it = m_Samples.erase(it);
         }
     }
 
-    std::multimap<float, DWORD> MedianStabilizer::GetSorted(const DofValue dof, const DWORD now) const
+    std::multimap<float, DWORD> MedianStabilizer::GetSorted(const DofValue dof, const DWORD now)
     {
         std::multimap<float, DWORD> sorted{};
         DWORD lastTime = now - m_WindowSize;
+        std::unique_lock lock(m_SampleMutex);
         for (const auto& [time, value] : m_Samples)
         {
             sorted.insert({value[dof], time - lastTime});
             lastTime = time;
         }
         return sorted;
+    }
+
+    void PassThroughSampler::InsertSample(utility::Dof& sample, int64_t time)
+    {
+        m_PassThrough = sample;
+    }
+
+    Dof PassThroughSampler::GetValue()
+    {
+        Dof out{};
+        for (const DofValue value : m_RelevantValues)
+        {
+            out.data[value] = m_PassThrough.data[value];
+        }
+        return out;
+    }
+
+    void MedianSampler::InsertSample(Dof& sample, int64_t time)
+    {
+        if (m_WindowSize <= 1)
+        {
+            PassThroughSampler::InsertSample(sample, time);
+            return;
+        }
+        std::unique_lock lock(m_SampleMutex);
+        for (const DofValue value : m_RelevantValues)
+        {
+            std::deque<float>& samples = m_Samples[value]; 
+            samples.push_back(sample.data[value]);
+            if (samples.size() > m_WindowSize)
+            {
+                samples.pop_front();
+            }
+        }
+    }
+
+    Dof MedianSampler::GetValue()
+    {
+        if (m_WindowSize <= 1)
+        {
+            return PassThroughSampler::GetValue();
+        }
+        Dof dof{};
+        std::unique_lock lock(m_SampleMutex);
+        for (const DofValue relevantValue : m_RelevantValues)
+        {
+            std::multiset<float> sorted(m_Samples[relevantValue].begin(), m_Samples[relevantValue].end());
+            const size_t halfSize = sorted.size() / 2;
+            auto med = sorted.begin();
+            std::advance(med, halfSize);
+            dof.data[relevantValue] = *med;
+        }
+        return dof;
+    }
+    
+    void WeightedMedianSampler::InsertSample(Dof& sample, int64_t time)
+    {
+        if (m_WindowSize <= 1)
+        {
+            PassThroughSampler::InsertSample(sample, time);
+            return;
+        }
+        const int64_t windowBegin = time - m_WindowSize;
+        std::unique_lock lock(m_SampleMutex);
+        for (const DofValue value : m_RelevantValues)
+        {
+            auto& samples = m_Samples[value];
+            // insert sample
+            samples.push_back({sample.data[value], time});
+            // remove outdated sample(s)
+            while (!samples.empty() && samples.front().second <= windowBegin)
+            {
+                samples.pop_front();
+            }
+        }
+    }
+
+    Dof WeightedMedianSampler::GetValue()
+    {
+        if (m_WindowSize <= 0)
+        {
+            return PassThroughSampler::GetValue();
+        }
+        Dof dof{};
+        std::unique_lock lock(m_SampleMutex);
+        for (const DofValue relevantValue : m_RelevantValues)
+        {
+            // sort by value and store duration
+            std::multimap<float, int64_t> sorted{};
+            int64_t lastBegin = m_Samples[relevantValue].back().second - m_WindowSize;
+            for (const auto& sample : m_Samples[relevantValue])
+            {
+                sorted.insert({sample.first, sample.second - lastBegin});
+                lastBegin = sample.second;
+            }
+            // calculate median, weighted by duration
+            auto it = sorted.begin();
+            int64_t durationSum = it->second;
+            while (durationSum < m_WindowHalf)
+            {
+                durationSum += (++it)->second;
+            }
+            dof.data[relevantValue] = it->first;
+        }
+        return dof;
     }
 } // namespace filter

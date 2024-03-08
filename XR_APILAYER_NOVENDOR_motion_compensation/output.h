@@ -102,8 +102,8 @@ namespace output
 
     struct DofSample
     {
-        utility::DofData raw{};
-        utility::DofData stabilized{};
+        utility::Dof raw{};
+        utility::Dof stabilized{};
     };
 
     struct PoseSample
@@ -122,7 +122,7 @@ namespace output
         virtual ~RecorderBase() = default;
         virtual bool Toggle(bool isCalibrated) = 0;
         virtual void AddPose(const XrPosef& pose, RecorderPoseInput type) = 0;
-        virtual void AddDofValues(const utility::DofData& dofValues, RecorderDofInput type) = 0;
+        virtual void AddDofValues(const utility::Dof& dofValues, RecorderDofInput type) = 0;
         virtual void Write(XrTime time, bool newLine = true) = 0;
     };
 
@@ -131,7 +131,7 @@ namespace output
       public:
         bool Toggle(bool isCalibrated) override;
         void AddPose(const XrPosef& pose, RecorderPoseInput type) override{};
-        void AddDofValues(const utility::DofData& dofValues, RecorderDofInput type) override{};
+        void AddDofValues(const utility::Dof& dofValues, RecorderDofInput type) override{};
         void Write(XrTime time, bool newLine = true) override{};
     };
 
@@ -142,7 +142,7 @@ namespace output
         ~PoseRecorder() override;
         bool Toggle(bool isCalibrated) override;
         void AddPose(const XrPosef& pose, RecorderPoseInput type) override;
-        void AddDofValues(const utility::DofData& dofValues, RecorderDofInput type) override{};
+        void AddDofValues(const utility::Dof& dofValues, RecorderDofInput type) override{};
         void Write(XrTime time, bool newLine = true) override;
 
       protected:
@@ -173,7 +173,7 @@ namespace output
             m_HeadLine += "; Sway_Raw; Sway_Stabilized; Surge_Raw; Surge_Stabilized; Heave_Raw; Heave_Stabilized; "
                           "Yaw_Raw; Yaw_Stabilized; Pitch_Raw; Pitch_Stabilized; Roll_Raw; Roll_Stabilized";
         }
-        void AddDofValues(const utility::DofData& dofValues, RecorderDofInput type) override;
+        void AddDofValues(const utility::Dof& dofValues, RecorderDofInput type) override;
         void Write(XrTime time, bool newLine = true) override;
 
       private:

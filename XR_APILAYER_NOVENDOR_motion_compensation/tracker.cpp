@@ -464,6 +464,11 @@ namespace tracker
         TraceLoggingWriteStop(local, "TrackerBase::SetReferencePose");
     }
 
+    void TrackerBase::InvalidateCalibration()
+    {
+        m_Calibrated = false;
+    }
+
     void TrackerBase::SetModifierActive(const bool active) const
     {
         TraceLocalActivity(local);
@@ -846,7 +851,7 @@ namespace tracker
         TraceLoggingWriteStop(local, "VirtualTracker::SaveReferencePose", TLArg(m_Calibrated, "Success"));
     }
 
-    
+
     bool VirtualTracker::LoadReferencePose(const XrSession session, const XrTime time)
     {
         TraceLocalActivity(local);
@@ -914,8 +919,8 @@ namespace tracker
     {
         if (m_IsStabilized && m_Calibrated)
         {
-            DofData pose;
-            if (ReadMmf(time, pose))
+            Dof pose;
+            if (ReadData(time, pose))
             {
                 m_Stabilizer->InsertSample(pose);
             }
@@ -938,23 +943,23 @@ namespace tracker
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "VirtualTracker::GetPose", TLPArg(session, "Session"), TLArg(time, "Time"));
 
-        DofData data{};
-        if (!ReadMmf(time, data))
+        Dof dof{};
+        if (!ReadData(time, dof))
         {
             TraceLoggingWriteStop(local, "VirtualTracker::GetPose", TLArg(false, "Success"));
             return false;
         }
-        m_Recorder->AddDofValues(data, Raw);
+        m_Recorder->AddDofValues(dof, Raw);
 
-        DebugLog("MotionData: %s", xr::ToString(data).c_str());
+        DebugLog("MotionData: %s", xr::ToString(dof).c_str());
         TraceLoggingWriteTagged(local,
                                 "VirtualTracker::GetPose",
-                                TLArg(xr::ToString(data).c_str(), "Data"));
+                                TLArg(xr::ToString(dof).c_str(), "Data"));
 
-        m_Stabilizer->Stabilize(data);
-        m_Recorder->AddDofValues(data, Stabilized);
+        m_Stabilizer->Stabilize(dof);
+        m_Recorder->AddDofValues(dof, Stabilized);
 
-        const XrPosef rigPose = DataToPose(data);
+        const XrPosef rigPose = DataToPose(dof);
         TraceLoggingWriteTagged(local, "VirtualTracker::GetPose", TLArg(xr::ToString(rigPose).c_str(), "RigPose"));
 
         trackerPose = Pose::Multiply(rigPose, m_ReferencePose);
@@ -985,16 +990,16 @@ namespace tracker
                 {
                     if (Pose::IsPoseValid(hmdLocation.locationFlags))
                     {
-                        YawData data{};
-                        if (m_Mmf.Read(&data, sizeof(data), time))
+                        YawData dof{};
+                        if (m_Mmf.Read(&dof, sizeof(dof), time))
                         {
                             Log("Yaw Game Engine values: rotationHeight = %f, rotationForwardHead = %f",
-                                data.rotationHeight,
-                                data.rotationForwardHead);
+                                dof.rotationHeight,
+                                dof.rotationForwardHead);
 
                             m_OffsetRight = 0.0;
-                            m_OffsetForward = data.rotationForwardHead / 100.0f;
-                            m_OffsetDown = hmdLocation.pose.position.y - data.rotationHeight / 100.0f;
+                            m_OffsetForward = dof.rotationForwardHead / 100.0f;
+                            m_OffsetDown = hmdLocation.pose.position.y - dof.rotationHeight / 100.0f;
 
                             Log("offset down value based on Yaw Game Engine value: %f", m_OffsetDown);
                             TraceLoggingWriteTagged(local,
@@ -1030,7 +1035,7 @@ namespace tracker
         return success;
     }
 
-    bool YawTracker::ReadMmf(XrTime time, DofData& data)
+    bool YawTracker::ReadData(XrTime time, Dof& dof)
     {
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "YawTracker::ReadMmf", TLArg(time, "Time"));
@@ -1067,20 +1072,20 @@ namespace tracker
                                 TLArg(mmfData.autoX, "AutoX"),
                                 TLArg(mmfData.autoY, "AutoY"));
 
-        data.yaw = mmfData.yaw;
-        data.roll = mmfData.roll;
-        data.pitch = mmfData.pitch;
+        dof.data[yaw] = mmfData.yaw;
+        dof.data[roll] = mmfData.roll;
+        dof.data[pitch] = mmfData.pitch;
        
         TraceLoggingWriteStop(local, "YawTracker::ReadMmf", TLArg(true, "Success"));
         return true;
     }
 
-    XrPosef YawTracker::DataToPose(const DofData& data)
+    XrPosef YawTracker::DataToPose(const Dof& dof)
     {
         XrPosef rigPose{Pose::Identity()};
-        auto rotation = DirectX::XMQuaternionRotationRollPitchYaw(data.pitch * angleToRadian,
-                                                                  -data.yaw * angleToRadian,
-                                                                  -data.roll * angleToRadian);
+        auto rotation = DirectX::XMQuaternionRotationRollPitchYaw(dof.data[pitch] * angleToRadian,
+                                                                  -dof.data[yaw] * angleToRadian,
+                                                                  -dof.data[roll] * angleToRadian);
         if (0 != m_PitchConstant)
         {
             rotation =
@@ -1091,18 +1096,113 @@ namespace tracker
         return rigPose;
     }
 
-    bool SixDofTracker::ReadMmf(XrTime time, DofData& data)
+    YawSamplingTracker::~YawSamplingTracker()
+    {
+        StopSampling();
+    }
+
+    bool YawSamplingTracker::ResetReferencePose(XrSession session, XrTime time)
+    {
+        const bool success = YawTracker::ResetReferencePose(session, time);
+        if (success)
+        {
+            StartSampling();
+        }
+        return success;
+    }
+
+    void YawSamplingTracker::InvalidateCalibration()
+    {
+        m_Calibrated = false;
+        StopSampling();
+    }
+
+    bool YawSamplingTracker::ReadData(XrTime time, utility::Dof& dof)
+    {
+        if (!m_IsSampling)
+        {
+            // try to reconnect
+            if (m_Mmf.Open(0))
+            {
+                StartSampling();
+            }
+            else
+            {
+                return false;
+            }
+        }
+        dof = m_Sampler->GetValue();
+        return true;
+    }
+
+    void YawSamplingTracker::StartSampling()
+    {
+        if (m_IsSampling)
+        {
+            return;
+        }
+        if (m_thread)
+        {
+            StopSampling();
+        }
+        m_IsSampling = true;
+        auto sampleFunction = [&, this]()
+        {
+            using namespace std::chrono;
+            std::condition_variable condition;
+            std::mutex mutex;
+            std::unique_lock<std::mutex> lock(mutex);
+
+            auto waitUntil = steady_clock::now() + m_Interval;
+            while (m_IsSampling)
+            {
+                // set timing
+                condition.wait_until(lock, waitUntil);
+                waitUntil += m_Interval;
+
+                const int64_t now = time_point_cast<nanoseconds>(steady_clock::now()).time_since_epoch().count();
+
+                // TODO: remove
+                DebugLog("sample: %u", now);
+
+                YawData mmfData{};
+                if (!m_Mmf.Read(&mmfData, sizeof(mmfData), now))
+                {
+                    break;
+                }
+                Dof dof{0.f, 0.f, 0.f, mmfData.yaw, mmfData.roll, mmfData.pitch};
+                m_Sampler->InsertSample(dof, now);
+            }
+            m_IsSampling = false;
+        };
+        m_thread = new std::thread(sampleFunction);
+    }
+
+    void YawSamplingTracker::StopSampling()
+    {
+        m_IsSampling = false;
+        if (m_thread)
+        {
+            if (m_thread->joinable())
+            {
+                m_thread->join();
+            }
+            delete m_thread;
+            m_thread = nullptr;
+        }
+    }
+
+    bool SixDofTracker::ReadData(XrTime time, Dof& dof)
     {
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "SixDofTracker::ReadMmf", TLArg(time, "Time"));
-        SixDofData mmfData{};
+        SixDof mmfData{};
         if (!m_Mmf.Read(&mmfData, sizeof(mmfData), time))
         {
             TraceLoggingWriteStop(local, "YawTracker::ReadMmf", TLArg(false, "Success"));
             return false;
         }
 
-        
         TraceLoggingWriteTagged(local,
                                 "SixDofTracker::GetVirtualPose",
                                 TLArg(mmfData.sway, "Sway"),
@@ -1112,23 +1212,23 @@ namespace tracker
                                 TLArg(mmfData.roll, "Roll"),
                                 TLArg(mmfData.pitch, "Pitch"));
 
-        data.sway = static_cast<float>(mmfData.sway);
-        data.surge = static_cast<float>(mmfData.surge);
-        data.heave = static_cast<float>(mmfData.heave);
-        data.yaw = static_cast<float>(mmfData.yaw);
-        data.pitch = static_cast<float>(mmfData.pitch);
-        data.roll =  static_cast<float>(mmfData.roll);
+        dof.data[sway] = static_cast<float>(mmfData.sway);
+        dof.data[surge]= static_cast<float>(mmfData.surge);
+        dof.data[heave] = static_cast<float>(mmfData.heave);
+        dof.data[yaw] = static_cast<float>(mmfData.yaw);
+        dof.data[pitch] = static_cast<float>(mmfData.pitch);
+        dof.data[roll] =  static_cast<float>(mmfData.roll);
 
         TraceLoggingWriteStop(local, "YawTracker::ReadMmf", TLArg(true, "Success"));
         return true;
     }
     
-    XrPosef FlyPtTracker::DataToPose(const DofData& data)
+    XrPosef FlyPtTracker::DataToPose(const Dof& dof)
     {
        XrPosef rigPose{Pose::Identity()};
-       auto rotation = DirectX::XMQuaternionRotationRollPitchYaw(-data.pitch * angleToRadian,
-                                                                 data.yaw * angleToRadian,
-                                                                 data.roll * angleToRadian);
+       auto rotation = DirectX::XMQuaternionRotationRollPitchYaw(-dof.data[pitch] * angleToRadian,
+                                                                 dof.data[yaw] * angleToRadian,
+                                                                 dof.data[roll] * angleToRadian);
        if (0 != m_PitchConstant)
        {
             rotation =
@@ -1137,16 +1237,16 @@ namespace tracker
        }
        StoreXrQuaternion(&rigPose.orientation, rotation);
 
-       rigPose.position = XrVector3f{-data.sway / -1000.f, data.heave / 1000.f, data.surge / 1000.f};
+       rigPose.position = XrVector3f{-dof.data[sway] / -1000.f, dof.data[heave] / 1000.f, dof.data[surge] / 1000.f};
        return rigPose;
     }
 
-    XrPosef SrsTracker::DataToPose(const DofData& data)
+    XrPosef SrsTracker::DataToPose(const Dof& dof)
     {
        XrPosef rigPose{Pose::Identity()};
-       auto rotation = DirectX::XMQuaternionRotationRollPitchYaw(data.pitch * angleToRadian,
-                                                                 data.yaw * angleToRadian,
-                                                                 -data.roll * angleToRadian);
+       auto rotation = DirectX::XMQuaternionRotationRollPitchYaw(dof.data[pitch] * angleToRadian,
+                                                                 dof.data[yaw] * angleToRadian,
+                                                                 -dof.data[roll] * angleToRadian);
        if (0 != m_PitchConstant)
        {
             rotation =
@@ -1155,7 +1255,7 @@ namespace tracker
        }
        StoreXrQuaternion(&rigPose.orientation, rotation);
 
-       rigPose.position = XrVector3f{-data.sway / -1000.f, data.heave / 1000.f, data.surge / 1000.f};
+       rigPose.position = XrVector3f{-dof.data[sway] / -1000.f, dof.data[heave] / 1000.f, dof.data[surge] / 1000.f};
        return rigPose;
     }
 
@@ -1461,7 +1561,7 @@ namespace tracker
             {
                 Log("Yaw Game Engine memory mapped file is used as reference tracker");
                 TraceLoggingWriteStop(local, "GetTracker", TLPArg(trackerType.c_str(), "tracker"));
-                return std::make_unique<YawTracker>();
+                return std::make_unique<YawSamplingTracker>();
             }
             if ("srs" == trackerType)
             {

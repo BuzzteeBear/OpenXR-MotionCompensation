@@ -115,42 +115,87 @@ namespace filter
     {
       public:
         virtual ~StabilizerBase() = default;
-        virtual void InsertSample(utility::DofData& value) = 0;
-        virtual void Stabilize(utility::DofData& value) = 0;
+        virtual void InsertSample(utility::Dof& dof) = 0;
+        virtual void Stabilize(utility::Dof& dof) = 0;
     };
 
     class NoStabilizer : public StabilizerBase
     {
       public:
-        void InsertSample(utility::DofData& value) override{};
-        void Stabilize(utility::DofData& value) override{};
+        void InsertSample(utility::Dof& dof) override{};
+        void Stabilize(utility::Dof& dof) override{};
     };
 
     class MedianStabilizer : public StabilizerBase
     {
       public:
         MedianStabilizer(bool threeDofOnly);
-        void InsertSample(utility::DofData& sample) override;
-        void InsertSample(utility::DofData& sample, DWORD time);
-        void Stabilize(utility::DofData & data) override;
+        void InsertSample(utility::Dof& dof) override;
+        void InsertSample(utility::Dof& dof, DWORD time);
+        void Stabilize(utility::Dof & dof) override;
 
       private:
-        enum DofValue
-        {
-            sway = 0,
-            surge,
-            heave,
-            yaw,
-            roll,
-            pitch
-        };
-
         DWORD m_WindowSize{0}, m_WindowHalf{0};
-        std::vector<DofValue> m_RelevantValues;
+        std::vector<utility::DofValue> m_RelevantValues;
+        std::mutex m_SampleMutex;
 
         std::map<DWORD, std::vector<float>> m_Samples;
         void RemoveOutdated(DWORD now);
-        std::multimap<float, DWORD> GetSorted(DofValue dof, DWORD now) const;
-    }; 
+        std::multimap<float, DWORD> GetSorted(utility::DofValue dof, DWORD now);
+    };
+
+    class SamplerBase
+    {
+      public:
+        virtual ~SamplerBase() = default;
+        virtual void InsertSample(utility::Dof& sample, int64_t time) = 0;
+        virtual utility::Dof GetValue() = 0;
+
+      protected:
+        std::mutex m_SampleMutex;
+    };
+
+    class PassThroughSampler : public SamplerBase
+    {
+      public:
+        explicit PassThroughSampler(const std::vector<utility::DofValue>& relevantValues)
+            : m_RelevantValues(relevantValues){};
+        void InsertSample(utility::Dof& sample, int64_t time) override;
+        utility::Dof GetValue() override;
+
+      protected:
+        std::vector<utility::DofValue> m_RelevantValues;
+
+      private:
+        utility::Dof m_PassThrough{};
+    };
+
+    class MedianSampler : public PassThroughSampler
+    {
+      public:
+        explicit MedianSampler(const std::vector<utility::DofValue>& relevantValues, unsigned windowSize)
+            : PassThroughSampler(relevantValues), m_WindowSize(windowSize){};
+        void InsertSample(utility::Dof& sample, int64_t time) override;
+        utility::Dof GetValue() override;
+
+      protected:
+        unsigned m_WindowSize{0};
+
+      private:
+        std::deque<float> m_Samples[6]{};
+    };
+
+    class WeightedMedianSampler : public MedianSampler
+    {
+      public:
+        explicit WeightedMedianSampler(const std::vector<utility::DofValue>& relevantValues, unsigned windowSize)
+            : MedianSampler(relevantValues, windowSize), m_WindowHalf{windowSize / 2} {};
+        void InsertSample(utility::Dof& sample, int64_t time) override;
+        utility::Dof GetValue() override;
+
+      private:
+        std::deque<std::pair<float, int64_t>> m_Samples[6]{};
+        unsigned m_WindowHalf{0};
+    };
 
 } // namespace filter

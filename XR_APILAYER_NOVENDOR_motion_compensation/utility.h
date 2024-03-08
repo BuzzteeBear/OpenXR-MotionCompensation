@@ -10,14 +10,19 @@ namespace utility
     constexpr float floatPi{static_cast<float>(M_PI)};
     constexpr float angleToRadian{floatPi / 180.0f};
 
-    struct DofData
+    typedef struct dof
     {
-        float sway{0.f};
-        float surge{0.f};
-        float heave{0.f};
-        float yaw{0.f};
-        float roll{0.f};
-        float pitch{0.f};
+        float data[6]{};
+    } Dof;
+
+    enum DofValue
+    {
+        sway = 0,
+        surge,
+        heave,
+        yaw,
+        roll,
+        pitch
     };
 
     class AutoActivator
@@ -223,8 +228,8 @@ namespace utility
         Mmf();
         ~Mmf();
         void SetName(const std::string& name);
-        bool Open(XrTime time);
-        bool Read(void* buffer, size_t size, XrTime time);
+        bool Open(int64_t time);
+        bool Read(void* buffer, size_t size, int64_t time);
         void Close();
 
       private:

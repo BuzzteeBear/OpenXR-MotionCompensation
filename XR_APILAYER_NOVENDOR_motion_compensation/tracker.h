@@ -31,6 +31,7 @@ namespace tracker
         XrPosef m_LastPoseDelta{xr::math::Pose::Identity()};
         XrTime m_LastPoseTime{0};
         bool m_FallBackUsed{false};
+        bool m_ConnectionLost{false};
         std::shared_ptr<output::RecorderBase> m_Recorder{std::make_shared<output::NoRecorder>()};
         
       private:
@@ -38,7 +39,6 @@ namespace tracker
         virtual void ApplyModifier(XrPosef& trackerPose){};
 
         bool m_PhysicalEnabled{false};
-        bool m_ConnectionLost{false};
     };
    
     class TrackerBase : public ControllerBase
@@ -50,6 +50,7 @@ namespace tracker
         void ModifyFilterStrength(bool trans, bool increase, bool fast);
         [[nodiscard]] XrPosef GetReferencePose() const;
         void SetReferencePose(const XrPosef& pose) override;
+        virtual void InvalidateCalibration();
         void SetModifierActive(const bool active) const;
         void LogCurrentTrackerPoses(XrSession session, XrTime time, bool activated);
         virtual bool ChangeOffset(XrVector3f modification);
@@ -112,8 +113,8 @@ namespace tracker
       protected:
         void SetReferencePose(const XrPosef& pose) override;
         bool GetPose(XrPosef& trackerPose, XrSession session, XrTime time) override;
-        virtual bool ReadMmf(XrTime time, utility::DofData& data) = 0;
-        virtual XrPosef DataToPose(const utility::DofData& data) = 0;
+        virtual bool ReadData(XrTime time, utility::Dof& dof) = 0;
+        virtual XrPosef DataToPose(const utility::Dof& dof) = 0;
 
 
         std::string m_Filename;
@@ -129,7 +130,7 @@ namespace tracker
         bool m_LoadPoseFromFile{false};
     };
 
-    class YawTracker final : public VirtualTracker
+    class YawTracker : public VirtualTracker
     {
       public:
         YawTracker()
@@ -141,8 +142,8 @@ namespace tracker
         bool ResetReferencePose(XrSession session, XrTime time) override;
 
       protected:
-        bool ReadMmf(XrTime time, utility::DofData& data) override;
-        XrPosef DataToPose(const utility::DofData& data) override;
+        bool ReadData(XrTime time, utility::Dof& dof) override;
+        XrPosef DataToPose(const utility::Dof& dof) override;
 
       private:
         struct YawData
@@ -153,13 +154,42 @@ namespace tracker
         };
     };
 
+    class YawSamplingTracker : public YawTracker
+    {
+      public:
+        ~YawSamplingTracker() override;
+        bool ResetReferencePose(XrSession session, XrTime time) override;
+        void SampleVirtualTracker(XrTime time) override{};
+        void InvalidateCalibration() override;
+
+      protected:
+        bool ReadData(XrTime time, utility::Dof& dof) override;
+
+      private:
+        struct YawData
+        {
+            float yaw, pitch, roll;
+        };
+
+        std::atomic_bool m_IsSampling{false};
+        std::thread* m_thread{nullptr};
+        // TODO: read window size from config
+        std::shared_ptr<filter::SamplerBase> m_Sampler{std::make_shared<filter::MedianSampler>(
+            std::vector<utility::DofValue>{utility::yaw, utility::roll, utility::pitch},
+            10)};
+        inline static std::chrono::duration m_Interval{std::chrono::milliseconds(2)};
+        
+        void StartSampling();
+        void StopSampling();
+    };
+
     class SixDofTracker : public VirtualTracker
     {
       protected:
-        bool ReadMmf(XrTime time, utility::DofData& data) override;
+        bool ReadData(XrTime time, utility::Dof& dof) override;
 
       private:
-        struct SixDofData
+        struct SixDof
         {
             double sway;
             double surge;
@@ -179,7 +209,7 @@ namespace tracker
         }
 
       protected:
-        XrPosef DataToPose(const utility::DofData& data) override;
+        XrPosef DataToPose(const utility::Dof& dof) override;
     };
 
     class SrsTracker final : public SixDofTracker
@@ -191,7 +221,7 @@ namespace tracker
         }
 
       protected:
-        XrPosef DataToPose(const utility::DofData& data) override;
+        XrPosef DataToPose(const utility::Dof& dof) override;
     };
 
     class CorManipulator : public ControllerBase

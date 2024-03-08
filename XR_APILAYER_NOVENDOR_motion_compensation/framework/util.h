@@ -41,15 +41,15 @@ namespace xr {
                            pose.orientation.w);
     }
 
-    static inline std::string ToString(utility::DofData data)
+    static inline std::string ToString(utility::Dof dof)
     {
         return fmt::format("sway: {:f}, surge: {:f}, heave: {:f}, yaw: {:f}, roll: {:f}, pitch: {:f}",
-                           data.sway,
-                           data.surge,
-                           data.heave,
-                           data.yaw,
-                           data.roll,
-                           data.pitch);
+                           dof.data[utility::sway],
+                           dof.data[utility::surge],
+                           dof.data[utility::heave],
+                           dof.data[utility::yaw],
+                           dof.data[utility::roll],
+                           dof.data[utility::pitch]);
     }
 
     static inline std::string ToString(XrVector3f vec)

@@ -10,6 +10,7 @@
 #include <playsoundapi.h>
 
 using namespace openxr_api_layer::log;
+using namespace utility;
 namespace output
 {
     void AudioOut::Execute(const Event event)
@@ -32,7 +33,7 @@ namespace output
                          __FUNCTION__,
                          soundResource->first,
                          soundResource->second,
-                         utility::LastErrorMsg().c_str());
+                         LastErrorMsg().c_str());
             }
         }
         else
@@ -66,7 +67,7 @@ namespace output
                          __FUNCTION__,
                          -seconds,
                          COUNT0_WAV + seconds,
-                         utility::LastErrorMsg().c_str());
+                         LastErrorMsg().c_str());
             }
         }
         TraceLoggingWriteStop(local, "AudioOut::CountDown");
@@ -257,7 +258,7 @@ namespace output
         TraceLoggingWriteStop(local, "PoseRecorder::Stop", TLArg(false, "Stream_Closed"));
     }
 
-    void PoseAndDofRecorder::AddDofValues(const utility::DofData& dofValues, RecorderDofInput type)
+    void PoseAndDofRecorder::AddDofValues(const Dof& dofValues, RecorderDofInput type)
     {
         if (!m_Started)
         {
@@ -294,12 +295,12 @@ namespace output
         {
             PoseRecorder::Write(time, false);
 
-            m_FileStream << ";" << m_DofValues.raw.sway << ";" << m_DofValues.stabilized.sway
-                         << ";" << m_DofValues.raw.surge << ";" << m_DofValues.stabilized.surge
-                         << ";" << m_DofValues.raw.heave << ";" << m_DofValues.stabilized.heave
-                         << ";" << m_DofValues.raw.yaw << ";" << m_DofValues.stabilized.yaw
-                         << ";" << m_DofValues.raw.pitch << ";" << m_DofValues.stabilized.pitch
-                         << ";" << m_DofValues.raw.roll << ";" << m_DofValues.stabilized.roll;
+            m_FileStream << ";" << m_DofValues.raw.data[sway] << ";" << m_DofValues.stabilized.data[sway]
+                         << ";" << m_DofValues.raw.data[surge] << ";" << m_DofValues.stabilized.data[surge]
+                         << ";" << m_DofValues.raw.data[heave] << ";" << m_DofValues.stabilized.data[heave]
+                         << ";" << m_DofValues.raw.data[yaw] << ";" << m_DofValues.stabilized.data[yaw]
+                         << ";" << m_DofValues.raw.data[pitch] << ";" << m_DofValues.stabilized.data[pitch]
+                         << ";" << m_DofValues.raw.data[roll] << ";" << m_DofValues.stabilized.data[roll];
             if (newLine)
             {
                 m_FileStream << "\n";
