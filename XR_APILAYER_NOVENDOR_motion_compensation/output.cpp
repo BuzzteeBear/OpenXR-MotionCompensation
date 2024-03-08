@@ -258,27 +258,17 @@ namespace output
         TraceLoggingWriteStop(local, "PoseRecorder::Stop", TLArg(false, "Stream_Closed"));
     }
 
-    void PoseAndDofRecorder::AddDofValues(const Dof& dofValues, RecorderDofInput type)
+    void PoseAndDofRecorder::AddDofValues(const Dof& dofValues)
     {
         if (!m_Started)
         {
             return;
         }
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "PoseAndDofRecorder::AddDofValues", TLArg(static_cast<uint32_t>(type), "Type"));
+        TraceLoggingWriteStart(local, "PoseAndDofRecorder::AddDofValues");
 
-        switch (type)
-        {
-        case Raw:
-            m_DofValues.raw = dofValues;
-            break;
-        case Stabilized:
-            m_DofValues.stabilized = dofValues;
-            break;
-        default:
-            break;
-        }
-        
+        m_DofValues = dofValues;
+
         TraceLoggingWriteStop(local, "PoseAndDofRecorder::AddDofValues", TLArg(true, "Success"));
     }
 
@@ -295,12 +285,12 @@ namespace output
         {
             PoseRecorder::Write(time, false);
 
-            m_FileStream << ";" << m_DofValues.raw.data[sway] << ";" << m_DofValues.stabilized.data[sway]
-                         << ";" << m_DofValues.raw.data[surge] << ";" << m_DofValues.stabilized.data[surge]
-                         << ";" << m_DofValues.raw.data[heave] << ";" << m_DofValues.stabilized.data[heave]
-                         << ";" << m_DofValues.raw.data[yaw] << ";" << m_DofValues.stabilized.data[yaw]
-                         << ";" << m_DofValues.raw.data[pitch] << ";" << m_DofValues.stabilized.data[pitch]
-                         << ";" << m_DofValues.raw.data[roll] << ";" << m_DofValues.stabilized.data[roll];
+            m_FileStream << ";" << m_DofValues.data[sway]
+                         << ";" << m_DofValues.data[surge] 
+                         << ";" << m_DofValues.data[heave] 
+                         << ";" << m_DofValues.data[yaw] 
+                         << ";" << m_DofValues.data[pitch]
+                         << ";" << m_DofValues.data[roll];
             if (newLine)
             {
                 m_FileStream << "\n";

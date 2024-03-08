@@ -208,82 +208,12 @@ namespace filter
         m_ThirdStage = rotation;
     }
 
-    MedianStabilizer::MedianStabilizer(bool threeDofOnly)
-    {
-        // TODO: read config
-        m_WindowSize = 100;
-        m_WindowHalf = m_WindowSize / 2;
-        threeDofOnly ? m_RelevantValues = {yaw, roll, pitch}
-                     : m_RelevantValues = {sway, surge, heave, yaw, roll, pitch};
-    }
-
-    void MedianStabilizer::InsertSample(Dof& dof)
-    {
-        const DWORD now = timeGetTime();
-        InsertSample(dof, now);
-    }
-
-    void MedianStabilizer::InsertSample(Dof& dof, DWORD time)
-    {
-        std::unique_lock lock(m_SampleMutex);
-        m_Samples[time] = {
-            dof.data[sway],
-            dof.data[surge],
-            dof.data[heave],
-            dof.data[yaw],
-            dof.data[roll],
-            dof.data[pitch],
-        };
-        RemoveOutdated(time);
-    }
-
-    void MedianStabilizer::Stabilize(Dof& dof)
-    {
-        const DWORD now = timeGetTime();
-        InsertSample(dof, now);
-
-        for (const DofValue relevantValue : m_RelevantValues)
-        {
-            auto sorted = GetSorted(relevantValue, now);
-            auto it = sorted.begin();
-            DWORD weightSum = it->second;
-            while (it != sorted.end() && weightSum < m_WindowHalf)
-            {
-                weightSum += (++it)->second;
-            }
-            dof.data[relevantValue] = it->first;
-        }
-    }
-
-    void MedianStabilizer::RemoveOutdated(const DWORD now)
-    {
-        const DWORD windowBegin = now - m_WindowSize;
-        auto it = m_Samples.begin();
-        while (it != m_Samples.end() && it->first <= windowBegin)
-        {
-            it = m_Samples.erase(it);
-        }
-    }
-
-    std::multimap<float, DWORD> MedianStabilizer::GetSorted(const DofValue dof, const DWORD now)
-    {
-        std::multimap<float, DWORD> sorted{};
-        DWORD lastTime = now - m_WindowSize;
-        std::unique_lock lock(m_SampleMutex);
-        for (const auto& [time, value] : m_Samples)
-        {
-            sorted.insert({value[dof], time - lastTime});
-            lastTime = time;
-        }
-        return sorted;
-    }
-
-    void PassThroughSampler::InsertSample(utility::Dof& sample, int64_t time)
+    void PassThroughStabilizer::InsertSample(utility::Dof& sample, int64_t time)
     {
         m_PassThrough = sample;
     }
 
-    Dof PassThroughSampler::GetValue()
+    Dof PassThroughStabilizer::GetValue()
     {
         Dof out{};
         for (const DofValue value : m_RelevantValues)
@@ -293,11 +223,11 @@ namespace filter
         return out;
     }
 
-    void MedianSampler::InsertSample(Dof& sample, int64_t time)
+    void MedianStabilizer::InsertSample(Dof& sample, int64_t time)
     {
         if (m_WindowSize <= 1)
         {
-            PassThroughSampler::InsertSample(sample, time);
+            PassThroughStabilizer::InsertSample(sample, time);
             return;
         }
         std::unique_lock lock(m_SampleMutex);
@@ -312,11 +242,11 @@ namespace filter
         }
     }
 
-    Dof MedianSampler::GetValue()
+    Dof MedianStabilizer::GetValue()
     {
         if (m_WindowSize <= 1)
         {
-            return PassThroughSampler::GetValue();
+            return PassThroughStabilizer::GetValue();
         }
         Dof dof{};
         std::unique_lock lock(m_SampleMutex);
@@ -331,11 +261,11 @@ namespace filter
         return dof;
     }
     
-    void WeightedMedianSampler::InsertSample(Dof& sample, int64_t time)
+    void WeightedMedianStabilizer::InsertSample(Dof& sample, int64_t time)
     {
-        if (m_WindowSize <= 1)
+        if (m_WindowSize == 0)
         {
-            PassThroughSampler::InsertSample(sample, time);
+            PassThroughStabilizer::InsertSample(sample, time);
             return;
         }
         const int64_t windowBegin = time - m_WindowSize;
@@ -353,11 +283,11 @@ namespace filter
         }
     }
 
-    Dof WeightedMedianSampler::GetValue()
+    Dof WeightedMedianStabilizer::GetValue()
     {
-        if (m_WindowSize <= 0)
+        if (m_WindowSize == 0)
         {
-            return PassThroughSampler::GetValue();
+            return PassThroughStabilizer::GetValue();
         }
         Dof dof{};
         std::unique_lock lock(m_SampleMutex);

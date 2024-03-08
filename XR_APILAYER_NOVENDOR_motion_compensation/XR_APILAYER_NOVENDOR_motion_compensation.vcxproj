@@ -167,6 +167,7 @@ xcopy "$(SolutionDir)\scripts\Uninstall-$(SolutionName).ps1" "$(OutDir)" /y /q</
     <ClInclude Include="overlay.h" />
     <ClInclude Include="modifier.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="sampler.h" />
     <ClInclude Include="utility.h" />
     <ClInclude Include="framework\dispatch.gen.h" />
     <ClInclude Include="framework\dispatch.h" />
@@ -186,6 +187,7 @@ xcopy "$(SolutionDir)\scripts\Uninstall-$(SolutionName).ps1" "$(OutDir)" /y /q</
     <ClCompile Include="input.cpp" />
     <ClCompile Include="overlay.cpp" />
     <ClCompile Include="modifier.cpp" />
+    <ClCompile Include="sampler.cpp" />
     <ClCompile Include="utility.cpp" />
     <ClCompile Include="framework\dispatch.cpp" />
     <ClCompile Include="framework\dispatch.gen.cpp" />

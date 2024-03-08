@@ -222,14 +222,22 @@ namespace utility
         std::string m_SampleType;
     };
 
-    class Mmf
+    class DataSource
+    {
+      public:
+        virtual ~DataSource() = default;
+        virtual bool Open(int64_t time) = 0;
+        virtual bool Read(void* buffer, size_t size, int64_t time) = 0;
+    };
+
+    class Mmf : public DataSource
     {
       public:
         Mmf();
-        ~Mmf();
+        ~Mmf() override;
         void SetName(const std::string& name);
-        bool Open(int64_t time);
-        bool Read(void* buffer, size_t size, int64_t time);
+        bool Open(int64_t time) override;
+        bool Read(void* buffer, size_t size, int64_t time) override;
         void Close();
 
       private:

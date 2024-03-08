@@ -2,6 +2,7 @@
 
 #pragma once
 #include "utility.h"
+#include "sampler.h"
 #include "filter.h"
 #include "modifier.h"
 #include "output.h"
@@ -57,7 +58,6 @@ namespace tracker
         virtual bool ChangeRotation(float radian);
         virtual void SaveReferencePose(XrTime time) const{};
         virtual void ApplyCorManipulation(XrSession session, XrTime time){};
-        virtual void SampleVirtualTracker(XrTime time){};
         bool ToggleRecording() const;
 
         bool m_SkipLazyInit{false};
@@ -108,7 +108,6 @@ namespace tracker
         void SaveReferencePose(XrTime time) const override;
         void LogOffsetValues() const;
         void ApplyCorManipulation(XrSession session, XrTime time) override;
-        void SampleVirtualTracker(XrTime time) override;
 
       protected:
         void SetReferencePose(const XrPosef& pose) override;
@@ -116,12 +115,10 @@ namespace tracker
         virtual bool ReadData(XrTime time, utility::Dof& dof) = 0;
         virtual XrPosef DataToPose(const utility::Dof& dof) = 0;
 
-
+        Sampler* m_Sampler{nullptr};
         std::string m_Filename;
         utility::Mmf m_Mmf;
         float m_OffsetForward{0.0f}, m_OffsetDown{0.0f}, m_OffsetRight{0.0f}, m_OffsetYaw{0.0f}, m_PitchConstant{0.0f};
-        bool m_IsStabilized{false};
-        std::shared_ptr<filter::StabilizerBase> m_Stabilizer{std::make_shared<filter::NoStabilizer>()};
 
       private:
         bool LoadReferencePose(XrSession session, XrTime time);
@@ -136,10 +133,16 @@ namespace tracker
         YawTracker()
         {
             m_Filename = "Local\\YawVRGEFile";
-            m_Stabilizer = std::make_unique<filter::MedianStabilizer>(true);
-            m_IsStabilized = true;
+            // TODO: read from config
+            m_Sampler = new Sampler(&ReadMmf, &m_Mmf);
+        }
+        ~YawTracker() override
+        {
+           delete m_Sampler;
         }
         bool ResetReferencePose(XrSession session, XrTime time) override;
+        void InvalidateCalibration() override;
+        static bool ReadMmf(utility::Dof& dof, XrTime now, utility::DataSource* source);
 
       protected:
         bool ReadData(XrTime time, utility::Dof& dof) override;
@@ -148,39 +151,10 @@ namespace tracker
       private:
         struct YawData
         {
-            float yaw, pitch, roll, battery, rotationHeight, rotationForwardHead;
-            bool sixDof, usePos;
-            float autoX, autoY;
+           float yaw, pitch, roll, battery, rotationHeight, rotationForwardHead;
+           bool sixDof, usePos;
+           float autoX, autoY;
         };
-    };
-
-    class YawSamplingTracker : public YawTracker
-    {
-      public:
-        ~YawSamplingTracker() override;
-        bool ResetReferencePose(XrSession session, XrTime time) override;
-        void SampleVirtualTracker(XrTime time) override{};
-        void InvalidateCalibration() override;
-
-      protected:
-        bool ReadData(XrTime time, utility::Dof& dof) override;
-
-      private:
-        struct YawData
-        {
-            float yaw, pitch, roll;
-        };
-
-        std::atomic_bool m_IsSampling{false};
-        std::thread* m_thread{nullptr};
-        // TODO: read window size from config
-        std::shared_ptr<filter::SamplerBase> m_Sampler{std::make_shared<filter::MedianSampler>(
-            std::vector<utility::DofValue>{utility::yaw, utility::roll, utility::pitch},
-            10)};
-        inline static std::chrono::duration m_Interval{std::chrono::milliseconds(2)};
-        
-        void StartSampling();
-        void StopSampling();
     };
 
     class SixDofTracker : public VirtualTracker

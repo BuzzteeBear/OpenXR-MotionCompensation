@@ -915,18 +915,6 @@ namespace tracker
         TraceLoggingWriteStop(local, "VirtualTracker::ApplyCorManipulation");
     }
 
-    void VirtualTracker::SampleVirtualTracker(XrTime time)
-    {
-        if (m_IsStabilized && m_Calibrated)
-        {
-            Dof pose;
-            if (ReadData(time, pose))
-            {
-                m_Stabilizer->InsertSample(pose);
-            }
-        }
-    }
-
     void VirtualTracker::SetReferencePose(const ::XrPosef& pose)
     {
         TraceLocalActivity(local);
@@ -949,15 +937,12 @@ namespace tracker
             TraceLoggingWriteStop(local, "VirtualTracker::GetPose", TLArg(false, "Success"));
             return false;
         }
-        m_Recorder->AddDofValues(dof, Raw);
+        m_Recorder->AddDofValues(dof);
 
         DebugLog("MotionData: %s", xr::ToString(dof).c_str());
         TraceLoggingWriteTagged(local,
                                 "VirtualTracker::GetPose",
                                 TLArg(xr::ToString(dof).c_str(), "Data"));
-
-        m_Stabilizer->Stabilize(dof);
-        m_Recorder->AddDofValues(dof, Stabilized);
 
         const XrPosef rigPose = DataToPose(dof);
         TraceLoggingWriteTagged(local, "VirtualTracker::GetPose", TLArg(xr::ToString(rigPose).c_str(), "RigPose"));
@@ -990,16 +975,16 @@ namespace tracker
                 {
                     if (Pose::IsPoseValid(hmdLocation.locationFlags))
                     {
-                        YawData dof{};
-                        if (m_Mmf.Read(&dof, sizeof(dof), time))
+                        YawData data{};
+                        if (m_Mmf.Read(&data, sizeof(data), time))
                         {
                             Log("Yaw Game Engine values: rotationHeight = %f, rotationForwardHead = %f",
-                                dof.rotationHeight,
-                                dof.rotationForwardHead);
+                                data.rotationHeight,
+                                data.rotationForwardHead);
 
                             m_OffsetRight = 0.0;
-                            m_OffsetForward = dof.rotationForwardHead / 100.0f;
-                            m_OffsetDown = hmdLocation.pose.position.y - dof.rotationHeight / 100.0f;
+                            m_OffsetForward = data.rotationForwardHead / 100.0f;
+                            m_OffsetDown = hmdLocation.pose.position.y - data.rotationHeight / 100.0f;
 
                             Log("offset down value based on Yaw Game Engine value: %f", m_OffsetDown);
                             TraceLoggingWriteTagged(local,
@@ -1030,51 +1015,68 @@ namespace tracker
             }
         }
         const bool success = VirtualTracker::ResetReferencePose(session, time);
+        if (success && m_Sampler)
+        {
+            m_Sampler->StartSampling();
+        }
 
         TraceLoggingWriteStop(local, "YawTracker::ResetReferencePose", TLArg(success, "Success"));
         return success;
+    }
+
+    
+    void YawTracker::InvalidateCalibration()
+    {
+        TrackerBase::InvalidateCalibration();
+        if (m_Sampler)
+        {
+            m_Sampler->StopSampling();
+        }
+    }
+
+    bool YawTracker::ReadMmf(utility::Dof& dof, XrTime now, utility::DataSource* source)
+    {
+        struct YawMmfData
+        {
+            float yaw, pitch, roll;
+        };
+        YawMmfData mmfData{};
+        if (!source->Read(&mmfData, sizeof(mmfData), now))
+        {
+            return false;
+        }
+        dof =  {0.f, 0.f, 0.f, mmfData.yaw, mmfData.roll, mmfData.pitch};
+        return true;
     }
 
     bool YawTracker::ReadData(XrTime time, Dof& dof)
     {
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "YawTracker::ReadMmf", TLArg(time, "Time"));
-        YawData mmfData{};
-        if (!m_Mmf.Read(&mmfData, sizeof(mmfData), time))
+
+        if (!m_Sampler)
         {
-            TraceLoggingWriteStop(local, "YawTracker::ReadMmf", TLArg(false, "Success"));
-            return false;
+            if (!ReadMmf(dof, time, &m_Mmf))
+            {
+                TraceLoggingWriteStop(local, "YawTracker::ReadMmf", TLArg(false, "Success"));
+                return false;
+            }
         }
-        DebugLog(
-            "YawData: yaw: %f, pitch: %f, roll: %f, battery: %f, height: %f, headDistance: %f, sixDof: %d, usePos: "
-            "%d, autoX: %f, autoY: %f",
-            mmfData.yaw,
-            mmfData.pitch,
-            mmfData.roll,
-            mmfData.battery,
-            mmfData.rotationHeight,
-            mmfData.rotationForwardHead,
-            mmfData.sixDof,
-            mmfData.usePos,
-            mmfData.autoX,
-            mmfData.autoY);
+        else
+        {
+            if (!m_Sampler->ReadData(dof, time))
+            {
+                TraceLoggingWriteStop(local, "YawTracker::ReadMmf", TLArg(false, "Success"));
+                return false;
+            }
+        }
+        DebugLog("YawData: yaw: %f, pitch: %f, roll: %f", dof.data[yaw], dof.data[pitch], dof.data[roll]);
 
         TraceLoggingWriteTagged(local,
                                 "YawTracker::GetVirtualPose",
-                                TLArg(mmfData.yaw, "Yaw"),
-                                TLArg(mmfData.pitch, "Pitch"),
-                                TLArg(mmfData.roll, "Yaw"),
-                                TLArg(mmfData.battery, "Battery"),
-                                TLArg(mmfData.rotationHeight, "RotationHeight"),
-                                TLArg(mmfData.rotationForwardHead, "RotationForwardHead"),
-                                TLArg(mmfData.sixDof, "SixDof"),
-                                TLArg(mmfData.usePos, "UsePos"),
-                                TLArg(mmfData.autoX, "AutoX"),
-                                TLArg(mmfData.autoY, "AutoY"));
-
-        dof.data[yaw] = mmfData.yaw;
-        dof.data[roll] = mmfData.roll;
-        dof.data[pitch] = mmfData.pitch;
+                                TLArg(dof.data[yaw], "Yaw"),
+                                TLArg(dof.data[pitch], "Pitch"),
+                                TLArg(dof.data[roll], "Yaw"));
        
         TraceLoggingWriteStop(local, "YawTracker::ReadMmf", TLArg(true, "Success"));
         return true;
@@ -1094,102 +1096,6 @@ namespace tracker
         }
         StoreXrQuaternion(&rigPose.orientation, rotation);
         return rigPose;
-    }
-
-    YawSamplingTracker::~YawSamplingTracker()
-    {
-        StopSampling();
-    }
-
-    bool YawSamplingTracker::ResetReferencePose(XrSession session, XrTime time)
-    {
-        const bool success = YawTracker::ResetReferencePose(session, time);
-        if (success)
-        {
-            StartSampling();
-        }
-        return success;
-    }
-
-    void YawSamplingTracker::InvalidateCalibration()
-    {
-        m_Calibrated = false;
-        StopSampling();
-    }
-
-    bool YawSamplingTracker::ReadData(XrTime time, utility::Dof& dof)
-    {
-        if (!m_IsSampling)
-        {
-            // try to reconnect
-            if (m_Mmf.Open(0))
-            {
-                StartSampling();
-            }
-            else
-            {
-                return false;
-            }
-        }
-        dof = m_Sampler->GetValue();
-        return true;
-    }
-
-    void YawSamplingTracker::StartSampling()
-    {
-        if (m_IsSampling)
-        {
-            return;
-        }
-        if (m_thread)
-        {
-            StopSampling();
-        }
-        m_IsSampling = true;
-        auto sampleFunction = [&, this]()
-        {
-            using namespace std::chrono;
-            std::condition_variable condition;
-            std::mutex mutex;
-            std::unique_lock<std::mutex> lock(mutex);
-
-            auto waitUntil = steady_clock::now() + m_Interval;
-            while (m_IsSampling)
-            {
-                // set timing
-                condition.wait_until(lock, waitUntil);
-                waitUntil += m_Interval;
-
-                const int64_t now = time_point_cast<nanoseconds>(steady_clock::now()).time_since_epoch().count();
-
-                // TODO: remove
-                DebugLog("sample: %u", now);
-
-                YawData mmfData{};
-                if (!m_Mmf.Read(&mmfData, sizeof(mmfData), now))
-                {
-                    break;
-                }
-                Dof dof{0.f, 0.f, 0.f, mmfData.yaw, mmfData.roll, mmfData.pitch};
-                m_Sampler->InsertSample(dof, now);
-            }
-            m_IsSampling = false;
-        };
-        m_thread = new std::thread(sampleFunction);
-    }
-
-    void YawSamplingTracker::StopSampling()
-    {
-        m_IsSampling = false;
-        if (m_thread)
-        {
-            if (m_thread->joinable())
-            {
-                m_thread->join();
-            }
-            delete m_thread;
-            m_thread = nullptr;
-        }
     }
 
     bool SixDofTracker::ReadData(XrTime time, Dof& dof)
@@ -1561,7 +1467,7 @@ namespace tracker
             {
                 Log("Yaw Game Engine memory mapped file is used as reference tracker");
                 TraceLoggingWriteStop(local, "GetTracker", TLPArg(trackerType.c_str(), "tracker"));
-                return std::make_unique<YawSamplingTracker>();
+                return std::make_unique<YawTracker>();
             }
             if ("srs" == trackerType)
             {

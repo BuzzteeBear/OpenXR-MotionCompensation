@@ -65,6 +65,9 @@
     <ClInclude Include="modifier.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="sampler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -116,6 +119,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="modifier.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="sampler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -262,7 +268,7 @@
     <Media Include="sounds\recorder_off.wav">
       <Filter>Sounds</Filter>
     </Media>
-    <Media Include="sounds\recorder_on.wav" >
+    <Media Include="sounds\recorder_on.wav">
       <Filter>Sounds</Filter>
     </Media>
   </ItemGroup>
