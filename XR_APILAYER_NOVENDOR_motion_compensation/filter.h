@@ -115,8 +115,9 @@ namespace filter
     {
       public:
         virtual ~StabilizerBase() = default;
+        virtual void SetWindowSize(unsigned size) = 0;
         virtual void InsertSample(utility::Dof& sample, int64_t time) = 0;
-        virtual utility::Dof GetValue() = 0;
+        virtual void Stabilize(utility::Dof& dof) = 0;
 
       protected:
         std::mutex m_SampleMutex;
@@ -127,8 +128,9 @@ namespace filter
       public:
         explicit PassThroughStabilizer(const std::vector<utility::DofValue>& relevantValues)
             : m_RelevantValues(relevantValues){};
+        void SetWindowSize(unsigned size) override{};
         void InsertSample(utility::Dof& sample, int64_t time) override;
-        utility::Dof GetValue() override;
+        void Stabilize(utility::Dof& dof) override;
 
       protected:
         std::vector<utility::DofValue> m_RelevantValues;
@@ -142,14 +144,17 @@ namespace filter
       public:
         explicit MedianStabilizer(const std::vector<utility::DofValue>& relevantValues, unsigned windowSize)
             : PassThroughStabilizer(relevantValues), m_WindowSize(windowSize){};
+        void SetWindowSize(unsigned size) override
+        {
+            m_WindowSize = size;
+            openxr_api_layer::log::DebugLog("stabilizer averaging time: %u ns", size);
+        }
         void InsertSample(utility::Dof& sample, int64_t time) override;
-        utility::Dof GetValue() override;
+        void Stabilize(utility::Dof& dof) override;
 
       protected:
-        unsigned m_WindowSize{0};
-
-      private:
-        std::deque<float> m_Samples[6]{};
+        std::atomic<unsigned> m_WindowSize{0};
+        std::multimap<float, int64_t> m_Samples[6]{};
     };
 
     class WeightedMedianStabilizer : public MedianStabilizer
@@ -157,11 +162,14 @@ namespace filter
       public:
         explicit WeightedMedianStabilizer(const std::vector<utility::DofValue>& relevantValues, unsigned windowSize)
             : MedianStabilizer(relevantValues, windowSize), m_WindowHalf{windowSize / 2} {};
-        void InsertSample(utility::Dof& sample, int64_t time) override;
-        utility::Dof GetValue() override;
+        void SetWindowSize(unsigned size) override
+        {
+            MedianStabilizer::SetWindowSize(size);
+            m_WindowHalf = size / 2;
+        }
+        void Stabilize(utility::Dof& dof) override;
 
       private:
-        std::deque<std::pair<float, int64_t>> m_Samples[6]{};
         unsigned m_WindowHalf{0};
     };
 

@@ -38,7 +38,9 @@ namespace output
         VerboseOn,
         VerboseOff,
         RecorderOn,
-        RecorderOff
+        RecorderOff,
+        StabilizerOn,
+        StabilizerOff
 
     };
 
@@ -79,7 +81,9 @@ namespace output
                                                                   {Event::VerboseOn, VERBOSE_ON_WAV},
                                                                   {Event::VerboseOff, VERBOSE_OFF_WAV},
                                                                   {Event::RecorderOn, RECORDER_ON_WAV},
-                                                                  {Event::RecorderOff, RECORDER_OFF_WAV}};
+                                                                  {Event::RecorderOff, RECORDER_OFF_WAV},
+                                                                  {Event::StabilizerOn, STABILIZER_ON_WAV},
+                                                                  {Event::StabilizerOff, STABILIZER_OFF_WAV}};
 
     };
 

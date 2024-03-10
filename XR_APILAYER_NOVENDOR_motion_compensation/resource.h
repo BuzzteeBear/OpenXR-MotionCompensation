@@ -46,12 +46,14 @@
 #define VERBOSE_OFF_WAV                 142
 #define RECORDER_ON_WAV                 143
 #define RECORDER_OFF_WAV                144
+#define STABILIZER_ON_WAV               145
+#define STABILIZER_OFF_WAV              146
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        145
+#define _APS_NEXT_RESOURCE_VALUE        147
 #define _APS_NEXT_COMMAND_VALUE         40001
 #define _APS_NEXT_CONTROL_VALUE         1001
 #define _APS_NEXT_SYMED_VALUE           101

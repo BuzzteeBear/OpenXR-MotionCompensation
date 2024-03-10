@@ -101,6 +101,10 @@ Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "translation_filt
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "rotation_filter"; Key: "strength"; String: "0.50"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "rotation_filter"; Key: "order"; String: "2"; Flags: createkeyifdoesntexist
 
+; [input_stabilizer]
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "input_stabilizer"; Key: "enabled"; String: "1"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "input_stabilizer"; Key: "averaging_time"; String: "100"; Flags: createkeyifdoesntexist
+
 ; [pose_modifier]
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "pose_modifier"; Key: "enabled"; String: "0"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "pose_modifier"; Key: "tracker_roll"; String: "1.0"; Flags: createkeyifdoesntexist

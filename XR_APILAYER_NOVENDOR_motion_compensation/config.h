@@ -37,6 +37,9 @@ enum class Cfg
     TransVerticalFactor,
     RotStrength,
     RotOrder,
+    StabilizerEnabled,
+    StabilizerRate,
+    StabilizerWindow,
     FactorEnabled,
     FactorTrackerRoll,
     FactorTrackerPitch,
@@ -58,6 +61,9 @@ enum class Cfg
     KeyTransDec,
     KeyRotInc,
     KeyRotDec,
+    KeyStabilizer,
+    KeyStabInc,
+    KeyStabDec,
     KeyOffForward,
     KeyOffBack,
     KeyOffUp,
@@ -148,6 +154,9 @@ class ConfigManager
         {Cfg::RotStrength, {"rotation_filter", "strength"}},
         {Cfg::RotOrder, {"rotation_filter", "order"}},
 
+        {Cfg::StabilizerEnabled, {"input_stabilizer", "enabled"}},
+        {Cfg::StabilizerWindow, {"input_stabilizer", "averaging_time"}},
+
         {Cfg::FactorEnabled, {"pose_modifier", "enabled"}},
         {Cfg::FactorTrackerRoll, {"pose_modifier", "tracker_roll"}},
         {Cfg::FactorTrackerPitch, {"pose_modifier", "tracker_pitch"}},
@@ -172,6 +181,10 @@ class ConfigManager
         {Cfg::KeyTransDec, {"shortcuts", "translation_decrease"}},
         {Cfg::KeyRotInc, {"shortcuts", "rotation_increase"}},
         {Cfg::KeyRotDec, {"shortcuts", "rotation_decrease"}},
+
+        {Cfg::KeyStabilizer, {"shortcuts", "toggle_stabilizer"}},
+        {Cfg::KeyStabInc, {"shortcuts", "stabilizer_increase"}},
+        {Cfg::KeyStabDec, {"shortcuts", "stabilizer_decrease"}},
 
         {Cfg::KeyOffForward, {"shortcuts", "offset_forward"}},
         {Cfg::KeyOffBack, {"shortcuts", "offset_back"}},
@@ -218,7 +231,9 @@ class ConfigManager
                                Cfg::CorB,
                                Cfg::CorC,
                                Cfg::CorD,
-                               Cfg::FactorEnabled};
+                               Cfg::FactorEnabled,
+                               Cfg::StabilizerEnabled,
+                               Cfg::StabilizerWindow};
 
     std::set<Cfg> m_CorValues{Cfg::CorX, Cfg::CorY, Cfg::CorZ, Cfg::CorA, Cfg::CorB, Cfg::CorC, Cfg::CorD};
 

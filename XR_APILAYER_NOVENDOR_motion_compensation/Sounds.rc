@@ -138,6 +138,10 @@ RECORDER_ON_WAV         WAVE                    "sounds\\recorder_on.wav"
 
 RECORDER_OFF_WAV        WAVE                    "sounds\\recorder_off.wav"
 
+STABILIZER_ON_WAV       WAVE                    "sounds\\stabilizer_on.wav"
+
+STABILIZER_OFF_WAV      WAVE                    "sounds\\stabilizer_off.wav"
+
 #endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////
 

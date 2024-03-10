@@ -271,5 +271,11 @@
     <Media Include="sounds\recorder_on.wav">
       <Filter>Sounds</Filter>
     </Media>
+    <Media Include="sounds\stabilizer_off.wav">
+      <Filter>Sounds</Filter>
+    </Media>
+    <Media Include="sounds\stabilizer_on.wav">
+      <Filter>Sounds</Filter>
+    </Media>
   </ItemGroup>
 </Project>

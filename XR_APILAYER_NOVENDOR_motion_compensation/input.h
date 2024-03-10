@@ -25,19 +25,22 @@ namespace input
 
         std::map<Cfg, std::pair<std::set<int>, std::set<int>>> m_ShortCuts;
         std::map<std::set<int>, std::pair<bool, std::chrono::steady_clock::time_point>> m_KeyStates;
-        const std::chrono::milliseconds m_KeyRepeatDelay = 300ms;
+        std::chrono::milliseconds m_KeyRepeatDelay{300ms};
         std::set<Cfg> m_FastActivities{Cfg::KeyTransInc,
-                                     Cfg::KeyTransDec,
-                                     Cfg::KeyRotInc,
-                                     Cfg::KeyRotDec,
-                                     Cfg::KeyOffForward,
-                                     Cfg::KeyOffBack,
-                                     Cfg::KeyOffUp,
-                                     Cfg::KeyOffDown,
-                                     Cfg::KeyOffRight,
-                                     Cfg::KeyOffLeft,
-                                     Cfg::KeyRotRight,
-                                     Cfg::KeyRotLeft};
+                                       Cfg::KeyTransDec,
+                                       Cfg::KeyRotInc,
+                                       Cfg::KeyRotDec,
+                                       Cfg::KeyStabilizer,
+                                       Cfg::KeyStabInc,
+                                       Cfg::KeyStabDec,
+                                       Cfg::KeyOffForward,
+                                       Cfg::KeyOffBack,
+                                       Cfg::KeyOffUp,
+                                       Cfg::KeyOffDown,
+                                       Cfg::KeyOffRight,
+                                       Cfg::KeyOffLeft,
+                                       Cfg::KeyRotRight,
+                                       Cfg::KeyRotLeft};
     };
     class InputHandler
     {
@@ -66,7 +69,6 @@ namespace input
         void ReloadConfig() const;
         void SaveConfig(XrTime time, bool forApp) const;
         static void ToggleVerbose();
-        static void ToggleRecorder();
 
     private:
         openxr_api_layer::OpenXrLayer* m_Layer;

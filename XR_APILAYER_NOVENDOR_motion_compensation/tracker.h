@@ -49,6 +49,8 @@ namespace tracker
         bool Init() override;
         virtual bool LazyInit(XrTime time);
         void ModifyFilterStrength(bool trans, bool increase, bool fast);
+        virtual void ToggleStabilizer();
+        virtual void ModifyStabilizer(bool increase, bool fast);
         [[nodiscard]] XrPosef GetReferencePose() const;
         void SetReferencePose(const XrPosef& pose) override;
         virtual void InvalidateCalibration();
@@ -130,18 +132,12 @@ namespace tracker
     class YawTracker : public VirtualTracker
     {
       public:
-        YawTracker()
-        {
-            m_Filename = "Local\\YawVRGEFile";
-            // TODO: read from config
-            m_Sampler = new Sampler(&ReadMmf, &m_Mmf);
-        }
-        ~YawTracker() override
-        {
-           delete m_Sampler;
-        }
+        YawTracker();
+        ~YawTracker() override;
         bool ResetReferencePose(XrSession session, XrTime time) override;
         void InvalidateCalibration() override;
+        void ToggleStabilizer() override;
+        void ModifyStabilizer(bool increase, bool fast) override;
         static bool ReadMmf(utility::Dof& dof, XrTime now, utility::DataSource* source);
 
       protected:

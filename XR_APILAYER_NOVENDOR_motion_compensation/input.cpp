@@ -19,11 +19,12 @@ namespace input
         TraceLoggingWriteStart(local, "KeyboardInput::Init");
         bool success = true;
         const std::set<Cfg> activities{
-            Cfg::KeyActivate,     Cfg::KeyCalibrate,  Cfg::KeyTransInc,     Cfg::KeyTransDec,   Cfg::KeyRotInc,
-            Cfg::KeyRotDec,       Cfg::KeyOffForward, Cfg::KeyOffBack,      Cfg::KeyOffUp,      Cfg::KeyOffDown,
-            Cfg::KeyOffRight,     Cfg::KeyOffLeft,    Cfg::KeyRotRight,     Cfg::KeyRotLeft,    Cfg::KeyOverlay,
-            Cfg::KeyCache,        Cfg::KeyModifier,   Cfg::KeyFastModifier, Cfg::KeySaveConfig, Cfg::KeySaveConfigApp,
-            Cfg::KeyReloadConfig, Cfg::KeyVerbose,    Cfg::KeyRecorder,     Cfg::KeyLogTracker, Cfg::KeyLogProfile};
+            Cfg::KeyActivate,     Cfg::KeyCalibrate,  Cfg::KeyTransInc,      Cfg::KeyTransDec,     Cfg::KeyRotInc,
+            Cfg::KeyRotDec,       Cfg::KeyStabilizer, Cfg::KeyStabInc,       Cfg::KeyStabDec,      Cfg::KeyOffForward,
+            Cfg::KeyOffBack,      Cfg::KeyOffUp,      Cfg::KeyOffDown,       Cfg::KeyOffRight,     Cfg::KeyOffLeft,
+            Cfg::KeyRotRight,     Cfg::KeyRotLeft,    Cfg::KeyOverlay,       Cfg::KeyCache,        Cfg::KeyModifier,
+            Cfg::KeyFastModifier, Cfg::KeySaveConfig, Cfg::KeySaveConfigApp, Cfg::KeyReloadConfig, Cfg::KeyVerbose,
+            Cfg::KeyRecorder,     Cfg::KeyLogTracker, Cfg::KeyLogProfile};
         const std::set<int> modifiers{VK_CONTROL, VK_SHIFT, VK_MENU};
         std::set<int> fastModifiers{};
         GetConfig()->GetShortcut(Cfg::KeyFastModifier, fastModifiers);
@@ -107,6 +108,18 @@ namespace input
         if (m_Input.GetKeyState(Cfg::KeyRotDec, isRepeat))
         {
             m_Layer->m_Tracker->ModifyFilterStrength(false, false, fast);
+        }
+        if (m_Input.GetKeyState(Cfg::KeyStabilizer, isRepeat) && !isRepeat)
+        {
+            m_Layer->m_Tracker->ToggleStabilizer();
+        }
+        if (m_Input.GetKeyState(Cfg::KeyStabInc, isRepeat))
+        {
+            m_Layer->m_Tracker->ModifyStabilizer(true, fast);
+        }
+        if (m_Input.GetKeyState(Cfg::KeyStabDec, isRepeat))
+        {
+            m_Layer->m_Tracker->ModifyStabilizer(false, fast);
         }
         if (m_Input.GetKeyState(Cfg::KeyOffForward, isRepeat))
         {

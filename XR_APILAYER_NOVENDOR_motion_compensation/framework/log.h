@@ -28,8 +28,6 @@ namespace openxr_api_layer::log {
 
     TRACELOGGING_DECLARE_PROVIDER(g_traceProvider);
 
-    extern TraceLoggingActivity<g_traceProvider> g_traceGlobal;
-
 #define IsTraceEnabled() TraceLoggingProviderEnabled(g_traceProvider, 0, 0)
 
 #define TraceLocalActivity(activity) TraceLoggingActivity<g_traceProvider> activity;
