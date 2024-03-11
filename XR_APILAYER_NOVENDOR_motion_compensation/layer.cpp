@@ -1083,18 +1083,7 @@ namespace openxr_api_layer
             }
             else
             {
-                if (0 == m_RecoveryStart)
-                {
-                    ErrorLog("unable to retrieve tracker pose delta");
-                    m_RecoveryStart = time;
-                }
-                else if (m_RecoveryWait >= 0 && time - m_RecoveryStart > m_RecoveryWait)
-                {
-                    ErrorLog("tracker connection lost");
-                    AudioOut::Execute(Event::ConnectionLost);
-                    m_Activated = false;
-                    m_RecoveryStart = -1;
-                }
+                RecoveryTimeOut(time);
             }
 
             if ((spaceView && !baseAction) || (baseView && !spaceAction))
@@ -1265,18 +1254,7 @@ namespace openxr_api_layer
             }
             else
             {
-                if (0 == m_RecoveryStart)
-                {
-                    ErrorLog("unable to retrieve tracker pose delta");
-                    m_RecoveryStart = displayTime;
-                }
-                else if (m_RecoveryWait >= 0 && displayTime - m_RecoveryStart > m_RecoveryWait)
-                {
-                    ErrorLog("tracker connection lost");
-                    AudioOut::Execute(Event::ConnectionLost);
-                    m_Activated = false;
-                    m_RecoveryStart = -1;
-                }
+                RecoveryTimeOut(displayTime);
             }
             TraceLoggingWriteStop(local,
                                   "OpenXrLayer::xrLocateViews",
@@ -2204,6 +2182,22 @@ namespace openxr_api_layer
         TraceLoggingWriteStop(local, "OpenXrLayer::LazyInit", TLArg(success, "Success"));
 
         return success;
+    }
+
+    void OpenXrLayer::RecoveryTimeOut(XrTime time)
+    {
+        if (0 == m_RecoveryStart)
+        {
+            ErrorLog("%s: unable to retrieve tracker pose delta", __FUNCTION__);
+            m_RecoveryStart = time;
+        }
+        else if (m_RecoveryWait >= 0 && time - m_RecoveryStart > m_RecoveryWait)
+        {
+            ErrorLog("%s, tracker connection lost", __FUNCTION__);
+            AudioOut::Execute(Event::ConnectionLost);
+            m_Activated = false;
+            m_RecoveryStart = -1;
+        }
     }
 
     void OpenXrLayer::LogCurrentInteractionProfile()

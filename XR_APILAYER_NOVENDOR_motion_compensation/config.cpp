@@ -20,7 +20,7 @@ bool ConfigManager::Init(const std::string& application)
     const auto& enabledKey = m_Keys.find(Cfg::Enabled);
     if (enabledKey == m_Keys.cend())
     {
-        ErrorLog("unable to find internal enable entry");
+        ErrorLog("%s: unable to find internal enable entry", __FUNCTION__);
         return false;
     }
     m_UsesOpenComposite = application.rfind("OpenComposite", 0) == 0;

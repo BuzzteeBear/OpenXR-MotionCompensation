@@ -116,7 +116,7 @@ namespace tracker
 
         if (!m_PhysicalEnabled)
         {
-            ErrorLog("physical tracker disabled in config file");
+            ErrorLog("%s: physical tracker disabled in config file", __FUNCTION__);
             TraceLoggingWriteStop(local, "ControllerBase::GetControllerPose", TLArg(false, "Success"));
             return false;
         }
@@ -735,8 +735,10 @@ namespace tracker
 
             if (!m_Mmf.Open(time))
             {
-                ErrorLog("unable to open mmf '%s'. Check if motion software is running and data output is activated!",
-                         m_Filename.c_str());
+                ErrorLog(
+                    "%s: unable to open mmf '%s'. Check if motion software is running and data output is activated!",
+                    __FUNCTION__,
+                    m_Filename.c_str());
                 success = false;
             }
         }
@@ -799,7 +801,7 @@ namespace tracker
                                TLArg(xr::ToString(this->m_ReferencePose).c_str(), "ReferencePose"));
         if (!m_Calibrated)
         {
-            ErrorLog("please calibrate cor position before trying to move it");
+            ErrorLog("%s: please calibrate cor position before trying to move it", __FUNCTION__);
             TraceLoggingWriteStop(local, "VirtualTracker::ChangeOffset", TLArg(false, "Success"));
             return false;
         }
@@ -835,7 +837,7 @@ namespace tracker
                                TLArg(xr::ToString(this->m_ReferencePose).c_str(), "ReferencePose"));
         if (!m_Calibrated)
         {
-            ErrorLog("please calibrate cor position before trying to rotate it");
+            ErrorLog("%s: please calibrate cor position before trying to rotate it", __FUNCTION__);
             TraceLoggingWriteStop(local, "VirtualTracker::ChangeRotation", TLArg(false, "Success"));
             return false;
         }
@@ -1583,7 +1585,7 @@ namespace tracker
             }
             if (!validRoles.contains(side))
             {
-                ErrorLog("invalid role for vive tracker (= parameter 'side'): %s", side.c_str());
+                ErrorLog("%s: invalid role for vive tracker (= parameter 'side'): %s", __FUNCTION__, side.c_str());
                 std::string validOptions;
                 for (const auto& option : validRoles)
                 {
@@ -1643,11 +1645,11 @@ namespace tracker
                 TraceLoggingWriteStop(local, "GetTracker", TLPArg(trackerType.c_str(), "tracker"));
                 return std::make_unique<OpenXrTracker>();
             }
-            ErrorLog("unknown tracker type: %s", trackerType.c_str());
+            ErrorLog("%s: unknown tracker type: %s", __FUNCTION__, trackerType.c_str());
         }
         else
         {
-            ErrorLog("unable to determine tracker type");
+            ErrorLog("%s: unable to determine tracker type", __FUNCTION__);
         }
         ErrorLog("defaulting to 'controller'");
         TraceLoggingWriteStop(local, "GetTracker", TLPArg("Default", "tracker"));

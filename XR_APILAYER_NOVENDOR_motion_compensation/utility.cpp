@@ -104,7 +104,7 @@ namespace utility
             }
             else
             {
-                ErrorLog("unable to map view of mmf %s: %s", m_Name.c_str(), LastErrorMsg().c_str());
+                ErrorLog("%s: unable to map view to mmf '%s': %s",__FUNCTION__, m_Name.c_str(), LastErrorMsg().c_str());
                 lock.unlock();
                 Close();
                 TraceLoggingWriteStop(local, "Mmf::Open", TLArg(false, "Success"));
@@ -115,7 +115,7 @@ namespace utility
         {
             if (!m_ConnectionLost)
             {
-                ErrorLog("could not open file mapping object %s: %s", m_Name.c_str(), LastErrorMsg().c_str());
+                ErrorLog("%s: could not open mmf '%s': %s", __FUNCTION__,  m_Name.c_str(), LastErrorMsg().c_str());
                 m_ConnectionLost = true;
             }
             TraceLoggingWriteStop(local, "Mmf::Open", TLArg(false, "Success"));

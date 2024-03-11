@@ -329,7 +329,7 @@ namespace openxr_api_layer::graphics
         if (!m_Initialized)
         {
             m_OverlayActive = false;
-            ErrorLog(" %s: graphical overlay is not properly initialized", __FUNCTION__);
+            ErrorLog("%s: graphical overlay is not properly initialized", __FUNCTION__);
             output::AudioOut::Execute(output::Event::Error);
 
             TraceLoggingWriteStop(local,
@@ -484,7 +484,7 @@ namespace openxr_api_layer::graphics
                 // copy from application texture
                 if (!composition->getApplicationDevice()->CopyAppTexture(m_Swapchains[swapchain], eye, colorTexture, true))
                 {
-                    ErrorLog("$s: unable to copy app texture for swapchain: %u", __FUNCTION__, swapchain);
+                    ErrorLog("%s: unable to copy app texture for swapchain: %u", __FUNCTION__, swapchain);
                     m_Initialized = false;
                     TraceLoggingWriteStop(local, "Overlay::DrawOverlay", TLArg(false, "AppTexure_Copied"));
                     return;
@@ -500,7 +500,7 @@ namespace openxr_api_layer::graphics
                 // copy back to application texture
                 if (!composition->getApplicationDevice()->CopyAppTexture(m_Swapchains[swapchain], eye, colorTexture, false))
                 {
-                    ErrorLog("$s: unable to copy app texture for swapchain: %u", __FUNCTION__, swapchain);
+                    ErrorLog("%s: unable to copy app texture for swapchain: %u", __FUNCTION__, swapchain);
                     m_Initialized = false;
                     TraceLoggingWriteStop(local, "Overlay::InitializeTextures", TLArg(false, "AppTexure_Copied"));
                     return;

@@ -45,10 +45,6 @@ namespace tracker
     class TrackerBase : public ControllerBase
     {
       public:
-        TrackerBase()
-        {
-            
-        }
         ~TrackerBase() override;
         bool Init() override;
         virtual bool LazyInit(XrTime time);

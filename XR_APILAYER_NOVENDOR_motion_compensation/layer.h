@@ -126,6 +126,7 @@ namespace openxr_api_layer
         bool AttachActionSet(const std::string& caller);
         void SuggestInteractionProfiles(const std::string& caller);
         bool LazyInit(XrTime time);
+        void RecoveryTimeOut(XrTime time);
         void LogCurrentInteractionProfile();
         bool ToggleModifierActive();
         void ToggleRecorderActive();

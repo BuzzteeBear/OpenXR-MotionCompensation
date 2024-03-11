@@ -276,7 +276,7 @@ namespace input
         }
         else
         {
-            ErrorLog("layer initialization failed or incomplete!");
+            ErrorLog("%s: layer initialization failed or incomplete!", __FUNCTION__);
         }
         Log("motion compensation %s",
             oldState != m_Layer->m_Activated ? (m_Layer->m_Activated ? "activated" : "deactivated")
@@ -299,22 +299,20 @@ namespace input
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "InputHandler::Recalibrate", TLArg(time, "Time"));
 
-        bool success = true;
         if (m_Layer->m_TestRotation)
         {
             m_Layer->m_TestRotStart = time;
             Log("test rotation motion compensation recalibrated");
-            TraceLoggingWriteStop(local, "InputHandler::Recalibrate", TLArg(success, "Success"));
+            TraceLoggingWriteStop(local, "InputHandler::Recalibrate", TLArg(true, "Success"));
             return;
         }
 
-        std::string trackerType;
-        if (!m_Layer->m_Activated)
+        bool success = false;
+        // trigger interaction suggestion and action set attachment if necessary
+        if (m_Layer->m_Activated || m_Layer->LazyInit(time))
         {
-            // trigger interaction suggestion and action set attachment if necessary
-            m_Layer->LazyInit(time);
+            success =  m_Layer->m_Tracker->ResetReferencePose(m_Layer->m_Session, time);
         }
-        success = m_Layer->m_Tracker->ResetReferencePose(m_Layer->m_Session, time);
         if (success)
         {
             AudioOut::Execute(Event::Calibrated);
@@ -324,7 +322,7 @@ namespace input
             // failed to update reference pose -> deactivate mc
             if (m_Layer->m_Activated)
             {
-                ErrorLog("motion compensation deactivated because tracker reference pose could not be calibrated");
+                ErrorLog("%s: motion compensation deactivated because tracker reference pose could not be calibrated", __FUNCTION__);
                 m_Layer->m_Activated = false;
             }
             AudioOut::Execute(Event::Error);
@@ -340,7 +338,7 @@ namespace input
         if (!m_Layer->m_Overlay)
         {
             AudioOut::Execute(Event::Error);
-            ErrorLog("overlay is deactivated in config file and cannot be activated");
+            ErrorLog("%s: overlay is deactivated in config file and cannot be activated", __FUNCTION__);
             TraceLoggingWriteStop(local, "InputHandler::ToggleOverlay");
             return;
         }
@@ -408,7 +406,7 @@ namespace input
         }
         else
         {
-            ErrorLog("unable to modify offset, wrong type of tracker");
+            ErrorLog("%s: unable to modify offset, wrong type of tracker", __FUNCTION__);
             success = false;
         }
 
