@@ -45,6 +45,10 @@ namespace tracker
     class TrackerBase : public ControllerBase
     {
       public:
+        TrackerBase()
+        {
+            
+        }
         ~TrackerBase() override;
         bool Init() override;
         virtual bool LazyInit(XrTime time);
@@ -90,7 +94,7 @@ namespace tracker
     class OpenXrTracker final : public TrackerBase
     {
       public:
-        bool Init() override;
+        OpenXrTracker();
         bool ResetReferencePose(XrSession session, XrTime time) override;
 
       protected:
@@ -102,6 +106,7 @@ namespace tracker
     class VirtualTracker : public TrackerBase
     {
       public:
+        VirtualTracker();
         bool Init() override;
         bool LazyInit(XrTime time) override;
         bool ResetReferencePose(XrSession session, XrTime time) override;

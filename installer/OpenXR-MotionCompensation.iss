@@ -153,6 +153,7 @@ Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key:
 
 ; [debug]
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "debug"; Key: "log_verbose"; String: "0"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "debug"; Key: "record_stabilizer_samples"; String: "0"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "debug"; Key: "testrotation"; String: "0"; Flags: createkeyifdoesntexist
 
 [Languages]

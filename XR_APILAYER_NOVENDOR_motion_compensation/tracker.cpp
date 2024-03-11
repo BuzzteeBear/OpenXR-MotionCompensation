@@ -39,6 +39,7 @@ namespace tracker
         }
         if (XrPosef curPose{Pose::Identity()}; GetPose(curPose, session, time))
         {
+            m_Recorder->AddFrameTime(time);
             m_Recorder->AddPose(m_ReferencePose, Reference);
             m_Recorder->AddPose(curPose, Input);
             
@@ -51,7 +52,7 @@ namespace tracker
             // calculate difference toward reference pose
             poseDelta = Pose::Multiply(Pose::Invert(curPose), m_ReferencePose);
             m_Recorder->AddPose(poseDelta, Delta);
-            m_Recorder->Write(time);
+            m_Recorder->Write();
 
             if (!m_FallBackUsed)
             {
@@ -594,10 +595,9 @@ namespace tracker
         TraceLoggingWriteStop(local, "TrackerBase::SetForwardRotation");
     }
 
-    bool OpenXrTracker::Init()
+    OpenXrTracker::OpenXrTracker()
     {
         m_Recorder = std::make_shared<output::PoseRecorder>();
-        return TrackerBase::Init();
     }
 
     bool OpenXrTracker::ResetReferencePose(XrSession session, XrTime time)
@@ -633,6 +633,11 @@ namespace tracker
                               TLArg(xr::ToString(trackerPose).c_str(), "TrackerPose"));
 
         return success;
+    }
+
+    VirtualTracker::VirtualTracker()
+    {
+        m_Recorder = std::make_shared<output::PoseAndDofRecorder>();
     }
 
     bool VirtualTracker::Init()
@@ -703,8 +708,6 @@ namespace tracker
 
         m_Manipulator = std::make_unique<CorManipulator>(CorManipulator(this));
         m_Manipulator->Init();
-
-        m_Recorder = std::make_shared<output::PoseAndDofRecorder>(); 
  
         TraceLoggingWriteStop(local,
                               "VirtualTracker::Init",
@@ -959,7 +962,7 @@ namespace tracker
             TraceLoggingWriteStop(local, "VirtualTracker::GetPose", TLArg(false, "Success"));
             return false;
         }
-        m_Recorder->AddDofValues(dof);
+        m_Recorder->AddDofValues(dof, Read);
 
         DebugLog("MotionData: %s", xr::ToString(dof).c_str());
         TraceLoggingWriteTagged(local,
@@ -983,7 +986,7 @@ namespace tracker
         bool samplerEnabled;
         if (GetConfig()->GetBool(Cfg::StabilizerEnabled, samplerEnabled) && samplerEnabled)
         {
-            m_Sampler = new Sampler(&ReadMmf, &m_Mmf);
+            m_Sampler = new Sampler(&ReadMmf, &m_Mmf, m_Recorder);
             Log("input stabilizer enabled");
         }
     }
@@ -1084,7 +1087,7 @@ namespace tracker
 
         if (!m_Sampler)
         {
-            m_Sampler = new Sampler(&ReadMmf, &m_Mmf);
+            m_Sampler = new Sampler(&ReadMmf, &m_Mmf, m_Recorder);
             if (m_Calibrated)
             {
                 m_Sampler->StartSampling(); 

@@ -84,6 +84,7 @@ enum class Cfg
     KeyLogProfile,
     KeyRecorder,
     TestRotation,
+    RecordSamples,
     LogVerbose
 };
 
@@ -214,6 +215,7 @@ class ConfigManager
         {Cfg::KeyLogProfile, {"shortcuts", "log_interaction_profile"}},
 
         {Cfg::LogVerbose, {"debug", "log_verbose"}},
+        {Cfg::RecordSamples, {"debug", "record_stabilizer_samples"}},
         {Cfg::TestRotation, {"debug", "testrotation"}}};
 
 

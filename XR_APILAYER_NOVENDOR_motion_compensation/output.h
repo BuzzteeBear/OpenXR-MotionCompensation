@@ -41,7 +41,6 @@ namespace output
         RecorderOff,
         StabilizerOn,
         StabilizerOff
-
     };
 
     class AudioOut
@@ -84,12 +83,15 @@ namespace output
                                                                   {Event::RecorderOff, RECORDER_OFF_WAV},
                                                                   {Event::StabilizerOn, STABILIZER_ON_WAV},
                                                                   {Event::StabilizerOff, STABILIZER_OFF_WAV}};
-
     };
 
     constexpr uint32_t m_RecorderMax{36000}; // max 10 min @ 100 frames/s
 
-    
+    enum RecorderDofInput
+    {
+        Sampled = 0,
+        Read 
+    };
 
     enum RecorderPoseInput
     {
@@ -98,6 +100,12 @@ namespace output
         Filtered,
         Modified,
         Delta
+    };
+
+    struct DofSample
+    {
+        utility::Dof sampled{};
+        utility::Dof read{};
     };
 
     struct PoseSample
@@ -115,18 +123,20 @@ namespace output
         RecorderBase() = default;
         virtual ~RecorderBase() = default;
         virtual bool Toggle(bool isCalibrated) = 0;
+        virtual void AddFrameTime(XrTime time) = 0;
         virtual void AddPose(const XrPosef& pose, RecorderPoseInput type) = 0;
-        virtual void AddDofValues(const utility::Dof& dofValues) = 0;
-        virtual void Write(XrTime time, bool newLine = true) = 0;
+        virtual void AddDofValues(const utility::Dof& dofValues, RecorderDofInput type) = 0;
+        virtual void Write(bool newLine = true) = 0;
     };
 
     class NoRecorder final : public RecorderBase
     {
       public:
         bool Toggle(bool isCalibrated) override;
+        void AddFrameTime(XrTime time) override{};
         void AddPose(const XrPosef& pose, RecorderPoseInput type) override{};
-        void AddDofValues(const utility::Dof& dofValues) override{};
-        void Write(XrTime time, bool newLine = true) override{};
+        void AddDofValues(const utility::Dof& dofValues, RecorderDofInput type) override{};
+        void Write(bool newLine = true) override{};
     };
 
     class PoseRecorder : public RecorderBase
@@ -135,14 +145,16 @@ namespace output
         PoseRecorder();
         ~PoseRecorder() override;
         bool Toggle(bool isCalibrated) override;
+        void AddFrameTime(XrTime time) override;
         void AddPose(const XrPosef& pose, RecorderPoseInput type) override;
-        void AddDofValues(const utility::Dof& dofValues) override{};
-        void Write(XrTime time, bool newLine = true) override;
+        void AddDofValues(const utility::Dof& dofValues, RecorderDofInput type) override{};
+        void Write(bool newLine = true) override;
 
       protected:
-        bool m_Started{false};
+        bool m_Started{false}, m_PoseRecorded{false};
         std::ofstream m_FileStream;
-        std::string m_HeadLine{"Time; "
+        XrTime m_FrameTime{};
+        std::string m_HeadLine{"Time; FrameTime; "
                                "X_Input; X_Filtered; X_Modified; X_Reference; X_Delta;"
                                "Y_Input; Y_Filtered; Y_Modified; Y_Reference; Y_Delta;"
                                "Z_Input; Z_Filtered; Z_Modified; Z_Reference; Z_Delta;"
@@ -150,6 +162,7 @@ namespace output
                                "B_Input; B_Filtered; B_Modified; B_Reference; B_Delta;"
                                "C_Input; C_Filtered; C_Modified; C_Reference; C_Delta;"
                                "D_Input; D_Filtered; D_Modified; D_Reference; D_Delta"};
+        std::mutex m_RecorderMutex;
 
     private:
         virtual bool Start();
@@ -164,14 +177,14 @@ namespace output
       public:
         PoseAndDofRecorder()
         {
-            m_HeadLine += "; Sway_Raw; Sway_Stabilized; Surge_Raw; Surge_Stabilized; Heave_Raw; Heave_Stabilized; "
-                          "Yaw_Raw; Yaw_Stabilized; Pitch_Raw; Pitch_Stabilized; Roll_Raw; Roll_Stabilized";
+            m_HeadLine += "; Sway_Sampled; Sway_Read; Surge_Sampled; Surge_Read; Heave_Sampled; Heave_Read; "
+                          "Yaw_Sampled; Yaw_Read; Pitch_Sampled; Pitch_Read; Roll_Sampled; Roll_Read";
         }
-        void AddDofValues(const utility::Dof& dofValues) override;
-        void Write(XrTime time, bool newLine = true) override;
+        void AddDofValues(const utility::Dof& dofValues, RecorderDofInput type) override;
+        void Write(bool newLine = true) override;
 
       private:
-        utility::Dof m_DofValues{};
+        DofSample m_DofValues{};
     };
 
 } // namespace output

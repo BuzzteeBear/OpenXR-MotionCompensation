@@ -13,15 +13,19 @@ using namespace log;
 using namespace output;
 using namespace utility;
 
-Sampler::Sampler(bool (*read)(Dof&, int64_t, DataSource*), DataSource* source) : m_Read(read), m_Source(source)
+Sampler::Sampler(bool (*read)(Dof&, int64_t, DataSource*),
+                 DataSource* source,
+                 const std::shared_ptr<output::RecorderBase>& recorder)
+    : m_Read(read), m_Source(source), m_Recorder(recorder)
 {
     if (int window{}; GetConfig()->GetInt(Cfg::StabilizerWindow, window))
     {
         window = std::max(std::min(window, 1000), 1) * 1000000;
         m_Stabilizer =
             std::make_shared<filter::WeightedMedianStabilizer>(std::vector<DofValue>{yaw, roll, pitch}, window);
-       DebugLog("stabilizer averaging time: %u ns", window);
+        DebugLog("stabilizer averaging time: %u ms", window / 1000000);
     }
+    GetConfig()->GetBool(Cfg::RecordSamples, m_RecordSamples);
 }
 
 Sampler::~Sampler()
@@ -108,17 +112,21 @@ void Sampler::DoSampling()
         // set timing
         auto now = steady_clock::now();
         waitUntil = now + m_Interval;
-        const int64_t nanoTicks = time_point_cast<nanoseconds>(now).time_since_epoch().count();
+        const int64_t time = time_point_cast<nanoseconds>(now).time_since_epoch().count();
 
         Dof dof;
         
-        if (!m_Read(dof, nanoTicks, m_Source))
+        if (!m_Read(dof, time, m_Source))
         {
             break;
         }
-        m_Stabilizer->InsertSample(dof, nanoTicks);
+        m_Stabilizer->InsertSample(dof, time);
         
-        DebugLog("input sample(%u): %s", nanoTicks, xr::ToString(dof).c_str());
+        if (m_RecordSamples && m_Recorder)
+        {
+            m_Recorder->AddDofValues(dof, Sampled);
+            m_Recorder->Write();
+        }
 
         std::this_thread::sleep_until(waitUntil);
     }

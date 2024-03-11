@@ -3,11 +3,14 @@
 #pragma once
 
 #include "filter.h"
+#include "output.h"
 
 class Sampler
 {
   public:
-    Sampler(bool (*read)(utility::Dof&, int64_t, utility::DataSource*), utility::DataSource* source);
+    Sampler(bool (*read)(utility::Dof&, int64_t, utility::DataSource*),
+            utility::DataSource* source,
+            const std::shared_ptr<output::RecorderBase>& recorder);
     ~Sampler();
 
     void SetWindowSize(unsigned size) const;
@@ -24,4 +27,7 @@ class Sampler
     utility::DataSource* m_Source{nullptr};
     std::shared_ptr<filter::StabilizerBase> m_Stabilizer{};
     std::chrono::microseconds m_Interval{1ms};
+    // TODO: add config switch
+    bool m_RecordSamples{false};
+    std::shared_ptr<output::RecorderBase> m_Recorder{};
 };

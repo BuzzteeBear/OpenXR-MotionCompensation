@@ -105,12 +105,26 @@ namespace output
             {
                 return Start();
             }
-            ErrorLog("%s: recording requires the tracker to be calibrated", __FUNCTION__);
+            ErrorLog("%s: recording requires reference tracker to be calibrated", __FUNCTION__);
             AudioOut::Execute(Event::Error);
             return false;
         }
         Stop();
         return false;
+    }
+
+    void PoseRecorder::AddFrameTime(XrTime time)
+    {
+        if (!m_Started)
+        {
+            return;
+        }
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "PoseRecorder::AddFrameTime", TLArg(time, "Time"));
+
+        m_FrameTime = time;
+
+        TraceLoggingWriteStop(local, "PoseRecorder::AddFrameTime");
     }
 
     void PoseRecorder::AddPose(const XrPosef& pose, RecorderPoseInput type)
@@ -144,11 +158,12 @@ namespace output
         default:
             break;
         }
+        m_PoseRecorded = true;
 
         TraceLoggingWriteStop(local, "PoseRecorder::AddReference", TLArg(true, "Success"));
     }
 
-    void PoseRecorder::Write(const XrTime time, bool newLine)
+    void PoseRecorder::Write(const bool newLine)
     {
         if (!m_Started)
         {
@@ -157,6 +172,7 @@ namespace output
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "PoseRecorder::Write", TLArg(newLine, "NewLine"));
 
+        std::unique_lock lock{m_RecorderMutex};
         if (++m_Counter > m_RecorderMax)
         {
             Start();
@@ -175,7 +191,9 @@ namespace output
             const XrQuaternionf& rO = m_Poses.reference.orientation;
             const XrQuaternionf& dO = m_Poses.delta.orientation;
 
-            m_FileStream << time << ";"
+            const std::chrono::nanoseconds now = std::chrono::steady_clock::now().time_since_epoch();
+            
+            m_FileStream << now.count() << ";" << m_FrameTime << ";"
                 << iP.x << ";" << fP.x << ";" << mP.x << ";" << rP.x << ";" << dP.x << ";"
                 << iP.y << ";" << fP.y << ";" << mP.y << ";" << rP.y << ";" << dP.y << ";"
                 << iP.z << ";" << fP.z << ";" << mP.z << ";" << rP.z << ";" << dP.z << ";"
@@ -246,6 +264,7 @@ namespace output
         TraceLoggingWriteStart(local, "PoseRecorder::Stop");
 
         m_Started = false;
+        m_PoseRecorded = false;
         if (m_FileStream.is_open())
         {
             m_FileStream.close();
@@ -258,39 +277,52 @@ namespace output
         TraceLoggingWriteStop(local, "PoseRecorder::Stop", TLArg(false, "Stream_Closed"));
     }
 
-    void PoseAndDofRecorder::AddDofValues(const Dof& dofValues)
+    void PoseAndDofRecorder::AddDofValues(const Dof& dofValues, RecorderDofInput type)
     {
         if (!m_Started)
         {
             return;
         }
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "PoseAndDofRecorder::AddDofValues");
+        TraceLoggingWriteStart(local, "PoseAndDofRecorder::AddDofValues", TLArg(static_cast<uint32_t>(type), "Type"));
 
-        m_DofValues = dofValues;
-
+        std::unique_lock lock{m_RecorderMutex};
+        switch (type)
+        {
+        case Sampled:
+            m_DofValues.sampled = dofValues;
+            break;
+        case Read:
+            m_DofValues.read = dofValues;
+            break;
+        default:
+            break;
+        }
+        
         TraceLoggingWriteStop(local, "PoseAndDofRecorder::AddDofValues", TLArg(true, "Success"));
     }
 
-    void PoseAndDofRecorder::Write(XrTime time, bool newLine)
+    void PoseAndDofRecorder::Write(bool newLine)
     {
-        if (!m_Started)
+        if (!m_Started || !m_PoseRecorded)
         {
             return;
         }
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "PoseAndDofRecorder::Write", TLArg(newLine, "NewLine"));
 
+        
         if (m_FileStream.is_open())
         {
-            PoseRecorder::Write(time, false);
+            PoseRecorder::Write(false);
 
-            m_FileStream << ";" << m_DofValues.data[sway]
-                         << ";" << m_DofValues.data[surge] 
-                         << ";" << m_DofValues.data[heave] 
-                         << ";" << m_DofValues.data[yaw] 
-                         << ";" << m_DofValues.data[pitch]
-                         << ";" << m_DofValues.data[roll];
+            std::unique_lock lock{m_RecorderMutex};
+            m_FileStream << ";" << m_DofValues.sampled.data[sway] << ";" << m_DofValues.read.data[sway]
+                         << ";" << m_DofValues.sampled.data[surge] << ";" << m_DofValues.read.data[surge]
+                         << ";" << m_DofValues.sampled.data[heave] << ";" << m_DofValues.read.data[heave]
+                         << ";" << m_DofValues.sampled.data[yaw] << ";" << m_DofValues.read.data[yaw]
+                         << ";" << m_DofValues.sampled.data[pitch] << ";" << m_DofValues.read.data[pitch]
+                         << ";" << m_DofValues.sampled.data[roll] << ";" << m_DofValues.read.data[roll];
             if (newLine)
             {
                 m_FileStream << "\n";
