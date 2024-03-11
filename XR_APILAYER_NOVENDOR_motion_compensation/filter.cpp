@@ -225,7 +225,25 @@ namespace filter
 
         TraceLoggingWriteStop(local, "PassThroughStabilizer::Stabilize", TLArg(xr::ToString(dof).c_str(), "Dof")); 
     }
-    
+
+    void MedianStabilizer::SetWindowSize(unsigned size)
+    {
+        m_WindowSize = size;
+        openxr_api_layer::log::DebugLog("stabilizer averaging time: %u ms", size);
+    }
+
+    void MedianStabilizer::SetStartTime(int64_t time)
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local,
+                               "MedianStabilizer::SetStartTime",
+                               TLArg(time, "Time"));
+
+        m_LastSampleTime = time;
+
+        TraceLoggingWriteStop(local, "MedianStabilizer::SetStartTime");
+    }
+
     void MedianStabilizer::InsertSample(Dof& sample, int64_t time)
     {
         TraceLocalActivity(local);
@@ -237,6 +255,9 @@ namespace filter
         const int64_t windowBegin = time - m_WindowSize;
         TraceLoggingWriteTagged(local, "MedianStabilizer::InsertSample", TLArg(windowBegin, "WindowBegin"));
 
+        const int64_t duration = time - std::exchange(m_LastSampleTime, time);
+        m_WindowHalf = std::min(m_WindowSize / 2, m_WindowHalf + duration);
+
         for (const DofValue value : m_RelevantValues)
         {
             std::unique_lock lock(m_SampleMutex);
@@ -244,13 +265,13 @@ namespace filter
             // remove outdated sample(s)
             for (auto it = samples.cbegin(); it != samples.cend();)
             {
-                if (it->second <= windowBegin)
+                if (it->second.first <= windowBegin)
                 {
-                    it = samples.erase(it);
                     TraceLoggingWriteTagged(local,
                                             "MedianStabilizer::InsertSample",
-                                            TLArg(it->second, "Dropped"),
+                                            TLArg(it->second.first, "Dropped"),
                                             TLArg(static_cast<int>(value), "RelevantValue"));
+                    it = samples.erase(it);
                 }
                 else
                 {
@@ -258,7 +279,7 @@ namespace filter
                 }
             }
             // insert sample
-            samples.insert({sample.data[value], time});
+            samples.insert({sample.data[value], {time, duration}});
             
             TraceLoggingWriteTagged(local,
                                     "MedianStabilizer::InsertSample",
@@ -277,6 +298,7 @@ namespace filter
         for (const DofValue value : m_RelevantValues)
         {
             std::unique_lock lock(m_SampleMutex);
+
             // select median
             const size_t halfSize = m_Samples[value].size() / 2;
             auto med = m_Samples[value].begin();
@@ -294,13 +316,12 @@ namespace filter
         for (const DofValue value : m_RelevantValues)
         {
             std::unique_lock lock(m_SampleMutex);
+
             // sum up durations and select weighted median
-            int64_t lastBegin = m_Samples[value].crbegin()->second - m_WindowSize;
-            int64_t durationSum {0};
-            for (const auto& [sample, time] : m_Samples[value])
+            int64_t durationSum{0};            
+            for (const auto& [sample, times] : m_Samples[value])
             {
-                durationSum += time - std::exchange(lastBegin, time) ;
-                if (durationSum > m_WindowHalf)
+                if ((durationSum += times.second) > m_WindowHalf)
                 {
                     dof.data[value] = sample;
                     break;

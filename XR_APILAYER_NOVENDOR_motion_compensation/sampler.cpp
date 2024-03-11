@@ -105,30 +105,33 @@ void Sampler::StopSampling()
 void Sampler::DoSampling()
 {
     using namespace std::chrono;
-    time_point<steady_clock> waitUntil{};
+
+    const nanoseconds start = steady_clock::now().time_since_epoch();
+    m_Stabilizer->SetStartTime(start.count());
 
     while (m_IsSampling)
     {
         // set timing
         auto now = steady_clock::now();
-        waitUntil = now + m_Interval;
         const int64_t time = time_point_cast<nanoseconds>(now).time_since_epoch().count();
 
+        // sample value
         Dof dof;
-        
         if (!m_Read(dof, time, m_Source))
         {
             break;
         }
         m_Stabilizer->InsertSample(dof, time);
-        
+
+        // record sample
         if (m_RecordSamples && m_Recorder)
         {
             m_Recorder->AddDofValues(dof, Sampled);
             m_Recorder->Write();
         }
 
-        std::this_thread::sleep_until(waitUntil);
+        // wait for next sampling cycle
+        std::this_thread::sleep_until(now + m_Interval);
     }
     m_IsSampling = false;
 }

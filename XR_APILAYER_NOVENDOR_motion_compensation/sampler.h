@@ -27,7 +27,6 @@ class Sampler
     utility::DataSource* m_Source{nullptr};
     std::shared_ptr<filter::StabilizerBase> m_Stabilizer{};
     std::chrono::microseconds m_Interval{1ms};
-    // TODO: add config switch
     bool m_RecordSamples{false};
     std::shared_ptr<output::RecorderBase> m_Recorder{};
 };

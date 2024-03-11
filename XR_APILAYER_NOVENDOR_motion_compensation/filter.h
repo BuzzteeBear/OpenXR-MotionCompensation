@@ -116,6 +116,7 @@ namespace filter
       public:
         virtual ~StabilizerBase() = default;
         virtual void SetWindowSize(unsigned size) = 0;
+        virtual void SetStartTime(int64_t time) = 0;
         virtual void InsertSample(utility::Dof& sample, int64_t time) = 0;
         virtual void Stabilize(utility::Dof& dof) = 0;
 
@@ -129,6 +130,7 @@ namespace filter
         explicit PassThroughStabilizer(const std::vector<utility::DofValue>& relevantValues)
             : m_RelevantValues(relevantValues){};
         void SetWindowSize(unsigned size) override{};
+        void SetStartTime(int64_t time) override{};
         void InsertSample(utility::Dof& sample, int64_t time) override;
         void Stabilize(utility::Dof& dof) override;
 
@@ -144,33 +146,24 @@ namespace filter
       public:
         explicit MedianStabilizer(const std::vector<utility::DofValue>& relevantValues, unsigned windowSize)
             : PassThroughStabilizer(relevantValues), m_WindowSize(windowSize){};
-        void SetWindowSize(unsigned size) override
-        {
-            m_WindowSize = size;
-            openxr_api_layer::log::DebugLog("stabilizer averaging time: %u ns", size);
-        }
+        void SetWindowSize(unsigned size) override;
+        void SetStartTime(int64_t time) override;
         void InsertSample(utility::Dof& sample, int64_t time) override;
         void Stabilize(utility::Dof& dof) override;
 
       protected:
-        std::atomic<unsigned> m_WindowSize{0};
-        std::multimap<float, int64_t> m_Samples[6]{};
+        std::atomic<int64_t> m_WindowSize{0};
+        int64_t m_WindowHalf{0};
+        std::multimap<float, std::pair<int64_t, int64_t>> m_Samples[6]{};
+        int64_t m_LastSampleTime{};
     };
 
     class WeightedMedianStabilizer : public MedianStabilizer
     {
       public:
         explicit WeightedMedianStabilizer(const std::vector<utility::DofValue>& relevantValues, unsigned windowSize)
-            : MedianStabilizer(relevantValues, windowSize), m_WindowHalf{windowSize / 2} {};
-        void SetWindowSize(unsigned size) override
-        {
-            MedianStabilizer::SetWindowSize(size);
-            m_WindowHalf = size / 2;
-        }
-        void Stabilize(utility::Dof& dof) override;
-
-      private:
-        unsigned m_WindowHalf{0};
+            : MedianStabilizer(relevantValues, windowSize){};
+        void Stabilize(utility::Dof& dof) override;        
     };
 
 } // namespace filter
