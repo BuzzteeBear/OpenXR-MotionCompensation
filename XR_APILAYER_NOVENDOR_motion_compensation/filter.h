@@ -136,34 +136,78 @@ namespace filter
 
       protected:
         std::vector<utility::DofValue> m_RelevantValues;
-
-      private:
-        utility::Dof m_PassThrough{};
+        utility::Dof m_CurrentSample{};
     };
 
-    class MedianStabilizer : public PassThroughStabilizer
+    class EmaStabilizer : public PassThroughStabilizer
     {
       public:
-        explicit MedianStabilizer(const std::vector<utility::DofValue>& relevantValues, unsigned windowSize)
-            : PassThroughStabilizer(relevantValues), m_WindowSize(windowSize){};
-        void SetWindowSize(unsigned size) override;
+        explicit EmaStabilizer(const std::vector<utility::DofValue>& relevantValues, float frequency)
+            : PassThroughStabilizer(relevantValues), m_Frequency(frequency){};
         void SetStartTime(int64_t time) override;
         void InsertSample(utility::Dof& sample, int64_t time) override;
         void Stabilize(utility::Dof& dof) override;
 
       protected:
+        int64_t m_LastSampleTime{};
+    private:
+        bool m_Initialized = false;
+        float m_Frequency{10.f};
+    };
+
+    class WindowStabilizer : public EmaStabilizer
+    {
+      public:
+        explicit WindowStabilizer(const std::vector<utility::DofValue>& relevantValues, int64_t windowSize)
+            : EmaStabilizer(relevantValues, 0), m_WindowSize(windowSize){};
+        void SetWindowSize(unsigned size) override;
+        void SetStartTime(int64_t time) override;
+        void InsertSample(utility::Dof& sample, int64_t time) override;
+
+      protected:
         std::atomic<int64_t> m_WindowSize{0};
         int64_t m_WindowHalf{0};
         std::multimap<float, std::pair<int64_t, int64_t>> m_Samples[6]{};
-        int64_t m_LastSampleTime{};
     };
 
-    class WeightedMedianStabilizer : public MedianStabilizer
+    class AverageStabilizer : public WindowStabilizer
     {
       public:
-        explicit WeightedMedianStabilizer(const std::vector<utility::DofValue>& relevantValues, unsigned windowSize)
-            : MedianStabilizer(relevantValues, windowSize){};
+        explicit AverageStabilizer(const std::vector<utility::DofValue>& relevantValues, int64_t windowSize)
+            : WindowStabilizer(relevantValues, windowSize){};
+        void Stabilize(utility::Dof& dof) override;
+    };
+
+    class WeightedAverageStabilizer : public WindowStabilizer
+    {
+      public:
+        explicit WeightedAverageStabilizer(const std::vector<utility::DofValue>& relevantValues, int64_t windowSize)
+            : WindowStabilizer(relevantValues, windowSize){};
+        void Stabilize(utility::Dof& dof) override;
+    };
+
+    class MedianStabilizer : public WindowStabilizer
+    {
+      public:
+        explicit MedianStabilizer(const std::vector<utility::DofValue>& relevantValues, int64_t windowSize)
+            : WindowStabilizer(relevantValues, windowSize){};
+        void Stabilize(utility::Dof& dof) override;
+    };
+
+    class WeightedMedianStabilizer : public WindowStabilizer
+    {
+      public:
+        explicit WeightedMedianStabilizer(const std::vector<utility::DofValue>& relevantValues, int64_t windowSize)
+            : WindowStabilizer(relevantValues, windowSize){};
         void Stabilize(utility::Dof& dof) override;        
+    };
+
+    class HybridStabilizer : public WindowStabilizer
+    {
+      public:
+        explicit HybridStabilizer(const std::vector<utility::DofValue>& relevantValues, int64_t windowSize)
+            : WindowStabilizer(relevantValues, windowSize){};
+        void Stabilize(utility::Dof& dof) override;
     };
 
 } // namespace filter

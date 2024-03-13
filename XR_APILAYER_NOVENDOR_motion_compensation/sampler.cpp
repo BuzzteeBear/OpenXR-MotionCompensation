@@ -20,6 +20,7 @@ Sampler::Sampler(bool (*read)(Dof&, int64_t, DataSource*),
 {
     if (int window{}; GetConfig()->GetInt(Cfg::StabilizerWindow, window))
     {
+        // TODO: scale input parameter t0 [0..1] range?
         window = std::max(std::min(window, 1000), 1) * 1000000;
         m_Stabilizer =
             std::make_shared<filter::WeightedMedianStabilizer>(std::vector<DofValue>{yaw, roll, pitch}, window);
