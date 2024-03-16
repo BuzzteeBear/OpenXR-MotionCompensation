@@ -434,6 +434,26 @@ namespace tracker
         return m_ReferencePose;
     }
 
+    bool TrackerBase::ChangeOffset(XrVector3f modification)
+    {
+        return false;
+    }
+
+    bool TrackerBase::ChangeRotation(float radian)
+    {
+        return false;
+    }
+
+    void TrackerBase::SetModifierActive(const bool active) const
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "TrackerBase::SetModifierActive", TLArg(active, "Active"));
+
+        m_TrackerModifier->SetActive(active);
+
+        TraceLoggingWriteStop(local, "TrackerBase::SetModifierActive");
+    }
+
     void TrackerBase::LogCurrentTrackerPoses(XrSession session, XrTime time, bool activated)
     {
         TraceLocalActivity(local);
@@ -459,21 +479,6 @@ namespace tracker
         TraceLoggingWriteStop(local, "TrackerBase::LogCurrentTrackerPose");
     }
 
-    bool TrackerBase::ChangeOffset(XrVector3f modification)
-    {
-        return false;
-    }
-
-    bool TrackerBase::ChangeRotation(float radian)
-    {
-        return false;
-    }
-
-    bool TrackerBase::ToggleRecording() const
-    {
-        return m_Recorder->Toggle(m_Calibrated);
-    }
-
     void TrackerBase::SetReferencePose(const XrPosef& pose)
     {
         TraceLocalActivity(local);
@@ -492,14 +497,9 @@ namespace tracker
         m_Calibrated = false;
     }
 
-    void TrackerBase::SetModifierActive(const bool active) const
+    bool TrackerBase::ToggleRecording() const
     {
-        TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "TrackerBase::SetModifierActive", TLArg(active, "Active"));
-
-        m_TrackerModifier->SetActive(active);
-
-        TraceLoggingWriteStop(local, "TrackerBase::SetModifierActive");
+        return m_Recorder->Toggle(m_Calibrated);
     }
 
     void TrackerBase::ApplyFilters(XrPosef& pose)
@@ -583,8 +583,7 @@ namespace tracker
         // update forward rotation
         const XrPosef fwdRotation = {pose.orientation, {0.f, 0.f, 0.f}};
         m_TrackerModifier->SetFwdToStage(fwdRotation);
-        const auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
-        if (layer)
+        if (const auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance()))
         {
             layer->SetForwardRotation(fwdRotation);
         }
@@ -638,6 +637,17 @@ namespace tracker
     VirtualTracker::VirtualTracker()
     {
         m_Recorder = std::make_shared<output::PoseAndDofRecorder>();
+        bool samplerEnabled;
+        if (GetConfig()->GetBool(Cfg::StabilizerEnabled, samplerEnabled) && samplerEnabled)
+        {
+            m_Sampler = new sampler::Sampler(this, m_Recorder);
+            Log("input stabilizer enabled");
+        }
+    }
+
+    VirtualTracker::~VirtualTracker()
+    {
+        delete m_Sampler;
     }
 
     bool VirtualTracker::Init()
@@ -747,6 +757,79 @@ namespace tracker
 
         return success;
     }
+    void VirtualTracker::ToggleStabilizer()
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "VirtualTracker::ToggleStabilizer");
+
+        if (!m_Sampler)
+        {
+            m_Sampler = new sampler::Sampler(this, m_Recorder);
+            if (m_Calibrated)
+            {
+                m_Sampler->StartSampling();
+            }
+            GetConfig()->SetValue(Cfg::StabilizerEnabled, true);
+            AudioOut::Execute(Event::StabilizerOn);
+
+            TraceLoggingWriteStop(local, "VirtualTracker::ToggleStabilizer", TLArg(true, "Activated"));
+            return;
+        }
+        delete m_Sampler;
+        m_Sampler = nullptr;
+        GetConfig()->SetValue(Cfg::StabilizerEnabled, false);
+        AudioOut::Execute(Event::StabilizerOff);
+
+        TraceLoggingWriteStop(local, "VirtualTracker::ToggleStabilizer", TLArg(false, "Activated"));
+    }
+
+    void VirtualTracker::ModifyStabilizer(bool increase, bool fast)
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local,
+                               "VirtualTracker::ModifyStabilizer",
+                               TLArg(increase, "Increase"),
+                               TLArg(fast, "Fast"));
+
+        int prevWindow;
+        if (!GetConfig()->GetInt(Cfg::StabilizerWindow, prevWindow))
+        {
+            AudioOut::Execute(Event::Error);
+            TraceLoggingWriteStop(local, "VirtualTracker::ModifyStabilizer", TLArg(false, "Success"));
+            return;
+        }
+        const int amount = (increase ? 1 : -1) * (fast ? 25 : 5);
+        int newWindow = prevWindow + amount;
+        if (newWindow < 1)
+        {
+            newWindow = 1;
+
+            AudioOut::Execute(Event::Min);
+            TraceLoggingWriteTagged(local, "VirtualTracker::ModifyStabilizer", TLArg(true, "Minimum"));
+        }
+        else if (newWindow > 1000)
+        {
+            newWindow = 1000;
+
+            AudioOut::Execute(Event::Max);
+            TraceLoggingWriteTagged(local, "VirtualTracker::ModifyStabilizer", TLArg(true, "Maximum"));
+        }
+        else
+        {
+            AudioOut::Execute(increase ? Event::Plus : Event::Minus);
+        }
+        GetConfig()->SetValue(Cfg::StabilizerWindow, newWindow);
+        if (m_Sampler)
+        {
+            m_Sampler->SetWindowSize(newWindow);
+        }
+
+        TraceLoggingWriteStop(local,
+                              "VirtualTracker::ModifyStabilizer",
+                              TLArg(prevWindow, "Previous"),
+                              TLArg(newWindow, "New"),
+                              TLArg(true, "Success"));
+    }
 
     bool VirtualTracker::ResetReferencePose(const XrSession session, const XrTime time)
     {
@@ -787,6 +870,52 @@ namespace tracker
                               TLArg(success, "Success"),
                               TLArg(xr::ToString(this->m_ReferencePose).c_str(), "ReferencePose"));
         return success;
+    }
+    
+    void VirtualTracker::InvalidateCalibration()
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "YawTracker::InvalidateCalibration");
+
+        TrackerBase::InvalidateCalibration();
+        if (m_Sampler)
+        {
+            m_Sampler->StopSampling();
+        }
+
+        TraceLoggingWriteStop(local, "YawTracker::InvalidateCalibration");
+    }
+
+    void VirtualTracker::SaveReferencePose(const XrTime time) const
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "VirtualTracker::SaveReferencePose", TLArg(time, "Time"));
+        if (m_Calibrated)
+        {
+            GetConfig()->SetValue(Cfg::CorX, m_ReferencePose.position.x);
+            GetConfig()->SetValue(Cfg::CorY, m_ReferencePose.position.y);
+            GetConfig()->SetValue(Cfg::CorZ, m_ReferencePose.position.z);
+            GetConfig()->SetValue(Cfg::CorA, m_ReferencePose.orientation.w);
+            GetConfig()->SetValue(Cfg::CorB, m_ReferencePose.orientation.x);
+            GetConfig()->SetValue(Cfg::CorC, m_ReferencePose.orientation.y);
+            GetConfig()->SetValue(Cfg::CorD, m_ReferencePose.orientation.z);
+        }
+        TraceLoggingWriteStop(local, "VirtualTracker::SaveReferencePose", TLArg(m_Calibrated, "Success"));
+    }
+
+    void VirtualTracker::ApplyCorManipulation(XrSession session, XrTime time)
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local,
+                               "VirtualTracker::ApplyCorManipulation",
+                               TLPArg(session, "Session"),
+                               TLArg(time, "Time"));
+        if (m_Manipulator)
+        {
+            m_Manipulator->ApplyManipulation(session, time);
+        }
+
+        TraceLoggingWriteStop(local, "VirtualTracker::ApplyCorManipulation");
     }
 
     bool VirtualTracker::ChangeOffset(XrVector3f modification)
@@ -861,63 +990,6 @@ namespace tracker
         return true;
     }
 
-    void VirtualTracker::SaveReferencePose(const XrTime time) const
-    {
-        TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "VirtualTracker::SaveReferencePose", TLArg(time, "Time"));
-        if (m_Calibrated)
-        {
-            GetConfig()->SetValue(Cfg::CorX, m_ReferencePose.position.x);
-            GetConfig()->SetValue(Cfg::CorY, m_ReferencePose.position.y);
-            GetConfig()->SetValue(Cfg::CorZ, m_ReferencePose.position.z);
-            GetConfig()->SetValue(Cfg::CorA, m_ReferencePose.orientation.w);
-            GetConfig()->SetValue(Cfg::CorB, m_ReferencePose.orientation.x);
-            GetConfig()->SetValue(Cfg::CorC, m_ReferencePose.orientation.y);
-            GetConfig()->SetValue(Cfg::CorD, m_ReferencePose.orientation.z);
-        }
-        TraceLoggingWriteStop(local, "VirtualTracker::SaveReferencePose", TLArg(m_Calibrated, "Success"));
-    }
-
-
-    bool VirtualTracker::LoadReferencePose(const XrSession session, const XrTime time)
-    {
-        TraceLocalActivity(local);
-        TraceLoggingWriteStart(local,
-                               "VirtualTracker::LoadReferencePose",
-                               TLPArg(session, "Session"),
-                               TLArg(time, "Time"));
-
-        bool success = true;
-        XrPosef refPose;
-        auto ReadValue = [&success](Cfg key, float& value) {
-            if (!GetConfig()->GetFloat(key, value))
-            {
-                success = false;
-            }
-        };
-        ReadValue(Cfg::CorX, refPose.position.x);
-        ReadValue(Cfg::CorY, refPose.position.y);
-        ReadValue(Cfg::CorZ, refPose.position.z);
-        ReadValue(Cfg::CorA, refPose.orientation.w);
-        ReadValue(Cfg::CorB, refPose.orientation.x);
-        ReadValue(Cfg::CorC, refPose.orientation.y);
-        ReadValue(Cfg::CorD, refPose.orientation.z);
-        if (success && !Quaternion::IsNormalized(refPose.orientation))
-        {
-            ErrorLog("%s: rotation values are invalid in config file", __FUNCTION__);
-            Log("you may need to save cor position separately for native OpenXR and OpenComposite");
-            TraceLoggingWriteStop(local, "VirtualTracker::LoadReferencePose", TLArg(false, "Success"));
-            return false;
-        }
-        if (success)
-        {
-            Log("reference pose successfully loaded from config file");
-            SetReferencePose(refPose);
-        }
-        TraceLoggingWriteStop(local, "VirtualTracker::LoadReferencePose", TLArg(false, "Success"));
-        return success;
-    }
-
     void VirtualTracker::LogOffsetValues() const
     {
         Log("offset values: forward = %.3f m, down = %.3f m, right = %.3f m, yaw = %.3f deg",
@@ -927,19 +999,9 @@ namespace tracker
             m_OffsetYaw / angleToRadian);
     }
 
-    void VirtualTracker::ApplyCorManipulation(XrSession session, XrTime time)
+    utility::DataSource* VirtualTracker::GetSource()
     {
-        TraceLocalActivity(local);
-        TraceLoggingWriteStart(local,
-                               "VirtualTracker::ApplyCorManipulation",
-                               TLPArg(session, "Session"),
-                               TLArg(time, "Time"));
-        if (m_Manipulator)
-        {
-            m_Manipulator->ApplyManipulation(session, time);
-        }
-
-        TraceLoggingWriteStop(local, "VirtualTracker::ApplyCorManipulation");
+        return &m_Mmf;
     }
 
     void VirtualTracker::SetReferencePose(const ::XrPosef& pose)
@@ -981,21 +1043,77 @@ namespace tracker
                               TLArg(xr::ToString(trackerPose).c_str(), "TrackerPose"));
         return true;
     }
-
-    YawTracker::YawTracker()
+    
+    bool VirtualTracker::ReadData(XrTime time, Dof& dof)
     {
-        m_Filename = "Local\\YawVRGEFile";
-        bool samplerEnabled;
-        if (GetConfig()->GetBool(Cfg::StabilizerEnabled, samplerEnabled) && samplerEnabled)
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "VirtualTracker::ReadData", TLArg(time, "Time"));
+
+        if (!m_Sampler)
         {
-            m_Sampler = new Sampler(&ReadMmf, &m_Mmf, m_Recorder);
-            Log("input stabilizer enabled");
+            if (!ReadSource(time, dof))
+            {
+                TraceLoggingWriteStop(local, "VirtualTracker::ReadData", TLArg(false, "Success"));
+                return false;
+            }
         }
+        else
+        {
+            if (!m_Sampler->ReadData(dof, time))
+            {
+                TraceLoggingWriteStop(local, "VirtualTracker::ReadData", TLArg(false, "Success"));
+                return false;
+            }
+        }
+        DebugLog("virtual tracker data: %s", xr::ToString(dof).c_str());
+
+        TraceLoggingWriteTagged(local,
+                                "VirtualTracker::GetVirtualPose",
+                                TLArg(dof.data[yaw], "Yaw"),
+                                TLArg(dof.data[pitch], "Pitch"),
+                                TLArg(dof.data[roll], "Yaw"));
+
+        TraceLoggingWriteStop(local, "VirtualTracker::ReadData", TLArg(true, "Success"));
+        return true;
     }
 
-    YawTracker ::~YawTracker()
+    bool VirtualTracker::LoadReferencePose(const XrSession session, const XrTime time)
     {
-        delete m_Sampler;
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local,
+                               "VirtualTracker::LoadReferencePose",
+                               TLPArg(session, "Session"),
+                               TLArg(time, "Time"));
+
+        bool success = true;
+        XrPosef refPose;
+        auto ReadValue = [&success](Cfg key, float& value) {
+            if (!GetConfig()->GetFloat(key, value))
+            {
+                success = false;
+            }
+        };
+        ReadValue(Cfg::CorX, refPose.position.x);
+        ReadValue(Cfg::CorY, refPose.position.y);
+        ReadValue(Cfg::CorZ, refPose.position.z);
+        ReadValue(Cfg::CorA, refPose.orientation.w);
+        ReadValue(Cfg::CorB, refPose.orientation.x);
+        ReadValue(Cfg::CorC, refPose.orientation.y);
+        ReadValue(Cfg::CorD, refPose.orientation.z);
+        if (success && !Quaternion::IsNormalized(refPose.orientation))
+        {
+            ErrorLog("%s: rotation values are invalid in config file", __FUNCTION__);
+            Log("you may need to save cor position separately for native OpenXR and OpenComposite");
+            TraceLoggingWriteStop(local, "VirtualTracker::LoadReferencePose", TLArg(false, "Success"));
+            return false;
+        }
+        if (success)
+        {
+            Log("reference pose successfully loaded from config file");
+            SetReferencePose(refPose);
+        }
+        TraceLoggingWriteStop(local, "VirtualTracker::LoadReferencePose", TLArg(false, "Success"));
+        return success;
     }
 
     bool YawTracker::ResetReferencePose(XrSession session, XrTime time)
@@ -1067,103 +1185,13 @@ namespace tracker
         return success;
     }
 
-    
-    void YawTracker::InvalidateCalibration()
-    {
-        TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "YawTracker::InvalidateCalibration");
-
-        TrackerBase::InvalidateCalibration();
-        if (m_Sampler)
-        {
-            m_Sampler->StopSampling();
-        }
-
-        TraceLoggingWriteStop(local, "YawTracker::InvalidateCalibration");
-    }
-
-    void YawTracker::ToggleStabilizer()
-    {
-        TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "YawTracker::ToggleStabilizer");
-
-        if (!m_Sampler)
-        {
-            m_Sampler = new Sampler(&ReadMmf, &m_Mmf, m_Recorder);
-            if (m_Calibrated)
-            {
-                m_Sampler->StartSampling(); 
-            }
-            GetConfig()->SetValue(Cfg::StabilizerEnabled, true);
-            AudioOut::Execute(Event::StabilizerOn);
-
-            TraceLoggingWriteStop(local, "YawTracker::ToggleStabilizer", TLArg(true, "Activated"));
-            return;
-        }
-        delete m_Sampler;
-        m_Sampler = nullptr;
-        GetConfig()->SetValue(Cfg::StabilizerEnabled, false);
-        AudioOut::Execute(Event::StabilizerOff);
-
-        TraceLoggingWriteStop(local, "YawTracker::ToggleStabilizer", TLArg(false, "Activated"));
-    }
-
-    void YawTracker::ModifyStabilizer(bool increase, bool fast)
-    {
-        TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "YawTracker::ModifyStabilizer", TLArg(increase, "Increase"), TLArg(fast, "Fast"));
-
-        int prevWindow;
-        if (!GetConfig()->GetInt(Cfg::StabilizerWindow, prevWindow))
-        {
-            AudioOut::Execute(Event::Error);
-            TraceLoggingWriteStop(local, "TrackerBase::ModifyStabilizer", TLArg(false, "Success"));
-            return;
-        }
-        const int amount = (increase ? 1 : -1) * (fast ? 25 : 5);
-        int newWindow = prevWindow + amount;
-        if (newWindow < 1)
-        {
-            newWindow = 1;
-
-            AudioOut::Execute(Event::Min);
-            TraceLoggingWriteTagged(local, "YawTracker::ModifyStabilizer", TLArg(true, "Minimum"));
-        }
-        else if (newWindow > 1000)
-        {
-            newWindow = 1000;
-
-            AudioOut::Execute(Event::Max);
-            TraceLoggingWriteTagged(local, "YawTracker::ModifyStabilizer", TLArg(true, "Maximum"));
-        }
-        else
-        {
-            AudioOut::Execute(increase ? Event::Plus : Event::Minus);
-        }
-        GetConfig()->SetValue(Cfg::StabilizerWindow, newWindow);
-        if (m_Sampler)
-        {
-            m_Sampler->SetWindowSize(newWindow);
-        }
-
-        TraceLoggingWriteStop(local,
-                              "TrackerBase::ModifyStabilizer",
-                              TLArg(prevWindow, "Previous"),
-                              TLArg(newWindow, "New"),
-                              TLArg(true, "Success"));
-    }
-
-    bool YawTracker::ReadMmf(utility::Dof& dof, XrTime now, utility::DataSource* source)
+    bool YawTracker::ReadSource(XrTime now, utility::Dof& dof)
     {
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "YawTracker::ReadMmf", TLArg(now, "Now"));
 
-        struct YawMmfData
-        {
-            float yaw, pitch, roll;
-        };
-        YawMmfData mmfData{};
-        if (!source->Read(&mmfData, sizeof(mmfData), now))
+        YawData mmfData{};
+        if (!m_Mmf.Read(&mmfData, sizeof(mmfData), now))
         {
             TraceLoggingWriteStop(local, "YawTracker::ReadMmf", TLArg(false, "Success"));
             return false;
@@ -1176,39 +1204,6 @@ namespace tracker
                               TLArg(mmfData.roll, "Roll"),
                               TLArg(mmfData.pitch, "Pitch"),
                               TLArg(true, "Success"));
-        return true;
-    }
-
-    bool YawTracker::ReadData(XrTime time, Dof& dof)
-    {
-        TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "YawTracker::ReadData", TLArg(time, "Time"));
-
-        if (!m_Sampler)
-        {
-            if (!ReadMmf(dof, time, &m_Mmf))
-            {
-                TraceLoggingWriteStop(local, "YawTracker::ReadData", TLArg(false, "Success"));
-                return false;
-            }
-        }
-        else
-        {
-            if (!m_Sampler->ReadData(dof, time))
-            {
-                TraceLoggingWriteStop(local, "YawTracker::ReadData", TLArg(false, "Success"));
-                return false;
-            }
-        }
-        DebugLog("YawData: yaw: %f, pitch: %f, roll: %f", dof.data[yaw], dof.data[pitch], dof.data[roll]);
-
-        TraceLoggingWriteTagged(local,
-                                "YawTracker::GetVirtualPose",
-                                TLArg(dof.data[yaw], "Yaw"),
-                                TLArg(dof.data[pitch], "Pitch"),
-                                TLArg(dof.data[roll], "Yaw"));
-       
-        TraceLoggingWriteStop(local, "YawTracker::ReadData", TLArg(true, "Success"));
         return true;
     }
 
@@ -1235,20 +1230,20 @@ namespace tracker
         return rigPose;
     }
 
-    bool SixDofTracker::ReadData(XrTime time, Dof& dof)
+    bool SixDofTracker::ReadSource(XrTime now, Dof& dof)
     {
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "SixDofTracker::ReadData", TLArg(time, "Time"));
-
+        TraceLoggingWriteStart(local, "SixDofTracker::ReadSource", TLArg(now, "Now"));
+        
         SixDof mmfData{};
-        if (!m_Mmf.Read(&mmfData, sizeof(mmfData), time))
+        if (!m_Mmf.Read(&mmfData, sizeof(mmfData), now))
         {
-            TraceLoggingWriteStop(local, "SixDofTracker::ReadData", TLArg(false, "Success"));
+            TraceLoggingWriteStop(local, "SixDofTracker::ReadSource", TLArg(false, "Success"));
             return false;
         }
 
         TraceLoggingWriteTagged(local,
-                                "SixDofTracker::GetVirtualPose",
+                                "SixDofTracker::ReadSource",
                                 TLArg(mmfData.sway, "Sway"),
                                 TLArg(mmfData.surge, "Surge"),
                                 TLArg(mmfData.heave, "Heave"),
@@ -1263,7 +1258,7 @@ namespace tracker
         dof.data[pitch] = static_cast<float>(mmfData.pitch);
         dof.data[roll] =  static_cast<float>(mmfData.roll);
 
-        TraceLoggingWriteStop(local, "SixDofTracker::ReadData", TLArg(true, "Success"));
+        TraceLoggingWriteStop(local, "SixDofTracker::ReadSource", TLArg(true, "Success"));
         return true;
     }
     

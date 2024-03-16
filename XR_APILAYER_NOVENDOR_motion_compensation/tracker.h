@@ -7,6 +7,11 @@
 #include "modifier.h"
 #include "output.h"
 
+namespace sampler
+{
+    class Sampler;
+}
+
 namespace tracker
 {
     class ControllerBase
@@ -51,15 +56,19 @@ namespace tracker
         void ModifyFilterStrength(bool trans, bool increase, bool fast);
         virtual void ToggleStabilizer();
         virtual void ModifyStabilizer(bool increase, bool fast);
+
         [[nodiscard]] XrPosef GetReferencePose() const;
         void SetReferencePose(const XrPosef& pose) override;
         virtual void InvalidateCalibration();
-        void SetModifierActive(const bool active) const;
-        void LogCurrentTrackerPoses(XrSession session, XrTime time, bool activated);
+        virtual void SaveReferencePose(XrTime time) const {};
+
         virtual bool ChangeOffset(XrVector3f modification);
         virtual bool ChangeRotation(float radian);
-        virtual void SaveReferencePose(XrTime time) const{};
         virtual void ApplyCorManipulation(XrSession session, XrTime time){};
+
+        void SetModifierActive(const bool active) const;
+
+        void LogCurrentTrackerPoses(XrSession session, XrTime time, bool activated);
         bool ToggleRecording() const;
 
         bool m_SkipLazyInit{false};
@@ -103,22 +112,31 @@ namespace tracker
     {
       public:
         VirtualTracker();
+        ~VirtualTracker() override;
         bool Init() override;
         bool LazyInit(XrTime time) override;
+        void ToggleStabilizer() override;
+        void ModifyStabilizer(bool increase, bool fast) override;
+
         bool ResetReferencePose(XrSession session, XrTime time) override;
+        void InvalidateCalibration() override;
+        void SaveReferencePose(XrTime time) const override;
+
+        void ApplyCorManipulation(XrSession session, XrTime time) override;
         bool ChangeOffset(XrVector3f modification) override;
         bool ChangeRotation(float radian) override;
-        void SaveReferencePose(XrTime time) const override;
         void LogOffsetValues() const;
-        void ApplyCorManipulation(XrSession session, XrTime time) override;
+
+        virtual utility::DataSource* GetSource();
+        virtual bool ReadSource(XrTime time, utility::Dof& dof) = 0;
 
       protected:
         void SetReferencePose(const XrPosef& pose) override;
         bool GetPose(XrPosef& trackerPose, XrSession session, XrTime time) override;
-        virtual bool ReadData(XrTime time, utility::Dof& dof) = 0;
+        virtual bool ReadData(XrTime time, utility::Dof& dof);
         virtual XrPosef DataToPose(const utility::Dof& dof) = 0;
 
-        Sampler* m_Sampler{nullptr};
+        sampler::Sampler* m_Sampler{nullptr};
         std::string m_Filename;
         utility::Mmf m_Mmf;
         float m_OffsetForward{0.0f}, m_OffsetDown{0.0f}, m_OffsetRight{0.0f}, m_OffsetYaw{0.0f}, m_PitchConstant{0.0f};
@@ -128,21 +146,21 @@ namespace tracker
 
         std::unique_ptr<CorManipulator> m_Manipulator{};
         bool m_LoadPoseFromFile{false};
+
+        friend class Sampler;
     };
 
     class YawTracker : public VirtualTracker
     {
       public:
-        YawTracker();
-        ~YawTracker() override;
+        YawTracker()
+        {
+            m_Filename = "Local\\YawVRGEFile";
+        }
         bool ResetReferencePose(XrSession session, XrTime time) override;
-        void InvalidateCalibration() override;
-        void ToggleStabilizer() override;
-        void ModifyStabilizer(bool increase, bool fast) override;
-        static bool ReadMmf(utility::Dof& dof, XrTime now, utility::DataSource* source);
+        bool ReadSource(XrTime now, utility::Dof& dof) override;
 
       protected:
-        bool ReadData(XrTime time, utility::Dof& dof) override;
         XrPosef DataToPose(const utility::Dof& dof) override;
 
       private:
@@ -157,7 +175,7 @@ namespace tracker
     class SixDofTracker : public VirtualTracker
     {
       protected:
-        bool ReadData(XrTime time, utility::Dof& dof) override;
+        bool ReadSource(XrTime now, utility::Dof& dof) override;
 
       private:
         struct SixDof
