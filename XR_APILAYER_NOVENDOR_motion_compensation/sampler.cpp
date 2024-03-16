@@ -24,7 +24,7 @@ namespace sampler
             // TODO: scale input parameter t0 [0..1] range?
             window = std::max(std::min(window, 1000), 1) * 1000000;
             m_Stabilizer =
-                std::make_shared<filter::EmaStabilizer>(std::vector<DofValue>{yaw, roll, pitch}, 1.f);
+                std::make_shared<filter::EmaStabilizer>(std::vector<DofValue>{yaw, roll, pitch}, 2.f);
             DebugLog("stabilizer averaging time: %u ms", window / 1000000);
         }
         GetConfig()->GetBool(Cfg::RecordSamples, m_RecordSamples);
@@ -60,6 +60,14 @@ namespace sampler
             }
         }
         m_Stabilizer->Stabilize(dof);
+        if (m_RecordSamples && m_Recorder)
+        {
+            Dof momentary;
+            if (m_Tracker->ReadSource(time, momentary))
+            {
+                m_Recorder->AddDofValues(momentary, Momentary);
+            }
+        }
 
         TraceLoggingWriteStop(local, "Sampler::ReadData", TLArg(true, "Success"));
         return true;

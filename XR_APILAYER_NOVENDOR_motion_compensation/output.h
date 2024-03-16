@@ -90,7 +90,8 @@ namespace output
     enum RecorderDofInput
     {
         Sampled = 0,
-        Read 
+        Read,
+        Momentary
     };
 
     enum RecorderPoseInput
@@ -106,6 +107,7 @@ namespace output
     {
         utility::Dof sampled{};
         utility::Dof read{};
+        utility::Dof momentary{};
     };
 
     struct PoseSample
@@ -177,10 +179,11 @@ namespace output
       public:
         PoseAndDofRecorder()
         {
-            m_HeadLine += "; Sway_Sampled; Sway_Read; Surge_Sampled; Surge_Read; Heave_Sampled; Heave_Read; "
-                          "Yaw_Sampled; Yaw_Read; Pitch_Sampled; Pitch_Read; Roll_Sampled; Roll_Read";
+            m_HeadLine += "; Sway_Sampled; Sway_Read; Sway_Momentary; Surge_Sampled; Surge_Read; Surge_Momentary; "
+                          "Heave_Sampled; Heave_Read; Heave_Momentary; Yaw_Sampled; Yaw_Read; Yaw_Momentary; "
+                          "Pitch_Sampled; Pitch_Read; Pitch_Momentary; Roll_Sampled; Roll_Read; Roll_Momentary";
         }
-        void AddDofValues(const utility::Dof& dofValues, RecorderDofInput type) override;
+        void AddDofValues(const utility::Dof& dof, RecorderDofInput type) override;
         void Write(bool newLine = true) override;
 
       private:

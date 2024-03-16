@@ -277,7 +277,7 @@ namespace output
         TraceLoggingWriteStop(local, "PoseRecorder::Stop", TLArg(false, "Stream_Closed"));
     }
 
-    void PoseAndDofRecorder::AddDofValues(const Dof& dofValues, RecorderDofInput type)
+    void PoseAndDofRecorder::AddDofValues(const Dof& dof, RecorderDofInput type)
     {
         if (!m_Started)
         {
@@ -290,10 +290,13 @@ namespace output
         switch (type)
         {
         case Sampled:
-            m_DofValues.sampled = dofValues;
+            m_DofValues.sampled = dof;
             break;
         case Read:
-            m_DofValues.read = dofValues;
+            m_DofValues.read = dof;
+            break;
+        case Momentary:
+            m_DofValues.momentary = dof;
             break;
         default:
             break;
@@ -317,12 +320,15 @@ namespace output
             PoseRecorder::Write(false);
 
             std::unique_lock lock{m_RecorderMutex};
-            m_FileStream << ";" << m_DofValues.sampled.data[sway] << ";" << m_DofValues.read.data[sway]
-                         << ";" << m_DofValues.sampled.data[surge] << ";" << m_DofValues.read.data[surge]
-                         << ";" << m_DofValues.sampled.data[heave] << ";" << m_DofValues.read.data[heave]
-                         << ";" << m_DofValues.sampled.data[yaw] << ";" << m_DofValues.read.data[yaw]
-                         << ";" << m_DofValues.sampled.data[pitch] << ";" << m_DofValues.read.data[pitch]
-                         << ";" << m_DofValues.sampled.data[roll] << ";" << m_DofValues.read.data[roll];
+            m_FileStream << ";" << m_DofValues.sampled.data[sway] << ";" << m_DofValues.read.data[sway] << ";"
+                         << m_DofValues.momentary.data[sway] << ";" << m_DofValues.sampled.data[surge] << ";"
+                         << m_DofValues.read.data[surge] << ";" << m_DofValues.momentary.data[surge] << ";"
+                         << m_DofValues.sampled.data[heave] << ";" << m_DofValues.read.data[heave] << ";"
+                         << m_DofValues.momentary.data[heave] << ";" << m_DofValues.sampled.data[yaw] << ";"
+                         << m_DofValues.read.data[yaw] << ";" << m_DofValues.momentary.data[yaw] << ";"
+                         << m_DofValues.sampled.data[pitch] << ";" << m_DofValues.read.data[pitch] << ";"
+                         << m_DofValues.momentary.data[pitch] << ";" << m_DofValues.sampled.data[roll] << ";"
+                         << m_DofValues.read.data[roll] << ";" << m_DofValues.momentary.data[roll];
             if (newLine)
             {
                 m_FileStream << "\n";
