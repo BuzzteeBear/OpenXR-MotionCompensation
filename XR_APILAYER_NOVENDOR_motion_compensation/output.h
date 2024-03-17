@@ -156,7 +156,7 @@ namespace output
         bool m_Started{false}, m_PoseRecorded{false};
         std::ofstream m_FileStream;
         XrTime m_FrameTime{};
-        std::string m_HeadLine{"Time; FrameTime; "
+        std::string m_HeadLine{"Elapsed (ms); Time; FrameTime; "
                                "X_Input; X_Filtered; X_Modified; X_Reference; X_Delta;"
                                "Y_Input; Y_Filtered; Y_Modified; Y_Reference; Y_Delta;"
                                "Z_Input; Z_Filtered; Z_Modified; Z_Reference; Z_Delta;"
@@ -165,6 +165,7 @@ namespace output
                                "C_Input; C_Filtered; C_Modified; C_Reference; C_Delta;"
                                "D_Input; D_Filtered; D_Modified; D_Reference; D_Delta"};
         std::mutex m_RecorderMutex;
+        int64_t m_StartTime{0};
 
     private:
         virtual bool Start();

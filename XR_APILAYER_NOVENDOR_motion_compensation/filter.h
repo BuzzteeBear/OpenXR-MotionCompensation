@@ -116,8 +116,8 @@ namespace filter
       public:
         virtual ~StabilizerBase() = default;
         virtual void SetWindowSize(unsigned size) = 0;
-        virtual void SetStartTime(int64_t time) = 0;
-        virtual void InsertSample(utility::Dof& sample, int64_t time) = 0;
+        virtual void SetStartTime(int64_t now) = 0;
+        virtual void InsertSample(utility::Dof& sample, int64_t now) = 0;
         virtual void Stabilize(utility::Dof& dof) = 0;
 
       protected:
@@ -130,8 +130,8 @@ namespace filter
         explicit PassThroughStabilizer(const std::vector<utility::DofValue>& relevantValues)
             : m_RelevantValues(relevantValues){};
         void SetWindowSize(unsigned size) override{};
-        void SetStartTime(int64_t time) override{};
-        void InsertSample(utility::Dof& sample, int64_t time) override;
+        void SetStartTime(int64_t now) override{};
+        void InsertSample(utility::Dof& sample, int64_t now) override;
         void Stabilize(utility::Dof& dof) override;
 
       protected:
@@ -143,26 +143,27 @@ namespace filter
     {
       public:
         explicit EmaStabilizer(const std::vector<utility::DofValue>& relevantValues, float frequency)
-            : PassThroughStabilizer(relevantValues), m_Frequency(frequency){};
-        void SetStartTime(int64_t time) override;
-        void InsertSample(utility::Dof& sample, int64_t time) override;
+            : PassThroughStabilizer(relevantValues), m_FrequencyFactor(frequency * -2.f * utility::floatPi){};
+        void SetStartTime(int64_t now) override;
+        void InsertSample(utility::Dof& sample, int64_t now) override;
         void Stabilize(utility::Dof& dof) override;
 
       protected:
         int64_t m_LastSampleTime{};
-    private:
         bool m_Initialized = false;
-        float m_Frequency{10.f};
+        float m_FrequencyFactor{0.f};
     };
+
+    
 
     class WindowStabilizer : public EmaStabilizer
     {
       public:
-        explicit WindowStabilizer(const std::vector<utility::DofValue>& relevantValues, int64_t windowSize)
-            : EmaStabilizer(relevantValues, 0), m_WindowSize(windowSize){};
+        explicit WindowStabilizer(const std::vector<utility::DofValue>& relevantValues, int64_t windowSize, float frequency = 0.f)
+            : EmaStabilizer(relevantValues, frequency), m_WindowSize(windowSize){};
         void SetWindowSize(unsigned size) override;
-        void SetStartTime(int64_t time) override;
-        void InsertSample(utility::Dof& sample, int64_t time) override;
+        void SetStartTime(int64_t now) override;
+        void InsertSample(utility::Dof& sample, int64_t now) override;
 
       protected:
         std::atomic<int64_t> m_WindowSize{0};
@@ -201,13 +202,4 @@ namespace filter
             : WindowStabilizer(relevantValues, windowSize){};
         void Stabilize(utility::Dof& dof) override;        
     };
-
-    class HybridStabilizer : public WindowStabilizer
-    {
-      public:
-        explicit HybridStabilizer(const std::vector<utility::DofValue>& relevantValues, int64_t windowSize)
-            : WindowStabilizer(relevantValues, windowSize){};
-        void Stabilize(utility::Dof& dof) override;
-    };
-
 } // namespace filter

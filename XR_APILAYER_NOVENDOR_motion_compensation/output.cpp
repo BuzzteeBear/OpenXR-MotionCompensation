@@ -192,8 +192,8 @@ namespace output
             const XrQuaternionf& dO = m_Poses.delta.orientation;
 
             const std::chrono::nanoseconds now = std::chrono::steady_clock::now().time_since_epoch();
-            
-            m_FileStream << now.count() << ";" << m_FrameTime << ";"
+            const float elapsed = ((now.count() - m_StartTime) / 1000) / 1000.f;
+            m_FileStream << elapsed << ";" << now.count() << ";" << m_FrameTime << ";"
                 << iP.x << ";" << fP.x << ";" << mP.x << ";" << rP.x << ";" << dP.x << ";"
                 << iP.y << ";" << fP.y << ";" << mP.y << ";" << rP.y << ";" << dP.y << ";"
                 << iP.z << ";" << fP.z << ";" << mP.z << ";" << rP.z << ";" << dP.z << ";"
@@ -244,6 +244,8 @@ namespace output
         if (m_FileStream.is_open())
         {
             m_Started = true;
+            const std::chrono::nanoseconds now = std::chrono::steady_clock::now().time_since_epoch();
+            m_StartTime = now.count();
             m_FileStream << m_HeadLine << "\n";
             m_FileStream.flush();
 
@@ -264,6 +266,7 @@ namespace output
         TraceLoggingWriteStart(local, "PoseRecorder::Stop");
 
         m_Started = false;
+        m_StartTime = 0;
         m_PoseRecorded = false;
         if (m_FileStream.is_open())
         {
