@@ -374,19 +374,19 @@ namespace filter
 
     BiQuadStabilizer::BiQuadFilter::BiQuadFilter(float frequency)
     {
-        const float a = tanf(utility::floatPi * frequency / m_SamplingFrequency);
-        const float a2 = a * a;
-        const float r = sinf(utility::floatPi / 4.f);
-        const float s = (a2 + 2.f * a * r + 1.f);
-        m_A = a2 / s;
-        m_D1 = 2.f * (1.f - a2) / s;
-        m_D2 = -(a2 - 2.f * a * r + 1.f) / s;
-        m_W0 = m_W1 = m_W2 = 0.f;
+        const double a = tan(M_PI * frequency / m_SamplingFrequency);
+        const double aSquare = a * a;
+        const double r = sin(M_PI_4);
+        const double s = (aSquare + 2.0 * a * r + 1.0);
+        m_A = aSquare / s;
+        m_D1 = 2.0 * (1.0 - aSquare) / s;
+        m_D2 = -(aSquare - 2.0 * a * r + 1.0) / s;
+        m_W0 = m_W1 = m_W2 = 0.0;
     }
 
     float BiQuadStabilizer::BiQuadFilter::Filter(const float value)
     {
         m_W0 = m_D1 * m_W1 + m_D2 * m_W2 + value;
-        return  m_A * (std::exchange(m_W2, m_W1) + 2.0f * std::exchange(m_W1, m_W0) + m_W0);
+        return static_cast<float>(m_A * (std::exchange(m_W2, m_W1) + 2.0f * std::exchange(m_W1, m_W0) + m_W0));
     }
 } // namespace filter

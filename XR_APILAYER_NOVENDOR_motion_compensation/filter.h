@@ -184,12 +184,12 @@ namespace filter
           private:
             float m_SamplingFrequency{600.f};
 
-            float m_A;
-            float m_D1;
-            float m_D2;
-            float m_W0;
-            float m_W1;
-            float m_W2;
+            double m_A;
+            double m_D1;
+            double m_D2;
+            double m_W0;
+            double m_W1;
+            double m_W2;
         };
 
         std::unique_ptr<BiQuadFilter> m_Filter[6]{};
