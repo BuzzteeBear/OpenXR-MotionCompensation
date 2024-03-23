@@ -41,7 +41,7 @@ namespace tracker
         {
             m_Recorder->AddFrameTime(time);
             m_Recorder->AddPose(m_ReferencePose, Reference);
-            m_Recorder->AddPose(curPose, Input);
+            m_Recorder->AddPose(curPose, Unfiltered);
             
             ApplyFilters(curPose);
             m_Recorder->AddPose(curPose, Filtered);
@@ -51,7 +51,6 @@ namespace tracker
 
             // calculate difference toward reference pose
             poseDelta = Pose::Multiply(Pose::Invert(curPose), m_ReferencePose);
-            m_Recorder->AddPose(poseDelta, Delta);
             m_Recorder->Write();
 
             if (!m_FallBackUsed)
@@ -583,6 +582,7 @@ namespace tracker
         // update forward rotation
         const XrPosef fwdRotation = {pose.orientation, {0.f, 0.f, 0.f}};
         m_TrackerModifier->SetFwdToStage(fwdRotation);
+        m_Recorder->SetFwdToStage(fwdRotation);
         if (const auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance()))
         {
             layer->SetForwardRotation(fwdRotation);

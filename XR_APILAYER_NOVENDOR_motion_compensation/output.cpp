@@ -9,6 +9,8 @@
 #include <util.h>
 #include <playsoundapi.h>
 
+using namespace xr::math;
+using namespace Pose;
 using namespace openxr_api_layer::log;
 using namespace utility;
 namespace output
@@ -99,9 +101,21 @@ namespace output
         TraceLoggingWriteStop(local, "PoseRecorder::Destroy");
     }
 
+    void PoseRecorder::SetFwdToStage(const XrPosef& pose)
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "PoseRecorder::SetFwdToStage", TLArg(xr::ToString(pose).c_str(), "Pose"));
+
+        m_StageToFwd = xr::math::Pose::Invert(pose);
+
+        TraceLoggingWriteStop(local,
+                              "PoseRecorder::SetFwdToStage",
+                              TLArg(xr::ToString(m_StageToFwd).c_str(), "Inverted Pose"));
+    }
+
     bool PoseRecorder::Toggle(bool isCalibrated)
     {
-        if (!m_Started )
+        if (!m_Started.load() )
         {
             if (isCalibrated)
             {
@@ -117,7 +131,7 @@ namespace output
 
     void PoseRecorder::AddFrameTime(XrTime time)
     {
-        if (!m_Started)
+        if (!m_Started.load())
         {
             return;
         }
@@ -131,7 +145,7 @@ namespace output
 
     void PoseRecorder::AddPose(const XrPosef& pose, RecorderPoseInput type)
     {
-        if (!m_Started)
+        if (!m_Started.load())
         {
             return;
         }
@@ -142,33 +156,29 @@ namespace output
                                TLArg(xr::ToString(pose).c_str(), "Pose"));
 
         std::unique_lock lock{m_RecorderMutex};
-        switch (type)
+        if (Reference == type)
         {
-        case Reference:
-            m_Poses.reference = std::move(pose);
-            break;
-        case Input:
-            m_Poses.input = std::move(pose);
-            break;
-        case Filtered:
-            m_Poses.filtered = std::move(pose);
-            break;
-        case Modified:
-            m_Poses.modified = std::move(pose);
-            break;
-        case Delta:
-            m_Poses.delta = std::move(pose);
-            break;
-        default:
-            break;
+            m_Ref = pose;
+            m_InvertedRef = Invert(pose);
+
+            TraceLoggingWriteStop(local, "PoseRecorder::AddReference", TLArg(true, "Success"));
+            return;
         }
-        if (!m_PoseRecorded)
+
+        
+        const XrPosef deltaFwd = xr::Normalize(Multiply(Multiply(pose, m_InvertedRef), m_StageToFwd));
+        const XrVector3f angles = utility::ToEulerAngles(deltaFwd.orientation);
+        
+
+        m_Poses[type] = {deltaFwd.position, angles};
+
+        if (Modified == type && !m_PoseRecorded.load())
         {
             // update start time to avoid offset on elapsed time
             const std::chrono::nanoseconds now = std::chrono::steady_clock::now().time_since_epoch();
             m_StartTime = now.count();
+            m_PoseRecorded = true;
         }
-        m_PoseRecorded = true;
 
         TraceLoggingWriteStop(local, "PoseRecorder::AddReference", TLArg(true, "Success"));
     }
@@ -193,28 +203,23 @@ namespace output
         }
         if (m_FileStream.is_open())
         {
-            const XrVector3f& iP = m_Poses.input.position;            
-            const XrVector3f& fP = m_Poses.filtered.position;
-            const XrVector3f& mP = m_Poses.modified.position;
-            const XrVector3f& rP = m_Poses.reference.position;
-            const XrVector3f& dP = m_Poses.delta.position;
+            const XrVector3f& iP = m_Poses[Unfiltered].first;            
+            const XrVector3f& fP = m_Poses[Filtered].first;
+            const XrVector3f& mP = m_Poses[Modified].first;
 
-            const XrQuaternionf& iO = m_Poses.input.orientation;
-            const XrQuaternionf& fO = m_Poses.filtered.orientation;
-            const XrQuaternionf& mO = m_Poses.modified.orientation;
-            const XrQuaternionf& rO = m_Poses.reference.orientation;
-            const XrQuaternionf& dO = m_Poses.delta.orientation;
+            const XrVector3f& iO = m_Poses[Unfiltered].second;
+            const XrVector3f& fO = m_Poses[Filtered].second;
+            const XrVector3f& mO = m_Poses[Modified].second;
 
             const std::chrono::nanoseconds now = std::chrono::steady_clock::now().time_since_epoch();
             const float elapsed = ((now.count() - m_StartTime) / 1000) / 1000.f;
             m_FileStream << elapsed << ";" << now.count() << ";" << m_FrameTime << ";"
-                << iP.x << ";" << fP.x << ";" << mP.x << ";" << rP.x << ";" << dP.x << ";"
-                << iP.y << ";" << fP.y << ";" << mP.y << ";" << rP.y << ";" << dP.y << ";"
-                << iP.z << ";" << fP.z << ";" << mP.z << ";" << rP.z << ";" << dP.z << ";"
-                << iO.x << ";" << fO.x << ";" << mO.x << ";" << rO.x << ";" << dO.x << ";"
-                << iO.y << ";" << fO.y << ";" << mO.y << ";" << rO.y << ";" << dO.y << ";"
-                << iO.z << ";" << fO.z << ";" << mO.z << ";" << rO.z << ";" << dO.z << ";"
-                << iO.w << ";" << fO.w << ";" << mO.w << ";" << rO.w << ";" << dO.w;
+                << iP.x * 1000.f << ";" << fP.x * 1000.f << ";" << mP.x * 1000.f << ";" 
+                << iP.z * 1000.f << ";" << fP.z * 1000.f << ";" << mP.z * 1000.f << ";" 
+                << iP.y * 1000.f << ";" << fP.y * 1000.f << ";" << mP.y * 1000.f << ";"
+                << iO.y / angleToRadian << ";" << fO.y / angleToRadian << ";" << mO.y / angleToRadian << ";"
+                << iO.z / angleToRadian << ";" << fO.z / angleToRadian << ";" << mO.z / angleToRadian << ";"
+                << iO.x / -angleToRadian << ";" << fO.x / -angleToRadian << ";" << mO.x / -angleToRadian << ";";
             if (newLine)
             {
                 m_FileStream << "\n";
@@ -299,7 +304,7 @@ namespace output
 
     void PoseAndDofRecorder::AddDofValues(const Dof& dof, RecorderDofInput type)
     {
-        if (!m_Started)
+        if (!m_Started.load())
         {
             return;
         }
@@ -327,7 +332,7 @@ namespace output
 
     void PoseAndDofRecorder::Write(bool sampled, bool newLine)
     {
-        if (!m_Started || !m_PoseRecorded || (m_Sampling.load() && m_RecordSamples && !sampled))
+        if (!m_Started.load() || !m_PoseRecorded.load() || (m_Sampling.load() && m_RecordSamples && !sampled))
         {
             return;
         }

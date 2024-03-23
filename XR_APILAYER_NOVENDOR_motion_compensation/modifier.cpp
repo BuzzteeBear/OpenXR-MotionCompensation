@@ -43,33 +43,6 @@ namespace modifier
                               TLArg(xr::ToString(m_StageToFwd).c_str(), "Inverted Pose"));
     }
 
-    XrVector3f ModifierBase::ToEulerAngles(XrQuaternionf q)
-    {
-        TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "ModifierBase::ToEulerAngles", TLArg(xr::ToString(q).c_str(), "Quaternion"));
-
-        XrVector3f angles;
-
-        // pitch (x-axis rotation)
-        const float sinp = std::sqrt(1 + 2 * (q.w * q.x - q.z * q.y));
-        const float cosp = std::sqrt(1 - 2 * (q.w * q.x - q.z * q.y));
-        angles.x = 2 * std::atan2f(sinp, cosp) - utility::floatPi / 2;
-
-        // yaw (y-axis rotation)
-        const float siny_cosp = 2 * (q.w * q.y + q.z * q.x);
-        const float cosy_cosp = 1 - 2 * (q.x * q.x + q.y * q.y);
-        angles.y = std::atan2f(siny_cosp, cosy_cosp);
-
-        // roll (z-axis rotation)
-        const float sinr_cosp = 2 * (q.w * q.z + q.x * q.y);
-        const float cosr_cosp = 1 - 2 * (q.z * q.z + q.x * q.x);
-        angles.z = std::atan2f(sinr_cosp, cosr_cosp);
-
-        TraceLoggingWriteStop(local, "ModifierBase::ToEulerAngles", TLArg(xr::ToString(angles).c_str(), "Angles"));
-
-        return angles;
-    }
-
     TrackerModifier::TrackerModifier()
     {
         TraceLocalActivity(local);
@@ -124,7 +97,7 @@ namespace modifier
         {
             // apply rotation scaling
             const XrPosef deltaInvFwd = Multiply(Invert(refFwd), curFwd);
-            XrVector3f angles = ToEulerAngles(deltaInvFwd.orientation);
+            XrVector3f angles = utility::ToEulerAngles(deltaInvFwd.orientation);
             TraceLoggingWriteTagged(local,
                                     "TrackerModifier::Apply",
                                     TLArg(xr::ToString(angles).c_str(), "Original Angles"));
@@ -236,7 +209,7 @@ namespace modifier
         if (m_ApplyRotation)
         {
             // apply rotation scaling
-            XrVector3f angles = ToEulerAngles(Invert(deltaFwd).orientation);
+            XrVector3f angles = utility::ToEulerAngles(Invert(deltaFwd).orientation);
             TraceLoggingWriteTagged(local,
                                     "HmdModifier::Apply",
                                     TLArg(xr::ToString(angles).c_str(), "Original Angles"));

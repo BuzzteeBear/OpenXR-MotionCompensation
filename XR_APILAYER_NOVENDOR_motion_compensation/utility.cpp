@@ -4,6 +4,7 @@
 
 #include <DirectXMath.h>
 #include <log.h>
+#include <util.h>
 #include "layer.h"
 #include "config.h"
 #include "output.h"
@@ -16,6 +17,33 @@ using namespace DirectX;
 
 namespace utility
 {
+    XrVector3f ToEulerAngles(XrQuaternionf q)
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "ModifierBase::ToEulerAngles", TLArg(xr::ToString(q).c_str(), "Quaternion"));
+
+        XrVector3f angles;
+
+        // pitch (x-axis rotation)
+        const double sinP = std::sqrt(1 + 2.0 * (q.w * q.x - q.z * q.y));
+        const double cosP = std::sqrt(1 - 2.0 * (q.w * q.x - q.z * q.y));
+        angles.x = static_cast<float>(2 * std::atan2(sinP, cosP) - M_PI / 2);
+
+        // yaw (y-axis rotation)
+        const double sinYCosP = 2.0 * (q.w * q.y + q.z * q.x);
+        const double cosYCosP = 1 - 2.0 * (q.x * q.x + q.y * q.y);
+        angles.y = static_cast<float>(std::atan2(sinYCosP, cosYCosP));
+
+        // roll (z-axis rotation)
+        const double sinRCosP = 2.0 * (q.w * q.z + q.x * q.y);
+        const double cosRCosP = 1 - 2.0 * (q.z * q.z + q.x * q.x);
+        angles.z = static_cast<float>(std::atan2(sinRCosP, cosRCosP));
+
+        TraceLoggingWriteStop(local, "ModifierBase::ToEulerAngles", TLArg(xr::ToString(angles).c_str(), "Angles"));
+
+        return angles;
+    }
+
     AutoActivator::AutoActivator(const std::shared_ptr<input::InputHandler>& input)
     {
         m_Input = input;

@@ -25,18 +25,20 @@ namespace utility
         pitch
     };
 
+    XrVector3f ToEulerAngles(XrQuaternionf q);
+
     class AutoActivator
     {
+      public:
+        explicit AutoActivator(const std::shared_ptr<input::InputHandler>& input);
+        void ActivateIfNecessary(XrTime time);
+
       private:
         std::shared_ptr<input::InputHandler> m_Input;
         bool m_Activate{false};
         bool m_Countdown{false};
         int m_SecondsLeft{0};
         XrTime m_ActivationTime{0};
-
-      public:
-        explicit AutoActivator(const std::shared_ptr<input::InputHandler>& input);
-        void ActivateIfNecessary(XrTime time);
     };
 
     template <typename Sample>

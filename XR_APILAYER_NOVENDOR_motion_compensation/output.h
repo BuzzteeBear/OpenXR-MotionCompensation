@@ -95,12 +95,11 @@ namespace output
     };
 
     enum RecorderPoseInput
-    {
-        Reference = 0,
-        Input,
+    { 
+        Unfiltered = 0,
         Filtered,
         Modified,
-        Delta
+        Reference
     };
 
     struct DofSample
@@ -110,20 +109,12 @@ namespace output
         utility::Dof momentary{};
     };
 
-    struct PoseSample
-    {
-        XrPosef input{};
-        XrPosef filtered{};
-        XrPosef modified{};
-        XrPosef delta{};
-        XrPosef reference{};
-    };
-
     class RecorderBase
     {
       public:
         RecorderBase() = default;
         virtual ~RecorderBase() = default;
+        virtual void SetFwdToStage(const XrPosef& pose) = 0;
         virtual bool Toggle(bool isCalibrated) = 0;
         virtual void AddFrameTime(XrTime time) = 0;
         virtual void AddPose(const XrPosef& pose, RecorderPoseInput type) = 0;
@@ -137,6 +128,7 @@ namespace output
     {
       public:
         bool Toggle(bool isCalibrated) override;
+        void SetFwdToStage(const XrPosef& pose) override {};
         void AddFrameTime(XrTime time) override{};
         void AddPose(const XrPosef& pose, RecorderPoseInput type) override{};
         void AddDofValues(const utility::Dof& dofValues, RecorderDofInput type) override{};
@@ -148,6 +140,7 @@ namespace output
       public:
         PoseRecorder();
         ~PoseRecorder() override;
+        void SetFwdToStage(const XrPosef& pose) override;
         bool Toggle(bool isCalibrated) override;
         void AddFrameTime(XrTime time) override;
         void AddPose(const XrPosef& pose, RecorderPoseInput type) override;
@@ -155,18 +148,18 @@ namespace output
         void Write(bool sampled , bool newLine) override;
 
       protected:
-        bool m_Started{false}, m_PoseRecorded{false}, m_RecordSamples{false};
-        ;
+        std::atomic_bool m_Started{false}, m_PoseRecorded{false};
+        bool m_RecordSamples{false};
+        
         std::ofstream m_FileStream;
         XrTime m_FrameTime{};
         std::string m_HeadLine{"Elapsed (ms); Time; FrameTime; "
-                               "X_Input; X_Filtered; X_Modified; X_Reference; X_Delta;"
-                               "Y_Input; Y_Filtered; Y_Modified; Y_Reference; Y_Delta;"
-                               "Z_Input; Z_Filtered; Z_Modified; Z_Reference; Z_Delta;"
-                               "A_Input; A_Filtered; A_Modified; A_Reference; A_Delta;"
-                               "B_Input; B_Filtered; B_Modified; B_Reference; B_Delta;"
-                               "C_Input; C_Filtered; C_Modified; C_Reference; C_Delta;"
-                               "D_Input; D_Filtered; D_Modified; D_Reference; D_Delta"};
+                               "Sway_Unfiltered; Sway_Filtered; Sway_Modified;"
+                               "Surge_Unfiltered; Surge_Filtered; Surge_Modified;"
+                               "Heave_Unfiltered; Heave_Filtered; Heave_Modified;"
+                               "Yaw_Unfiltered; Yaw_Filtered; Yaw_Modified;"
+                               "Roll_Unfiltered; Roll_Filtered; Roll_Modified;"
+                               "Pitch_Unfiltered; Pitch_Filtered; Pitch_Modified"};
         std::mutex m_RecorderMutex;
         int64_t m_StartTime{0};
 
@@ -174,7 +167,9 @@ namespace output
         virtual bool Start();
         virtual void Stop();
 
-        PoseSample m_Poses{};
+        XrPosef m_StageToFwd{xr::math::Pose::Identity()};
+        std::pair<XrVector3f, XrVector3f> m_Poses[3]{};
+        XrPosef m_Ref{xr::math::Pose::Identity()}, m_InvertedRef{xr::math::Pose::Identity()};
         uint32_t m_Counter{0};
     };
 
