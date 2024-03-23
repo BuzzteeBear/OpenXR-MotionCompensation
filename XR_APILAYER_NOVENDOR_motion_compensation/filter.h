@@ -143,11 +143,9 @@ namespace filter
     {
       public:
         explicit LowPassStabilizer(const std::vector<utility::DofValue>& relevantValues);
-        void SetStartTime(int64_t now) override;
         void Read(utility::Dof& dof) override;
 
       protected:
-        int64_t m_LastSampleTime{};
         bool m_Initialized = false;
         float m_Frequency{0.f};
     };
@@ -158,7 +156,11 @@ namespace filter
         explicit EmaStabilizer(const std::vector<utility::DofValue>& relevantValues)
             : LowPassStabilizer(relevantValues){};
         void SetFrequency(float frequency) override;
+        void SetStartTime(int64_t now) override;
         void Insert(utility::Dof& dof, int64_t now) override;
+
+      private:
+        int64_t m_LastSampleTime{};
     };
 
     class BiQuadStabilizer : public LowPassStabilizer
@@ -171,6 +173,8 @@ namespace filter
         void Insert(utility::Dof& dof, int64_t now) override;
 
       private:
+        void ResetFilters();
+
         class BiQuadFilter
         {
           public:
@@ -187,9 +191,7 @@ namespace filter
             float m_W1;
             float m_W2;
         };
-        void ResetFilters();
 
-        int64_t m_StartTime{};
         std::unique_ptr<BiQuadFilter> m_Filter[6]{};
     };
 } // namespace filter

@@ -93,7 +93,7 @@ namespace output
         TraceLoggingWriteStart(local, "PoseRecorder::Destroy");
         if (m_FileStream.is_open())
         {
-            TraceLoggingWriteTagged(local, "PoseRecorder::Stop", TLArg(true, "Stream_Closed"));
+            TraceLoggingWriteTagged(local, "PoseRecorder::Destroy", TLArg(true, "Stream_Closed"));
             m_FileStream.close();
         }
         TraceLoggingWriteStop(local, "PoseRecorder::Destroy");
@@ -140,6 +140,8 @@ namespace output
                                "PoseRecorder::AddReference",
                                TLArg(static_cast<uint32_t>(type), "Type"),
                                TLArg(xr::ToString(pose).c_str(), "Pose"));
+
+        std::unique_lock lock{m_RecorderMutex};
         switch (type)
         {
         case Reference:
@@ -173,20 +175,21 @@ namespace output
 
     void PoseRecorder::Write(const bool sampled, const bool newLine)
     {
-        if (!m_Started || (m_Sampling && m_RecordSamples && !sampled))
+        if (!m_Started || (m_Sampling.load() && m_RecordSamples && !sampled))
         {
             return;
         }
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "PoseRecorder::Write", TLArg(newLine, "NewLine"));
+
+        if (++m_Counter > m_RecorderMax)
+        {
+            Start();
+        }
         std::unique_ptr<std::unique_lock<std::mutex>> lock{};
         if (newLine)
         {
             lock = std::make_unique<std::unique_lock<std::mutex>>(std::unique_lock{m_RecorderMutex});
-        }
-        if (++m_Counter > m_RecorderMax)
-        {
-            Start();
         }
         if (m_FileStream.is_open())
         {
@@ -228,6 +231,8 @@ namespace output
     {
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "PoseRecorder::Start");
+
+        std::unique_lock lock{m_RecorderMutex};
         if (m_FileStream.is_open())
         {
             TraceLoggingWriteTagged(local, "PoseRecorder::Start", TLArg(true, "Previous_Stream_Closed"));
@@ -322,7 +327,7 @@ namespace output
 
     void PoseAndDofRecorder::Write(bool sampled, bool newLine)
     {
-        if (!m_Started || !m_PoseRecorded || (m_Sampling && m_RecordSamples && !sampled))
+        if (!m_Started || !m_PoseRecorded || (m_Sampling.load() && m_RecordSamples && !sampled))
         {
             return;
         }

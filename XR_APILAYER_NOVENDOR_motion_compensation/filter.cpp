@@ -242,16 +242,7 @@ namespace filter
         TraceLoggingWriteStop(local, "LowPassStabilizer::LowPassStabilizer");
     }
 
-    void LowPassStabilizer::SetStartTime(int64_t now)
-    {
-        TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "LowPassStabilizer::SetStartTime", TLArg(now, "Now"));
-
-        m_LastSampleTime = now;
-        m_Initialized = false;
-
-        TraceLoggingWriteStop(local, "LowPassStabilizer::SetStartTime");
-    }
+    
     void LowPassStabilizer::Read(utility::Dof& dof)
     {
         TraceLocalActivity(local);
@@ -274,6 +265,18 @@ namespace filter
         m_Frequency = frequency;
 
         TraceLoggingWriteStop(local, "EmaStabilizer::SetFrequency");
+    }
+
+    void EmaStabilizer::SetStartTime(int64_t now)
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "LowPassStabilizer::SetStartTime", TLArg(now, "Now"));
+
+        std::unique_lock lock(m_SampleMutex);
+        m_LastSampleTime = now;
+        m_Initialized = false;
+
+        TraceLoggingWriteStop(local, "LowPassStabilizer::SetStartTime");
     }
 
     void EmaStabilizer::Insert(utility::Dof& dof, int64_t now)
@@ -323,8 +326,6 @@ namespace filter
         TraceLoggingWriteStart(local, "BiQuadStabilizer::SetStartTime", TLArg(now, "Now"));
 
         std::unique_lock lock(m_SampleMutex);
-
-        LowPassStabilizer::SetStartTime(now);
         ResetFilters();
 
         TraceLoggingWriteStop(local, "BiQuadStabilizer::SetStartTime");
@@ -339,7 +340,6 @@ namespace filter
                                TLArg(now, "Now"));
 
         std::unique_lock lock(m_SampleMutex);
-        m_LastSampleTime = now;
         for (const DofValue value : m_RelevantValues)
         {
             if (!m_Initialized)
@@ -355,6 +355,21 @@ namespace filter
         m_Initialized = true;
 
         TraceLoggingWriteStop(local, "BiQuadStabilizer::Insert");
+    }
+
+    
+    void BiQuadStabilizer::ResetFilters()
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "BiQuadStabilizer::ResetFilters");
+
+        for (const DofValue value : m_RelevantValues)
+        {
+            m_Filter[value] = std::make_unique<BiQuadFilter>(BiQuadFilter(m_Frequency));
+        }
+        m_Initialized = false;
+
+        TraceLoggingWriteStop(local, "BiQuadStabilizer::ResetFilters");
     }
 
     BiQuadStabilizer::BiQuadFilter::BiQuadFilter(float frequency)
@@ -373,20 +388,5 @@ namespace filter
     {
         m_W0 = m_D1 * m_W1 + m_D2 * m_W2 + value;
         return  m_A * (std::exchange(m_W2, m_W1) + 2.0f * std::exchange(m_W1, m_W0) + m_W0);
-    }
-
-
-    void BiQuadStabilizer::ResetFilters()
-    {
-        TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "BiQuadStabilizer::ResetFilters");
-
-        for (const DofValue value : m_RelevantValues)
-        {
-            m_Filter[value] = std::make_unique<BiQuadFilter>(BiQuadFilter(m_Frequency));
-        }
-        m_Initialized = false;
-
-        TraceLoggingWriteStop(local, "BiQuadStabilizer::ResetFilters");
     }
 } // namespace filter

@@ -130,7 +130,7 @@ namespace output
         virtual void AddDofValues(const utility::Dof& dofValues, RecorderDofInput type) = 0;
         virtual void Write(bool sampled = false, bool newLine = true) = 0;
 
-        std::atomic<bool> m_Sampling{false};
+        std::atomic_bool m_Sampling{false};
     };
 
     class NoRecorder final : public RecorderBase

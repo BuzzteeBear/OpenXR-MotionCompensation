@@ -43,7 +43,7 @@ namespace sampler
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "Sampler::ReadData", TLArg(now, "Now"));
 
-        if (!m_IsSampling)
+        if (!m_IsSampling.load())
         {
             // try to reconnect
             if (m_Tracker->GetSource()->Open(0))
@@ -76,7 +76,7 @@ namespace sampler
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "Sampler::StartSampling");
 
-        if (m_IsSampling)
+        if (m_IsSampling.load())
         {
             return;
         }
@@ -123,7 +123,7 @@ namespace sampler
         const nanoseconds start = steady_clock::now().time_since_epoch();
         m_Stabilizer->SetStartTime(start.count());
 
-        while (m_IsSampling)
+        while (m_IsSampling.load())
         {
             // set timing
             auto now = steady_clock::now();
