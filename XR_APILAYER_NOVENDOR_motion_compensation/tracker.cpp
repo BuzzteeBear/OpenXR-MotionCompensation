@@ -884,6 +884,11 @@ namespace tracker
         }
         m_Calibrated = success;
 
+        if (m_Calibrated && m_Sampler)
+        {
+            m_Sampler->StartSampling();
+        }
+
         TraceLoggingWriteStop(local,
                               "VirtualTracker::ResetReferencePose",
                               TLArg(success, "Success"),

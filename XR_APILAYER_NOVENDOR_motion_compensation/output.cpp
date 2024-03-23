@@ -219,7 +219,7 @@ namespace output
                 << iP.y * 1000.f << ";" << fP.y * 1000.f << ";" << mP.y * 1000.f << ";"
                 << iO.y / angleToRadian << ";" << fO.y / angleToRadian << ";" << mO.y / angleToRadian << ";"
                 << iO.z / angleToRadian << ";" << fO.z / angleToRadian << ";" << mO.z / angleToRadian << ";"
-                << iO.x / -angleToRadian << ";" << fO.x / -angleToRadian << ";" << mO.x / -angleToRadian << ";";
+                << iO.x / -angleToRadian << ";" << fO.x / -angleToRadian << ";" << mO.x / -angleToRadian;
             if (newLine)
             {
                 m_FileStream << "\n";
