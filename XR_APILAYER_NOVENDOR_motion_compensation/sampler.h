@@ -15,13 +15,15 @@ namespace sampler
     class Sampler
     {
       public:
-        Sampler(tracker::VirtualTracker* tracker, const std::shared_ptr<output::RecorderBase>& recorder);
+        Sampler(tracker::VirtualTracker* tracker,
+                const std::vector<utility::DofValue>& relevantValues,
+                const std::shared_ptr<output::RecorderBase>& recorder);
         ~Sampler();
 
-        void SetWindowSize(unsigned size) const;
+        void SetFrequency(float frequency) const;
         void StartSampling();
         void StopSampling();
-        bool ReadData(utility::Dof& dof, XrTime time);
+        bool ReadData(utility::Dof& dof, XrTime now);
 
       private:
         void DoSampling();
@@ -31,7 +33,7 @@ namespace sampler
         tracker::VirtualTracker* m_Tracker{nullptr};
         std::shared_ptr<filter::StabilizerBase> m_Stabilizer{};
         std::chrono::microseconds m_Interval{1ms};
-        bool m_RecordSamples{false};
+        bool m_SampleRecording{false};
         std::shared_ptr<output::RecorderBase> m_Recorder{};
     };
 } // namespace sampler

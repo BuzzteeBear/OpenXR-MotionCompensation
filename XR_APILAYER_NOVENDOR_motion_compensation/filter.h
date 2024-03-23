@@ -115,10 +115,10 @@ namespace filter
     {
       public:
         virtual ~StabilizerBase() = default;
-        virtual void SetWindowSize(unsigned size) = 0;
+        virtual void SetFrequency(float frequency) = 0;
         virtual void SetStartTime(int64_t now) = 0;
-        virtual void InsertSample(utility::Dof& sample, int64_t now) = 0;
-        virtual void Stabilize(utility::Dof& dof) = 0;
+        virtual void Insert(utility::Dof& sample, int64_t now) = 0;
+        virtual void Read(utility::Dof& dof) = 0;
 
       protected:
         std::mutex m_SampleMutex;
@@ -129,77 +129,67 @@ namespace filter
       public:
         explicit PassThroughStabilizer(const std::vector<utility::DofValue>& relevantValues)
             : m_RelevantValues(relevantValues){};
-        void SetWindowSize(unsigned size) override{};
+        void SetFrequency(float frequency) override{};
         void SetStartTime(int64_t now) override{};
-        void InsertSample(utility::Dof& sample, int64_t now) override;
-        void Stabilize(utility::Dof& dof) override;
+        void Insert(utility::Dof& dof, int64_t now) override;
+        void Read(utility::Dof& dof) override;
 
       protected:
         std::vector<utility::DofValue> m_RelevantValues;
         utility::Dof m_CurrentSample{};
     };
 
-    class EmaStabilizer : public PassThroughStabilizer
+    class LowPassStabilizer : public PassThroughStabilizer
     {
       public:
-        explicit EmaStabilizer(const std::vector<utility::DofValue>& relevantValues, float frequency)
-            : PassThroughStabilizer(relevantValues), m_FrequencyFactor(frequency * -2.f * utility::floatPi){};
+        explicit LowPassStabilizer(const std::vector<utility::DofValue>& relevantValues);
         void SetStartTime(int64_t now) override;
-        void InsertSample(utility::Dof& sample, int64_t now) override;
-        void Stabilize(utility::Dof& dof) override;
+        void Read(utility::Dof& dof) override;
 
       protected:
         int64_t m_LastSampleTime{};
         bool m_Initialized = false;
-        float m_FrequencyFactor{0.f};
+        float m_Frequency{0.f};
     };
 
-    
-
-    class WindowStabilizer : public EmaStabilizer
+    class EmaStabilizer : public LowPassStabilizer
     {
       public:
-        explicit WindowStabilizer(const std::vector<utility::DofValue>& relevantValues, int64_t windowSize, float frequency = 0.f)
-            : EmaStabilizer(relevantValues, frequency), m_WindowSize(windowSize){};
-        void SetWindowSize(unsigned size) override;
+        explicit EmaStabilizer(const std::vector<utility::DofValue>& relevantValues)
+            : LowPassStabilizer(relevantValues){};
+        void SetFrequency(float frequency) override;
+        void Insert(utility::Dof& dof, int64_t now) override;
+    };
+
+    class BiQuadStabilizer : public LowPassStabilizer
+    {
+      public:
+        explicit BiQuadStabilizer(const std::vector<utility::DofValue>& relevantValues)
+            : LowPassStabilizer(relevantValues){};
+        void SetFrequency(float frequency) override;
         void SetStartTime(int64_t now) override;
-        void InsertSample(utility::Dof& sample, int64_t now) override;
+        void Insert(utility::Dof& dof, int64_t now) override;
 
-      protected:
-        std::atomic<int64_t> m_WindowSize{0};
-        int64_t m_WindowHalf{0};
-        std::multimap<float, std::pair<int64_t, int64_t>> m_Samples[6]{};
-    };
+      private:
+        class BiQuadFilter
+        {
+          public:
+            BiQuadFilter(float frequency);
+            float Filter(float value);
 
-    class AverageStabilizer : public WindowStabilizer
-    {
-      public:
-        explicit AverageStabilizer(const std::vector<utility::DofValue>& relevantValues, int64_t windowSize)
-            : WindowStabilizer(relevantValues, windowSize){};
-        void Stabilize(utility::Dof& dof) override;
-    };
+          private:
+            float m_SamplingFrequency{600.f};
 
-    class WeightedAverageStabilizer : public WindowStabilizer
-    {
-      public:
-        explicit WeightedAverageStabilizer(const std::vector<utility::DofValue>& relevantValues, int64_t windowSize)
-            : WindowStabilizer(relevantValues, windowSize){};
-        void Stabilize(utility::Dof& dof) override;
-    };
+            float m_A;
+            float m_D1;
+            float m_D2;
+            float m_W0;
+            float m_W1;
+            float m_W2;
+        };
+        void ResetFilters();
 
-    class MedianStabilizer : public WindowStabilizer
-    {
-      public:
-        explicit MedianStabilizer(const std::vector<utility::DofValue>& relevantValues, int64_t windowSize)
-            : WindowStabilizer(relevantValues, windowSize){};
-        void Stabilize(utility::Dof& dof) override;
-    };
-
-    class WeightedMedianStabilizer : public WindowStabilizer
-    {
-      public:
-        explicit WeightedMedianStabilizer(const std::vector<utility::DofValue>& relevantValues, int64_t windowSize)
-            : WindowStabilizer(relevantValues, windowSize){};
-        void Stabilize(utility::Dof& dof) override;        
+        int64_t m_StartTime{};
+        std::unique_ptr<BiQuadFilter> m_Filter[6]{};
     };
 } // namespace filter

@@ -208,16 +208,16 @@ namespace filter
         m_ThirdStage = rotation;
     }
 
-    void PassThroughStabilizer::InsertSample(utility::Dof& sample, int64_t now)
+    void PassThroughStabilizer::Insert(utility::Dof& dof, int64_t now)
     {
         std::unique_lock lock(m_SampleMutex);
-        m_CurrentSample = sample;
+        m_CurrentSample = dof;
     }
 
-    void PassThroughStabilizer::Stabilize(utility::Dof& dof)
+    void PassThroughStabilizer::Read(utility::Dof& dof)
     {
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "PassThroughStabilizer::Stabilize");
+        TraceLoggingWriteStart(local, "PassThroughStabilizer::Read");
 
         std::unique_lock lock(m_SampleMutex);
         for (const DofValue value : m_RelevantValues)
@@ -225,189 +225,168 @@ namespace filter
             dof.data[value] = m_CurrentSample.data[value];
         }
 
-        TraceLoggingWriteStop(local, "PassThroughStabilizer::Stabilize", TLArg(xr::ToString(dof).c_str(), "Dof")); 
+        TraceLoggingWriteStop(local, "PassThroughStabilizer::Read", TLArg(xr::ToString(dof).c_str(), "Dof")); 
     }
 
-    void EmaStabilizer::SetStartTime(int64_t now)
+    LowPassStabilizer::LowPassStabilizer(const std::vector<utility::DofValue>& relevantValues): PassThroughStabilizer(relevantValues)
     {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "LowPassStabilizer::LowPassStabilizer");
+
+        float frequency;
+        GetConfig()->GetFloat(Cfg::StabilizerFrequency, frequency);
+        frequency = std::min(std::max(frequency, 0.1f), 100.f);
+        m_Frequency = frequency;
+
+        DebugLog("stabilizer frequency: %.4f", frequency);
+        TraceLoggingWriteStop(local, "LowPassStabilizer::LowPassStabilizer");
+    }
+
+    void LowPassStabilizer::SetStartTime(int64_t now)
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "LowPassStabilizer::SetStartTime", TLArg(now, "Now"));
+
         m_LastSampleTime = now;
         m_Initialized = false;
+
+        TraceLoggingWriteStop(local, "LowPassStabilizer::SetStartTime");
+    }
+    void LowPassStabilizer::Read(utility::Dof& dof)
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "LowPassStabilizer::Read", TLArg(xr::ToString(dof).c_str(), "DofIn"));
+
+        std::unique_lock lock(m_SampleMutex);
+        for (const DofValue value : m_RelevantValues)
+        {
+            dof.data[value] = m_CurrentSample.data[value];
+        }
+        TraceLoggingWriteStop(local, "LowPassStabilizer::Read", TLArg(xr::ToString(dof).c_str(), "DofOut"));
     }
 
-    void EmaStabilizer::InsertSample(utility::Dof& sample, int64_t now)
+    void EmaStabilizer::SetFrequency(const float frequency)
     {
-        const float duration = (now - std::exchange(m_LastSampleTime, now)) / 1e9f;
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "EmaStabilizer::SetFrequency", TLArg(frequency, "Frequency"));
+
         std::unique_lock lock(m_SampleMutex);
+        m_Frequency = frequency;
+
+        TraceLoggingWriteStop(local, "EmaStabilizer::SetFrequency");
+    }
+
+    void EmaStabilizer::Insert(utility::Dof& dof, int64_t now)
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local,
+                               "EmaStabilizer::Insert",
+                               TLArg(xr::ToString(dof).c_str(), "Sample"),
+                               TLArg(now, "Now"));
+
+        std::unique_lock lock(m_SampleMutex);
+        const float duration = (now - std::exchange(m_LastSampleTime, now)) / 1e9f;
         if (!m_Initialized)
         {
             for (const DofValue value : m_RelevantValues)
             {
-                m_CurrentSample.data[value] = sample.data[value];
+                m_CurrentSample.data[value] = dof.data[value];
             }
             m_Initialized = true;
+            TraceLoggingWriteStop(local, "EmaStabilizer::Insert", TLArg(true, "InitialSample"));
             return;
         }
 
-        const float factor = 1 - exp(duration * m_FrequencyFactor);
+        const float factor = 1 - exp(duration * -2.f * utility::floatPi * m_Frequency);
         for (const DofValue value : m_RelevantValues)
         {
-            m_CurrentSample.data[value] += (sample.data[value] - m_CurrentSample.data[value]) * factor;
+            m_CurrentSample.data[value] += (dof.data[value] - m_CurrentSample.data[value]) * factor;
         }
+        TraceLoggingWriteStop(local, "EmaStabilizer::Insert");
     }
 
-    void EmaStabilizer::Stabilize(utility::Dof& dof)
+    void BiQuadStabilizer::SetFrequency(float frequency)
     {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "BiQuadStabilizer::SetFrequency", TLArg(frequency, "Frequency"));
+
         std::unique_lock lock(m_SampleMutex);
-        for (const DofValue value : m_RelevantValues)
-        {
-            dof.data[value] = m_CurrentSample.data[value];
-        }
+        m_Frequency = frequency;
+        ResetFilters();
+
+        TraceLoggingWriteStop(local, "BiQuadStabilizer::SetFrequency");
     }
 
-    void WindowStabilizer::SetWindowSize(unsigned size)
+    void BiQuadStabilizer::SetStartTime(int64_t now)
     {
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "WindowStabilizer::SetWindowSize", TLArg(size, "Size"));
+        TraceLoggingWriteStart(local, "BiQuadStabilizer::SetStartTime", TLArg(now, "Now"));
 
-        m_WindowSize = size;
-        openxr_api_layer::log::DebugLog("stabilizer averaging now: %u ms", size);
+        std::unique_lock lock(m_SampleMutex);
 
-        TraceLoggingWriteStop(local, "WindowStabilizer::SetWindowSize");
+        LowPassStabilizer::SetStartTime(now);
+        ResetFilters();
+
+        TraceLoggingWriteStop(local, "BiQuadStabilizer::SetStartTime");
     }
 
-    void WindowStabilizer::SetStartTime(int64_t now)
-    {
-        TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "WindowStabilizer::SetStartTime", TLArg(now, "Time"));
-
-        m_LastSampleTime = now;
-
-        TraceLoggingWriteStop(local, "WindowStabilizer::SetStartTime");
-    }
-
-    void WindowStabilizer::InsertSample(Dof& sample, int64_t now)
+    void BiQuadStabilizer::Insert(utility::Dof& dof, int64_t now)
     {
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local,
-                               "WindowStabilizer::InsertSample",
-                               TLArg(xr::ToString(sample).c_str(), "Sample"),
-                               TLArg(now, "Time"));
+                               "BiQuadStabilizer::Insert",
+                               TLArg(xr::ToString(dof).c_str(), "Sample"),
+                               TLArg(now, "Now"));
 
-        const int64_t windowBegin = now - m_WindowSize;
-        TraceLoggingWriteTagged(local, "MedianStabilizer::InsertSample", TLArg(windowBegin, "WindowBegin"));
-
-        const int64_t duration = now - std::exchange(m_LastSampleTime, now);
-        m_WindowHalf = std::min(m_WindowSize / 2, m_WindowHalf + duration / 2);
-
+        std::unique_lock lock(m_SampleMutex);
+        m_LastSampleTime = now;
         for (const DofValue value : m_RelevantValues)
         {
-            std::unique_lock lock(m_SampleMutex);
-            auto& samples = m_Samples[value];
-            // remove outdated sample(s)
-            for (auto it = samples.cbegin(); it != samples.cend();)
+            if (!m_Initialized)
             {
-                if (it->second.first <= windowBegin)
+                // skip attack time
+                for (int i = 0; i < 1e5; i++)
                 {
-                    TraceLoggingWriteTagged(local,
-                                            "WindowStabilizer::InsertSample",
-                                            TLArg(it->second.first, "Dropped"),
-                                            TLArg(static_cast<int>(value), "RelevantValue"));
-                    it = samples.erase(it);
-                }
-                else
-                {
-                    ++it;
+                    m_Filter[value]->Filter(dof.data[value]);
                 }
             }
-            // insert sample
-            samples.insert({sample.data[value], {now, duration}});
-
-            TraceLoggingWriteTagged(local,
-                                    "WindowStabilizer::InsertSample",
-                                    TLArg(samples.size(), "SamplesSize"),
-                                    TLArg(static_cast<int>(value), "RelevantValue"));
+            m_CurrentSample.data[value] = m_Filter[value]->Filter(dof.data[value]);
         }
-        TraceLoggingWriteStop(local, "WindowStabilizer::InsertSample");
+        m_Initialized = true;
+
+        TraceLoggingWriteStop(local, "BiQuadStabilizer::Insert");
     }
 
-    void AverageStabilizer::Stabilize(utility::Dof& dof)
+    BiQuadStabilizer::BiQuadFilter::BiQuadFilter(float frequency)
     {
-        TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "SimpleAverageStabilizer::Stabilize", TLArg(xr::ToString(dof).c_str(), "Dof"));
-        for (const DofValue value : m_RelevantValues)
-        {
-            std::unique_lock lock(m_SampleMutex);
-
-            // calculate average
-            float sum{0};
-            for (const auto& sample : m_Samples[value])
-            {
-                sum += sample.first;
-            }
-            dof.data[value] = sum / m_Samples[value].size();
-        }
-        TraceLoggingWriteStop(local, "SimpleAverageStabilizer::Stabilize", TLArg(xr::ToString(dof).c_str(), "Dof"));
+        const float a = tanf(utility::floatPi * frequency / m_SamplingFrequency);
+        const float a2 = a * a;
+        const float r = sinf(utility::floatPi / 4.f);
+        const float s = (a2 + 2.f * a * r + 1.f);
+        m_A = a2 / s;
+        m_D1 = 2.f * (1.f - a2) / s;
+        m_D2 = -(a2 - 2.f * a * r + 1.f) / s;
+        m_W0 = m_W1 = m_W2 = 0.f;
     }
 
-    void WeightedAverageStabilizer::Stabilize(utility::Dof& dof)
+    float BiQuadStabilizer::BiQuadFilter::Filter(const float value)
     {
-        TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "WeightedAverageStabilizer::Stabilize", TLArg(xr::ToString(dof).c_str(), "Dof"));
-        for (const DofValue value : m_RelevantValues)
-        {
-            std::unique_lock lock(m_SampleMutex);
-
-            // calculate average
-            float sum{0};
-            int64_t durationSum{0};     
-            for (const auto& sample : m_Samples[value])
-            {
-                sum += sample.first * sample.second.second;
-                durationSum += sample.second.second;
-            }
-            dof.data[value] = sum / durationSum;
-        }
-        TraceLoggingWriteStop(local, "WeightedAverageStabilizer::Stabilize", TLArg(xr::ToString(dof).c_str(), "Dof"));
+        m_W0 = m_D1 * m_W1 + m_D2 * m_W2 + value;
+        return  m_A * (std::exchange(m_W2, m_W1) + 2.0f * std::exchange(m_W1, m_W0) + m_W0);
     }
 
-    void MedianStabilizer::Stabilize(utility::Dof& dof)
+
+    void BiQuadStabilizer::ResetFilters()
     {
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "MedianStabilizer::Stabilize", TLArg(xr::ToString(dof).c_str(), "Dof"));
+        TraceLoggingWriteStart(local, "BiQuadStabilizer::ResetFilters");
 
         for (const DofValue value : m_RelevantValues)
         {
-            std::unique_lock lock(m_SampleMutex);
-
-            // select median
-            const size_t halfSize = m_Samples[value].size() / 2;
-            auto med = m_Samples[value].begin();
-            std::advance(med, halfSize);
-            dof.data[value] = med->first;
+            m_Filter[value] = std::make_unique<BiQuadFilter>(BiQuadFilter(m_Frequency));
         }
-        TraceLoggingWriteStop(local, "MedianStabilizer::Stabilize", TLArg(xr::ToString(dof).c_str(), "Dof"));
-    }
+        m_Initialized = false;
 
-    void WeightedMedianStabilizer::Stabilize(utility::Dof& dof)
-    {
-        TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "WeightedMedianStabilizer::Stabilize", TLArg(xr::ToString(dof).c_str(), "Dof"));
-
-        for (const DofValue value : m_RelevantValues)
-        {
-            std::unique_lock lock(m_SampleMutex);
-
-            // sum up durations and select weighted median
-            int64_t durationSum{0};            
-            for (const auto& [sample, times] : m_Samples[value])
-            {
-                if ((durationSum += times.second) > m_WindowHalf)
-                {
-                    dof.data[value] = sample;
-                    break;
-                }
-            }
-        }
-        TraceLoggingWriteStop(local, "WeightedMedianStabilizer::Stabilize", TLArg(xr::ToString(dof).c_str(), "Dof"));
+        TraceLoggingWriteStop(local, "BiQuadStabilizer::ResetFilters");
     }
 } // namespace filter

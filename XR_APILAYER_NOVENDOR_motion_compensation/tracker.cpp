@@ -634,13 +634,15 @@ namespace tracker
         return success;
     }
 
-    VirtualTracker::VirtualTracker()
+    VirtualTracker::VirtualTracker(const std::vector<utility::DofValue>&  relevantValues)
+        : m_RelevantValues(relevantValues)
     {
         m_Recorder = std::make_shared<output::PoseAndDofRecorder>();
         bool samplerEnabled;
         if (GetConfig()->GetBool(Cfg::StabilizerEnabled, samplerEnabled) && samplerEnabled)
         {
-            m_Sampler = new sampler::Sampler(this, m_Recorder);
+            m_Sampler = new sampler::Sampler(this, m_RelevantValues, m_Recorder);
+            m_Recorder->m_Sampling = true;
             Log("input stabilizer enabled");
         }
     }
@@ -764,7 +766,8 @@ namespace tracker
 
         if (!m_Sampler)
         {
-            m_Sampler = new sampler::Sampler(this, m_Recorder);
+            m_Sampler = new sampler::Sampler(this, m_RelevantValues, m_Recorder);
+            m_Recorder->m_Sampling = true;
             if (m_Calibrated)
             {
                 m_Sampler->StartSampling();
@@ -772,14 +775,17 @@ namespace tracker
             GetConfig()->SetValue(Cfg::StabilizerEnabled, true);
             AudioOut::Execute(Event::StabilizerOn);
 
+            DebugLog("stabilizer activated");
             TraceLoggingWriteStop(local, "VirtualTracker::ToggleStabilizer", TLArg(true, "Activated"));
             return;
         }
         delete m_Sampler;
         m_Sampler = nullptr;
+        m_Recorder->m_Sampling = false;
         GetConfig()->SetValue(Cfg::StabilizerEnabled, false);
         AudioOut::Execute(Event::StabilizerOff);
 
+        DebugLog("stabilizer off");
         TraceLoggingWriteStop(local, "VirtualTracker::ToggleStabilizer", TLArg(false, "Activated"));
     }
 
@@ -790,26 +796,35 @@ namespace tracker
                                "VirtualTracker::ModifyStabilizer",
                                TLArg(increase, "Increase"),
                                TLArg(fast, "Fast"));
-
-        int prevWindow;
-        if (!GetConfig()->GetInt(Cfg::StabilizerWindow, prevWindow))
+        float prevFrequency;
+        if (!GetConfig()->GetFloat(Cfg::StabilizerFrequency, prevFrequency))
         {
             AudioOut::Execute(Event::Error);
             TraceLoggingWriteStop(local, "VirtualTracker::ModifyStabilizer", TLArg(false, "Success"));
             return;
         }
-        const int amount = (increase ? 1 : -1) * (fast ? 25 : 5);
-        int newWindow = prevWindow + amount;
-        if (newWindow < 1)
+        float amount = prevFrequency < 1.f     ? 0.1f
+                       : prevFrequency < 2.5f  ? 0.125f
+                       : prevFrequency < 5.f   ? 0.25f
+                       : prevFrequency < 10.f  ? 0.5f
+                       : prevFrequency < 25.f  ? 1.f
+                       : prevFrequency < 50.f  ? 2.5f
+                       : prevFrequency < 100.f ? 5.f
+                       : prevFrequency < 250.f ? 10.f
+                                               : 25.f;
+        amount *= (increase ? 1.f : -1.f) * (fast ? 5.f : 1.f);
+
+        float newFrequency = prevFrequency + amount;
+        if (newFrequency < 0.1f)
         {
-            newWindow = 1;
+            newFrequency = 0.1f;
 
             AudioOut::Execute(Event::Min);
             TraceLoggingWriteTagged(local, "VirtualTracker::ModifyStabilizer", TLArg(true, "Minimum"));
         }
-        else if (newWindow > 1000)
+        else if (newFrequency > 100.f)
         {
-            newWindow = 1000;
+            newFrequency = 100.f;
 
             AudioOut::Execute(Event::Max);
             TraceLoggingWriteTagged(local, "VirtualTracker::ModifyStabilizer", TLArg(true, "Maximum"));
@@ -818,16 +833,20 @@ namespace tracker
         {
             AudioOut::Execute(increase ? Event::Plus : Event::Minus);
         }
-        GetConfig()->SetValue(Cfg::StabilizerWindow, newWindow);
+
+        GetConfig()->SetValue(Cfg::StabilizerFrequency, newFrequency);
+        DebugLog("stabilizer frequency: %.4f", newFrequency);
+
         if (m_Sampler)
         {
-            m_Sampler->SetWindowSize(newWindow);
+            m_Sampler->SetFrequency(newFrequency);
         }
 
         TraceLoggingWriteStop(local,
                               "VirtualTracker::ModifyStabilizer",
-                              TLArg(prevWindow, "Previous"),
-                              TLArg(newWindow, "New"),
+                              TLArg(prevFrequency, "Previous"),
+                              TLArg(amount, "Amount"),
+                              TLArg(newFrequency, "New"),
                               TLArg(true, "Success"));
     }
 
@@ -1188,18 +1207,18 @@ namespace tracker
     bool YawTracker::ReadSource(XrTime now, utility::Dof& dof)
     {
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "YawTracker::ReadMmf", TLArg(now, "Now"));
+        TraceLoggingWriteStart(local, "YawTracker::ReadSource", TLArg(now, "Now"));
 
         YawData mmfData{};
         if (!m_Mmf.Read(&mmfData, sizeof(mmfData), now))
         {
-            TraceLoggingWriteStop(local, "YawTracker::ReadMmf", TLArg(false, "Success"));
+            TraceLoggingWriteStop(local, "YawTracker::ReadSource", TLArg(false, "Success"));
             return false;
         }
         dof = {0.f, 0.f, 0.f, mmfData.yaw, mmfData.roll, mmfData.pitch};
 
         TraceLoggingWriteStop(local,
-                              "YawTracker::ReadMmf",
+                              "YawTracker::ReadSource",
                               TLArg(mmfData.yaw, "Yaw"),
                               TLArg(mmfData.roll, "Roll"),
                               TLArg(mmfData.pitch, "Pitch"),

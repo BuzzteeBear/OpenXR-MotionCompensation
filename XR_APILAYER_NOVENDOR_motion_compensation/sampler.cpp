@@ -6,7 +6,6 @@
 #include "filter.h"
 #include "output.h"
 #include <log.h>
-#include <util.h>
 
 using namespace openxr_api_layer;
 using namespace log;
@@ -15,19 +14,13 @@ using namespace utility;
 
 namespace sampler
 {
-
-    Sampler::Sampler(tracker::VirtualTracker* tracker, const std::shared_ptr<output::RecorderBase>& recorder)
+    Sampler::Sampler(tracker::VirtualTracker* tracker,
+                     const std::vector<utility::DofValue>& relevantValues,
+                     const std::shared_ptr<output::RecorderBase>& recorder)
         : m_Tracker(tracker), m_Recorder(recorder)
     {
-        if (int window{}; GetConfig()->GetInt(Cfg::StabilizerWindow, window))
-        {
-            // TODO: scale input parameter t0 [0..1] range?
-            window = std::max(std::min(window, 1000), 1) * 1000000;
-            m_Stabilizer =
-                std::make_shared<filter::EmaStabilizer>(std::vector<DofValue>{yaw, roll, pitch}, 2.f);
-            DebugLog("stabilizer averaging time: %u ms", window / 1000000);
-        }
-        GetConfig()->GetBool(Cfg::RecordSamples, m_RecordSamples);
+        m_Stabilizer = std::make_shared<filter::BiQuadStabilizer>(relevantValues);
+        GetConfig()->GetBool(Cfg::RecordSamples, m_SampleRecording);
     }
 
     Sampler::~Sampler()
@@ -35,15 +28,20 @@ namespace sampler
         StopSampling();
     }
 
-    void Sampler::SetWindowSize(const unsigned size) const
-    {
-        m_Stabilizer->SetWindowSize(size * 1000000);
-    }
-
-    bool Sampler::ReadData(Dof& dof, XrTime time)
+    void Sampler::SetFrequency(const float frequency) const
     {
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "Sampler::ReadData");
+        TraceLoggingWriteStart(local, "Sampler::SetFrequency", TLArg(frequency, "Frequency"));
+
+        m_Stabilizer->SetFrequency(frequency);
+
+        TraceLoggingWriteStop(local, "Sampler::SetFrequency", TLArg(frequency, "Frequency"));
+    }
+
+    bool Sampler::ReadData(Dof& dof, XrTime now)
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "Sampler::ReadData", TLArg(now, "Now"));
 
         if (!m_IsSampling)
         {
@@ -59,11 +57,11 @@ namespace sampler
                 return false;
             }
         }
-        m_Stabilizer->Stabilize(dof);
-        if (m_RecordSamples && m_Recorder)
+        m_Stabilizer->Read(dof);
+        if (m_SampleRecording && m_Recorder)
         {
             Dof momentary;
-            if (m_Tracker->ReadSource(time, momentary))
+            if (m_Tracker->ReadSource(now, momentary))
             {
                 m_Recorder->AddDofValues(momentary, Momentary);
             }
@@ -108,6 +106,12 @@ namespace sampler
             m_Thread = nullptr;
             TraceLoggingWriteTagged(local, "Sampler::StopSampling", TLArg(true, "Stopped"));
         }
+        if (m_SampleRecording && m_Recorder)
+        {
+            Dof zero;
+            m_Recorder->AddDofValues(zero, Sampled);
+            m_Recorder->AddDofValues(zero, Momentary);      
+        }
 
         TraceLoggingWriteStop(local, "Sampler::StopSampling");
     }
@@ -131,13 +135,13 @@ namespace sampler
             {
                 break;
             }
-            m_Stabilizer->InsertSample(dof, time);
+            m_Stabilizer->Insert(dof, time);
 
             // record sample
-            if (m_RecordSamples && m_Recorder)
+            if (m_SampleRecording && m_Recorder)
             {
                 m_Recorder->AddDofValues(dof, Sampled);
-                m_Recorder->Write();
+                m_Recorder->Write(true);
             }
 
             // wait for next sampling cycle

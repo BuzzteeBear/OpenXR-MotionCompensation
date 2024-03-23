@@ -128,7 +128,9 @@ namespace output
         virtual void AddFrameTime(XrTime time) = 0;
         virtual void AddPose(const XrPosef& pose, RecorderPoseInput type) = 0;
         virtual void AddDofValues(const utility::Dof& dofValues, RecorderDofInput type) = 0;
-        virtual void Write(bool newLine = true) = 0;
+        virtual void Write(bool sampled = false, bool newLine = true) = 0;
+
+        std::atomic<bool> m_Sampling{false};
     };
 
     class NoRecorder final : public RecorderBase
@@ -138,7 +140,7 @@ namespace output
         void AddFrameTime(XrTime time) override{};
         void AddPose(const XrPosef& pose, RecorderPoseInput type) override{};
         void AddDofValues(const utility::Dof& dofValues, RecorderDofInput type) override{};
-        void Write(bool newLine = true) override{};
+        void Write(bool sampled, bool newLine) override{};
     };
 
     class PoseRecorder : public RecorderBase
@@ -150,10 +152,11 @@ namespace output
         void AddFrameTime(XrTime time) override;
         void AddPose(const XrPosef& pose, RecorderPoseInput type) override;
         void AddDofValues(const utility::Dof& dofValues, RecorderDofInput type) override{};
-        void Write(bool newLine = true) override;
+        void Write(bool sampled , bool newLine) override;
 
       protected:
-        bool m_Started{false}, m_PoseRecorded{false};
+        bool m_Started{false}, m_PoseRecorded{false}, m_RecordSamples{false};
+        ;
         std::ofstream m_FileStream;
         XrTime m_FrameTime{};
         std::string m_HeadLine{"Elapsed (ms); Time; FrameTime; "
@@ -185,7 +188,7 @@ namespace output
                           "Pitch_Sampled; Pitch_Read; Pitch_Momentary; Roll_Sampled; Roll_Read; Roll_Momentary";
         }
         void AddDofValues(const utility::Dof& dof, RecorderDofInput type) override;
-        void Write(bool newLine = true) override;
+        void Write(bool sampled = false, bool newLine = true) override;
 
       private:
         DofSample m_DofValues{};

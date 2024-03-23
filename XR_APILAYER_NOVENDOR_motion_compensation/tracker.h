@@ -111,7 +111,7 @@ namespace tracker
     class VirtualTracker : public TrackerBase
     {
       public:
-        VirtualTracker();
+        explicit VirtualTracker(const std::vector<utility::DofValue>& relevantValues);
         ~VirtualTracker() override;
         bool Init() override;
         bool LazyInit(XrTime time) override;
@@ -136,10 +136,12 @@ namespace tracker
         virtual bool ReadData(XrTime time, utility::Dof& dof);
         virtual XrPosef DataToPose(const utility::Dof& dof) = 0;
 
+        std::vector<utility::DofValue> m_RelevantValues{};
         sampler::Sampler* m_Sampler{nullptr};
         std::string m_Filename;
         utility::Mmf m_Mmf;
         float m_OffsetForward{0.0f}, m_OffsetDown{0.0f}, m_OffsetRight{0.0f}, m_OffsetYaw{0.0f}, m_PitchConstant{0.0f};
+        
 
       private:
         bool LoadReferencePose(XrSession session, XrTime time);
@@ -153,7 +155,7 @@ namespace tracker
     class YawTracker : public VirtualTracker
     {
       public:
-        YawTracker()
+        YawTracker() : VirtualTracker({utility::yaw, utility::roll, utility::pitch})
         {
             m_Filename = "Local\\YawVRGEFile";
         }
@@ -175,6 +177,7 @@ namespace tracker
     class SixDofTracker : public VirtualTracker
     {
       protected:
+        SixDofTracker(const std::vector<utility::DofValue>& relevantValues) : VirtualTracker(relevantValues){}
         bool ReadSource(XrTime now, utility::Dof& dof) override;
 
       private:
@@ -193,6 +196,8 @@ namespace tracker
     {
       public:
         FlyPtTracker()
+            : SixDofTracker(
+                  {utility::sway, utility::surge, utility::heave, utility::yaw, utility::roll, utility::pitch})
         {
             m_Filename = "Local\\motionRigPose";
         }
@@ -204,7 +209,7 @@ namespace tracker
     class SrsTracker final : public SixDofTracker
     {
       public:
-        SrsTracker()
+        SrsTracker() : SixDofTracker({utility::yaw, utility::roll, utility::pitch})
         {
             m_Filename = "Local\\SimRacingStudioMotionRigPose";
         }

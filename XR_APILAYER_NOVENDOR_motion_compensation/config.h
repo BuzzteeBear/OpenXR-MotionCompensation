@@ -38,8 +38,7 @@ enum class Cfg
     RotStrength,
     RotOrder,
     StabilizerEnabled,
-    StabilizerRate,
-    StabilizerWindow,
+    StabilizerFrequency,
     FactorEnabled,
     FactorTrackerRoll,
     FactorTrackerPitch,
@@ -156,7 +155,7 @@ class ConfigManager
         {Cfg::RotOrder, {"rotation_filter", "order"}},
 
         {Cfg::StabilizerEnabled, {"input_stabilizer", "enabled"}},
-        {Cfg::StabilizerWindow, {"input_stabilizer", "averaging_time"}},
+        {Cfg::StabilizerFrequency, {"input_stabilizer", "half_power_frequency"}},
 
         {Cfg::FactorEnabled, {"pose_modifier", "enabled"}},
         {Cfg::FactorTrackerRoll, {"pose_modifier", "tracker_roll"}},
@@ -235,7 +234,7 @@ class ConfigManager
                                Cfg::CorD,
                                Cfg::FactorEnabled,
                                Cfg::StabilizerEnabled,
-                               Cfg::StabilizerWindow};
+                               Cfg::StabilizerFrequency};
 
     std::set<Cfg> m_CorValues{Cfg::CorX, Cfg::CorY, Cfg::CorZ, Cfg::CorA, Cfg::CorB, Cfg::CorC, Cfg::CorD};
 

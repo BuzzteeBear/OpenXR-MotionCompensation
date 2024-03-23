@@ -83,6 +83,8 @@ namespace output
     PoseRecorder::PoseRecorder()
     {
         m_FileStream << std::fixed << std::setprecision(5);
+        GetConfig()->GetBool(Cfg::RecordSamples, m_RecordSamples);
+        Log("recording of samples is %s", (m_RecordSamples ? "activated" : "off"));
     }
 
     PoseRecorder::~PoseRecorder()
@@ -158,21 +160,30 @@ namespace output
         default:
             break;
         }
+        if (!m_PoseRecorded)
+        {
+            // update start time to avoid offset on elapsed time
+            const std::chrono::nanoseconds now = std::chrono::steady_clock::now().time_since_epoch();
+            m_StartTime = now.count();
+        }
         m_PoseRecorded = true;
 
         TraceLoggingWriteStop(local, "PoseRecorder::AddReference", TLArg(true, "Success"));
     }
 
-    void PoseRecorder::Write(const bool newLine)
+    void PoseRecorder::Write(const bool sampled, const bool newLine)
     {
-        if (!m_Started)
+        if (!m_Started || (m_Sampling && m_RecordSamples && !sampled))
         {
             return;
         }
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "PoseRecorder::Write", TLArg(newLine, "NewLine"));
-
-        std::unique_lock lock{m_RecorderMutex};
+        std::unique_ptr<std::unique_lock<std::mutex>> lock{};
+        if (newLine)
+        {
+            lock = std::make_unique<std::unique_lock<std::mutex>>(std::unique_lock{m_RecorderMutex});
+        }
         if (++m_Counter > m_RecorderMax)
         {
             Start();
@@ -225,15 +236,15 @@ namespace output
         SYSTEMTIME lt;
         GetLocalTime(&lt);
         char buf[1024];
-        size_t offset = sprintf(buf,
-                                "%d-%02d-%02d_%02d-%02d-%02d-%03d",
-                                lt.wYear,
-                                lt.wMonth,
-                                lt.wDay,
-                                lt.wHour,
-                                lt.wMinute,
-                                lt.wSecond,
-                                lt.wMilliseconds);
+        sprintf(buf,
+                "%d-%02d-%02d_%02d-%02d-%02d-%03d",
+                lt.wYear,
+                lt.wMonth,
+                lt.wDay,
+                lt.wHour,
+                lt.wMinute,
+                lt.wSecond,
+                lt.wMilliseconds);
         const std::string fileName =
             (openxr_api_layer::localAppData / ("recording_" + std::string(buf) + ".csv")).string();
         m_FileStream.open(fileName, std::ios_base::ate);
@@ -265,6 +276,7 @@ namespace output
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "PoseRecorder::Stop");
 
+        std::unique_ptr<std::unique_lock<std::mutex>> lock{};
         m_Started = false;
         m_StartTime = 0;
         m_PoseRecorded = false;
@@ -308,21 +320,19 @@ namespace output
         TraceLoggingWriteStop(local, "PoseAndDofRecorder::AddDofValues", TLArg(true, "Success"));
     }
 
-    void PoseAndDofRecorder::Write(bool newLine)
+    void PoseAndDofRecorder::Write(bool sampled, bool newLine)
     {
-        if (!m_Started || !m_PoseRecorded)
+        if (!m_Started || !m_PoseRecorded || (m_Sampling && m_RecordSamples && !sampled))
         {
             return;
         }
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "PoseAndDofRecorder::Write", TLArg(newLine, "NewLine"));
 
-        
+        std::unique_lock lock{m_RecorderMutex};
         if (m_FileStream.is_open())
         {
-            PoseRecorder::Write(false);
-
-            std::unique_lock lock{m_RecorderMutex};
+            PoseRecorder::Write(sampled, false);
             m_FileStream << ";" << m_DofValues.sampled.data[sway] << ";" << m_DofValues.read.data[sway] << ";"
                          << m_DofValues.momentary.data[sway] << ";" << m_DofValues.sampled.data[surge] << ";"
                          << m_DofValues.read.data[surge] << ";" << m_DofValues.momentary.data[surge] << ";"
