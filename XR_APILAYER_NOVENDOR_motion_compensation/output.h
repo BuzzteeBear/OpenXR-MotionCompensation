@@ -180,7 +180,7 @@ namespace output
         {
             m_HeadLine += "; Sway_Sampled; Sway_Read; Sway_Momentary; Surge_Sampled; Surge_Read; Surge_Momentary; "
                           "Heave_Sampled; Heave_Read; Heave_Momentary; Yaw_Sampled; Yaw_Read; Yaw_Momentary; "
-                          "Pitch_Sampled; Pitch_Read; Pitch_Momentary; Roll_Sampled; Roll_Read; Roll_Momentary";
+                          "Roll_Sampled; Roll_Read; Roll_Momentary; Pitch_Sampled; Pitch_Read; Pitch_Momentary";
         }
         void AddDofValues(const utility::Dof& dof, RecorderDofInput type) override;
         void Write(bool sampled = false, bool newLine = true) override;

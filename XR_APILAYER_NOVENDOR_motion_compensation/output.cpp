@@ -349,9 +349,9 @@ namespace output
                          << m_DofValues.sampled.data[heave] << ";" << m_DofValues.read.data[heave] << ";"
                          << m_DofValues.momentary.data[heave] << ";" << m_DofValues.sampled.data[yaw] << ";"
                          << m_DofValues.read.data[yaw] << ";" << m_DofValues.momentary.data[yaw] << ";"
-                         << m_DofValues.sampled.data[pitch] << ";" << m_DofValues.read.data[pitch] << ";"
-                         << m_DofValues.momentary.data[pitch] << ";" << m_DofValues.sampled.data[roll] << ";"
-                         << m_DofValues.read.data[roll] << ";" << m_DofValues.momentary.data[roll];
+                         << m_DofValues.sampled.data[roll] << ";" << m_DofValues.read.data[roll] << ";"
+                         << m_DofValues.momentary.data[roll] << ";" << m_DofValues.sampled.data[pitch] << ";"
+                         << m_DofValues.read.data[pitch] << ";" << m_DofValues.momentary.data[pitch];
             if (newLine)
             {
                 m_FileStream << "\n";
