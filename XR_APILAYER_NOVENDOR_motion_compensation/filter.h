@@ -115,7 +115,7 @@ namespace filter
     {
       public:
         virtual ~StabilizerBase() = default;
-        virtual void SetFrequency(float frequency) = 0;
+        virtual void SetStrength(float frequency) = 0;
         virtual void SetStartTime(int64_t now) = 0;
         virtual void Insert(utility::Dof& sample, int64_t now) = 0;
         virtual void Read(utility::Dof& dof) = 0;
@@ -127,9 +127,8 @@ namespace filter
     class PassThroughStabilizer : public StabilizerBase
     {
       public:
-        explicit PassThroughStabilizer(const std::vector<utility::DofValue>& relevantValues)
-            : m_RelevantValues(relevantValues){};
-        void SetFrequency(float frequency) override{};
+        explicit PassThroughStabilizer(const std::vector<utility::DofValue>& relevantValues);;
+        void SetStrength(float strength) override{};
         void SetStartTime(int64_t now) override{};
         void Insert(utility::Dof& dof, int64_t now) override;
         void Read(utility::Dof& dof) override;
@@ -137,6 +136,7 @@ namespace filter
       protected:
         std::vector<utility::DofValue> m_RelevantValues;
         utility::Dof m_CurrentSample{};
+        utility::Dof m_Factor{};
     };
 
     class LowPassStabilizer : public PassThroughStabilizer
@@ -146,8 +146,14 @@ namespace filter
         void Read(utility::Dof& dof) override;
 
       protected:
-        bool m_Initialized = false;
-        float m_Frequency{0.f};
+        void SetFrequencies(float strength);
+        bool Disabled(const utility::Dof& dof);
+
+        bool m_Initialized{false};
+        utility::Dof m_Frequency{};
+
+      private:
+        bool m_Disabled{false}, m_Blocking{false};
     };
 
     class EmaStabilizer : public LowPassStabilizer
@@ -155,7 +161,7 @@ namespace filter
       public:
         explicit EmaStabilizer(const std::vector<utility::DofValue>& relevantValues)
             : LowPassStabilizer(relevantValues){};
-        void SetFrequency(float frequency) override;
+        void SetStrength(float strength) override;
         void SetStartTime(int64_t now) override;
         void Insert(utility::Dof& dof, int64_t now) override;
 
@@ -168,7 +174,7 @@ namespace filter
       public:
         explicit BiQuadStabilizer(const std::vector<utility::DofValue>& relevantValues)
             : LowPassStabilizer(relevantValues){};
-        void SetFrequency(float frequency) override;
+        void SetStrength(float strength) override;
         void SetStartTime(int64_t now) override;
         void Insert(utility::Dof& dof, int64_t now) override;
 

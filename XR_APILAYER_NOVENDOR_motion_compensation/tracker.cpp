@@ -796,35 +796,26 @@ namespace tracker
                                "VirtualTracker::ModifyStabilizer",
                                TLArg(increase, "Increase"),
                                TLArg(fast, "Fast"));
-        float prevFrequency;
-        if (!GetConfig()->GetFloat(Cfg::StabilizerFrequency, prevFrequency))
+        float prevStrength;
+        if (!GetConfig()->GetFloat(Cfg::StabilizerStrength, prevStrength))
         {
             AudioOut::Execute(Event::Error);
             TraceLoggingWriteStop(local, "VirtualTracker::ModifyStabilizer", TLArg(false, "Success"));
             return;
         }
-        float amount = prevFrequency < 1.f     ? 0.1f
-                       : prevFrequency < 2.5f  ? 0.125f
-                       : prevFrequency < 5.f   ? 0.25f
-                       : prevFrequency < 10.f  ? 0.5f
-                       : prevFrequency < 25.f  ? 1.f
-                       : prevFrequency < 50.f  ? 2.5f
-                       : prevFrequency < 100.f ? 5.f
-                       : prevFrequency < 250.f ? 10.f
-                                               : 25.f;
-        amount *= (increase ? 1.f : -1.f) * (fast ? 5.f : 1.f);
+        float amount = (increase ? 1.f : -1.f) * (fast ? 0.10f : 0.01f);
 
-        float newFrequency = prevFrequency + amount;
-        if (newFrequency < 0.1f)
+        float newStrength = prevStrength + amount;
+        if (newStrength < 0.001f)
         {
-            newFrequency = 0.1f;
+            newStrength = 0.f;
 
             AudioOut::Execute(Event::Min);
             TraceLoggingWriteTagged(local, "VirtualTracker::ModifyStabilizer", TLArg(true, "Minimum"));
         }
-        else if (newFrequency > 100.f)
+        else if (newStrength > 0.999f)
         {
-            newFrequency = 100.f;
+            newStrength = 1.f;
 
             AudioOut::Execute(Event::Max);
             TraceLoggingWriteTagged(local, "VirtualTracker::ModifyStabilizer", TLArg(true, "Maximum"));
@@ -834,19 +825,19 @@ namespace tracker
             AudioOut::Execute(increase ? Event::Plus : Event::Minus);
         }
 
-        GetConfig()->SetValue(Cfg::StabilizerFrequency, newFrequency);
-        DebugLog("stabilizer frequency: %.4f", newFrequency);
+        GetConfig()->SetValue(Cfg::StabilizerStrength, newStrength);
+        DebugLog("stabilizer strength: %.4f", newStrength);
 
         if (m_Sampler)
         {
-            m_Sampler->SetFrequency(newFrequency);
+            m_Sampler->SetStrength(newStrength);
         }
 
         TraceLoggingWriteStop(local,
                               "VirtualTracker::ModifyStabilizer",
-                              TLArg(prevFrequency, "Previous"),
+                              TLArg(prevStrength, "Previous"),
                               TLArg(amount, "Amount"),
-                              TLArg(newFrequency, "New"),
+                              TLArg(newStrength, "New"),
                               TLArg(true, "Success"));
     }
 

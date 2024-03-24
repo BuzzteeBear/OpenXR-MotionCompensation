@@ -103,7 +103,13 @@ Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "rotation_filter"
 
 ; [input_stabilizer]
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "input_stabilizer"; Key: "enabled"; String: "1"; Flags: createkeyifdoesntexist
-Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "input_stabilizer"; Key: "half_power_frequency"; String: "5.0"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "input_stabilizer"; Key: "strength"; String: "0.5"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "input_stabilizer"; Key: "roll"; String: "1.0"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "input_stabilizer"; Key: "pitch"; String: "1.0"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "input_stabilizer"; Key: "yaw"; String: "1.0"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "input_stabilizer"; Key: "surge"; String: "1.0"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "input_stabilizer"; Key: "sway"; String: "1.0"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "input_stabilizer"; Key: "heave"; String: "1.0"; Flags: createkeyifdoesntexist
 
 ; [pose_modifier]
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "pose_modifier"; Key: "enabled"; String: "0"; Flags: createkeyifdoesntexist

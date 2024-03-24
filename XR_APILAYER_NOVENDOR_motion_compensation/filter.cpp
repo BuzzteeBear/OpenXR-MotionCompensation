@@ -37,8 +37,8 @@ namespace filter
 
         FilterBase::SetStrength(strength);
         m_Alpha = {1.0f - m_Strength, std::max(0.f, 1.0f - (m_VerticalFactor * m_Strength)), 1.0f - m_Strength};
-        m_OneMinusAlpha = {1.f - m_Alpha.x , 1.f - m_Alpha.y, 1.f - m_Alpha.z};
-        
+        m_OneMinusAlpha = {1.f - m_Alpha.x, 1.f - m_Alpha.y, 1.f - m_Alpha.z};
+
         TraceLoggingWriteStop(local,
                               "SingleEmaFilter::SetStrength",
                               TLArg(xr::ToString(m_Alpha).c_str(), "Alpha"),
@@ -208,6 +208,21 @@ namespace filter
         m_ThirdStage = rotation;
     }
 
+    PassThroughStabilizer::PassThroughStabilizer(const std::vector<utility::DofValue>& relevantValues)
+        : m_RelevantValues(relevantValues)
+    {
+        auto SetFactor = [this](const Cfg key, const DofValue value) {
+            GetConfig()->GetFloat(key, m_Factor.data[value]);
+            m_Factor.data[value] = std::max(m_Factor.data[value], 0.f);
+        };
+        SetFactor(Cfg::StabilizerSway, sway);
+        SetFactor(Cfg::StabilizerSurge, surge);
+        SetFactor(Cfg::StabilizerHeave, heave);
+        SetFactor(Cfg::StabilizerYaw, yaw);
+        SetFactor(Cfg::StabilizerRoll, roll);
+        SetFactor(Cfg::StabilizerPitch, pitch);
+    }
+
     void PassThroughStabilizer::Insert(utility::Dof& dof, int64_t now)
     {
         std::unique_lock lock(m_SampleMutex);
@@ -225,24 +240,24 @@ namespace filter
             dof.data[value] = m_CurrentSample.data[value];
         }
 
-        TraceLoggingWriteStop(local, "PassThroughStabilizer::Read", TLArg(xr::ToString(dof).c_str(), "Dof")); 
+        TraceLoggingWriteStop(local, "PassThroughStabilizer::Read", TLArg(xr::ToString(dof).c_str(), "Dof"));
     }
 
-    LowPassStabilizer::LowPassStabilizer(const std::vector<utility::DofValue>& relevantValues): PassThroughStabilizer(relevantValues)
+    LowPassStabilizer::LowPassStabilizer(const std::vector<utility::DofValue>& relevantValues)
+        : PassThroughStabilizer(relevantValues)
     {
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "LowPassStabilizer::LowPassStabilizer");
 
-        float frequency;
-        GetConfig()->GetFloat(Cfg::StabilizerFrequency, frequency);
-        frequency = std::min(std::max(frequency, 0.1f), 100.f);
-        m_Frequency = frequency;
+        float strength;
+        GetConfig()->GetFloat(Cfg::StabilizerStrength, strength);
+        strength = std::min(std::max(strength, 0.0f), 1.f);
+        SetFrequencies(strength);
 
-        DebugLog("stabilizer frequency: %.4f", frequency);
+        DebugLog("stabilizer strength: %.4f", strength);
         TraceLoggingWriteStop(local, "LowPassStabilizer::LowPassStabilizer");
     }
 
-    
     void LowPassStabilizer::Read(utility::Dof& dof)
     {
         TraceLocalActivity(local);
@@ -256,15 +271,65 @@ namespace filter
         TraceLoggingWriteStop(local, "LowPassStabilizer::Read", TLArg(xr::ToString(dof).c_str(), "DofOut"));
     }
 
-    void EmaStabilizer::SetFrequency(const float frequency)
+    void LowPassStabilizer::SetFrequencies(float strength)
     {
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "EmaStabilizer::SetFrequency", TLArg(frequency, "Frequency"));
+        TraceLoggingWriteStart(local, "LowPassStabilizer::SetFrequencies", TLArg(strength, "Strength"));
+
+        m_Blocking = strength > 0.999f;
+        m_Disabled = m_Blocking || strength < 0.001f;
+        if (m_Disabled)
+        {
+            DebugLog("stabilizer filters are %s", m_Blocking ? "blocking" : "disabled");
+            TraceLoggingWriteStop(local,
+                                  "EmaStabilizer::SetFrequencies",
+                                  TLArg(m_Disabled, "Disabled"),
+                                  TLArg(m_Blocking, "Blocked"));
+            return;
+        }
+
+        for (const DofValue value : m_RelevantValues)
+        {
+            const double withFactor = std::min(strength * m_Factor.data[value], 1.f);
+            m_Frequency.data[value] = static_cast<float>(12.5 / (2 * withFactor + 0.1) - 12.5 / 2.1);
+
+            DebugLog("stabilizer low pass frequency(%u) = %f", value, m_Frequency.data[value]);
+            TraceLoggingWriteTagged(local,
+                                    "LowPassStabilizer::SetFrequencies",
+                                    TLArg(static_cast<int>(value), "Value"),
+                                    TLArg(m_Frequency.data[value], "Frequency"));
+        }
+        TraceLoggingWriteStop(local, "LowPassStabilizer::SetFrequencies");
+    }
+
+    bool LowPassStabilizer::Disabled(const utility::Dof& dof)
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "LowPassStabilizer::Disabled");
+
+        if (m_Disabled)
+        {
+            for (const DofValue value : m_RelevantValues)
+            {
+                m_CurrentSample.data[value] = m_Blocking ? 0.f : dof.data[value];
+            }
+        }
+        TraceLoggingWriteStop(local,
+                              "EmaStabilizer::Insert",
+                              TLArg(m_Disabled, "Disabled"),
+                              TLArg(m_Blocking, "Blocked"));
+        return m_Disabled;
+    }
+
+    void EmaStabilizer::SetStrength(const float strength)
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "EmaStabilizer::SetStrength", TLArg(strength, "Strength"));
 
         std::unique_lock lock(m_SampleMutex);
-        m_Frequency = frequency;
+        SetFrequencies(strength);
 
-        TraceLoggingWriteStop(local, "EmaStabilizer::SetFrequency");
+        TraceLoggingWriteStop(local, "EmaStabilizer::SetStrength");
     }
 
     void EmaStabilizer::SetStartTime(int64_t now)
@@ -288,6 +353,12 @@ namespace filter
                                TLArg(now, "Now"));
 
         std::unique_lock lock(m_SampleMutex);
+        if (Disabled(dof))
+        {
+            TraceLoggingWriteStop(local, "EmaStabilizer::Insert", TLArg(true, "Disabled"));
+            return;
+        }
+
         const float duration = (now - std::exchange(m_LastSampleTime, now)) / 1e9f;
         if (!m_Initialized)
         {
@@ -300,21 +371,27 @@ namespace filter
             return;
         }
 
-        const float factor = 1 - exp(duration * -2.f * utility::floatPi * m_Frequency);
+        const double durationFactor = duration * -2.0 * M_PI;
         for (const DofValue value : m_RelevantValues)
         {
+            const float factor = static_cast<float>(1 - exp(durationFactor * m_Frequency.data[value]));
             m_CurrentSample.data[value] += (dof.data[value] - m_CurrentSample.data[value]) * factor;
+            TraceLoggingWriteTagged(local,
+                                    "EmaStabilizer::Insert",
+                                    TLArg(static_cast<int>(value), "Value"),
+                                    TLArg(factor, "Factor"),
+                                    TLArg(this->m_CurrentSample.data[value], "Current_Sample"));
         }
         TraceLoggingWriteStop(local, "EmaStabilizer::Insert");
     }
 
-    void BiQuadStabilizer::SetFrequency(float frequency)
+    void BiQuadStabilizer::SetStrength(float strength)
     {
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "BiQuadStabilizer::SetFrequency", TLArg(frequency, "Frequency"));
+        TraceLoggingWriteStart(local, "BiQuadStabilizer::SetFrequency", TLArg(strength, "Strength"));
 
         std::unique_lock lock(m_SampleMutex);
-        m_Frequency = frequency;
+        SetFrequencies(strength);
         ResetFilters();
 
         TraceLoggingWriteStop(local, "BiQuadStabilizer::SetFrequency");
@@ -340,6 +417,12 @@ namespace filter
                                TLArg(now, "Now"));
 
         std::unique_lock lock(m_SampleMutex);
+        if (Disabled(dof))
+        {
+            TraceLoggingWriteStop(local, "BiQuadStabilizer::Insert", TLArg(true, "Disabled"));
+            return;
+        }
+
         for (const DofValue value : m_RelevantValues)
         {
             if (!m_Initialized)
@@ -351,13 +434,16 @@ namespace filter
                 }
             }
             m_CurrentSample.data[value] = m_Filter[value]->Filter(dof.data[value]);
+            TraceLoggingWriteTagged(local,
+                                    "BiQuadStabilizer::Insert",
+                                    TLArg(static_cast<int>(value), "Value"),
+                                    TLArg(this->m_CurrentSample.data[value], "Current_Sample"));
         }
         m_Initialized = true;
 
         TraceLoggingWriteStop(local, "BiQuadStabilizer::Insert");
     }
 
-    
     void BiQuadStabilizer::ResetFilters()
     {
         TraceLocalActivity(local);
@@ -365,7 +451,7 @@ namespace filter
 
         for (const DofValue value : m_RelevantValues)
         {
-            m_Filter[value] = std::make_unique<BiQuadFilter>(BiQuadFilter(m_Frequency));
+            m_Filter[value] = std::make_unique<BiQuadFilter>(BiQuadFilter(m_Frequency.data[value]));
         }
         m_Initialized = false;
 
@@ -374,9 +460,9 @@ namespace filter
 
     BiQuadStabilizer::BiQuadFilter::BiQuadFilter(float frequency)
     {
+        const double r = sin(M_PI_4);
         const double a = tan(M_PI * frequency / m_SamplingFrequency);
         const double aSquare = a * a;
-        const double r = sin(M_PI_4);
         const double s = (aSquare + 2.0 * a * r + 1.0);
         m_A = aSquare / s;
         m_D1 = 2.0 * (1.0 - aSquare) / s;

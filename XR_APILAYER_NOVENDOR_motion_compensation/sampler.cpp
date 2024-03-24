@@ -28,14 +28,14 @@ namespace sampler
         StopSampling();
     }
 
-    void Sampler::SetFrequency(const float frequency) const
+    void Sampler::SetStrength(const float strength) const
     {
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "Sampler::SetFrequency", TLArg(frequency, "Frequency"));
+        TraceLoggingWriteStart(local, "Sampler::SetStrength", TLArg(strength, "Strength"));
 
-        m_Stabilizer->SetFrequency(frequency);
+        m_Stabilizer->SetStrength(strength);
 
-        TraceLoggingWriteStop(local, "Sampler::SetFrequency", TLArg(frequency, "Frequency"));
+        TraceLoggingWriteStop(local, "Sampler::SetStrength", TLArg(strength, "Strength"));
     }
 
     bool Sampler::ReadData(Dof& dof, XrTime now)
@@ -108,7 +108,7 @@ namespace sampler
         }
         if (m_SampleRecording && m_Recorder)
         {
-            Dof zero;
+            constexpr Dof zero{};
             m_Recorder->AddDofValues(zero, Sampled);
             m_Recorder->AddDofValues(zero, Momentary);      
         }

@@ -20,7 +20,7 @@ namespace sampler
                 const std::shared_ptr<output::RecorderBase>& recorder);
         ~Sampler();
 
-        void SetFrequency(float frequency) const;
+        void SetStrength(float strength) const;
         void StartSampling();
         void StopSampling();
         bool ReadData(utility::Dof& dof, XrTime now);
