@@ -291,8 +291,14 @@ namespace filter
         for (const DofValue value : m_RelevantValues)
         {
             const double withFactor = std::min(strength * m_Factor.data[value], 1.f);
-            m_Frequency.data[value] = static_cast<float>(12.5 / (2 * withFactor + 0.1) - 12.5 / 2.1);
-
+            if (withFactor < 0.001f)
+            {
+                m_Frequency.data[value] = -1.f;
+            }
+            else
+            {
+                m_Frequency.data[value] = static_cast<float>(12.5 / (2 * withFactor + 0.1) - 12.5 / 2.1);
+            }
             DebugLog("stabilizer low pass frequency(%u) = %f", value, m_Frequency.data[value]);
             TraceLoggingWriteTagged(local,
                                     "LowPassStabilizer::SetFrequencies",
@@ -358,13 +364,14 @@ namespace filter
             TraceLoggingWriteStop(local, "EmaStabilizer::Insert", TLArg(true, "Disabled"));
             return;
         }
+        
 
         const float duration = (now - std::exchange(m_LastSampleTime, now)) / 1e9f;
         if (!m_Initialized)
         {
             for (const DofValue value : m_RelevantValues)
             {
-                m_CurrentSample.data[value] = dof.data[value];
+                m_CurrentSample.data[value] = m_Frequency.data[value] == 0.f ? 0.f : dof.data[value];
             }
             m_Initialized = true;
             TraceLoggingWriteStop(local, "EmaStabilizer::Insert", TLArg(true, "InitialSample"));
@@ -374,6 +381,15 @@ namespace filter
         const double durationFactor = duration * -2.0 * M_PI;
         for (const DofValue value : m_RelevantValues)
         {
+            if (m_Frequency.data[value] == -1.f)
+            {
+                m_CurrentSample.data[value] = dof.data[value];
+                TraceLoggingWriteTagged(local,
+                                        "EmaStabilizer::Insert",
+                                        TLArg(static_cast<int>(value), "Value"),
+                                        TLArg(true, "Disabled"));
+                continue;
+            }
             const float factor = static_cast<float>(1 - exp(durationFactor * m_Frequency.data[value]));
             m_CurrentSample.data[value] += (dof.data[value] - m_CurrentSample.data[value]) * factor;
             TraceLoggingWriteTagged(local,
@@ -425,6 +441,15 @@ namespace filter
 
         for (const DofValue value : m_RelevantValues)
         {
+            if (m_Frequency.data[value] == -1.f)
+            {
+                m_CurrentSample.data[value] = dof.data[value];
+                TraceLoggingWriteTagged(local,
+                                        "BiQuadStabilizer::Insert",
+                                        TLArg(static_cast<int>(value), "Value"),
+                                        TLArg(true, "Disabled"));
+                continue;
+            }
             if (!m_Initialized)
             {
                 // skip attack time
