@@ -259,6 +259,7 @@ namespace input
             m_Layer->m_TestRotStart = time;
             m_Layer->m_Activated = !m_Layer->m_Activated;
             Log("test rotation motion compensation % s", m_Layer->m_Activated ? "activated" : "deactivated");
+            AudioOut::Execute(m_Layer->m_Activated ? Event::Activated : Event::Deactivated);
             TraceLoggingWriteStop(local, "InputHandler::ToggleActive");
             return;
         }
@@ -303,6 +304,7 @@ namespace input
         {
             m_Layer->m_TestRotStart = time;
             Log("test rotation motion compensation recalibrated");
+            AudioOut::Execute(Event::Calibrated);
             TraceLoggingWriteStop(local, "InputHandler::Recalibrate", TLArg(true, "Success"));
             return;
         }

@@ -1042,28 +1042,22 @@ namespace openxr_api_layer
             const XrSpace refSpaceForCompensation = spaceComp ? baseSpace : space;
 
             // manipulate pose using tracker
-            XrPosef trackerDelta{Pose::Identity()};
+            XrPosef trackerDelta{Pose::Identity()},refToStage, stageToRef;
+            ;
             bool apply = true;
-            if (!m_TestRotation && ((apply = m_Tracker->GetPoseDelta(trackerDelta, m_Session, time))))
-            {
-                XrPosef refToStage, stageToRef;
-                if (GetRefToStage(refSpaceForCompensation, &refToStage, &stageToRef))
-                {
-                    if (m_ModifierActive && (spaceView || baseView))
-                    {
-                        const XrPosef poseStage = Pose::Multiply(poseToCompensate, stageToRef);
-                        m_HmdModifier->Apply(trackerDelta, poseStage);
-                    }
-                    trackerDelta = Pose::Multiply(Pose::Multiply(stageToRef, trackerDelta), refToStage);
-                }
-                else
-                {
-                    trackerDelta = Pose::Identity();
-                }
-            }
-            else
+            if (m_TestRotation)
             {
                 TestRotation(&trackerDelta, time, false);
+            }
+            else if (((apply = m_Tracker->GetPoseDelta(trackerDelta, m_Session, time))) &&
+                     GetRefToStage(refSpaceForCompensation, &refToStage, &stageToRef))
+            {
+                if (m_ModifierActive && (spaceView || baseView))
+                {
+                    const XrPosef poseStage = Pose::Multiply(poseToCompensate, stageToRef);
+                    m_HmdModifier->Apply(trackerDelta, poseStage);
+                }
+                trackerDelta = Pose::Multiply(Pose::Multiply(stageToRef, trackerDelta), refToStage);
             }
             if (apply)
             {
@@ -1075,7 +1069,7 @@ namespace openxr_api_layer
                 {
                     // TODO: verify calculation
                     Log("Please report the application in use to the oxrmc developer!");
-                    // undo inversion (unswitch roles)
+                    // undo inversion (undo role switch)
                     location->pose = Pose::Invert(location->pose);
                 }
 
@@ -1211,7 +1205,11 @@ namespace openxr_api_layer
 
             // manipulate pose using tracker
             XrPosef trackerDelta{Pose::Identity()};
-            if (m_Tracker->GetPoseDelta(trackerDelta, m_Session, displayTime))
+            if (m_TestRotation)
+            {
+                TestRotation(&trackerDelta, displayTime, false);
+            }
+            else if (m_Tracker->GetPoseDelta(trackerDelta, m_Session, displayTime))
             {
                 XrPosef refToStage, stageToRef;
                 if (GetRefToStage(refSpace, &refToStage, &stageToRef))
@@ -1248,14 +1246,15 @@ namespace openxr_api_layer
                                                 TLArg(i, "Index"),
                                                 TLArg(xr::ToString(views[i].pose).c_str(), "CompensatedViewPose"));
                     }
-                    // sample from xrLocateView potentially overrides previous one
-                    m_DeltaCache.AddSample(displayTime, trackerDelta, true);
                 }
             }
             else
             {
                 RecoveryTimeOut(displayTime);
             }
+            // sample from xrLocateView potentially overrides previous one
+            m_DeltaCache.AddSample(displayTime, trackerDelta, true);
+
             TraceLoggingWriteStop(local,
                                   "OpenXrLayer::xrLocateViews",
                                   TLArg(true, "Activated"),
