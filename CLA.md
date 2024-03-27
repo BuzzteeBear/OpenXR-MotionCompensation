@@ -6,9 +6,9 @@ based on the
 
 ## (including the Traditional Patent License OPTION)
 
-Thank you for your interest in contributing to Sebastian Veith's OpenXR Motion Compensation ("We" or "Us").
+Thank you for your interest in contributing to [Sebastian Veith](https://github.com/BuzzteeBear)'s OpenXR Motion Compensation ("We" or "Us").
 
-The purpose of this contributor agreement ("Agreement") is to clarify and document the rights granted by contributors to Us. To make this document effective, please follow the instructions at https://github.com/BuzzteeBear/OpenXR-MotionCompensation.
+The purpose of this contributor agreement ("Agreement") is to clarify and document the rights granted by contributors to Us.
 
 ### 0\. Preamble
 
