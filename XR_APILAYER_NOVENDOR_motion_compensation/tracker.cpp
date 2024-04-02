@@ -718,8 +718,12 @@ namespace tracker
             success = false;
         }
 
-        m_Manipulator = std::make_unique<CorManipulator>(CorManipulator(this));
-        m_Manipulator->Init();
+        bool physicalEnabled{false};
+        if (GetConfig()->GetBool(Cfg::PhysicalEnabled, physicalEnabled) && physicalEnabled)
+        {
+            m_Manipulator = std::make_unique<CorManipulator>(CorManipulator(this));
+            m_Manipulator->Init();
+        }
  
         TraceLoggingWriteStop(local,
                               "VirtualTracker::Init",
