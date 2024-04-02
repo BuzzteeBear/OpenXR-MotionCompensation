@@ -15,11 +15,11 @@ using namespace utility;
 namespace sampler
 {
     Sampler::Sampler(tracker::VirtualTracker* tracker,
-                     const std::vector<utility::DofValue>& relevantValues,
+                     const std::vector<utility::DofValue>& relevant,
                      const std::shared_ptr<output::RecorderBase>& recorder)
         : m_Tracker(tracker), m_Recorder(recorder)
     {
-        m_Stabilizer = std::make_shared<filter::BiQuadStabilizer>(relevantValues);
+        m_Stabilizer = std::make_shared<filter::BiQuadStabilizer>(relevant);
         GetConfig()->GetBool(Cfg::RecordSamples, m_SampleRecording);
     }
 

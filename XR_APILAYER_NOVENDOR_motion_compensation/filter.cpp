@@ -3,6 +3,7 @@
 #include "pch.h"
 
 #include "filter.h"
+
 #include "config.h"
 #include <util.h>
 
@@ -208,8 +209,8 @@ namespace filter
         m_ThirdStage = rotation;
     }
 
-    PassThroughStabilizer::PassThroughStabilizer(const std::vector<utility::DofValue>& relevantValues)
-        : m_RelevantValues(relevantValues)
+    PassThroughStabilizer::PassThroughStabilizer(const std::vector<utility::DofValue>& relevant)
+        : m_Relevant(relevant)
     {
         auto SetFactor = [this](const Cfg key, const DofValue value) {
             GetConfig()->GetFloat(key, m_Factor.data[value]);
@@ -235,7 +236,7 @@ namespace filter
         TraceLoggingWriteStart(local, "PassThroughStabilizer::Read");
 
         std::unique_lock lock(m_SampleMutex);
-        for (const DofValue value : m_RelevantValues)
+        for (const DofValue value : m_Relevant)
         {
             dof.data[value] = m_CurrentSample.data[value];
         }
@@ -243,8 +244,8 @@ namespace filter
         TraceLoggingWriteStop(local, "PassThroughStabilizer::Read", TLArg(xr::ToString(dof).c_str(), "Dof"));
     }
 
-    LowPassStabilizer::LowPassStabilizer(const std::vector<utility::DofValue>& relevantValues)
-        : PassThroughStabilizer(relevantValues)
+    LowPassStabilizer::LowPassStabilizer(const std::vector<utility::DofValue>& relevant)
+        : PassThroughStabilizer(relevant)
     {
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "LowPassStabilizer::LowPassStabilizer");
@@ -264,7 +265,7 @@ namespace filter
         TraceLoggingWriteStart(local, "LowPassStabilizer::Read", TLArg(xr::ToString(dof).c_str(), "DofIn"));
 
         std::unique_lock lock(m_SampleMutex);
-        for (const DofValue value : m_RelevantValues)
+        for (const DofValue value : m_Relevant)
         {
             dof.data[value] = m_CurrentSample.data[value];
         }
@@ -288,7 +289,7 @@ namespace filter
             return;
         }
 
-        for (const DofValue value : m_RelevantValues)
+        for (const DofValue value : m_Relevant)
         {
             const double withFactor = std::min(strength * m_Factor.data[value], 1.f);
             if (withFactor < 0.001f)
@@ -315,7 +316,7 @@ namespace filter
 
         if (m_Disabled)
         {
-            for (const DofValue value : m_RelevantValues)
+            for (const DofValue value : m_Relevant)
             {
                 m_CurrentSample.data[value] = m_Blocking ? 0.f : dof.data[value];
             }
@@ -364,12 +365,11 @@ namespace filter
             TraceLoggingWriteStop(local, "EmaStabilizer::Insert", TLArg(true, "Disabled"));
             return;
         }
-        
 
         const float duration = (now - std::exchange(m_LastSampleTime, now)) / 1e9f;
         if (!m_Initialized)
         {
-            for (const DofValue value : m_RelevantValues)
+            for (const DofValue value : m_Relevant)
             {
                 m_CurrentSample.data[value] = m_Frequency.data[value] == 0.f ? 0.f : dof.data[value];
             }
@@ -379,7 +379,7 @@ namespace filter
         }
 
         const double durationFactor = duration * -2.0 * M_PI;
-        for (const DofValue value : m_RelevantValues)
+        for (const DofValue value : m_Relevant)
         {
             if (m_Frequency.data[value] == -1.f)
             {
@@ -439,7 +439,7 @@ namespace filter
             return;
         }
 
-        for (const DofValue value : m_RelevantValues)
+        for (const DofValue value : m_Relevant)
         {
             if (m_Frequency.data[value] == -1.f)
             {
@@ -455,10 +455,10 @@ namespace filter
                 // skip attack time
                 for (int i = 0; i < 1e5; i++)
                 {
-                    m_Filter[value]->Filter(dof.data[value]);
+                    Filter(dof.data[value], value);
                 }
             }
-            m_CurrentSample.data[value] = m_Filter[value]->Filter(dof.data[value]);
+            m_CurrentSample.data[value] = static_cast<float>(Filter(dof.data[value], value));
             TraceLoggingWriteTagged(local,
                                     "BiQuadStabilizer::Insert",
                                     TLArg(static_cast<int>(value), "Value"),
@@ -474,13 +474,37 @@ namespace filter
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "BiQuadStabilizer::ResetFilters");
 
-        for (const DofValue value : m_RelevantValues)
+        for (const DofValue value : m_Relevant)
         {
             m_Filter[value] = std::make_unique<BiQuadFilter>(BiQuadFilter(m_Frequency.data[value]));
+            if (value >= yaw)
+            {
+                m_Filter[value + 3] = std::make_unique<BiQuadFilter>(BiQuadFilter(m_Frequency.data[value]));
+            }
         }
         m_Initialized = false;
 
         TraceLoggingWriteStop(local, "BiQuadStabilizer::ResetFilters");
+    }
+
+    double BiQuadStabilizer::Filter(float dofValue, utility::DofValue value)
+    {
+        if (value < yaw)
+        {
+            return m_Filter[value]->Filter(dofValue);
+        }
+        // avoid jump when going from -180 to 180 degrees and vice versa
+
+        // angle to radian (between pi and -pi
+        double radian = dofValue / 180.0 * M_PI;
+        radian = fmod(radian + M_PI, 2.0 * M_PI);
+        radian += radian > 0 ? -M_PI : M_PI;
+
+        // use complex numbers to decompose radian angle into sine and cosine
+        const std::complex<double> complex = std::polar(1.0, radian);
+        const double real = m_Filter[value]->Filter(complex.real());
+        const double imag = m_Filter[value + 3]->Filter(complex.imag());
+        return std::arg(std::complex<double>{real, imag}) * 180.0 / M_PI;
     }
 
     BiQuadStabilizer::BiQuadFilter::BiQuadFilter(float frequency)
@@ -495,9 +519,9 @@ namespace filter
         m_W0 = m_W1 = m_W2 = 0.0;
     }
 
-    float BiQuadStabilizer::BiQuadFilter::Filter(const float value)
+    double BiQuadStabilizer::BiQuadFilter::Filter(const double value)
     {
         m_W0 = m_D1 * m_W1 + m_D2 * m_W2 + value;
-        return static_cast<float>(m_A * (std::exchange(m_W2, m_W1) + 2.0f * std::exchange(m_W1, m_W0) + m_W0));
+        return m_A * (std::exchange(m_W2, m_W1) + 2.0f * std::exchange(m_W1, m_W0) + m_W0);
     }
 } // namespace filter

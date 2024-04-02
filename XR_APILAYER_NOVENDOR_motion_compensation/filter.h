@@ -127,14 +127,14 @@ namespace filter
     class PassThroughStabilizer : public StabilizerBase
     {
       public:
-        explicit PassThroughStabilizer(const std::vector<utility::DofValue>& relevantValues);;
+        explicit PassThroughStabilizer(const std::vector<utility::DofValue>& relevant);;
         void SetStrength(float strength) override{};
         void SetStartTime(int64_t now) override{};
         void Insert(utility::Dof& dof, int64_t now) override;
         void Read(utility::Dof& dof) override;
 
       protected:
-        std::vector<utility::DofValue> m_RelevantValues;
+        std::vector<utility::DofValue> m_Relevant;
         utility::Dof m_CurrentSample{};
         utility::Dof m_Factor{};
     };
@@ -142,7 +142,7 @@ namespace filter
     class LowPassStabilizer : public PassThroughStabilizer
     {
       public:
-        explicit LowPassStabilizer(const std::vector<utility::DofValue>& relevantValues);
+        explicit LowPassStabilizer(const std::vector<utility::DofValue>& relevant);
         void Read(utility::Dof& dof) override;
 
       protected:
@@ -159,8 +159,8 @@ namespace filter
     class EmaStabilizer : public LowPassStabilizer
     {
       public:
-        explicit EmaStabilizer(const std::vector<utility::DofValue>& relevantValues)
-            : LowPassStabilizer(relevantValues){};
+        explicit EmaStabilizer(const std::vector<utility::DofValue>& relevant)
+            : LowPassStabilizer(relevant){};
         void SetStrength(float strength) override;
         void SetStartTime(int64_t now) override;
         void Insert(utility::Dof& dof, int64_t now) override;
@@ -172,20 +172,21 @@ namespace filter
     class BiQuadStabilizer : public LowPassStabilizer
     {
       public:
-        explicit BiQuadStabilizer(const std::vector<utility::DofValue>& relevantValues)
-            : LowPassStabilizer(relevantValues){};
+        explicit BiQuadStabilizer(const std::vector<utility::DofValue>& relevant)
+            : LowPassStabilizer(relevant){};
         void SetStrength(float strength) override;
         void SetStartTime(int64_t now) override;
         void Insert(utility::Dof& dof, int64_t now) override;
 
       private:
         void ResetFilters();
+        double Filter(float dofValue, utility::DofValue value);
 
         class BiQuadFilter
         {
           public:
             BiQuadFilter(float frequency);
-            float Filter(float value);
+            double Filter(double value);
 
           private:
             float m_SamplingFrequency{600.f};
@@ -198,6 +199,6 @@ namespace filter
             double m_W2;
         };
 
-        std::unique_ptr<BiQuadFilter> m_Filter[6]{};
+        std::unique_ptr<BiQuadFilter> m_Filter[9]{};
     };
 } // namespace filter

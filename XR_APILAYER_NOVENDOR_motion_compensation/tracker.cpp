@@ -634,8 +634,8 @@ namespace tracker
         return success;
     }
 
-    VirtualTracker::VirtualTracker(const std::vector<utility::DofValue>&  relevantValues)
-        : m_RelevantValues(relevantValues)
+    VirtualTracker::VirtualTracker(const std::vector<utility::DofValue>&  relevant)
+        : m_RelevantValues(relevant)
     {
         m_Recorder = std::make_shared<output::PoseAndDofRecorder>();
         bool samplerEnabled;

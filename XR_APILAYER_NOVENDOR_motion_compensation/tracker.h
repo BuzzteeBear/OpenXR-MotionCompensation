@@ -111,7 +111,7 @@ namespace tracker
     class VirtualTracker : public TrackerBase
     {
       public:
-        explicit VirtualTracker(const std::vector<utility::DofValue>& relevantValues);
+        explicit VirtualTracker(const std::vector<utility::DofValue>& relevant);
         ~VirtualTracker() override;
         bool Init() override;
         bool LazyInit(XrTime time) override;
@@ -177,7 +177,7 @@ namespace tracker
     class SixDofTracker : public VirtualTracker
     {
       protected:
-        SixDofTracker(const std::vector<utility::DofValue>& relevantValues) : VirtualTracker(relevantValues){}
+        SixDofTracker(const std::vector<utility::DofValue>& relevant) : VirtualTracker(relevant){}
         bool ReadSource(XrTime now, utility::Dof& dof) override;
 
       private:

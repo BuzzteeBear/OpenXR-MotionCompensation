@@ -16,7 +16,7 @@ namespace sampler
     {
       public:
         Sampler(tracker::VirtualTracker* tracker,
-                const std::vector<utility::DofValue>& relevantValues,
+                const std::vector<utility::DofValue>& relevant,
                 const std::shared_ptr<output::RecorderBase>& recorder);
         ~Sampler();
 
