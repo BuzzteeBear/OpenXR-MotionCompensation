@@ -8,14 +8,14 @@
 
 namespace tracker
 {
-    class VirtualTracker;
+    class TrackerBase;
 }
 namespace sampler
 {
     class Sampler
     {
       public:
-        Sampler(tracker::VirtualTracker* tracker,
+        Sampler(tracker::TrackerBase* tracker,
                 const std::vector<utility::DofValue>& relevant,
                 const std::shared_ptr<output::RecorderBase>& recorder);
         ~Sampler();
@@ -30,7 +30,7 @@ namespace sampler
 
         std::atomic_bool m_IsSampling{false};
         std::thread* m_Thread{nullptr};
-        tracker::VirtualTracker* m_Tracker{nullptr};
+        tracker::TrackerBase* m_Tracker{nullptr};
         std::shared_ptr<filter::StabilizerBase> m_Stabilizer{};
         std::chrono::microseconds m_Interval{1ms};
         bool m_SampleRecording{false};

@@ -119,18 +119,18 @@ namespace tracker
             TraceLoggingWriteStop(local, "ControllerBase::GetControllerPose", TLArg(false, "Success"));
             return false;
         }
-        if (const auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance()))
+        if (auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance()))
         {
             // Query the latest tracker pose.
             XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
-            if (!m_XrSyncCalled)
+            if (!layer->m_XrSyncCalled.load())
             {
                 constexpr XrActionsSyncInfo syncInfo{XR_TYPE_ACTIONS_SYNC_INFO, nullptr, 0, nullptr};
 
                 TraceLoggingWriteTagged(local,
                                         "ControllerBase::GetControllerPose",
                                         TLPArg(layer->m_ActionSet, "xrSyncActions"));
-                if (const XrResult result = GetInstance()->xrSyncActions(session, &syncInfo); XR_FAILED(result))
+                if (const XrResult result = layer->xrSyncActions(session, &syncInfo); XR_FAILED(result))
                 {
                     ErrorLog("%s: xrSyncActions failed: %s", __FUNCTION__, xr::ToCString(result));
                     TraceLoggingWriteStop(local, "ControllerBase::GetControllerPose", TLArg(false, "Success"));
@@ -213,12 +213,9 @@ namespace tracker
             trackerPose = location.pose;
             return true;
         }
-        else
-        {
-            ErrorLog("%s: unable to cast instance to OpenXrLayer", __FUNCTION__);
-            TraceLoggingWriteStop(local, "ControllerBase::GetControllerPose", TLArg(false, "Success"));
-            return false;
-        }
+        ErrorLog("%s: unable to cast instance to OpenXrLayer", __FUNCTION__);
+        TraceLoggingWriteStop(local, "ControllerBase::GetControllerPose", TLArg(false, "Success"));
+        return false;
     }
 
     XrVector3f ControllerBase::GetForwardVector(const XrQuaternionf& quaternion, bool inverted)
@@ -270,6 +267,19 @@ namespace tracker
         return angle;
     }
 
+
+    TrackerBase::TrackerBase(const std::vector<utility::DofValue>& relevant) : m_RelevantValues(relevant)
+    {
+        m_Recorder = std::make_shared<output::PoseAndDofRecorder>();
+        bool samplerEnabled;
+        if (GetConfig()->GetBool(Cfg::StabilizerEnabled, samplerEnabled) && samplerEnabled)
+        {
+            m_Sampler = new sampler::Sampler(this, m_RelevantValues, m_Recorder);
+            m_Recorder->m_Sampling = true;
+            Log("input stabilizer enabled");
+        }
+    }
+
     TrackerBase::~TrackerBase()
     {
         TraceLocalActivity(local);
@@ -277,6 +287,7 @@ namespace tracker
 
         delete m_TransFilter;
         delete m_RotFilter;
+        delete m_Sampler;
 
         TraceLoggingWriteStop(local, "TrackerBase::~TrackerBase");
     }
@@ -400,26 +411,87 @@ namespace tracker
                               TLArg(amount, "Amount"));
     }
 
+    
     void TrackerBase::ToggleStabilizer()
     {
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "TrackerBase::ToggleStabilizer");
 
-        ErrorLog("%s: current tracker type doesn't support input stabilizer", __FUNCTION__);
-        AudioOut::Execute(Event::Error);
+        if (!m_Sampler)
+        {
+            m_Sampler = new sampler::Sampler(this, m_RelevantValues, m_Recorder);
+            m_Recorder->m_Sampling = true;
+            if (m_Calibrated)
+            {
+                m_Sampler->StartSampling();
+            }
+            GetConfig()->SetValue(Cfg::StabilizerEnabled, true);
+            AudioOut::Execute(Event::StabilizerOn);
 
-        TraceLoggingWriteStop(local, "TrackerBase::ToggleStabilizer");
+            DebugLog("stabilizer activated");
+            TraceLoggingWriteStop(local, "TrackerBase::ToggleStabilizer", TLArg(true, "Activated"));
+            return;
+        }
+        delete m_Sampler;
+        m_Sampler = nullptr;
+        m_Recorder->m_Sampling = false;
+        GetConfig()->SetValue(Cfg::StabilizerEnabled, false);
+        AudioOut::Execute(Event::StabilizerOff);
+
+        DebugLog("stabilizer off");
+        TraceLoggingWriteStop(local, "TrackerBase::ToggleStabilizer", TLArg(false, "Activated"));
     }
 
     void TrackerBase::ModifyStabilizer(bool increase, bool fast)
     {
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "TrackerBase::ModifyStabilizer");
+        TraceLoggingWriteStart(local,
+                               "TrackerBase::ModifyStabilizer",
+                               TLArg(increase, "Increase"),
+                               TLArg(fast, "Fast"));
+        float prevStrength;
+        if (!GetConfig()->GetFloat(Cfg::StabilizerStrength, prevStrength))
+        {
+            AudioOut::Execute(Event::Error);
+            TraceLoggingWriteStop(local, "TrackerBase::ModifyStabilizer", TLArg(false, "Success"));
+            return;
+        }
+        float amount = (increase ? 1.f : -1.f) * (fast ? 0.10f : 0.01f);
 
-        ErrorLog("%s: current tracker type doesn't support input stabilizer", __FUNCTION__);
-        AudioOut::Execute(Event::Error);
+        float newStrength = prevStrength + amount;
+        if (newStrength < 0.001f)
+        {
+            newStrength = 0.f;
 
-        TraceLoggingWriteStop(local, "TrackerBase::ModifyStabilizer");
+            AudioOut::Execute(Event::Min);
+            TraceLoggingWriteTagged(local, "TrackerBase::ModifyStabilizer", TLArg(true, "Minimum"));
+        }
+        else if (newStrength > 0.999f)
+        {
+            newStrength = 1.f;
+
+            AudioOut::Execute(Event::Max);
+            TraceLoggingWriteTagged(local, "TrackerBase::ModifyStabilizer", TLArg(true, "Maximum"));
+        }
+        else
+        {
+            AudioOut::Execute(increase ? Event::Plus : Event::Minus);
+        }
+
+        GetConfig()->SetValue(Cfg::StabilizerStrength, newStrength);
+        DebugLog("stabilizer strength: %.4f", newStrength);
+
+        if (m_Sampler)
+        {
+            m_Sampler->SetStrength(newStrength);
+        }
+
+        TraceLoggingWriteStop(local,
+                              "TrackerBase::ModifyStabilizer",
+                              TLArg(prevStrength, "Previous"),
+                              TLArg(amount, "Amount"),
+                              TLArg(newStrength, "New"),
+                              TLArg(true, "Success"));
     }
 
     XrPosef TrackerBase::GetReferencePose() const
@@ -494,6 +566,10 @@ namespace tracker
     void TrackerBase::InvalidateCalibration()
     {
         m_Calibrated = false;
+        if (m_Sampler)
+        {
+            m_Sampler->StopSampling();
+        }
     }
 
     bool TrackerBase::ToggleRecording() const
@@ -595,8 +671,9 @@ namespace tracker
     }
 
     OpenXrTracker::OpenXrTracker()
+        : TrackerBase({utility::sway, utility::surge, utility::heave, utility::yaw, utility::roll, utility::pitch})
     {
-        m_Recorder = std::make_shared<output::PoseRecorder>();
+        m_Source = std::make_unique<PhysicalSource>(this);
     }
 
     bool OpenXrTracker::ResetReferencePose(XrSession session, XrTime time)
@@ -615,7 +692,37 @@ namespace tracker
             TraceLoggingWriteStop(local, "OpenXrTracker::ResetReferencePose", TLArg(false, "Success"));
             return false;
         }
+        m_Session = session;
         TraceLoggingWriteStop(local, "OpenXrTracker::ResetReferencePose", TLArg(true, "Success"));
+        return true;
+    }
+
+    utility::DataSource* OpenXrTracker::GetSource()
+    {
+        return m_Source.get();
+    }
+
+    bool OpenXrTracker::ReadSource(XrTime time, Dof& dof)
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local,
+                               "OpenXrTracker::ReadSource",
+                               TLArg(time, "Time"));
+        
+        LARGE_INTEGER now;
+        QueryPerformanceCounter(&now);
+        XrTime nowXr;
+        if (XR_FAILED(
+                GetInstance()->xrConvertWin32PerformanceCounterToTimeKHR(GetInstance()->GetXrInstance(), &now, &nowXr)))
+        {
+            return false;
+        }
+        XrPosef controllerPose;
+        if (!GetControllerPose(controllerPose, m_Session, nowXr))
+        {
+            return false;
+        }
+        dof = PoseToDof(controllerPose);
         return true;
     }
 
@@ -623,8 +730,27 @@ namespace tracker
     {
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "OpenXrTracker::GetPose", TLPArg(session, "Session"), TLArg(time, "Time"));
+        
+        bool success{false}; 
+        if (!m_Calibrated || !m_Sampler)
+        {
+            success = GetControllerPose(trackerPose, session, time);
+        }
+        else
+        {
+            if (Dof momentary; m_Recorder && ReadSource(time, momentary))
+            {
+                m_Recorder->AddDofValues(momentary, Momentary);
+            }
 
-        bool success = GetControllerPose(trackerPose, session, time);
+            Dof dof;
+            success = m_Sampler->ReadData(dof, time);
+            if (success)
+            {
+                m_Recorder->AddDofValues(dof, Read);
+                trackerPose = DofToPose(dof);
+            }
+        }
 
         TraceLoggingWriteStop(local,
                               "OpenXrTracker::GetPose",
@@ -634,22 +760,36 @@ namespace tracker
         return success;
     }
 
-    VirtualTracker::VirtualTracker(const std::vector<utility::DofValue>&  relevant)
-        : m_RelevantValues(relevant)
+    Dof OpenXrTracker::PoseToDof(const XrPosef& controller) const
     {
-        m_Recorder = std::make_shared<output::PoseAndDofRecorder>();
-        bool samplerEnabled;
-        if (GetConfig()->GetBool(Cfg::StabilizerEnabled, samplerEnabled) && samplerEnabled)
-        {
-            m_Sampler = new sampler::Sampler(this, m_RelevantValues, m_Recorder);
-            m_Recorder->m_Sampling = true;
-            Log("input stabilizer enabled");
-        }
+        // TODO: convert into forward orientation
+        const XrPosef diff = Pose::Multiply(controller, Pose::Invert(m_ReferencePose));
+        const auto angles = utility::ToEulerAngles(diff.orientation);
+        return Dof{diff.position.x * -1000,
+                   diff.position.z * 1000,
+                   diff.position.y * 1000,
+                   angles.y / angleToRadian,
+                   angles.z / angleToRadian,
+                   angles.x / angleToRadian};
     }
 
-    VirtualTracker::~VirtualTracker()
+    XrPosef OpenXrTracker::DofToPose(const Dof& dof) const
     {
-        delete m_Sampler;
+        // TODO: convert into forward orientation
+        XrPosef controller;
+        StoreXrQuaternion(&controller.orientation,
+                          DirectX::XMQuaternionRotationRollPitchYaw(dof.data[pitch] * angleToRadian,
+                                                                    dof.data[yaw] * angleToRadian,
+                                                                    dof.data[roll] * angleToRadian));
+        controller.position = XrVector3f{dof.data[sway] / -1000.f, dof.data[heave] / 1000.f, dof.data[surge] / 1000.f};
+        return Pose::Multiply(controller, m_ReferencePose);
+    }
+
+    bool OpenXrTracker::PhysicalSource::Open(int64_t time)
+    {
+        return true;
+        // TODO: check action state
+        //m_Tracker->GetControllerPose();
     }
 
     bool VirtualTracker::Init()
@@ -763,87 +903,6 @@ namespace tracker
 
         return success;
     }
-    void VirtualTracker::ToggleStabilizer()
-    {
-        TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "VirtualTracker::ToggleStabilizer");
-
-        if (!m_Sampler)
-        {
-            m_Sampler = new sampler::Sampler(this, m_RelevantValues, m_Recorder);
-            m_Recorder->m_Sampling = true;
-            if (m_Calibrated)
-            {
-                m_Sampler->StartSampling();
-            }
-            GetConfig()->SetValue(Cfg::StabilizerEnabled, true);
-            AudioOut::Execute(Event::StabilizerOn);
-
-            DebugLog("stabilizer activated");
-            TraceLoggingWriteStop(local, "VirtualTracker::ToggleStabilizer", TLArg(true, "Activated"));
-            return;
-        }
-        delete m_Sampler;
-        m_Sampler = nullptr;
-        m_Recorder->m_Sampling = false;
-        GetConfig()->SetValue(Cfg::StabilizerEnabled, false);
-        AudioOut::Execute(Event::StabilizerOff);
-
-        DebugLog("stabilizer off");
-        TraceLoggingWriteStop(local, "VirtualTracker::ToggleStabilizer", TLArg(false, "Activated"));
-    }
-
-    void VirtualTracker::ModifyStabilizer(bool increase, bool fast)
-    {
-        TraceLocalActivity(local);
-        TraceLoggingWriteStart(local,
-                               "VirtualTracker::ModifyStabilizer",
-                               TLArg(increase, "Increase"),
-                               TLArg(fast, "Fast"));
-        float prevStrength;
-        if (!GetConfig()->GetFloat(Cfg::StabilizerStrength, prevStrength))
-        {
-            AudioOut::Execute(Event::Error);
-            TraceLoggingWriteStop(local, "VirtualTracker::ModifyStabilizer", TLArg(false, "Success"));
-            return;
-        }
-        float amount = (increase ? 1.f : -1.f) * (fast ? 0.10f : 0.01f);
-
-        float newStrength = prevStrength + amount;
-        if (newStrength < 0.001f)
-        {
-            newStrength = 0.f;
-
-            AudioOut::Execute(Event::Min);
-            TraceLoggingWriteTagged(local, "VirtualTracker::ModifyStabilizer", TLArg(true, "Minimum"));
-        }
-        else if (newStrength > 0.999f)
-        {
-            newStrength = 1.f;
-
-            AudioOut::Execute(Event::Max);
-            TraceLoggingWriteTagged(local, "VirtualTracker::ModifyStabilizer", TLArg(true, "Maximum"));
-        }
-        else
-        {
-            AudioOut::Execute(increase ? Event::Plus : Event::Minus);
-        }
-
-        GetConfig()->SetValue(Cfg::StabilizerStrength, newStrength);
-        DebugLog("stabilizer strength: %.4f", newStrength);
-
-        if (m_Sampler)
-        {
-            m_Sampler->SetStrength(newStrength);
-        }
-
-        TraceLoggingWriteStop(local,
-                              "VirtualTracker::ModifyStabilizer",
-                              TLArg(prevStrength, "Previous"),
-                              TLArg(amount, "Amount"),
-                              TLArg(newStrength, "New"),
-                              TLArg(true, "Success"));
-    }
 
     bool VirtualTracker::ResetReferencePose(const XrSession session, const XrTime time)
     {
@@ -889,20 +948,6 @@ namespace tracker
                               TLArg(success, "Success"),
                               TLArg(xr::ToString(this->m_ReferencePose).c_str(), "ReferencePose"));
         return success;
-    }
-    
-    void VirtualTracker::InvalidateCalibration()
-    {
-        TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "YawTracker::InvalidateCalibration");
-
-        TrackerBase::InvalidateCalibration();
-        if (m_Sampler)
-        {
-            m_Sampler->StopSampling();
-        }
-
-        TraceLoggingWriteStop(local, "YawTracker::InvalidateCalibration");
     }
 
     void VirtualTracker::SaveReferencePose(const XrTime time) const
@@ -1078,6 +1123,11 @@ namespace tracker
         }
         else
         {
+            if (Dof momentary; m_Recorder && ReadSource(time, momentary))
+            {
+                m_Recorder->AddDofValues(momentary, Momentary);
+            }
+            
             if (!m_Sampler->ReadData(dof, time))
             {
                 TraceLoggingWriteStop(local, "VirtualTracker::ReadData", TLArg(false, "Success"));
@@ -1326,7 +1376,7 @@ namespace tracker
         }
         StoreXrQuaternion(&rigPose.orientation, rotation);
 
-        rigPose.position = XrVector3f{-dof.data[sway] / -1000.f, dof.data[heave] / 1000.f, dof.data[surge] / 1000.f};
+        rigPose.position = XrVector3f{dof.data[sway] / -1000.f, dof.data[heave] / 1000.f, dof.data[surge] / 1000.f};
         TraceLoggingWriteStop(local, "SrsTracker::DataToPose", TLArg(xr::ToString(rigPose).c_str(), "Pose"));
         return rigPose;
     }
@@ -1454,7 +1504,7 @@ namespace tracker
             TraceLoggingWriteStop(local, "CorManipulator::GetButtonState", TLArg(false, "Leyer_Valid"));
             return;
          }
-         if (!m_Tracker->m_XrSyncCalled)
+         if (!layer->m_XrSyncCalled.load())
          {
             // sync actions
             TraceLoggingWriteTagged(local,

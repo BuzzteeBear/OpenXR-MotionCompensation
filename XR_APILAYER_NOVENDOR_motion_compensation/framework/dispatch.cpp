@@ -74,6 +74,17 @@ namespace openxr_api_layer {
                 XR_HTCX_VIVE_TRACKER_INTERACTION_EXTENSION_NAME,
                 type.c_str());
         }
+
+        if ("controller" == type || "vive" == type)
+        {
+            implicitExtensions.push_back(XR_KHR_WIN32_CONVERT_PERFORMANCE_COUNTER_TIME_EXTENSION_NAME);
+        }
+        else
+        {
+            Log("extension %s not requested for tracker type: %s",
+                XR_KHR_WIN32_CONVERT_PERFORMANCE_COUNTER_TIME_EXTENSION_NAME,
+                type.c_str());
+        }
  
         // Only request implicit extensions that are supported.
         //
