@@ -25,7 +25,7 @@ namespace tracker
       protected:
         virtual void SetReferencePose(const XrPosef& pose);
         virtual bool GetPose(XrPosef& trackerPose, XrSession session, XrTime time) = 0;
-        virtual bool GetControllerPose(XrPosef& trackerPose, XrSession session, XrTime time);
+        virtual bool GetControllerPose(XrPosef& trackerPose, XrSession session, XrTime time, bool reportError = true);
         static XrVector3f GetForwardVector(const XrQuaternionf& quaternion, bool inverted = false);
         static XrQuaternionf GetYawRotation(const XrVector3f& forward, float yawAdjustment);
         static float GetYawAngle(const XrVector3f& forward);
@@ -113,7 +113,7 @@ namespace tracker
         bool GetPose(XrPosef& trackerPose, XrSession session, XrTime time) override;
 
       private:
-        [[nodiscard]] utility::Dof PoseToDof(const XrPosef& controller) const;
+        [[nodiscard]] utility::Dof PoseToDof(const XrPosef& pose) const;
         [[nodiscard]] XrPosef DofToPose(const utility::Dof& dof) const;
 
         class PhysicalSource : public utility::DataSource
@@ -126,6 +126,9 @@ namespace tracker
           private:
             OpenXrTracker* m_Tracker{nullptr};
         };
+
+        std::mutex m_SampleMutex;
+        XrPosef m_RefToFwd{xr::math::Pose::Identity()};
 
         std::unique_ptr<PhysicalSource> m_Source;
         XrSession m_Session{XR_NULL_HANDLE};

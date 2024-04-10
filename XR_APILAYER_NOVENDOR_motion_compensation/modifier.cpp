@@ -125,7 +125,6 @@ namespace modifier
                                     TLArg(xr::ToString(translation).c_str(), "Modified Translation"));
 
             curFwd.position = refFwd.position + translation;
-            ;
         }
         target = xr::Normalize(Multiply(curFwd, m_FwdToStage));
 

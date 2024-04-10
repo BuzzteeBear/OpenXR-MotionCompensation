@@ -86,12 +86,9 @@ namespace tracker
             TraceLoggingWriteStop(local, "ControllerBase::ResetReferencePose", TLArg(true, "Success"));
             return true;
         }
-        else
-        {
-            ErrorLog("%s: unable to get current pose", __FUNCTION__);
-            TraceLoggingWriteStop(local, "ControllerBase::ResetReferencePose", TLArg(false, "Success"));
-            return false;
-        }
+        ErrorLog("%s: unable to get current pose", __FUNCTION__);
+        TraceLoggingWriteStop(local, "ControllerBase::ResetReferencePose", TLArg(false, "Success"));
+        return false;
     }
 
     void ControllerBase::SetReferencePose(const XrPosef& pose)
@@ -105,7 +102,7 @@ namespace tracker
         TraceLoggingWriteStop(local, "ControllerBase::SetReferencePose");
     }
 
-    bool ControllerBase::GetControllerPose(XrPosef& trackerPose, XrSession session, XrTime time)
+    bool ControllerBase::GetControllerPose(XrPosef& trackerPose, XrSession session, XrTime time, bool reportError)
     {
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local,
@@ -115,7 +112,10 @@ namespace tracker
 
         if (!m_PhysicalEnabled)
         {
-            ErrorLog("%s: physical tracker disabled in config file", __FUNCTION__);
+            if (reportError)
+            {
+                ErrorLog("%s: physical tracker disabled in config file", __FUNCTION__);
+            }
             TraceLoggingWriteStop(local, "ControllerBase::GetControllerPose", TLArg(false, "Success"));
             return false;
         }
@@ -132,7 +132,10 @@ namespace tracker
                                         TLPArg(layer->m_ActionSet, "xrSyncActions"));
                 if (const XrResult result = layer->xrSyncActions(session, &syncInfo); XR_FAILED(result))
                 {
-                    ErrorLog("%s: xrSyncActions failed: %s", __FUNCTION__, xr::ToCString(result));
+                    if (reportError)
+                    {
+                        ErrorLog("%s: xrSyncActions failed: %s", __FUNCTION__, xr::ToCString(result));
+                    }
                     TraceLoggingWriteStop(local, "ControllerBase::GetControllerPose", TLArg(false, "Success"));
                     return false;
                 }
@@ -149,7 +152,10 @@ namespace tracker
                         GetInstance()->xrGetActionStatePose(session, &getActionStateInfo, &actionStatePose);
                     XR_FAILED(result))
                 {
-                    ErrorLog("%s: xrGetActionStatePose failed: %s", __FUNCTION__, xr::ToCString(result));
+                    if (reportError)
+                    {
+                        ErrorLog("%s: xrGetActionStatePose failed: %s", __FUNCTION__, xr::ToCString(result));
+                    }
                     TraceLoggingWriteStop(local, "ControllerBase::GetControllerPose", TLArg(false, "Success"));
                     return false;
                 }
@@ -158,7 +164,11 @@ namespace tracker
                 {
                     if (!m_ConnectionLost)
                     {
-                        ErrorLog("%s: unable to determine tracker pose - XrActionStatePose not active", __FUNCTION__);
+                        if (reportError)
+                        {
+                            ErrorLog("%s: unable to determine tracker pose - XrActionStatePose not active",
+                                     __FUNCTION__);
+                        }
                         m_ConnectionLost = true;
                     }
                     TraceLoggingWriteStop(local, "ControllerBase::GetControllerPose", TLArg(false, "Success"));
@@ -170,7 +180,10 @@ namespace tracker
                     GetInstance()->OpenXrApi::xrLocateSpace(layer->m_TrackerSpace, layer->m_StageSpace, time, &location);
                 XR_FAILED(result))
             {
-                ErrorLog("%s: xrLocateSpace failed: %s", __FUNCTION__, xr::ToCString(result));
+                if (reportError)
+                {
+                    ErrorLog("%s: xrLocateSpace failed: %s", __FUNCTION__, xr::ToCString(result));
+                }
                 if (XR_ERROR_TIME_INVALID == result && m_LastPoseTime != 0)
                 {
                     TraceLoggingWriteTagged(local,
@@ -199,7 +212,10 @@ namespace tracker
             {
                 if (!m_ConnectionLost)
                 {
-                    ErrorLog("%s: unable to determine tracker pose - XrSpaceLocation not valid", __FUNCTION__);
+                    if (reportError)
+                    {
+                        ErrorLog("%s: unable to determine tracker pose - XrSpaceLocation not valid", __FUNCTION__);
+                    }
                     m_ConnectionLost = true;
                 }
                 return false;
@@ -213,7 +229,10 @@ namespace tracker
             trackerPose = location.pose;
             return true;
         }
-        ErrorLog("%s: unable to cast instance to OpenXrLayer", __FUNCTION__);
+        if (reportError)
+        {
+            ErrorLog("%s: unable to cast instance to OpenXrLayer", __FUNCTION__);
+        }
         TraceLoggingWriteStop(local, "ControllerBase::GetControllerPose", TLArg(false, "Success"));
         return false;
     }
@@ -268,7 +287,7 @@ namespace tracker
     }
 
 
-    TrackerBase::TrackerBase(const std::vector<utility::DofValue>& relevant) : m_RelevantValues(relevant)
+    TrackerBase::TrackerBase(const std::vector<DofValue>& relevant) : m_RelevantValues(relevant)
     {
         m_Recorder = std::make_shared<output::PoseAndDofRecorder>();
         bool samplerEnabled;
@@ -428,7 +447,7 @@ namespace tracker
             GetConfig()->SetValue(Cfg::StabilizerEnabled, true);
             AudioOut::Execute(Event::StabilizerOn);
 
-            DebugLog("stabilizer activated");
+            Log("stabilizer activated");
             TraceLoggingWriteStop(local, "TrackerBase::ToggleStabilizer", TLArg(true, "Activated"));
             return;
         }
@@ -438,7 +457,7 @@ namespace tracker
         GetConfig()->SetValue(Cfg::StabilizerEnabled, false);
         AudioOut::Execute(Event::StabilizerOff);
 
-        DebugLog("stabilizer off");
+        Log("stabilizer off");
         TraceLoggingWriteStop(local, "TrackerBase::ToggleStabilizer", TLArg(false, "Activated"));
     }
 
@@ -479,7 +498,7 @@ namespace tracker
         }
 
         GetConfig()->SetValue(Cfg::StabilizerStrength, newStrength);
-        DebugLog("stabilizer strength: %.4f", newStrength);
+        Log("stabilizer strength: %.4f", newStrength);
 
         if (m_Sampler)
         {
@@ -559,6 +578,11 @@ namespace tracker
         m_RotFilter->Reset(pose.orientation);
         m_Calibrated = true;
         ControllerBase::SetReferencePose(pose);
+        if (m_Sampler)
+        {
+            m_Sampler->StopSampling();
+            m_Sampler->StartSampling();
+        }
 
         TraceLoggingWriteStop(local, "TrackerBase::SetReferencePose");
     }
@@ -671,7 +695,7 @@ namespace tracker
     }
 
     OpenXrTracker::OpenXrTracker()
-        : TrackerBase({utility::sway, utility::surge, utility::heave, utility::yaw, utility::roll, utility::pitch})
+        : TrackerBase({sway, surge, heave, yaw, roll, pitch})
     {
         m_Source = std::make_unique<PhysicalSource>(this);
     }
@@ -684,20 +708,26 @@ namespace tracker
                                TLPArg(session, "Session"),
                                TLArg(time, "Time"));
 
+        std::unique_lock lock(m_SampleMutex); 
+        m_Session = session;
+        m_Calibrated = false;
         CalibrateForward(session, time, 0.f);
         SetForwardRotation(m_ForwardPose);
         if (!ControllerBase::ResetReferencePose(session, time))
         {
-            m_Calibrated = false;
             TraceLoggingWriteStop(local, "OpenXrTracker::ResetReferencePose", TLArg(false, "Success"));
             return false;
         }
-        m_Session = session;
+
+        m_RefToFwd = xr::Normalize(Pose::Multiply({m_ForwardPose.orientation, {0, 0, 0}},
+                                                  {Pose::Invert(m_ReferencePose).orientation, {0, 0, 0}}));
+        m_ReferencePose = Pose::Multiply(m_RefToFwd, m_ReferencePose);
+
         TraceLoggingWriteStop(local, "OpenXrTracker::ResetReferencePose", TLArg(true, "Success"));
         return true;
     }
 
-    utility::DataSource* OpenXrTracker::GetSource()
+    DataSource* OpenXrTracker::GetSource()
     {
         return m_Source.get();
     }
@@ -708,7 +738,8 @@ namespace tracker
         TraceLoggingWriteStart(local,
                                "OpenXrTracker::ReadSource",
                                TLArg(time, "Time"));
-        
+
+        std::unique_lock lock(m_SampleMutex); 
         LARGE_INTEGER now;
         QueryPerformanceCounter(&now);
         XrTime nowXr;
@@ -722,7 +753,7 @@ namespace tracker
         {
             return false;
         }
-        dof = PoseToDof(controllerPose);
+        dof = PoseToDof(Pose::Multiply(m_RefToFwd, controllerPose));
         return true;
     }
 
@@ -732,9 +763,18 @@ namespace tracker
         TraceLoggingWriteStart(local, "OpenXrTracker::GetPose", TLPArg(session, "Session"), TLArg(time, "Time"));
         
         bool success{false}; 
-        if (!m_Calibrated || !m_Sampler)
+        
+        if (!m_Sampler || !m_Calibrated)
         {
             success = GetControllerPose(trackerPose, session, time);
+            if (m_Calibrated)
+            {
+                trackerPose = Pose::Multiply(m_RefToFwd, trackerPose);
+            }
+            TraceLoggingWriteTagged(local,
+                                    "OpenXrTracker::GetPose",
+                                    TLArg(false, "Sampled"),
+                                    TLArg(m_Calibrated, "Calibrated"));
         }
         else
         {
@@ -750,6 +790,9 @@ namespace tracker
                 m_Recorder->AddDofValues(dof, Read);
                 trackerPose = DofToPose(dof);
             }
+            TraceLoggingWriteTagged(local,
+                                    "OpenXrTracker::GetPose",
+                                    TLArg(true, "Sampled"));
         }
 
         TraceLoggingWriteStop(local,
@@ -760,36 +803,51 @@ namespace tracker
         return success;
     }
 
-    Dof OpenXrTracker::PoseToDof(const XrPosef& controller) const
+    Dof OpenXrTracker::PoseToDof(const XrPosef& pose) const
     {
-        // TODO: convert into forward orientation
-        const XrPosef diff = Pose::Multiply(controller, Pose::Invert(m_ReferencePose));
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "OpenXrTracker::PoseToDof", TLArg(xr::ToString(pose).c_str(), "Pose"));
+
+        const XrPosef diff = Pose::Multiply(pose, Pose::Invert(m_ReferencePose));
         const auto angles = utility::ToEulerAngles(diff.orientation);
-        return Dof{diff.position.x * -1000,
-                   diff.position.z * 1000,
-                   diff.position.y * 1000,
-                   angles.y / angleToRadian,
-                   angles.z / angleToRadian,
-                   angles.x / angleToRadian};
+        Dof dof{diff.position.x * -1000,
+                diff.position.z * 1000,
+                diff.position.y * 1000,
+                angles.y / angleToRadian,
+                angles.z / angleToRadian,
+                angles.x / angleToRadian};
+
+        TraceLoggingWriteStop(local, "OpenXrTracker::PoseToDof", TLArg(xr::ToString(dof).c_str(), "Dof"));
+        return dof;
     }
 
     XrPosef OpenXrTracker::DofToPose(const Dof& dof) const
     {
-        // TODO: convert into forward orientation
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "OpenXrTracker::PoseToDof", TLArg(xr::ToString(dof).c_str(), "Dof"));
+
         XrPosef controller;
         StoreXrQuaternion(&controller.orientation,
                           DirectX::XMQuaternionRotationRollPitchYaw(dof.data[pitch] * angleToRadian,
                                                                     dof.data[yaw] * angleToRadian,
                                                                     dof.data[roll] * angleToRadian));
         controller.position = XrVector3f{dof.data[sway] / -1000.f, dof.data[heave] / 1000.f, dof.data[surge] / 1000.f};
-        return Pose::Multiply(controller, m_ReferencePose);
+        const XrPosef pose = xr::Normalize(Pose::Multiply(controller, m_ReferencePose));
+
+        TraceLoggingWriteStop(local, "OpenXrTracker::PoseToDof", TLArg(xr::ToString(pose).c_str(), "Pose"));
+        return pose;
     }
 
     bool OpenXrTracker::PhysicalSource::Open(int64_t time)
     {
-        return true;
-        // TODO: check action state
-        //m_Tracker->GetControllerPose();
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "PhysicalSource::Open", TLArg(time, "Time"));
+
+        Dof dof;
+        const bool success = m_Tracker->ReadSource(time, dof);
+
+        TraceLoggingWriteStop(local, "PhysicalSource::Open", TLArg(success, "Success"));
+        return success;
     }
 
     bool VirtualTracker::Init()
@@ -938,11 +996,6 @@ namespace tracker
         }
         m_Calibrated = success;
 
-        if (m_Calibrated && m_Sampler)
-        {
-            m_Sampler->StartSampling();
-        }
-
         TraceLoggingWriteStop(local,
                               "VirtualTracker::ResetReferencePose",
                               TLArg(success, "Success"),
@@ -1063,7 +1116,7 @@ namespace tracker
             m_OffsetYaw / angleToRadian);
     }
 
-    utility::DataSource* VirtualTracker::GetSource()
+    DataSource* VirtualTracker::GetSource()
     {
         return &m_Mmf;
     }
@@ -1245,16 +1298,12 @@ namespace tracker
             }
         }
         const bool success = VirtualTracker::ResetReferencePose(session, time);
-        if (success && m_Sampler)
-        {
-            m_Sampler->StartSampling();
-        }
 
         TraceLoggingWriteStop(local, "YawTracker::ResetReferencePose", TLArg(success, "Success"));
         return success;
     }
 
-    bool YawTracker::ReadSource(XrTime now, utility::Dof& dof)
+    bool YawTracker::ReadSource(XrTime now, Dof& dof)
     {
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "YawTracker::ReadSource", TLArg(now, "Now"));
