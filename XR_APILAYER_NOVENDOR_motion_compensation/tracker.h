@@ -22,12 +22,10 @@ namespace tracker
         virtual bool GetPoseDelta(XrPosef& poseDelta, XrSession session, XrTime time);
         virtual bool ResetReferencePose(XrSession session, XrTime time);
 
-        bool m_XrSyncCalled{false};
-
       protected:
         virtual void SetReferencePose(const XrPosef& pose);
         virtual bool GetPose(XrPosef& trackerPose, XrSession session, XrTime time) = 0;
-        virtual bool GetControllerPose(XrPosef& trackerPose, XrSession session, XrTime time);
+        virtual bool GetControllerPose(XrPosef& trackerPose, XrSession session, XrTime time, bool reportError = true);
         static XrVector3f GetForwardVector(const XrQuaternionf& quaternion, bool inverted = false);
         static XrQuaternionf GetYawRotation(const XrVector3f& forward, float yawAdjustment);
         static float GetYawAngle(const XrVector3f& forward);
@@ -50,6 +48,7 @@ namespace tracker
     class TrackerBase : public ControllerBase
     {
       public:
+        explicit TrackerBase(const std::vector<utility::DofValue>& relevant);
         ~TrackerBase() override;
         bool Init() override;
         virtual bool LazyInit(XrTime time);
@@ -71,6 +70,9 @@ namespace tracker
         void LogCurrentTrackerPoses(XrSession session, XrTime time, bool activated);
         bool ToggleRecording() const;
 
+        virtual utility::DataSource* GetSource() = 0;
+        virtual bool ReadSource(XrTime time, utility::Dof& dof) = 0;
+
         bool m_SkipLazyInit{false};
         bool m_Calibrated{false};
        
@@ -84,6 +86,8 @@ namespace tracker
         XrVector3f m_Right{-1.f, 0.f, 0.f};
         XrVector3f m_Up{0.f, 1.f, 0.f};
         XrPosef m_ForwardPose{xr::math::Pose::Identity()};
+        std::vector<utility::DofValue> m_RelevantValues{};
+        sampler::Sampler* m_Sampler{nullptr};
 
       private:
         bool LoadFilters();
@@ -102,8 +106,34 @@ namespace tracker
         OpenXrTracker();
         bool ResetReferencePose(XrSession session, XrTime time) override;
 
+        utility::DataSource* GetSource() override;
+        bool ReadSource(XrTime time, utility::Dof& dof) override;
+
       protected:
         bool GetPose(XrPosef& trackerPose, XrSession session, XrTime time) override;
+
+      private:
+        [[nodiscard]] utility::Dof PoseToDof(const XrPosef& pose) const;
+        [[nodiscard]] XrPosef DofToPose(const utility::Dof& dof) const;
+
+        class PhysicalSource : public utility::DataSource
+        {
+          public:
+            explicit PhysicalSource(OpenXrTracker* tracker)
+                : m_Tracker(tracker){};
+            bool Open(int64_t time) override;
+
+          private:
+            OpenXrTracker* m_Tracker{nullptr};
+        };
+
+        std::mutex m_SampleMutex;
+        XrPosef m_RefToFwd{xr::math::Pose::Identity()};
+
+        std::unique_ptr<PhysicalSource> m_Source;
+        XrSession m_Session{XR_NULL_HANDLE};
+
+        friend class PhysicalSource;
     };
 
     class CorManipulator;
@@ -111,15 +141,11 @@ namespace tracker
     class VirtualTracker : public TrackerBase
     {
       public:
-        explicit VirtualTracker(const std::vector<utility::DofValue>& relevant);
-        ~VirtualTracker() override;
+        explicit VirtualTracker(const std::vector<utility::DofValue>& relevant) : TrackerBase(relevant){};
         bool Init() override;
         bool LazyInit(XrTime time) override;
-        void ToggleStabilizer() override;
-        void ModifyStabilizer(bool increase, bool fast) override;
 
         bool ResetReferencePose(XrSession session, XrTime time) override;
-        void InvalidateCalibration() override;
         void SaveReferencePose(XrTime time) const override;
 
         void ApplyCorManipulation(XrSession session, XrTime time) override;
@@ -127,8 +153,7 @@ namespace tracker
         bool ChangeRotation(float radian) override;
         void LogOffsetValues() const;
 
-        virtual utility::DataSource* GetSource();
-        virtual bool ReadSource(XrTime time, utility::Dof& dof) = 0;
+        utility::DataSource* GetSource() override;
 
       protected:
         void SetReferencePose(const XrPosef& pose) override;
@@ -136,8 +161,6 @@ namespace tracker
         virtual bool ReadData(XrTime time, utility::Dof& dof);
         virtual XrPosef DataToPose(const utility::Dof& dof) = 0;
 
-        std::vector<utility::DofValue> m_RelevantValues{};
-        sampler::Sampler* m_Sampler{nullptr};
         std::string m_Filename;
         utility::Mmf m_Mmf;
         float m_OffsetForward{0.0f}, m_OffsetDown{0.0f}, m_OffsetRight{0.0f}, m_OffsetYaw{0.0f}, m_PitchConstant{0.0f};

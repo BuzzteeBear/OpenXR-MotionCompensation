@@ -110,6 +110,7 @@ namespace openxr_api_layer
         XrSpace m_TrackerSpace{XR_NULL_HANDLE};
         XrSpace m_ViewSpace{XR_NULL_HANDLE};
         XrSpace m_StageSpace{XR_NULL_HANDLE};
+        std::atomic_bool m_XrSyncCalled{false};
 
       private:
         [[nodiscard]] bool isSystemHandled(XrSystemId systemId) const;

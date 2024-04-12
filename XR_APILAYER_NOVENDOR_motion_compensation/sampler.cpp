@@ -14,7 +14,7 @@ using namespace utility;
 
 namespace sampler
 {
-    Sampler::Sampler(tracker::VirtualTracker* tracker,
+    Sampler::Sampler(tracker::TrackerBase* tracker,
                      const std::vector<utility::DofValue>& relevant,
                      const std::shared_ptr<output::RecorderBase>& recorder)
         : m_Tracker(tracker), m_Recorder(recorder)
@@ -58,14 +58,6 @@ namespace sampler
             }
         }
         m_Stabilizer->Read(dof);
-        if (m_SampleRecording && m_Recorder)
-        {
-            Dof momentary;
-            if (m_Tracker->ReadSource(now, momentary))
-            {
-                m_Recorder->AddDofValues(momentary, Momentary);
-            }
-        }
 
         TraceLoggingWriteStop(local, "Sampler::ReadData", TLArg(true, "Success"));
         return true;

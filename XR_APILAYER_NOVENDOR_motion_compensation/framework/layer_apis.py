@@ -37,10 +37,14 @@ requested_functions = [
     "xrGetActionStateBoolean",
     "xrApplyHapticFeedback",
     "xrEnumerateSwapchainImages",
+	"xrConvertWin32PerformanceCounterToTimeKHR",
     "xrDestroyAction",
     "xrDestroyActionSet",
     "xrDestroySpace"
 ]
 
 # The list of OpenXR extensions our layer will either override or use.
-extensions = ["XR_EXT_hp_mixed_reality_controller"]
+extensions = [
+	"XR_EXT_hp_mixed_reality_controller",
+	"XR_KHR_win32_convert_performance_counter_time"
+]

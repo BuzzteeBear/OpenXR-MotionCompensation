@@ -229,7 +229,6 @@ namespace utility
       public:
         virtual ~DataSource() = default;
         virtual bool Open(int64_t time) = 0;
-        virtual bool Read(void* buffer, size_t size, int64_t time) = 0;
     };
 
     class Mmf : public DataSource
@@ -239,7 +238,7 @@ namespace utility
         ~Mmf() override;
         void SetName(const std::string& name);
         bool Open(int64_t time) override;
-        bool Read(void* buffer, size_t size, int64_t time) override;
+        bool Read(void* buffer, size_t size, int64_t time);
         void Close();
 
       private:

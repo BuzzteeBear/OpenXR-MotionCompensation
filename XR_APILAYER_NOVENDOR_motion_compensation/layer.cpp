@@ -44,10 +44,9 @@ namespace openxr_api_layer
         {
             Log("xrDestroyInstance");
         }
-        if (m_Overlay)
-        {
-            m_Overlay.reset();
-        }
+        m_Overlay.reset();
+        m_Tracker.reset();
+
         const XrResult result = OpenXrApi::xrDestroyInstance(instance);
 
         TraceLoggingWriteStop(local, "OpenXrLayer::xrDestroyInstance", TLPArg(xr::ToCString(result), "Result"));
@@ -452,6 +451,8 @@ namespace openxr_api_layer
         Log("xrDestroySession");
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "OpenXrLayer::xrDestroySession", TLPArg(session, "Session"));
+
+        m_Tracker->InvalidateCalibration();
 
         // clean up open xr session resources
         if (XR_NULL_HANDLE != m_TrackerSpace)
@@ -1380,7 +1381,7 @@ namespace openxr_api_layer
         }
         const XrResult result = OpenXrApi::xrSyncActions(session, &chainSyncInfo);
         DebugLog("xrSyncAction: %s", xr::ToCString(result));
-        m_Tracker->m_XrSyncCalled = true;
+        m_XrSyncCalled = true;
 
         TraceLoggingWriteStop(local, "OpenXrLayer::xrSyncActions", TLArg(xr::ToCString(result), "Result"));
 
@@ -1507,8 +1508,6 @@ namespace openxr_api_layer
            m_Overlay->ReleaseAllSwapChainImages();
         }
 
-        m_Tracker->m_XrSyncCalled = false;
-
         if (!m_Activated)
         {
            if (m_Tracker->m_Calibrated)
@@ -1528,6 +1527,9 @@ namespace openxr_api_layer
            {
                 m_AutoActivator->ActivateIfNecessary(time);
            }
+
+           m_XrSyncCalled = false;
+
            XrResult result = OpenXrApi::xrEndFrame(session, &chainFrameEndInfo);
 
            TraceLoggingWriteStop(local,
@@ -1649,6 +1651,8 @@ namespace openxr_api_layer
            }
         }
         m_Input->HandleKeyboardInput(time);
+
+        m_XrSyncCalled = false;
 
         XrFrameEndInfo resetFrameEndInfo{chainFrameEndInfo.type,
                                          chainFrameEndInfo.next,
