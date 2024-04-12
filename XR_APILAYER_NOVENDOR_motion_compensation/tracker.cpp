@@ -893,6 +893,7 @@ namespace tracker
         if (GetConfig()->GetFloat(Cfg::TrackerConstantPitch, value))
         {
             m_PitchConstant = fmod(value * angleToRadian + floatPi, 2.0f * floatPi) - floatPi;
+            m_ConstantPitchQuaternion = DirectX::XMQuaternionRotationRollPitchYaw(m_PitchConstant, 0.f, 0.f);
         } 
         else
         {
@@ -1150,8 +1151,21 @@ namespace tracker
                                 "VirtualTracker::GetPose",
                                 TLArg(xr::ToString(dof).c_str(), "Data"));
 
-        const XrPosef rigPose = DataToPose(dof);
+        XrPosef rigPose = DataToPose(dof);
         TraceLoggingWriteTagged(local, "VirtualTracker::GetPose", TLArg(xr::ToString(rigPose).c_str(), "RigPose"));
+
+        if (0 != m_PitchConstant)
+        {
+            StoreXrQuaternion(
+                &rigPose.orientation,
+                DirectX::XMQuaternionMultiply(m_ConstantPitchQuaternion, LoadXrQuaternion(rigPose.orientation)));
+
+            TraceLoggingWriteTagged(local,
+                                    "VirtualTracker::GetPose",
+                                    TLArg(xr::ToString(rigPose).c_str(), "RigPose_Pitched"),
+                                    TLArg(std::to_string(this->m_PitchConstant).c_str(), "PitchConstant"));
+        }
+
 
         trackerPose = Pose::Multiply(rigPose, m_ReferencePose);
         TraceLoggingWriteStop(local,
@@ -1331,19 +1345,11 @@ namespace tracker
         TraceLoggingWriteStart(local, "YawTracker::DataToPose", TLArg(xr::ToString(dof).c_str(), "Dof"));
 
         XrPosef rigPose{Pose::Identity()};
-        auto rotation = DirectX::XMQuaternionRotationRollPitchYaw(dof.data[pitch] * angleToRadian,
-                                                                  -dof.data[yaw] * angleToRadian,
-                                                                  -dof.data[roll] * angleToRadian);
-        if (0 != m_PitchConstant)
-        {
-            rotation =
-                DirectX::XMQuaternionMultiply(DirectX::XMQuaternionRotationRollPitchYaw(m_PitchConstant, 0.f, 0.f),
-                                              rotation);
-            TraceLoggingWriteTagged(local,
-                                    "YawTracker::DataToPose",
-                                    TLArg(std::to_string(this->m_PitchConstant).c_str(), "PitchConstant"));
-        }
-        StoreXrQuaternion(&rigPose.orientation, rotation);
+        StoreXrQuaternion(&rigPose.orientation,
+                          DirectX::XMQuaternionRotationRollPitchYaw(dof.data[pitch] * angleToRadian,
+                                                                    -dof.data[yaw] * angleToRadian,
+                                                                    -dof.data[roll] * angleToRadian));
+
         TraceLoggingWriteStop(local, "YawTracker::DataToPose", TLArg(xr::ToString(rigPose).c_str(), "Pose"));
         return rigPose;
     }
@@ -1386,21 +1392,12 @@ namespace tracker
         TraceLoggingWriteStart(local, "FlyPtTracker::DataToPose", TLArg(xr::ToString(dof).c_str(), "Dof"));
 
         XrPosef rigPose{Pose::Identity()};
-        auto rotation = DirectX::XMQuaternionRotationRollPitchYaw(-dof.data[pitch] * angleToRadian,
-                                                                  dof.data[yaw] * angleToRadian,
-                                                                  dof.data[roll] * angleToRadian);
-        if (0 != m_PitchConstant)
-        {
-            rotation =
-                DirectX::XMQuaternionMultiply(DirectX::XMQuaternionRotationRollPitchYaw(m_PitchConstant, 0.f, 0.f),
-                                              rotation);
-            TraceLoggingWriteTagged(local,
-                                    "FlyPtTracker::DataToPose",
-                                    TLArg(std::to_string(this->m_PitchConstant).c_str(), "PitchConstant"));
-        }
-        StoreXrQuaternion(&rigPose.orientation, rotation);
-
+        StoreXrQuaternion(&rigPose.orientation,
+                          DirectX::XMQuaternionRotationRollPitchYaw(-dof.data[pitch] * angleToRadian,
+                                                                    dof.data[yaw] * angleToRadian,
+                                                                    dof.data[roll] * angleToRadian));
         rigPose.position = XrVector3f{-dof.data[sway] / -1000.f, dof.data[heave] / 1000.f, dof.data[surge] / 1000.f};
+
         TraceLoggingWriteStop(local, "FlyPtTracker::DataToPose", TLArg(xr::ToString(rigPose).c_str(), "Pose"));
         return rigPose;
     }
@@ -1411,21 +1408,11 @@ namespace tracker
         TraceLoggingWriteStart(local, "SrsTracker::DataToPose", TLArg(xr::ToString(dof).c_str(), "Dof"));
 
         XrPosef rigPose{Pose::Identity()};
-        auto rotation = DirectX::XMQuaternionRotationRollPitchYaw(dof.data[pitch] * angleToRadian,
+        StoreXrQuaternion(&rigPose.orientation, DirectX::XMQuaternionRotationRollPitchYaw(dof.data[pitch] * angleToRadian,
                                                                   dof.data[yaw] * angleToRadian,
-                                                                  -dof.data[roll] * angleToRadian);
-        if (0 != m_PitchConstant)
-        {
-            rotation =
-                DirectX::XMQuaternionMultiply(DirectX::XMQuaternionRotationRollPitchYaw(m_PitchConstant, 0.f, 0.f),
-                                              rotation);
-            TraceLoggingWriteTagged(local,
-                                    "SrsTracker::DataToPose",
-                                    TLArg(std::to_string(this->m_PitchConstant).c_str(), "PitchConstant"));
-        }
-        StoreXrQuaternion(&rigPose.orientation, rotation);
-
+                                                                  -dof.data[roll] * angleToRadian));
         rigPose.position = XrVector3f{dof.data[sway] / -1000.f, dof.data[heave] / 1000.f, dof.data[surge] / 1000.f};
+
         TraceLoggingWriteStop(local, "SrsTracker::DataToPose", TLArg(xr::ToString(rigPose).c_str(), "Pose"));
         return rigPose;
     }
