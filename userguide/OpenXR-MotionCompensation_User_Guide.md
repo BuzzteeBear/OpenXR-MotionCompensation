@@ -2,7 +2,7 @@
 
 **DISCLAIMER: This software is distributed as-is, without any warranties or conditions of any kind. Use at your own risks!**
 
-Version: 0.3.3
+Version: 0.3.4
 
 **This document contains instructions on how to use OpenXR motion compensation [API layer](https://www.khronos.org/registry/OpenXR/specs/1.0/html/xrspec.html#api-layers).**
 
@@ -27,7 +27,7 @@ You can find the [source code](https://github.com/BuzzteeBear/OpenXR-MotionCompe
 If you are (or know someone) willing and able to support the software development (mostly C++, maybe some GUI stuff later on) side of the project, feel free to contact **@BuzzteeBear** on the Discord server to ask about ways to contribute.
 
 Donations to the project are very welcome and can be made via [Paypal](https://www.paypal.com/donate/?hosted_button_id=Q64DT2ADFCBU8).  
-On explicit user request you can also sponsor the project via [GitHub Sponsors](https://github.com/sponsors/BuzzteeBear?o=esb)
+You can also sponsor the project via [GitHub Sponsors](https://github.com/sponsors/BuzzteeBear?o=esb)
 
 ## Install
 
@@ -125,8 +125,12 @@ What you can modify in a configuration file:
   - `legacy mode` reverts the internal pose manipulation technique to the way it was prior to version 0.3.0
 - `[translational_filter]` and `[rotational_filter]`: set the filtering magnitude (key `strength` with valid options between **0.0** and **1.0**) number of filtering stages (key `order`with valid options: **1, 2, 3**).  
   The key `vertical_factor` is applied to translational filter strength in vertical/heave direction only (Note that the filter strength is multiplied by the factor and the resulting product of strength * vertical_factor is clamped internally between 0.0 and 1.0).
+- `[input_stabilizer]`: [input stabilizer](#input-stabilizer) introduces temporal supersampling for reference tracker input data and (optionally) applies a butterworth/biquad low pass filter before handing over the values to the regular transalational and rotational filter stage.
+  - `enabled` - turn stabilizer functionality on/off. Can also be toggled in-game with the correspopnding keyboard shortcut
+  - `strength` - increases/decreases the attenuation of the low pass filter in the stabilizerr stage, value range from 0.0 to 1.0.
+  - `roll`, `pitch`, `yaw`, `surge`, `sway`, `heave` factors are applied to strength value for specific dof respectively
 - `[pose_modifier]`: you can use the [pose modifier](#pose-modifier) to increase or decrease the compensation effect for different degrees of freedom  
-  - `apply` - turn pose modifier on/off. Can also be toggled in-game with the correspopnding keyboard shorcut
+  - `enabled` - turn pose modifier on/off. Can also be toggled in-game with the correspopnding keyboard shortcut
   - the other values are the factors that are to be applied to the corresponding degree of freedom, if the pose modifier is activated
 - `[cache]`: you can modify the cache used for reverting the motion corrected pose on frame submission:
   - `use_eye_cache` - choose between calculating eye poses (0 = default) or use cached eye poses (1, was default up until version 0.1.4). Either one might work better with some games or hmds if you encounter jitter with mc activated. You can also modify this setting (and subsequently save it to config file) during runtime with the corresponding shortcut below.
@@ -135,14 +139,16 @@ What you can modify in a configuration file:
   - `activate`- turn motion compensation on or off. Note that this implicitly triggers the calibration action (`calibrate`) if that hasn't been executed before.
   - `calibrate` - calibrate the neutral reference pose of the tracker
   - `translation_increase`, `translation_decrease` - modify the strength of the translational filter. Changes made during runtime can be saved by using a save command (see below).
-  - `rotation_increase`, `rotation_decrease` = see above, but for rotational filter
+  - `rotation_increase`, `rotation_decrease` - see above, but for rotational filter
+  - `toggle_stabilizer` - enable/disable [input stabilizer](#input-stabilizer)
+  - `stabilizer_increase`, `stabilizer_decrease` - modify filter intensity for stabilizer stage filter
   - `offset_forward`, `offset_back`, `offset_up`, `offset_down`, `offset_right`, `offset_left` - move the center of rotation (cor) for a virtual tracker. The directions are aligned with the forward vector set with the `calibrate` command. Changes made during runtime can be saved by using a save command (see below).
   - `rotate_right`, `rotate_left` - rotate the aforementioned forward vector around the gravitational (yaw-)axis. Note that these changes cannot be saved. Therefore changing the offset position AFTER rotating manually and saving the offset values will result in the cor being a different offset position after reloading those saved values.
   - `toggle_overlay` - activate/deactivate graphical overlay displaying the reference tracker position(s) (See [Graphical overlay](#graphical-overlay) for details).
   - `toggle_cache` - change between calculated and cached eye positions
   - `fast_modifier` - press key(s) in addition to a filter or cor manipulation shortcut to increase amount of change per keypress/repetition. Filter modification will be sped up by factor 5 while cor manipulation will move/rotate 10 instead of 1 cm/degree
   - `save_config` -  write current filter strength and cor offsets to global config file
-  - `toggle_pose_modifier` - enable/disable application of factors on the motion compensation effect
+  - `toggle_pose_modifier` - enable/disable application of factors on the motion compensation effect, see [pose modifier](#pose-modifier)
   - `save_config_app` -  write current filter strength and cor offsets to application specific config file. Note that values in this file will precedent values in the global config file. 
   - `reload_config` - read in and apply configuration for current app from config files. For technical reasons motion compensation is automatically deactivated and the reference tracker pose is invalidated upon configuration reload.
   - `toggle_vebose_logging` - enable/disable verbose logging mode. Note that verbose logging includes per-frame log outputs, which (negatively) affects performance and log file size.
@@ -151,6 +157,7 @@ What you can modify in a configuration file:
   - `log_interaction_profile` - (only for physical tracker: `controller` or `vive`): write the current interaction profile bound to the reference tracker into the log file, can also be used for the purpose of troubleshooting.
 - `[debug]`: 
   - `log_verbose` - enables debug level entries in log file. Note that activating this option may have a negative impact on performance.
+  - `record_stabilizer_samples` - write every single value sampled by input stabilizer when recording tracker data 
   - `testrotation` - for debugging reasons you can check, if the motion compensation functionality generally works on your system without using tracker input from the motion controllers at all by setting this value to `1` and reloading the configuration. You should be able to see the world rotating around you after pressing the activation shortcut.  
 **Beware that this can be a nauseating experience because your eyes suggest that your head is turning in the virtual world, while your inner ear tells your brain otherwise. You can stop motion compensation at any time by pressing the activation shortcut again!** 
 
@@ -203,16 +210,16 @@ You can use (only) the left motion controller to move the cor position in virtua
 
 ### Graphical overlay
 You can enable/disable the overlay using the `toggle_overlay` shortcut. It displays a marker in your headset view for:
-- the current neutral position of the reference tracker. **Note that the position of the marker does not represent the tracker/cor position before tracker calibration**
-  - for a virtual tracker the neutral position corresponds to the center of rotation currently configured. The marker uses the following color coding:
+- the currently calibrated neutral position of the reference tracker. **Note that the position of the marker does __not__ represent the tracker/cor position __before__ tracker calibration** 
+  - the reference marker uses the following color coding:
     - blue arrow points upwards
     - green arrow points forward
     - red arrow points to the right
-  - for a physical tracker (`controller` or `vive`) the orientation of the marker is depending on the runtime implementation and doesn't really matter for functionality
-- the current tracker position, if mc is currently active. This marker's colorcoding uses:
-  - cyan instead of blue
-  - yellow instead of green
-  - magenta instead of red
+- the tracker position, if mc is currently active. 
+  - the active marker's colorcoding displays:
+    - cyan instead of blue
+    - yellow instead of green
+    - magenta instead of red
  
 ### Connection Loss
 OXRMC can detect whether a reference tracker isn't available anymore if: 
@@ -229,12 +236,22 @@ After detecting a loss of connection a configurable timeout period is used (`con
 The following features are purely optional and only recommended for users already familiar with the basic funtionality of oxrmc.
 
 ### Saving and reloading the cor location
-This feeature is relevant for [using a virtual tracker](#using-a-virtual-tracker) only. Once you're satisfied with the current setting, the current position and orientation of the cor can be saved to the (global = `ctrl + shift + s` or app-specific = `ctrl + shift + a`) config file. You can subsequently set the config key `load_ref_pose_from_file` to `1`. This causes the cor position and orientation to be loaded from the config file when calibrating instead of being determined using the hmd position and the offset values.  
+**This feature is relevant for [using a virtual tracker](#using-a-virtual-tracker) only!**  
+Once you're satisfied with the current setting, the current position and orientation of the cor can be saved to the (global = `ctrl + shift + s` or app-specific = `ctrl + shift + a`) config file. You can subsequently set the config key `load_ref_pose_from_file` to `1`. This causes the cor position and orientation to be loaded from the config file when calibrating instead of being determined using the hmd position and the offset values.  
 Applications using OpenComposite usually operate in a different VR play-space than titles supporting native OpenXR. That's why cor position needs to be saved once for all native games and once for all games using OpenComposite.  
 **Note that this functionality may not work with all HMD vendors. Setting up the play-space in the VR runtime of your hmd (before first use) might help to get this working correctly. Rumor has it that some HMDs need to be started/initialized at the exact same location for the play-space coordinates to be consistent in between uses.**
 
+### Input stabilizer
+**This feature is considered experimental and may cause undefined behaviour!**  
+In 'normal' operation mode the reference tracker pose is requested only once per frame. Enabling the input stabilizer feature increases the temporal resolution to approximately 600 samplesa per second, optimizing the ability to filter out noise from the input signal.  
+- ideally, the input stabilizer optimizes the ratio low pass filtering and latency, but may also negatively impact overall application performance (in particular when using a physical tracker).  
+- the input stabilizer filter can either be used to replace the classic filtering or act as an additional preprocessing stage. However the 'normal' filters still operate on a per frame basis so using the stabilizer filtering is expected to yield preferable results.
+- filter intensity can be modified on a per-dof basis by modifying the corresponding factors in config file
+  - the orientation of the dofs for individual factors depends on hmd pose on calibration
+  - the resulting product `strength * dof-factor` is internally clamped to values between 0.0 (no filtering) and 1.0 (maximal attenuation)
+
 ### Pose modifier
-**This feature is considered experimental and may cause conficts with other oxrmc funtionality!**  
+**This feature is considered experimental and may conflict with other oxrmc functionality!**    
 If you don't want the motion compensation effect to reflect the movement of the reference tracker exactly one to one, you can use this feature to increase or decrease it on one or more degrees of freedom. This is done under following constraints:
 - the orientation (which way is forward?) is based on:
   - physical tracker (`controller` or `vive`): forward vector of the hmd (orthogonal to gravity vector) in the moment of tracker calibration

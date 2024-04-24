@@ -1,5 +1,25 @@
 OpenXR-MotionCompensation Changelog
 
+Version 0.3.4
+
+	Input stabilizer (experimental)
+	- temporal supersampling for tracker input
+	- butterworth/bi-quad filter for supersampled data
+	- allow varying filter intensity for different dofs
+	
+	Graphical overlay
+	- marker for physical tracker correctly indicates `forward`
+	
+	Tracker data recorder
+	- writing euler angles instead of quaternions for rotational dofs
+	- included sampled (input stabilizer) data in recorder
+
+	Bugfixes:
+	- (re)enabled tracker connection loss detection
+	- fixed deactivation (via config file) of cor modification with motion controller
+	- fixed various log output issues
+	- fixed audible feedback on test_rotation mode
+
 Version 0.3.3
 
 	Bugfixes
