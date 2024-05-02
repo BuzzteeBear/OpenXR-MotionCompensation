@@ -1046,7 +1046,7 @@ namespace
         bool IsUsingD3D12(const XrSession session) override
         {
             TraceLocalActivity(local);
-            TraceLoggingWriteStart(local, "CompositionFrameworkFactory_IsUsingD3D12", TLPArg(session, "Session"));
+            TraceLoggingWriteStart(local, "CompositionFrameworkFactory_IsUsingD3D12", TLXArg(session, "Session"));
 
             auto binding = m_applicationBindings.find(session);
             if (m_applicationBindings.end() == binding)

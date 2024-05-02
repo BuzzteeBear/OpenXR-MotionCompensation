@@ -24,7 +24,7 @@ namespace tracker
     bool ControllerBase::GetPoseDelta(XrPosef& poseDelta, XrSession session, XrTime time)
     {
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "ControllerBase::GetPoseDelta", TLPArg(session, "Session"), TLArg(time, "Time"));
+        TraceLoggingWriteStart(local, "ControllerBase::GetPoseDelta", TLXArg(session, "Session"), TLArg(time, "Time"));
 
         // pose already calculated for requested time
         if (time == m_LastPoseTime)
@@ -77,7 +77,7 @@ namespace tracker
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local,
                                "ControllerBase::ResetReferencePose",
-                               TLPArg(session, "Session"),
+                               TLXArg(session, "Session"),
                                TLArg(time, "Time"));
 
         if (XrPosef curPose; GetPose(curPose, session, time))
@@ -107,7 +107,7 @@ namespace tracker
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local,
                                "ControllerBase::GetControllerPose",
-                               TLPArg(session, "Session"),
+                               TLXArg(session, "Session"),
                                TLArg(time, "Time"));
 
         if (!m_PhysicalEnabled)
@@ -129,7 +129,7 @@ namespace tracker
 
                 TraceLoggingWriteTagged(local,
                                         "ControllerBase::GetControllerPose",
-                                        TLPArg(layer->m_ActionSet, "xrSyncActions"));
+                                        TLXArg(layer->m_ActionSet, "xrSyncActions"));
                 if (const XrResult result = layer->xrSyncActions(session, &syncInfo); XR_FAILED(result))
                 {
                     if (reportError)
@@ -147,7 +147,7 @@ namespace tracker
 
                 TraceLoggingWriteTagged(local,
                                         "ControllerBase::GetControllerPose",
-                                        TLPArg(layer->m_PoseAction, "xrGetActionStatePose"));
+                                        TLXArg(layer->m_PoseAction, "xrGetActionStatePose"));
                 if (const XrResult result =
                         GetInstance()->xrGetActionStatePose(session, &getActionStateInfo, &actionStatePose);
                     XR_FAILED(result))
@@ -516,10 +516,10 @@ namespace tracker
     XrPosef TrackerBase::GetReferencePose() const
     {
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "TrackerBase::GetReferencePose");
-        TraceLoggingWriteStop(local,
-                              "TrackerBase::GetReferencePose",
-                              TLArg(xr::ToString(this->m_ReferencePose).c_str(), "ReferencePose"));
+        //TraceLoggingWriteStart(local, "TrackerBase::GetReferencePose");
+        //TraceLoggingWriteStop(local,
+        //                      "TrackerBase::GetReferencePose",
+        //                      TLArg(xr::ToString(this->m_ReferencePose).c_str(), "ReferencePose"));
 
         return m_ReferencePose;
     }
@@ -549,7 +549,7 @@ namespace tracker
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local,
                                "TrackerBase::LogCurrentTrackerPoses",
-                               TLPArg(session, "Session"),
+                               TLXArg(session, "Session"),
                                TLArg(time, "Time"),
                                TLArg(activated, "Activated"));
 
@@ -628,10 +628,10 @@ namespace tracker
     bool TrackerBase::CalibrateForward(XrSession session, XrTime time, float yawOffset)
     {
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local,
-                               "TrackerBase::CalibrateForward",
-                               TLArg(time, "Time"),
-                               TLArg(yawOffset, "YawOffset"));
+        //TraceLoggingWriteStart(local,
+        //                       "TrackerBase::CalibrateForward",
+        //                       TLArg(time, "Time"),
+        //                       TLArg(yawOffset, "YawOffset"));
 
         if (auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance()); !layer)
         {
@@ -665,12 +665,12 @@ namespace tracker
 
             m_ForwardPose = location.pose;
         }
-        TraceLoggingWriteStop(local,
-                              "TrackerBase::CalibrateForward",
-                              TLArg(true, "Success"),
-                              TLArg(xr::ToString(this->m_Forward).c_str(), "m_Forward"),
-                              TLArg(xr::ToString(this->m_Right).c_str(), "m_Right"),
-                              TLArg(xr::ToString(this->m_ForwardPose).c_str(), "m_ForwardPose"));
+        //TraceLoggingWriteStop(local,
+        //                      "TrackerBase::CalibrateForward",
+        //                      TLArg(true, "Success"),
+        //                      TLArg(xr::ToString(this->m_Forward).c_str(), "m_Forward"),
+        //                      TLArg(xr::ToString(this->m_Right).c_str(), "m_Right"),
+        //                      TLArg(xr::ToString(this->m_ForwardPose).c_str(), "m_ForwardPose"));
         return true;
     }
 
@@ -705,7 +705,7 @@ namespace tracker
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local,
                                "OpenXrTracker::ResetReferencePose",
-                               TLPArg(session, "Session"),
+                               TLXArg(session, "Session"),
                                TLArg(time, "Time"));
 
         std::unique_lock lock(m_SampleMutex); 
@@ -760,7 +760,7 @@ namespace tracker
     bool OpenXrTracker::GetPose(XrPosef& trackerPose, XrSession session, XrTime time)
     {
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "OpenXrTracker::GetPose", TLPArg(session, "Session"), TLArg(time, "Time"));
+        TraceLoggingWriteStart(local, "OpenXrTracker::GetPose", TLXArg(session, "Session"), TLArg(time, "Time"));
         
         bool success{false}; 
         
@@ -966,10 +966,10 @@ namespace tracker
     bool VirtualTracker::ResetReferencePose(const XrSession session, const XrTime time)
     {
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local,
-                               "VirtualTracker::ResetReferencePose",
-                               TLPArg(session, "Session"),
-                               TLArg(time, "Time"));
+        //TraceLoggingWriteStart(local,
+        //                       "VirtualTracker::ResetReferencePose",
+        //                       TLXArg(session, "Session"),
+        //                       TLArg(time, "Time"));
         bool success = true;
         if (m_LoadPoseFromFile)
         {
@@ -997,10 +997,10 @@ namespace tracker
         }
         m_Calibrated = success;
 
-        TraceLoggingWriteStop(local,
-                              "VirtualTracker::ResetReferencePose",
-                              TLArg(success, "Success"),
-                              TLArg(xr::ToString(this->m_ReferencePose).c_str(), "ReferencePose"));
+        //TraceLoggingWriteStop(local,
+        //                      "VirtualTracker::ResetReferencePose",
+        //                      TLArg(success, "Success"),
+        //                      TLArg(xr::ToString(this->m_ReferencePose).c_str(), "ReferencePose"));
         return success;
     }
 
@@ -1026,7 +1026,7 @@ namespace tracker
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local,
                                "VirtualTracker::ApplyCorManipulation",
-                               TLPArg(session, "Session"),
+                               TLXArg(session, "Session"),
                                TLArg(time, "Time"));
         if (m_Manipulator)
         {
@@ -1039,13 +1039,13 @@ namespace tracker
     bool VirtualTracker::ChangeOffset(XrVector3f modification)
     {
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local,
-                               "VirtualTracker::ChangeOffset",
-                               TLArg(xr::ToString(modification).c_str(), "Modifiaction"),
-                               TLArg(m_OffsetForward, "OffsetForward"),
-                               TLArg(m_OffsetDown, "OffsetDown"),
-                               TLArg(m_OffsetRight, "OffsetForward"),
-                               TLArg(xr::ToString(this->m_ReferencePose).c_str(), "ReferencePose"));
+        //TraceLoggingWriteStart(local,
+        //                       "VirtualTracker::ChangeOffset",
+        //                       TLArg(xr::ToString(modification).c_str(), "Modifiaction"),
+        //                       TLArg(m_OffsetForward, "OffsetForward"),
+        //                       TLArg(m_OffsetDown, "OffsetDown"),
+        //                       TLArg(m_OffsetRight, "OffsetForward"),
+        //                       TLArg(xr::ToString(this->m_ReferencePose).c_str(), "ReferencePose"));
         if (!m_Calibrated)
         {
             ErrorLog("%s: please calibrate cor position before trying to move it", __FUNCTION__);
@@ -1064,24 +1064,24 @@ namespace tracker
 
         const XrPosef adjustment{{Quaternion::Identity()}, modification};
         m_ReferencePose = Pose::Multiply(adjustment, m_ReferencePose);
-        TraceLoggingWriteStop(local,
-                              "VirtualTracker::ChangeOffset",
-                              TLArg(true, "Success"),
-                              TLArg(m_OffsetForward, "NewOffsetForward"),
-                              TLArg(m_OffsetDown, "NewOffsetDown"),
-                              TLArg(m_OffsetRight, "NewOffsetForward"),
-                              TLArg(xr::ToString(this->m_ReferencePose).c_str(), "ReferencePose"));
+        //TraceLoggingWriteStop(local,
+        //                      "VirtualTracker::ChangeOffset",
+        //                      TLArg(true, "Success"),
+        //                      TLArg(m_OffsetForward, "NewOffsetForward"),
+        //                      TLArg(m_OffsetDown, "NewOffsetDown"),
+        //                      TLArg(m_OffsetRight, "NewOffsetForward"),
+        //                      TLArg(xr::ToString(this->m_ReferencePose).c_str(), "ReferencePose"));
         return true;
     }
 
     bool VirtualTracker::ChangeRotation(float radian)
     {
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local,
-                               "VirtualTracker::ChangeRotation",
-                               TLArg(radian, "Radian"),
-                               TLArg(m_OffsetYaw, "OffsetYaw"),
-                               TLArg(xr::ToString(this->m_ReferencePose).c_str(), "ReferencePose"));
+        //TraceLoggingWriteStart(local,
+        //                       "VirtualTracker::ChangeRotation",
+        //                       TLArg(radian, "Radian"),
+        //                       TLArg(m_OffsetYaw, "OffsetYaw"),
+        //                       TLArg(xr::ToString(this->m_ReferencePose).c_str(), "ReferencePose"));
         if (!m_Calibrated)
         {
             ErrorLog("%s: please calibrate cor position before trying to rotate it", __FUNCTION__);
@@ -1100,11 +1100,11 @@ namespace tracker
         StoreXrQuaternion(&adjustment.orientation, DirectX::XMQuaternionRotationRollPitchYaw(0.0f, radian, 0.0f));
         SetReferencePose(Pose::Multiply(adjustment, m_ReferencePose));
 
-        TraceLoggingWriteStop(local,
-                              "VirtualTracker::ChangeRotation",
-                              TLArg(true, "Success"),
-                              TLArg(m_OffsetYaw, "OffsetYaw"),
-                              TLArg(xr::ToString(this->m_ReferencePose).c_str(), "ReferencePose"));
+        //TraceLoggingWriteStop(local,
+        //                      "VirtualTracker::ChangeRotation",
+        //                      TLArg(true, "Success"),
+        //                      TLArg(m_OffsetYaw, "OffsetYaw"),
+        //                      TLArg(xr::ToString(this->m_ReferencePose).c_str(), "ReferencePose"));
         return true;
     }
 
@@ -1136,7 +1136,7 @@ namespace tracker
     bool VirtualTracker::GetPose(XrPosef& trackerPose, const XrSession session, const XrTime time)
     {
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "VirtualTracker::GetPose", TLPArg(session, "Session"), TLArg(time, "Time"));
+        TraceLoggingWriteStart(local, "VirtualTracker::GetPose", TLXArg(session, "Session"), TLArg(time, "Time"));
 
         Dof dof{};
         if (!ReadData(time, dof))
@@ -1160,10 +1160,10 @@ namespace tracker
                 &rigPose.orientation,
                 DirectX::XMQuaternionMultiply(m_ConstantPitchQuaternion, LoadXrQuaternion(rigPose.orientation)));
 
-            TraceLoggingWriteTagged(local,
-                                    "VirtualTracker::GetPose",
-                                    TLArg(xr::ToString(rigPose).c_str(), "RigPose_Pitched"),
-                                    TLArg(std::to_string(this->m_PitchConstant).c_str(), "PitchConstant"));
+            //TraceLoggingWriteTagged(local,
+            //                        "VirtualTracker::GetPose",
+            //                        TLArg(xr::ToString(rigPose).c_str(), "RigPose_Pitched"),
+            //                        TLArg(std::to_string(this->m_PitchConstant).c_str(), "PitchConstant"));
         }
 
 
@@ -1218,7 +1218,7 @@ namespace tracker
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local,
                                "VirtualTracker::LoadReferencePose",
-                               TLPArg(session, "Session"),
+                               TLXArg(session, "Session"),
                                TLArg(time, "Time"));
 
         bool success = true;
@@ -1257,7 +1257,7 @@ namespace tracker
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local,
                                "YawTracker::ResetReferencePose",
-                               TLPArg(session, "Session"),
+                               TLXArg(session, "Session"),
                                TLArg(time, "Time"));
         bool useGameEngineValues;
         if (GetConfig()->GetBool(Cfg::UseYawGeOffset, useGameEngineValues) && useGameEngineValues)
@@ -1284,10 +1284,10 @@ namespace tracker
                             m_OffsetDown = hmdLocation.pose.position.y - data.rotationHeight / 100.0f;
 
                             Log("offset down value based on Yaw Game Engine value: %f", m_OffsetDown);
-                            TraceLoggingWriteTagged(local,
-                                                    "YawTracker::ResetReferencePose",
-                                                    TLArg(this->m_OffsetForward, "OffsetForward"),
-                                                    TLArg(this->m_OffsetDown, "OffsetDown"));
+                            //TraceLoggingWriteTagged(local,
+                            //                        "YawTracker::ResetReferencePose",
+                            //                        TLArg(this->m_OffsetForward, "OffsetForward"),
+                            //                        TLArg(this->m_OffsetDown, "OffsetDown"));
                         }
                         else
                         {
@@ -1422,7 +1422,7 @@ namespace tracker
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local,
                                "CorManipulator::ApplyManipulation",
-                               TLPArg(session, "Session"),
+                               TLXArg(session, "Session"),
                                TLArg(time, "Time"));
 
         if (!m_Initialized)
@@ -1458,7 +1458,7 @@ namespace tracker
             vibration.duration = XR_MIN_HAPTIC_DURATION;
             vibration.frequency = XR_FREQUENCY_UNSPECIFIED;
 
-            TraceLoggingWriteTagged(local, "ApplyManipulation", TLPArg(layer->m_HapticAction, "xrApplyHapticFeedback"));
+            TraceLoggingWriteTagged(local, "ApplyManipulation", TLXArg(layer->m_HapticAction, "xrApplyHapticFeedback"));
             XrHapticActionInfo hapticActionInfo{XR_TYPE_HAPTIC_ACTION_INFO};
             hapticActionInfo.action = layer->m_HapticAction;
             if (const XrResult result = layer->xrApplyHapticFeedback(session,
@@ -1516,7 +1516,7 @@ namespace tracker
     bool CorManipulator::GetPose(XrPosef& trackerPose, XrSession session, XrTime time)
     {
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "CorManipulator::GetPose", TLPArg(session, "Session"), TLArg(time, "Time"));
+        TraceLoggingWriteStart(local, "CorManipulator::GetPose", TLXArg(session, "Session"), TLArg(time, "Time"));
 
         const bool success = GetControllerPose(trackerPose, session, time);
 
@@ -1530,7 +1530,7 @@ namespace tracker
     void CorManipulator::GetButtonState(XrSession session, bool& moveButton, bool& positionButton)
     {
          TraceLocalActivity(local);
-         TraceLoggingWriteStart(local, "CorManipulator::GetButtonState", TLPArg(session, "Session"));
+         TraceLoggingWriteStart(local, "CorManipulator::GetButtonState", TLXArg(session, "Session"));
 
          auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
          if (!layer)
@@ -1545,7 +1545,7 @@ namespace tracker
             // sync actions
             TraceLoggingWriteTagged(local,
                                     "CorManipulator::GetButtonState",
-                                    TLPArg(layer->m_ActionSet, "xrSyncActions"));
+                                    TLXArg(layer->m_ActionSet, "xrSyncActions"));
             constexpr XrActionsSyncInfo syncInfo{XR_TYPE_ACTIONS_SYNC_INFO, nullptr, 0, nullptr};
             if (const XrResult result = GetInstance()->xrSyncActions(session, &syncInfo); XR_FAILED(result))
             {
@@ -1558,7 +1558,7 @@ namespace tracker
             // obtain current action state
             TraceLoggingWriteTagged(local,
                                     "CorManipulator::GetButtonState",
-                                    TLPArg(layer->m_MoveAction, "xrGetActionStateBoolean"));
+                                    TLXArg(layer->m_MoveAction, "xrGetActionStateBoolean"));
             XrActionStateGetInfo moveInfo{XR_TYPE_ACTION_STATE_GET_INFO};
             moveInfo.action = layer->m_MoveAction;
 
@@ -1580,7 +1580,7 @@ namespace tracker
 
             TraceLoggingWriteTagged(local,
                                     "CorManipulator::GetButtonState",
-                                    TLPArg(layer->m_PositionAction, "xrGetActionStateBoolean"));
+                                    TLXArg(layer->m_PositionAction, "xrGetActionStateBoolean"));
             XrActionStateGetInfo positionInfo{XR_TYPE_ACTION_STATE_GET_INFO};
             positionInfo.action = layer->m_PositionAction;
 
@@ -1608,9 +1608,9 @@ namespace tracker
     void CorManipulator::ApplyPosition() const
     {
          TraceLocalActivity(local);
-         TraceLoggingWriteStart(local,
-                                "CorManipulator::ApplyPosition",
-                                TLArg(xr::ToString(this->m_LastPose).c_str(), "tracker"));
+         //TraceLoggingWriteStart(local,
+         //                       "CorManipulator::ApplyPosition",
+         //                       TLArg(xr::ToString(this->m_LastPose).c_str(), "tracker"));
 
          const XrPosef corPose = m_Tracker->GetReferencePose();
          const auto [relativeOrientation, relativePosition] = Pose::Multiply(m_LastPose, Pose::Invert(corPose));
@@ -1619,16 +1619,16 @@ namespace tracker
                                   GetYawAngle(GetForwardVector(corPose.orientation, true));
          m_Tracker->ChangeRotation(angleDelta);
 
-         TraceLoggingWriteStop(local, "CorManipulator::ApplyPosition");
+         //TraceLoggingWriteStop(local, "CorManipulator::ApplyPosition");
     }
 
     void CorManipulator::ApplyTranslation() const
     {
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local,
-                               "CorManipulator::ApplyTranslation",
-                               TLArg(xr::ToString(this->m_ReferencePose).c_str(), "Reference"),
-                               TLArg(xr::ToString(this->m_LastPose).c_str(), "tracker"));
+        //TraceLoggingWriteStart(local,
+        //                       "CorManipulator::ApplyTranslation",
+        //                       TLArg(xr::ToString(this->m_ReferencePose).c_str(), "Reference"),
+        //                       TLArg(xr::ToString(this->m_LastPose).c_str(), "tracker"));
 
         const XrPosef corPose = m_Tracker->GetReferencePose();
         const DirectX::XMVECTOR rot = LoadXrQuaternion(corPose.orientation);
@@ -1640,7 +1640,7 @@ namespace tracker
             DirectX::XMVector3InverseRotate(DirectX::XMVectorAdd(current, DirectX::XMVectorNegate(ref)), rot));
         m_Tracker->ChangeOffset(relativeTranslation);
 
-        TraceLoggingWriteStop(local, "CorManipulator::ApplyTranslation");
+        //TraceLoggingWriteStop(local, "CorManipulator::ApplyTranslation");
     }
 
     void CorManipulator::ApplyRotation(const XrPosef& poseDelta) const
