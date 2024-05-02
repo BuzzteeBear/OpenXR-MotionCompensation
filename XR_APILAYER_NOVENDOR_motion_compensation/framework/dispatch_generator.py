@@ -238,7 +238,7 @@ namespace openxr_api_layer
 		return xrGetInstanceProcAddrInternal(instance, name, function);
 	}
 
-	XrResult OpenXrApi::xrGetInstanceProcAddrInternal(XrInstance instance, const char* name, PFN_xrVoidFunction* function)
+	XrResult XRAPI_CALL OpenXrApi::xrGetInstanceProcAddrInternal(XrInstance instance, const char* name, PFN_xrVoidFunction* function)
 	{
 		XrResult result = m_xrGetInstanceProcAddr(instance, name, function);
 
@@ -388,8 +388,8 @@ namespace openxr_api_layer
 		}
 
 	private:
-		XrResult xrGetInstanceProcAddrInternal(XrInstance instance, const char* name, PFN_xrVoidFunction* function);
-		friend XrResult xrGetInstanceProcAddr(XrInstance instance, const char* name, PFN_xrVoidFunction* function);
+		XrResult XRAPI_CALL xrGetInstanceProcAddrInternal(XrInstance instance, const char* name, PFN_xrVoidFunction* function);
+		friend XrResult XRAPI_CALL xrGetInstanceProcAddr(XrInstance instance, const char* name, PFN_xrVoidFunction* function);
 
 		PFN_xrDestroyInstance m_xrDestroyInstance{nullptr};
 		PFN_xrEnumerateInstanceExtensionProperties m_xrEnumerateInstanceExtensionProperties{nullptr};
@@ -431,7 +431,7 @@ namespace openxr_api_layer
 
                 if cur_cmd.return_type is not None:
                     generated += f'''
-		virtual XrResult {cur_cmd.name}({parameters_list})
+		virtual XrResult XRAPI_CALL {cur_cmd.name}({parameters_list})
 		{{
 			return m_{cur_cmd.name}({arguments_list});
 		}}
