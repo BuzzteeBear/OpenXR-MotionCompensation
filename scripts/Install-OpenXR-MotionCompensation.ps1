@@ -3,6 +3,7 @@ if (Test-Path "XR_APILAYER_NOVENDOR_motion_compensation.json") {
     $JsonPath = Join-Path "$PSScriptRoot" "XR_APILAYER_NOVENDOR_motion_compensation.json"
 } elseif (Test-Path "XR_APILAYER_NOVENDOR_motion_compensation-32.json") {
 	$RegistryPath = "HKLM:\Software\WOW6432Node\Khronos\OpenXR\1\ApiLayers\Implicit"
+    #$RegistryPath = "HKLM:\Software\Khronos\OpenXR\1\ApiLayers\Implicit"
 	$JsonPath = Join-Path "$PSScriptRoot" "XR_APILAYER_NOVENDOR_motion_compensation-32.json"
 } else {
 	Exit
