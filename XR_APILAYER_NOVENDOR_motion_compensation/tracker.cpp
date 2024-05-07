@@ -148,9 +148,7 @@ namespace tracker
                 TraceLoggingWriteTagged(local,
                                         "ControllerBase::GetControllerPose",
                                         TLXArg(layer->m_PoseAction, "xrGetActionStatePose"));
-                if (const XrResult result =
-                        GetInstance()->xrGetActionStatePose(session, &getActionStateInfo, &actionStatePose);
-                    XR_FAILED(result))
+                if (const XrResult result = GetInstance()->xrGetActionStatePose(session, &getActionStateInfo, &actionStatePose); XR_FAILED(result))
                 {
                     if (reportError)
                     {
@@ -176,9 +174,7 @@ namespace tracker
                 }
             }
 
-            if (const XrResult result =
-                    GetInstance()->OpenXrApi::xrLocateSpace(layer->m_TrackerSpace, layer->m_StageSpace, time, &location);
-                XR_FAILED(result))
+            if (const XrResult result = GetInstance()->OpenXrApi::xrLocateSpace(layer->m_TrackerSpace, layer->m_StageSpace, time, &location);XR_FAILED(result))
             {
                 if (reportError)
                 {

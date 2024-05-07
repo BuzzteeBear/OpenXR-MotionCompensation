@@ -81,6 +81,7 @@
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\obj\$(Platform)\$(Configuration)\</IntDir>
+    <TargetName>XR_APILAYER_NOVENDOR_motion_compensation_32</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -93,6 +94,7 @@
     <IntDir>$(SolutionDir)\obj\$(Platform)\$(Configuration)\</IntDir>
     <CustomBuildAfterTargets>
     </CustomBuildAfterTargets>
+    <TargetName>XR_APILAYER_NOVENDOR_motion_compensation_32</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
@@ -103,7 +105,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>LAYER_NAME="$(ProjectName)";VERSION_NUMBER="$(VersionNumber)";VERSION_STRING="$(VersionString)";_DEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
@@ -122,7 +124,7 @@
       </AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy "$(ProjectDir)\$(ProjectName)-32.json" "$(OutDir)" /y /q
+      <Command>xcopy "$(ProjectDir)\$(ProjectName)_32.json" "$(OutDir)" /y /q
                 xcopy "$(SolutionDir)\scripts\Install-$(SolutionName).ps1" "$(OutDir)" /y /q
                 xcopy "$(SolutionDir)\scripts\Uninstall-$(SolutionName).ps1" "$(OutDir)" /y /q</Command>
     </PostBuildEvent>
@@ -212,7 +214,7 @@
       </AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy "$(ProjectDir)\$(ProjectName)-32.json" "$(OutDir)" /y /q
+      <Command>xcopy "$(ProjectDir)\$(ProjectName)_32.json" "$(OutDir)" /y /q
                 xcopy "$(SolutionDir)\scripts\Install-$(SolutionName).ps1" "$(OutDir)" /y /q
                 xcopy "$(SolutionDir)\scripts\Uninstall-$(SolutionName).ps1" "$(OutDir)" /y /q</Command>
     </PostBuildEvent>
@@ -345,7 +347,7 @@
     <None Include="framework\dispatch_generator.py" />
     <None Include="framework\layer_apis.py" />
     <None Include="packages.config" />
-    <None Include="XR_APILAYER_NOVENDOR_motion_compensation-32.json">
+    <None Include="XR_APILAYER_NOVENDOR_motion_compensation_32.json">
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</DeploymentContent>
     </None>
