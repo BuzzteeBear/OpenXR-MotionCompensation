@@ -755,8 +755,8 @@ namespace tracker
 
     bool OpenXrTracker::GetPose(XrPosef& trackerPose, XrSession session, XrTime time)
     {
-        TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "OpenXrTracker::GetPose", TLXArg(session, "Session"), TLArg(time, "Time"));
+        //TraceLocalActivity(local);
+        //TraceLoggingWriteStart(local, "OpenXrTracker::GetPose", TLXArg(session, "Session"), TLArg(time, "Time"));
         
         bool success{false}; 
         
@@ -767,10 +767,10 @@ namespace tracker
             {
                 trackerPose = Pose::Multiply(m_RefToFwd, trackerPose);
             }
-            TraceLoggingWriteTagged(local,
-                                    "OpenXrTracker::GetPose",
-                                    TLArg(false, "Sampled"),
-                                    TLArg(m_Calibrated, "Calibrated"));
+            //TraceLoggingWriteTagged(local,
+            //                        "OpenXrTracker::GetPose",
+            //                        TLArg(false, "Sampled"),
+            //                        TLArg(m_Calibrated, "Calibrated"));
         }
         else
         {
@@ -786,15 +786,15 @@ namespace tracker
                 m_Recorder->AddDofValues(dof, Read);
                 trackerPose = DofToPose(dof);
             }
-            TraceLoggingWriteTagged(local,
-                                    "OpenXrTracker::GetPose",
-                                    TLArg(true, "Sampled"));
+            //TraceLoggingWriteTagged(local,
+            //                        "OpenXrTracker::GetPose",
+            //                        TLArg(true, "Sampled"));
         }
 
-        TraceLoggingWriteStop(local,
-                              "OpenXrTracker::GetPose",
-                              TLArg(success, "Success"),
-                              TLArg(xr::ToString(trackerPose).c_str(), "TrackerPose"));
+        //TraceLoggingWriteStop(local,
+        //                      "OpenXrTracker::GetPose",
+        //                      TLArg(success, "Success"),
+        //                      TLArg(xr::ToString(trackerPose).c_str(), "TrackerPose"));
 
         return success;
     }
@@ -1131,24 +1131,24 @@ namespace tracker
 
     bool VirtualTracker::GetPose(XrPosef& trackerPose, const XrSession session, const XrTime time)
     {
-        TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "VirtualTracker::GetPose", TLXArg(session, "Session"), TLArg(time, "Time"));
+        //TraceLocalActivity(local);
+        //TraceLoggingWriteStart(local, "VirtualTracker::GetPose", TLXArg(session, "Session"), TLArg(time, "Time"));
 
         Dof dof{};
         if (!ReadData(time, dof))
         {
-            TraceLoggingWriteStop(local, "VirtualTracker::GetPose", TLArg(false, "Success"));
+            //TraceLoggingWriteStop(local, "VirtualTracker::GetPose", TLArg(false, "Success"));
             return false;
         }
         m_Recorder->AddDofValues(dof, Read);
 
         DebugLog("MotionData: %s", xr::ToString(dof).c_str());
-        TraceLoggingWriteTagged(local,
-                                "VirtualTracker::GetPose",
-                                TLArg(xr::ToString(dof).c_str(), "Data"));
+        //TraceLoggingWriteTagged(local,
+        //                        "VirtualTracker::GetPose",
+        //                        TLArg(xr::ToString(dof).c_str(), "Data"));
 
         XrPosef rigPose = DataToPose(dof);
-        TraceLoggingWriteTagged(local, "VirtualTracker::GetPose", TLArg(xr::ToString(rigPose).c_str(), "RigPose"));
+        //TraceLoggingWriteTagged(local, "VirtualTracker::GetPose", TLArg(xr::ToString(rigPose).c_str(), "RigPose"));
 
         if (0 != m_PitchConstant)
         {
@@ -1164,10 +1164,10 @@ namespace tracker
 
 
         trackerPose = Pose::Multiply(rigPose, m_ReferencePose);
-        TraceLoggingWriteStop(local,
-                              "VirtualTracker::GetPose",
-                              TLArg(true, "Success"),
-                              TLArg(xr::ToString(trackerPose).c_str(), "TrackerPose"));
+        //TraceLoggingWriteStop(local,
+        //                      "VirtualTracker::GetPose",
+        //                      TLArg(true, "Success"),
+        //                      TLArg(xr::ToString(trackerPose).c_str(), "TrackerPose"));
         return true;
     }
     
@@ -1518,8 +1518,7 @@ namespace tracker
 
         TraceLoggingWriteStop(local,
                               "CorManipulator::GetPose",
-                              TLArg(success, "Success"),
-                              TLArg(xr::ToString(trackerPose).c_str(), "TrackerPose"));
+                              TLArg(success, "Success")); // removed parameter
         return success;
     }
 

@@ -889,52 +889,52 @@ namespace openxr_api_layer
             return OpenXrApi::xrCreateReferenceSpace(session, createInfo, space);
         }
 
-        TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "OpenXrLayer::xrCreateReferenceSpace", TLXArg(session, "Session"));
+        //TraceLocalActivity(local);
+        //TraceLoggingWriteStart(local, "OpenXrLayer::xrCreateReferenceSpace", TLXArg(session, "Session"));
 
         if (createInfo->type != XR_TYPE_REFERENCE_SPACE_CREATE_INFO)
         {
-            TraceLoggingWriteStop(local, "OpenXrLayer::xrCreateReferenceSpace", TLArg(false, "TypeCheck"));
+            //TraceLoggingWriteStop(local, "OpenXrLayer::xrCreateReferenceSpace", TLArg(false, "TypeCheck"));
             return XR_ERROR_VALIDATION_FAILURE;
         }
 
-        TraceLoggingWriteTagged(local,
-                                "OpenXrLayer::xrCreateReferenceSpace",
-                                TLArg(xr::ToCString(createInfo->referenceSpaceType), "ReferenceSpaceType"),
-                                TLArg(xr::ToString(createInfo->poseInReferenceSpace).c_str(), "PoseInReferenceSpace"));
+        //TraceLoggingWriteTagged(local,
+        //                        "OpenXrLayer::xrCreateReferenceSpace",
+        //                        TLArg(xr::ToCString(createInfo->referenceSpaceType), "ReferenceSpaceType"),
+        //                        TLArg(xr::ToString(createInfo->poseInReferenceSpace).c_str(), "PoseInReferenceSpace"));
 
         const XrResult result = OpenXrApi::xrCreateReferenceSpace(session, createInfo, space);
         if (XR_SUCCEEDED(result))
         {
             if (XR_REFERENCE_SPACE_TYPE_VIEW == createInfo->referenceSpaceType)
             {
-                Log("creation of view space detected: %u, offset pose: %s",
-                    *space,
-                    xr::ToString(createInfo->poseInReferenceSpace).c_str());
+                //Log("creation of view space detected: %u, offset pose: %s",
+                //    *space,
+                //    xr::ToString(createInfo->poseInReferenceSpace).c_str());
 
                 // memorize view spaces
                 m_ViewSpaces.insert(*space);
             }
             else if (XR_REFERENCE_SPACE_TYPE_LOCAL == createInfo->referenceSpaceType)
             {
-                Log("creation of local reference space detected: %u, offset pose: %s",
-                    *space,
-                    xr::ToString(createInfo->poseInReferenceSpace).c_str());
+                //Log("creation of local reference space detected: %u, offset pose: %s",
+                //    *space,
+                //    xr::ToString(createInfo->poseInReferenceSpace).c_str());
                 AddStaticRefSpace(*space);
             }
             else if (XR_REFERENCE_SPACE_TYPE_STAGE == createInfo->referenceSpaceType)
             {
-                Log("creation of stage reference space detected: %u, offset pose: %s",
-                    *space,
-                    xr::ToString(createInfo->poseInReferenceSpace).c_str());
+                //Log("creation of stage reference space detected: %u, offset pose: %s",
+                //    *space,
+                //    xr::ToString(createInfo->poseInReferenceSpace).c_str());
                 AddStaticRefSpace(*space);
             }
         }
 
-        TraceLoggingWriteStop(local,
-                              "OpenXrLayer::xrCreateReferenceSpace",
-                              TLXArg(*space, "Space"),
-                              TLArg(xr::ToCString(result), "Result"));
+        //TraceLoggingWriteStop(local,
+        //                      "OpenXrLayer::xrCreateReferenceSpace",
+        //                      TLXArg(*space, "Space"),
+        //                      TLArg(xr::ToCString(result), "Result"));
         return result;
     }
 
@@ -963,10 +963,10 @@ namespace openxr_api_layer
         TraceLoggingWriteTagged(local,
                                 "OpenXrLayer::xrCreateActionSpace",
                                 TLArg(subActionPath.c_str(), "SubactionPath"));
-        Log("creation of action space detected: %u, sub action path: %s, pose: %s",
-            *space,
-            subActionPath.c_str(),
-            xr::ToString(createInfo->poseInActionSpace).c_str());
+        //Log("creation of action space detected: %u, sub action path: %s, pose: %s",
+        //    *space,
+        //    subActionPath.c_str(),
+        //    xr::ToString(createInfo->poseInActionSpace).c_str());
 
         if (m_CompensateControllers)
         {

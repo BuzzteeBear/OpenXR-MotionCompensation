@@ -107,7 +107,7 @@ namespace openxr_api_layer
         std::shared_ptr<graphics::ICompositionFrameworkFactory> GetCompositionFactory();
 
         XrActionSet m_ActionSet{XR_NULL_HANDLE};
-        XrAction m_PoseAction{XR_NULL_HANDLE};
+        XrAction m_PoseAction{XR_NULL_HANDLE}; 
         XrAction m_MoveAction{XR_NULL_HANDLE};
         XrAction m_PositionAction{XR_NULL_HANDLE};
         XrAction m_HapticAction{XR_NULL_HANDLE};
