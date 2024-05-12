@@ -42,7 +42,7 @@ Source: "{#SolutionDir}\userguide\{#AppName}_User_Guide.html"; DestDir: "{app}";
 Source: "{#SolutionDir}\userguide\{#AppName}_User_Guide.html"; DestDir: "{localappdata}\{#AppName}"; Flags: ignoreversion
 Source: "{#SolutionDir}\scripts\Trace_{#AppName}.wprp"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SolutionDir}\bin\Win32\Release\XR_APILAYER_NOVENDOR_motion_compensation_32.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#SolutionDir}\XR_APILAYER_NOVENDOR_motion_compensation\XR_APILAYER_NOVENDOR_motion_compensation.json"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SolutionDir}\XR_APILAYER_NOVENDOR_motion_compensation\XR_APILAYER_NOVENDOR_motion_compensation_32.json"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SolutionDir}\bin\x64\Release\MmfReader\app.publish\MmfReader.exe"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
