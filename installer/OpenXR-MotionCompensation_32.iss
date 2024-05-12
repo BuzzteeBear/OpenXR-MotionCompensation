@@ -7,14 +7,14 @@
 #define AppVersion "0.3.4"
 #define AppPublisher "oxrmc@mailbox.org"
 #define AppURL "https://github.com/BuzzteeBear/OpenXR-MotionCompensation"
-#define AppId "{A6E4E3AB-454E-4B79-BDCD-A11B4E1AAF4D}"
+#define AppId "{75A9684F-B306-4E34-9B38-DA0A8A2D9F0F}"
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
 AppId={{#AppId}
 AppName={#AppName}
 AppVersion={#AppVersion}
-AppVerName={#AppName}
+AppVerName={#AppName} (32-bit)
 AppPublisher={#AppPublisher}
 AppPublisherURL={#AppURL}
 AppSupportURL={#AppURL}
@@ -25,11 +25,10 @@ DisableProgramGroupPage=yes
 DisableDirPage=auto
 LicenseFile={#SolutionDir}\installer\Disclaimer.txt
 OutputDir={#SolutionDir}\bin\Installer
-OutputBaseFilename=Install_{#AppName}_{#AppVersion}
+OutputBaseFilename=Install_{#AppName}_32bit_{#AppVersion}
 SetupIconFile={#SolutionDir}\installer\{#AppName}.ico
 UninstallDisplayIcon={#SolutionDir}\installer\{#AppName}.ico 
-ArchitecturesAllowed=x64
-ArchitecturesInstallIn64BitMode=x64  
+ArchitecturesAllowed=x64 
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
@@ -42,7 +41,7 @@ Source: "{#SolutionDir}\changelog.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SolutionDir}\userguide\{#AppName}_User_Guide.html"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SolutionDir}\userguide\{#AppName}_User_Guide.html"; DestDir: "{localappdata}\{#AppName}"; Flags: ignoreversion
 Source: "{#SolutionDir}\scripts\Trace_{#AppName}.wprp"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#SolutionDir}\bin\x64\Release\XR_APILAYER_NOVENDOR_motion_compensation.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SolutionDir}\bin\Win32\Release\XR_APILAYER_NOVENDOR_motion_compensation_32.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SolutionDir}\XR_APILAYER_NOVENDOR_motion_compensation\XR_APILAYER_NOVENDOR_motion_compensation.json"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SolutionDir}\bin\x64\Release\MmfReader\app.publish\MmfReader.exe"; DestDir: "{app}"; Flags: ignoreversion
 
@@ -50,7 +49,7 @@ Source: "{#SolutionDir}\bin\x64\Release\MmfReader\app.publish\MmfReader.exe"; De
 Name: "{group}\OXRMC MMF Reader"; Filename: "{app}\MmfReader.exe"; WorkingDir: "{app}"
 
 [Registry]
-Root: HKLM; Subkey: "SOFTWARE\Khronos\OpenXR\1\ApiLayers\Implicit"; ValueName: "{app}\XR_APILAYER_NOVENDOR_motion_compensation.json"; ValueType: dword; ValueData: 0; Flags: createvalueifdoesntexist uninsdeletevalue 
+Root: HKLM; Subkey: "SOFTWARE\WOW6432Node\Khronos\OpenXR\1\ApiLayers\Implicit"; ValueName: "{app}\XR_APILAYER_NOVENDOR_motion_compensation_32.json"; ValueType: dword; ValueData: 0; Flags: createvalueifdoesntexist uninsdeletevalue 
 
 [INI]
 ; [startup]
@@ -212,7 +211,7 @@ var
   Name,Path: string;
   I: Integer;
 begin 
-  Path := 'SOFTWARE\Khronos\OpenXR\1\ApiLayers\Implicit'
+  Path := 'SOFTWARE\SOFTWARE\WOW6432Node\Khronos\OpenXR\1\ApiLayers\Implicit'
   if RegDeleteValue(HKLM, Path, '') then
   begin
     Log(Format('Deleted registry key: %s', ['Computer\HKEY_LOCAL_MACHINE' + Path + '\(Default)'] ));
@@ -222,8 +221,8 @@ begin
     for I := 0 to GetArrayLength(Names) - 1 do
     begin
       Name := Names[I];
-      if EndsWith('XR_APILAYER_NOVENDOR_motion_compensation.json', Name)
-        AND NOT StartsWith(ExpandConstant('{app}') + '\XR_APILAYER_NOVENDOR_motion_compensation.json', Name) then
+      if EndsWith('XR_APILAYER_NOVENDOR_motion_compensation_32.json', Name)
+        AND NOT StartsWith(ExpandConstant('{app}') + '\XR_APILAYER_NOVENDOR_motion_compensation_32.json', Name) then
       begin
         if RegDeleteValue(HKLM, Path, Name) then
         begin
@@ -296,7 +295,7 @@ var
 begin
   ToolkitKey := '';
   LeapMotionKey := '';
-  Path := 'SOFTWARE\Khronos\OpenXR\1\ApiLayers\Implicit' 
+  Path := 'SOFTWARE\WOW6432Node\Khronos\OpenXR\1\ApiLayers\Implicit' 
   if RegGetValueNames(HKLM, Path, Names)then
   begin
     for I := 0 to GetArrayLength(Names) - 1 do
