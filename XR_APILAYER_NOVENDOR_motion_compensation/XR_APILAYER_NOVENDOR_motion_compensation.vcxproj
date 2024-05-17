@@ -81,6 +81,7 @@
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\obj\$(Platform)\$(Configuration)\</IntDir>
+    <TargetName>XR_APILAYER_NOVENDOR_motion_compensation_32</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
