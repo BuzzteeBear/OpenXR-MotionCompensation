@@ -672,7 +672,7 @@ namespace
             : m_instance(instance), xrGetInstanceProcAddr(xrGetInstanceProcAddr_), m_session(session)
         {
             TraceLocalActivity(local);
-            //TraceLoggingWriteStart(local, "CompositionFramework_Create", TLXArg(session, "Session"));
+            TraceLoggingWriteStart(local, "CompositionFramework_Create", TLXArg(session, "Session"));
 
             CHECK_XRCMD(xrGetInstanceProcAddr(m_instance,
                                               "xrCreateSwapchain",
@@ -757,7 +757,7 @@ namespace
                                     TLArg((int64_t)m_preferredSRGBColorFormat, "PreferredSRGBColorFormat"),
                                     TLArg((int64_t)m_preferredDepthFormat, "PreferredDepthFormat"));
 
-            //TraceLoggingWriteStop(local, "CompositionFramework_Create", TLXArg(this, "CompositionFramework"));
+            TraceLoggingWriteStop(local, "CompositionFramework_Create", TLPArg(this, "CompositionFramework"));
         }
 
         ~CompositionFramework() override

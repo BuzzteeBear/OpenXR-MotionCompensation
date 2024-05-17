@@ -38,7 +38,7 @@ namespace openxr_api_layer::graphics
     void Overlay::DestroySession(XrSession session)
     {
         TraceLocalActivity(local);
-        //TraceLoggingWriteStart(local, "Overlay::DestroySession", TLPArg(session, "Session"));
+        TraceLoggingWriteStart(local, "Overlay::DestroySession", TLXArg(session, "Session"));
 
         std::unique_lock lock(m_DrawMutex);
         m_Textures.clear();
@@ -52,10 +52,10 @@ namespace openxr_api_layer::graphics
     void Overlay::CreateSwapchain(XrSwapchain swapchain, const XrSwapchainCreateInfo* createInfo)
     {
         TraceLocalActivity(local);
-        //TraceLoggingWriteStart(local,
-        //                       "Overlay::CreateSwapchain",
-        //                       TLPArg(swapchain, "Swapchain"),
-        //                       TLArg(m_D3D12inUse, "D3D12inUse"));
+        TraceLoggingWriteStart(local,
+                               "Overlay::CreateSwapchain",
+                               TLXArg(swapchain, "Swapchain"),
+                               TLArg(m_D3D12inUse, "D3D12inUse"));
 
         uint32_t imageCount;
         if (const XrResult result = GetInstance()->xrEnumerateSwapchainImages(swapchain, 0, &imageCount, nullptr); XR_FAILED(result))
@@ -188,7 +188,7 @@ namespace openxr_api_layer::graphics
                                        false};
             Log("swapchain (%u): access to %u D3D12 textures added to overlay", swapchain, textures.size());
         }
-        //TraceLoggingWriteStop(local, "Overlay::CreateSwapchain", TLArg(true, "Success"));
+        TraceLoggingWriteStop(local, "Overlay::CreateSwapchain", TLArg(true, "Success"));
     }
 
     void Overlay::DestroySwapchain(const XrSwapchain swapchain)
@@ -202,7 +202,7 @@ namespace openxr_api_layer::graphics
     {
         std::unique_lock lock(m_DrawMutex);
         TraceLocalActivity(local);
-        //TraceLoggingWriteStart(local, "Overlay::AcquireSwapchainImage", TLPArg(swapchain, "Swapchain"));
+        TraceLoggingWriteStart(local, "Overlay::AcquireSwapchainImage", TLXArg(swapchain, "Swapchain"));
         const auto swapchainIt = m_Swapchains.find(swapchain);
         if (swapchainIt != m_Swapchains.end())
         {
@@ -217,9 +217,9 @@ namespace openxr_api_layer::graphics
                     XR_SUCCEEDED(result))
                 {
                     DebugLog("AcquireSwapchainImage: swapchain(%u) released", swapchain);
-                    //TraceLoggingWriteTagged(local,
-                    //                        "Overlay::AcquireSwapchainImage",
-                    //                        TLPArg(swapchain, "Swapchain_Released"));
+                    TraceLoggingWriteTagged(local,
+                                            "Overlay::AcquireSwapchainImage",
+                                            TLXArg(swapchain, "Swapchain_Released"));
                 }
                 else
                 {
@@ -242,10 +242,10 @@ namespace openxr_api_layer::graphics
                 swapchainIt->second.index = *index;
             }
         }
-        //TraceLoggingWriteStop(local,
-        //                      "Overlay::AcquireSwapchainImage",
-        //                      TLArg(*index, "Index"),
-        //                      TLArg(xr::ToCString(result), "Result"));
+        TraceLoggingWriteStop(local,
+                              "Overlay::AcquireSwapchainImage",
+                              TLArg(*index, "Index"),
+                              TLArg(xr::ToCString(result), "Result"));
         return result;
     }
 
@@ -253,7 +253,7 @@ namespace openxr_api_layer::graphics
     {
         std::unique_lock lock(m_DrawMutex);
         TraceLocalActivity(local);
-        //TraceLoggingWriteStart(local, "Overlay::ReleaseSwapchainImage", TLPArg(swapchain, "Swapchain"));
+        TraceLoggingWriteStart(local, "Overlay::ReleaseSwapchainImage", TLXArg(swapchain, "Swapchain"));
 
         const auto swapchainIt = m_Swapchains.find(swapchain);
         if (m_OverlayActive && swapchainIt != m_Swapchains.end())
@@ -266,7 +266,7 @@ namespace openxr_api_layer::graphics
         }
         
         const XrResult result = GetInstance()->OpenXrApi::xrReleaseSwapchainImage(swapchain, releaseInfo);
-        //TraceLoggingWriteStop(local, "Overlay::ReleaseSwapchainImage", TLArg(xr::ToCString(result), "Result"));
+        TraceLoggingWriteStop(local, "Overlay::ReleaseSwapchainImage", TLArg(xr::ToCString(result), "Result"));
         return result;
     }
 
@@ -282,9 +282,9 @@ namespace openxr_api_layer::graphics
         {
             if (swapchain.second.doRelease)
             {
-                //TraceLoggingWriteTagged(local,
-                //                        "Overlay::ReleaseAllSwapChainImages",
-                //                        TLPArg(swapchain.first, "Swapchain_Release"));
+                TraceLoggingWriteTagged(local,
+                                        "Overlay::ReleaseAllSwapChainImages",
+                                        TLXArg(swapchain.first, "Swapchain_Release"));
 
                 constexpr XrSwapchainImageReleaseInfo releaseInfo{XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO, nullptr};
                 swapchain.second.doRelease = false;
@@ -292,9 +292,9 @@ namespace openxr_api_layer::graphics
                     XR_SUCCEEDED(result))
                 {
                     DebugLog("ReleaseAllSwapChainImages: swapchain(%u) released", swapchain.first);
-                    //TraceLoggingWriteTagged(local,
-                    //                        "Overlay::ReleaseAllSwapChainImages",
-                    //                        TLPArg(swapchain.first, "Swapchain_Released"));
+                    TraceLoggingWriteTagged(local,
+                                            "Overlay::ReleaseAllSwapChainImages",
+                                            TLXArg(swapchain.first, "Swapchain_Released"));
                 }
                 else
                 {
