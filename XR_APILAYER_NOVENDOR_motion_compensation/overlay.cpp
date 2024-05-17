@@ -129,7 +129,7 @@ namespace openxr_api_layer::graphics
                                        static_cast<DXGI_FORMAT>(createInfo->format),
                                        0,
                                        false};
-            Log("swapchain (%u): access to %u D3D11 textures added to overlay", swapchain, textures.size());
+            Log("swapchain (%llu): access to %u D3D11 textures added to overlay", swapchain, textures.size());
         }
         else
         {
@@ -186,7 +186,7 @@ namespace openxr_api_layer::graphics
                                        static_cast<DXGI_FORMAT>(createInfo->format),
                                        0,
                                        false};
-            Log("swapchain (%u): access to %u D3D12 textures added to overlay", swapchain, textures.size());
+            Log("swapchain (%llu): access to %u D3D12 textures added to overlay", swapchain, textures.size());
         }
         TraceLoggingWriteStop(local, "Overlay::CreateSwapchain", TLArg(true, "Success"));
     }
@@ -216,14 +216,14 @@ namespace openxr_api_layer::graphics
                 if (const XrResult result = GetInstance()->OpenXrApi::xrReleaseSwapchainImage(swapchain, &releaseInfo);
                     XR_SUCCEEDED(result))
                 {
-                    DebugLog("AcquireSwapchainImage: swapchain(%u) released", swapchain);
+                    DebugLog("AcquireSwapchainImage: swapchain(%llu) released", swapchain);
                     TraceLoggingWriteTagged(local,
                                             "Overlay::AcquireSwapchainImage",
                                             TLXArg(swapchain, "Swapchain_Released"));
                 }
                 else
                 {
-                    ErrorLog("%s: xrReleaseSwapchainImage(%u) failed: %d",
+                    ErrorLog("%s: xrReleaseSwapchainImage(%llu) failed: %s",
                              __FUNCTION__,
                              swapchain,
                              xr::ToCString(result));
@@ -237,7 +237,7 @@ namespace openxr_api_layer::graphics
             // Record the index so we know which texture to use in xrEndFrame().
             if (swapchainIt != m_Swapchains.end())
             {
-                DebugLog("AcquireSwapchainImage(%u): index = %u", swapchain, *index);
+                DebugLog("AcquireSwapchainImage(%llu): index = %u", swapchain, *index);
                 TraceLoggingWriteTagged(local, "Overlay::AcquireSwapchainImage", TLArg(*index, "Acquired_Index"));
                 swapchainIt->second.index = *index;
             }
@@ -260,7 +260,7 @@ namespace openxr_api_layer::graphics
         {
             // Perform a delayed release: we still need to copy the texture in DrawOverlay()
             swapchainIt->second.doRelease = true;
-            DebugLog("ReleaseSwapchainImage(%u): release postponed", swapchain);
+            DebugLog("ReleaseSwapchainImage(%llu): release postponed", swapchain);
             TraceLoggingWriteStop(local, "Overlay::ReleaseSwapchainImage", TLArg(true, "Release_Postponed"));
             return XR_SUCCESS;
         }
@@ -291,14 +291,14 @@ namespace openxr_api_layer::graphics
                 if (const XrResult result = GetInstance()->OpenXrApi::xrReleaseSwapchainImage(swapchain.first, &releaseInfo);
                     XR_SUCCEEDED(result))
                 {
-                    DebugLog("ReleaseAllSwapChainImages: swapchain(%u) released", swapchain.first);
+                    DebugLog("ReleaseAllSwapChainImages: swapchain(%llu) released", swapchain.first);
                     TraceLoggingWriteTagged(local,
                                             "Overlay::ReleaseAllSwapChainImages",
                                             TLXArg(swapchain.first, "Swapchain_Released"));
                 }
                 else
                 {
-                    ErrorLog("%s: xrReleaseSwapchainImage(%u) failed: %s",
+                    ErrorLog("%s: xrReleaseSwapchainImage(%llu) failed: %s",
                              __FUNCTION__,
                              swapchain.first,
                              xr::ToCString(result));
@@ -430,7 +430,7 @@ namespace openxr_api_layer::graphics
             XrPosef refToStage;
             if (!openXrLayer->GetRefToStage(lastProjectionLayer->space, &refToStage, nullptr))
             {
-                ErrorLog("%s(%u): could not determine stage offset for projection reference space (%u)",
+                ErrorLog("%s(%llu): could not determine stage offset for projection reference space (%llu)",
                          __FUNCTION__,
                          chainFrameEndInfo->displayTime,
                          lastProjectionLayer->space);
@@ -438,7 +438,7 @@ namespace openxr_api_layer::graphics
                 TraceLoggingWriteStop(local, "Overlay::DrawOverlay", TLArg(false, "RefToStage"));
                 return;
             }
-            DebugLog("overlay last projection layer space: %u, pose to stage: %s",
+            DebugLog("overlay last projection layer space: %llu, pose to stage: %s",
                      lastProjectionLayer->space,
                      xr::ToString(refToStage).c_str());
 
@@ -484,7 +484,7 @@ namespace openxr_api_layer::graphics
                 // copy from application texture
                 if (!composition->getApplicationDevice()->CopyAppTexture(m_Swapchains[swapchain], eye, colorTexture, true))
                 {
-                    ErrorLog("%s: unable to copy app texture for swapchain: %u", __FUNCTION__, swapchain);
+                    ErrorLog("%s: unable to copy app texture for swapchain: %llu", __FUNCTION__, swapchain);
                     m_Initialized = false;
                     TraceLoggingWriteStop(local, "Overlay::DrawOverlay", TLArg(false, "AppTexure_Copied"));
                     return;
@@ -500,7 +500,7 @@ namespace openxr_api_layer::graphics
                 // copy back to application texture
                 if (!composition->getApplicationDevice()->CopyAppTexture(m_Swapchains[swapchain], eye, colorTexture, false))
                 {
-                    ErrorLog("%s: unable to copy app texture for swapchain: %u", __FUNCTION__, swapchain);
+                    ErrorLog("%s: unable to copy app texture for swapchain: %llu", __FUNCTION__, swapchain);
                     m_Initialized = false;
                     TraceLoggingWriteStop(local, "Overlay::InitializeTextures", TLArg(false, "AppTexure_Copied"));
                     return;
@@ -522,7 +522,7 @@ namespace openxr_api_layer::graphics
 
         if (!m_Swapchains.contains(swapchain))
         {
-            ErrorLog("%s: unable to find state for swapchain: %u", __FUNCTION__, swapchain);
+            ErrorLog("%s: unable to find state for swapchain: %llu", __FUNCTION__, swapchain);
             TraceLoggingWriteStop(local, "Overlay::InitializeTextures", TLArg(false, "SwapchainState_Found"));
             return false;
         }

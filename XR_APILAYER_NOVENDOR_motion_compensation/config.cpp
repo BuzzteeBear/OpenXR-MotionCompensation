@@ -333,7 +333,7 @@ void ConfigManager::WriteConfig(const bool forApp)
             else
             {
                 error = true;
-                ErrorLog("%s: key not found in value map: %d:%s", __FUNCTION__, section.c_str(), keyName.c_str());
+                ErrorLog("%s: key not found in value map: %s:%s", __FUNCTION__, section.c_str(), keyName.c_str());
             }
         }
         else

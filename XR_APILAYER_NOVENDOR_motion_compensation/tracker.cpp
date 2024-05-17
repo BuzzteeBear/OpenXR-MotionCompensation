@@ -34,7 +34,7 @@ namespace tracker
             TraceLoggingWriteStop(local,
                                   "ControllerBase::GetPoseDelta",
                                   TLArg(xr::ToString(m_LastPoseDelta).c_str(), "LastDelta"));
-            DebugLog("delta(%u) reused", time);
+            DebugLog("delta(%llu) reused", time);
             return true;
         }
         if (XrPosef curPose{Pose::Identity()}; GetPose(curPose, session, time))
@@ -60,7 +60,7 @@ namespace tracker
                 m_LastPoseTime = time;
             }
 
-            DebugLog("delta(%u): %s", time, xr::ToString(poseDelta).c_str());
+            DebugLog("delta(%llu): %s", time, xr::ToString(poseDelta).c_str());
             TraceLoggingWriteStop(local,
                                   "ControllerBase::GetPoseDelta",
                                   TLArg(true, "Success"),
@@ -188,7 +188,7 @@ namespace tracker
                                             TLArg(m_LastPoseTime, "LastGoodTime"));
                     if (!m_FallBackUsed)
                     {
-                        Log("Warning: requested time (%u) is out of bounds, using last known tracker pose (%u)",
+                        Log("Warning: requested time (%llu) is out of bounds, using last known tracker pose (%llu)",
                             time,
                             m_LastPoseTime);
                         m_FallBackUsed = true;
