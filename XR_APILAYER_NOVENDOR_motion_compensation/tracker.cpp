@@ -526,12 +526,50 @@ namespace tracker
 
     bool TrackerBase::ChangeOffset(XrVector3f modification)
     {
-        return false;
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local,
+                               "TrackerBase::ChangeOffset",
+                               TLArg(xr::ToString(modification).c_str(), "Modifiaction"),
+                               TLArg(xr::ToString(this->m_ReferencePose).c_str(), "ReferencePose"));
+        if (!m_Calibrated)
+        {
+            ErrorLog("%s: please calibrate cor position before trying to move it", __FUNCTION__);
+            TraceLoggingWriteStop(local, "TrackerBase::ChangeOffset", TLArg(false, "Success"));
+            return false;
+        }
+
+        const XrPosef adjustment{{Quaternion::Identity()}, modification};
+        m_ReferencePose = Pose::Multiply(adjustment, m_ReferencePose);
+        TraceLoggingWriteStop(local,
+                              "TrackerBase::ChangeOffset",
+                              TLArg(true, "Success"),
+                              TLArg(xr::ToString(this->m_ReferencePose).c_str(), "ReferencePose"));
+        return true;
     }
 
     bool TrackerBase::ChangeRotation(float radian)
     {
-        return false;
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local,
+                               "TrackerBase::ChangeRotation",
+                               TLArg(radian, "Radian"),
+                               TLArg(xr::ToString(this->m_ReferencePose).c_str(), "ReferencePose"));
+        if (!m_Calibrated)
+        {
+            ErrorLog("%s: please calibrate cor position before trying to rotate it", __FUNCTION__);
+            TraceLoggingWriteStop(local, "VirtualTracker::ChangeRotation", TLArg(false, "Success"));
+            return false;
+        }
+
+        XrPosef adjustment{Pose::Identity()};
+        StoreXrQuaternion(&adjustment.orientation, DirectX::XMQuaternionRotationRollPitchYaw(0.0f, radian, 0.0f));
+        SetReferencePose(Pose::Multiply(adjustment, m_ReferencePose));
+
+        TraceLoggingWriteStop(local,
+                              "TrackerBase::ChangeRotation",
+                              TLArg(true, "Success"),
+                              TLArg(xr::ToString(this->m_ReferencePose).c_str(), "ReferencePose"));
+        return true;
     }
 
     void TrackerBase::SetModifierActive(const bool active) const
@@ -1044,14 +1082,14 @@ namespace tracker
                                TLArg(xr::ToString(modification).c_str(), "Modifiaction"),
                                TLArg(m_OffsetForward, "OffsetForward"),
                                TLArg(m_OffsetDown, "OffsetDown"),
-                               TLArg(m_OffsetRight, "OffsetForward"),
-                               TLArg(xr::ToString(this->m_ReferencePose).c_str(), "ReferencePose"));
-        if (!m_Calibrated)
+                               TLArg(m_OffsetRight, "OffsetForward"));
+
+        if (!TrackerBase::ChangeOffset(modification))
         {
-            ErrorLog("%s: please calibrate cor position before trying to move it", __FUNCTION__);
             TraceLoggingWriteStop(local, "VirtualTracker::ChangeOffset", TLArg(false, "Success"));
             return false;
         }
+
         const XrVector3f relativeToHmd{cosf(m_OffsetYaw) * modification.x + sinf(m_OffsetYaw) * modification.z,
                                        modification.y,
                                        cosf(m_OffsetYaw) * modification.z - sinf(m_OffsetYaw) * modification.x};
@@ -1062,15 +1100,12 @@ namespace tracker
         GetConfig()->SetValue(Cfg::TrackerOffsetDown, m_OffsetDown * 100.0f);
         GetConfig()->SetValue(Cfg::TrackerOffsetRight, m_OffsetRight * 100.0f);
 
-        const XrPosef adjustment{{Quaternion::Identity()}, modification};
-        m_ReferencePose = Pose::Multiply(adjustment, m_ReferencePose);
         TraceLoggingWriteStop(local,
                               "VirtualTracker::ChangeOffset",
                               TLArg(true, "Success"),
                               TLArg(m_OffsetForward, "NewOffsetForward"),
                               TLArg(m_OffsetDown, "NewOffsetDown"),
-                              TLArg(m_OffsetRight, "NewOffsetForward"),
-                              TLArg(xr::ToString(this->m_ReferencePose).c_str(), "ReferencePose"));
+                              TLArg(m_OffsetRight, "NewOffsetForward"));
         return true;
     }
 
@@ -1082,13 +1117,12 @@ namespace tracker
                                TLArg(radian, "Radian"),
                                TLArg(m_OffsetYaw, "OffsetYaw"),
                                TLArg(xr::ToString(this->m_ReferencePose).c_str(), "ReferencePose"));
-        if (!m_Calibrated)
+        if (!TrackerBase::ChangeRotation(radian))
         {
-            ErrorLog("%s: please calibrate cor position before trying to rotate it", __FUNCTION__);
             TraceLoggingWriteStop(local, "VirtualTracker::ChangeRotation", TLArg(false, "Success"));
             return false;
         }
-        XrPosef adjustment{Pose::Identity()};
+
         m_OffsetYaw += radian;
         // restrict to +- pi
         m_OffsetYaw = fmod(m_OffsetYaw + floatPi, 2.0f * floatPi) - floatPi;
@@ -1096,9 +1130,6 @@ namespace tracker
         GetConfig()->SetValue(Cfg::TrackerOffsetYaw, yawAngle);
 
         TraceLoggingWriteTagged(local, "VirtualTracker::ChangeRotation", TLArg(yawAngle, "YawAngle"));
-
-        StoreXrQuaternion(&adjustment.orientation, DirectX::XMQuaternionRotationRollPitchYaw(0.0f, radian, 0.0f));
-        SetReferencePose(Pose::Multiply(adjustment, m_ReferencePose));
 
         TraceLoggingWriteStop(local,
                               "VirtualTracker::ChangeRotation",
