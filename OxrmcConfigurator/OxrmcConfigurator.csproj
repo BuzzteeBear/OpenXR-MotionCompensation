@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
-		<TargetFramework>net7.0-windows</TargetFramework>
+		<TargetFramework>net8.0-windows7.0</TargetFramework>
 		<RootNamespace>OxrmcConfigurator</RootNamespace>
 		<Nullable>enable</Nullable>
 		<UseWPF>true</UseWPF>
@@ -11,12 +11,13 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<PackageReference Include="CodeBeam.MudBlazor.Extensions" Version="6.9.2" />
 		<PackageReference Include="ini-parser" Version="2.5.2" />
-		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="7.0.92" />
-		<PackageReference Include="MudBlazor" Version="6.8.0" />
-		<PackageReference Include="Serilog" Version="3.0.1" />
-		<PackageReference Include="Serilog.Extensions.Logging" Version="7.0.0" />
-		<PackageReference Include="Serilog.Sinks.Console" Version="4.1.0" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="8.0.40" />
+		<PackageReference Include="MudBlazor" Version="6.19.1" />
+		<PackageReference Include="Serilog" Version="3.1.1" />
+		<PackageReference Include="Serilog.Extensions.Logging" Version="8.0.0" />
+		<PackageReference Include="Serilog.Sinks.Console" Version="5.0.1" />
 		<PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
 	</ItemGroup>
 

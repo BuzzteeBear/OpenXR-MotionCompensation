@@ -16,6 +16,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using MudBlazor.Services;
+using MudExtensions.Services;
 using OxrmcConfigurator.Model;
 
 namespace OxrmcConfigurator;
@@ -45,7 +46,8 @@ public partial class MainWindow : Window
         var serviceCollection = new ServiceCollection();
         serviceCollection.AddWpfBlazorWebView();
         serviceCollection.AddMudServices();
-        serviceCollection.AddSingleton<ConfigService>();
+        serviceCollection.AddMudExtensions();
+		serviceCollection.AddSingleton<ConfigService>();
         
 		Resources.Add("services", serviceCollection.BuildServiceProvider());
     }
