@@ -4,7 +4,7 @@
 ; make sure to adapt this path to your system before building the installer
 #define SolutionDir "P:\Development\OpenXR-MotionCompensation"
 #define AppName "OpenXR-MotionCompensation"
-#define AppVersion "0.3.4"
+#define AppVersion "0.3.5"
 #define AppPublisher "oxrmc@mailbox.org"
 #define AppURL "https://github.com/BuzzteeBear/OpenXR-MotionCompensation"
 #define AppId "{A6E4E3AB-454E-4B79-BDCD-A11B4E1AAF4D}"
@@ -102,7 +102,7 @@ Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "rotation_filter"
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "rotation_filter"; Key: "order"; String: "2"; Flags: createkeyifdoesntexist
 
 ; [input_stabilizer]
-Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "input_stabilizer"; Key: "enabled"; String: "1"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "input_stabilizer"; Key: "enabled"; String: "0"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "input_stabilizer"; Key: "strength"; String: "0.5"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "input_stabilizer"; Key: "roll"; String: "1.0"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "input_stabilizer"; Key: "pitch"; String: "1.0"; Flags: createkeyifdoesntexist

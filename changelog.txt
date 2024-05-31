@@ -2,6 +2,14 @@ OpenXR-MotionCompensation Changelog
 
 Version 0.3.4
 
+	Physical tracker:
+	- allow moving reference position via keyboard shortcuts
+
+	Bugfixes:
+	- fixed sway inversion on flypt reference tracker (was introduced at v0.3.4)
+
+Version 0.3.4
+
 	Input stabilizer (experimental)
 	- temporal supersampling for tracker input
 	- butterworth/bi-quad filter for supersampled data

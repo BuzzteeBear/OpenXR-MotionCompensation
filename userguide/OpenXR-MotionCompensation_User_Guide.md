@@ -2,7 +2,7 @@
 
 **DISCLAIMER: This software is distributed as-is, without any warranties or conditions of any kind. Use at your own risks!**
 
-Version: 0.3.4
+Version: 0.3.5
 
 **This document contains instructions on how to use OpenXR motion compensation [API layer](https://www.khronos.org/registry/OpenXR/specs/1.0/html/xrspec.html#api-layers).**
 
@@ -142,7 +142,7 @@ What you can modify in a configuration file:
   - `rotation_increase`, `rotation_decrease` - see above, but for rotational filter
   - `toggle_stabilizer` - enable/disable [input stabilizer](#input-stabilizer)
   - `stabilizer_increase`, `stabilizer_decrease` - modify filter intensity for stabilizer stage filter
-  - `offset_forward`, `offset_back`, `offset_up`, `offset_down`, `offset_right`, `offset_left` - move the center of rotation (cor) for a virtual tracker. The directions are aligned with the forward vector set with the `calibrate` command. Changes made during runtime can be saved by using a save command (see below).
+  - `offset_forward`, `offset_back`, `offset_up`, `offset_down`, `offset_right`, `offset_left` - move center of rotation (cor) for a virtual tracker or neutral reference position for physical tracker. The directions are aligned with the forward vector set with the `calibrate` command. For virtual trackers changes made during runtime may be saved by using a save command (see below).
   - `rotate_right`, `rotate_left` - rotate the aforementioned forward vector around the gravitational (yaw-)axis. Note that these changes cannot be saved. Therefore changing the offset position AFTER rotating manually and saving the offset values will result in the cor being a different offset position after reloading those saved values.
   - `toggle_overlay` - activate/deactivate graphical overlay displaying the reference tracker position(s) (See [Graphical overlay](#graphical-overlay) for details).
   - `toggle_cache` - change between calculated and cached eye positions
