@@ -16,16 +16,6 @@
 	private string? _lastName;
 	private bool _resetTracker = true; // (re)read tracker from config
 
-	public enum Tracker : ushort
-    {
-		Error = 0,
-		Controller,
-		Vive,
-		Srs,
-		FlyPt,
-		Yaw
-	}
-
 	public async Task SetTracker(Tracker tracker)
 	{
 		if (Tracker.Error == tracker)

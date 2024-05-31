@@ -2,23 +2,23 @@
 @inject ConfigService ConfigService;
 
 <MudChipSet SelectedValues="@_selected" SelectedValuesChanged="OnSelectedValuesChanged" Mandatory="true" Filter="true">
-	<MudChip Text="Unknown" Style="@(SelectedTracker == ConfigEditor.Tracker.Error ? string.Empty : "display: none")" Value="@ConfigEditor.Tracker.Error" />
-	<MudChip Text="Motion Controller" Value="@ConfigEditor.Tracker.Controller" />
-	<MudChip Text="HTC Vive Tracker" Value="@ConfigEditor.Tracker.Vive"/>
-	<MudChip Text="Sim Racing Studio" Value="@ConfigEditor.Tracker.Srs" />
-	<MudChip Text="FlyPT Mover" Value="@ConfigEditor.Tracker.FlyPt"/>
-	<MudChip Text="Yaw Built-in Sensors" Value="@ConfigEditor.Tracker.Yaw"/>
+	<MudChip Text="Unknown" Style="@(SelectedTracker == Tracker.Error ? string.Empty : "display: none")" Value="@Tracker.Error" />
+	<MudChip Text="Motion Controller" Value="@Tracker.Controller" />
+	<MudChip Text="HTC Vive Tracker" Value="@Tracker.Vive"/>
+	<MudChip Text="Sim Racing Studio" Value="@Tracker.Srs" />
+	<MudChip Text="FlyPT Mover" Value="@Tracker.FlyPt"/>
+	<MudChip Text="Yaw Built-in Sensors" Value="@Tracker.Yaw"/>
 </MudChipSet>
 
 @code {
 	[CascadingParameter]
 	private ConfigItem SelectedConfig { get; set; } = new(ConfigService.defaultApp);
 	[CascadingParameter]
-	public ConfigEditor.Tracker SelectedTracker { get; set; }
+	public Tracker SelectedTracker { get; set; }
 	[Parameter]
-	public EventCallback<ConfigEditor.Tracker> OnTrackerChanged { get; set; }
+	public EventCallback<Tracker> OnTrackerChanged { get; set; }
 
-	private ICollection<object> _selected = new List<object>() { ConfigEditor.Tracker.Error };
+	private ICollection<object> _selected = new List<object>() { Tracker.Error };
 	private bool _isDefault;
 	private string? _lastName;
 	private bool _ignoreSelectionChange = false;
@@ -31,12 +31,12 @@
 		_isDefault = trackerEntry?.Default ?? true;
 		var selectedTracker = trackerEntry?.Value switch
 		{
-			("controller") => ConfigEditor.Tracker.Controller,
-			("vive") => ConfigEditor.Tracker.Vive,
-			("srs") => ConfigEditor.Tracker.Srs,
-			("flypt") => ConfigEditor.Tracker.FlyPt,
-			("yaw") => ConfigEditor.Tracker.Yaw,
-			_ => ConfigEditor.Tracker.Error
+			("controller") => Tracker.Controller,
+			("vive") => Tracker.Vive,
+			("srs") => Tracker.Srs,
+			("flypt") => Tracker.FlyPt,
+			("yaw") => Tracker.Yaw,
+			_ => Tracker.Error
 		};
 		if (!OnTrackerChanged.HasDelegate) return;
 		await OnTrackerChanged.InvokeAsync(selectedTracker);
@@ -45,7 +45,7 @@
 	protected override async Task OnParametersSetAsync()
 	{
 		var oldSelection = _selected.First();
-		if ((ConfigEditor.Tracker)oldSelection != SelectedTracker)
+		if ((Tracker)oldSelection != SelectedTracker)
 		{
 			_selected.Clear();
 			_selected.Add(SelectedTracker);
@@ -65,14 +65,14 @@
 		}
 		var enumerable = values.ToList();
 		_selected = enumerable.ToList();
-		var type = (ConfigEditor.Tracker)enumerable.First() switch
+		var type = (Tracker)enumerable.First() switch
 		{
-			ConfigEditor.Tracker.Controller => "controller",
-			ConfigEditor.Tracker.Vive => "vive",
-			ConfigEditor.Tracker.Srs => "srs",
-			ConfigEditor.Tracker.FlyPt => "flypt",
-			ConfigEditor.Tracker.Yaw => "yaw",
-			ConfigEditor.Tracker.Error => "unknown", // TODO: handle error?
+			Tracker.Controller => "controller",
+			Tracker.Vive => "vive",
+			Tracker.Srs => "srs",
+			Tracker.FlyPt => "flypt",
+			Tracker.Yaw => "yaw",
+			Tracker.Error => "unknown", // TODO: handle error?
 			_ => "unknown"
 			};
 		ConfigService.SetEntry(SelectedConfig.name, "tracker", "type", type);

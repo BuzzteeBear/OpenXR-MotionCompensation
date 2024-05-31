@@ -7,7 +7,7 @@
         xmlns:local="clr-namespace:OxrmcConfigurator"
         xmlns:oxrmcConfigurator="clr-namespace:OxrmcConfigurator"
         mc:Ignorable="d"
-        Title="OXRMC Configurator" Height="720" Width="1280">
+        Title="OXRMC Configurator" Height="900" Width="1600">
     <Grid>
         <blazor:BlazorWebView HostPage="wwwroot\index.html" Services="{DynamicResource services}">
             <blazor:BlazorWebView.RootComponents>

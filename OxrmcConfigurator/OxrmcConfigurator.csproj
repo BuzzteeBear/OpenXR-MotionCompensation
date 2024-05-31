@@ -11,7 +11,14 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <None Include="wwwroot\Images\Micra.jpg" />
+	  <None Include="wwwroot\Images\Motion_Controller.jpg" />
+	  <None Include="wwwroot\Images\Motion_Controller.png" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<PackageReference Include="CodeBeam.MudBlazor.Extensions" Version="6.9.2" />
+		<PackageReference Include="FluentValidation" Version="11.9.1" />
 		<PackageReference Include="ini-parser" Version="2.5.2" />
 		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="8.0.40" />
 		<PackageReference Include="MudBlazor" Version="6.19.1" />

@@ -1,0 +1,72 @@
+﻿<MudForm @ref="_form">
+	<MudRadioGroup Class="d-flex xs-10" T="int?" @bind-Value="Tracker" Color="Color.Primary" Required="true" RequiredError="Please select a reference tracker option">
+		<MudStack Class="d-flex xs-2" Justify="Justify.Center" AlignItems="AlignItems.Stretch">
+			@for (var i = 0; i < 5; i++)
+			{
+				int index = i;
+				<block style="background-color: var(@_itemColors[index]) !important;">
+					<MudRadio T="int?" Option="index" Size="Size.Large" Color="Color.Transparent" DisableRipple="true">
+						<TrackerItem @ref=ItemRef Index="index"/>
+					</MudRadio>
+				</block>
+			}
+		</MudStack>
+	</MudRadioGroup>
+</MudForm>
+
+@code {
+	List<TrackerItem> _itemRefs = new List<TrackerItem>();
+
+
+	TrackerItem ItemRef
+	{
+		set => _itemRefs.Add(value);
+	}
+
+	static string[] _trackerValues = { "controller", "vive", "srs", "flypt", "yaw" };
+
+	int? _tracker;
+
+	int? Tracker
+	{
+		get => _tracker;
+		set
+		{
+			_tracker = value;
+			foreach (var item in _itemRefs)
+			{
+				item.OnTrackerChanged(value);
+			}
+			for (int i = 0; i < 5; i++)
+			{
+				_itemColors[i] = value == i ? "--mud-palette-secondary" : "--mud-palette--transparent";
+			}
+		}
+	}
+	MudForm _form = new();
+
+	string [] _itemColors =
+	{
+		"--mud-palette-text-transparent",
+		"--mud-palette-text-transparent",
+		"--mud-palette-text-transparent",
+		"--mud-palette-text-transparent",
+		"--mud-palette-text-transparent"
+    };
+
+	public async Task Validate()
+	{
+		await _form.Validate();
+	}
+
+	public bool IsValid()
+	{
+		return _form.IsValid;
+	}
+
+	public void Reset()
+	{
+		_tracker = null;
+		StateHasChanged();
+	}
+}
