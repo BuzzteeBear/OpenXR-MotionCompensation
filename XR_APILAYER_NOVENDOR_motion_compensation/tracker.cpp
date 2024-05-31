@@ -1427,7 +1427,7 @@ namespace tracker
                           DirectX::XMQuaternionRotationRollPitchYaw(-dof.data[pitch] * angleToRadian,
                                                                     dof.data[yaw] * angleToRadian,
                                                                     dof.data[roll] * angleToRadian));
-        rigPose.position = XrVector3f{-dof.data[sway] / -1000.f, dof.data[heave] / 1000.f, dof.data[surge] / 1000.f};
+        rigPose.position = XrVector3f{dof.data[sway] / -1000.f, dof.data[heave] / 1000.f, dof.data[surge] / 1000.f};
 
         TraceLoggingWriteStop(local, "FlyPtTracker::DataToPose", TLArg(xr::ToString(rigPose).c_str(), "Pose"));
         return rigPose;
