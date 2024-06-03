@@ -1,37 +1,41 @@
-@inherits LayoutComponentBase
+﻿@inherits LayoutComponentBase
 
-<MudThemeProvider @ref="_mudThemeProvider" Theme="CrispyThemeSpaceWalk.Theme" @bind-IsDarkMode="@_isDarkMode" />
+<MudThemeProvider @ref="_mudThemeProvider" Theme="CustomTheme.Theme" @bind-IsDarkMode="@_isDarkMode" />
 <MudDialogProvider />
 <MudSnackbarProvider />
 
 <MudLayout>
-	<MudAppBar Elevation="1">
+	<MudAppBar Elevation="8">
 		<MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
 		<MudText Typo="Typo.h5" Class="ml-3">OXRMC Configurator</MudText>
 		<MudSpacer />
-		<MudText>Advanced Mode</MudText>
-		<MudToggleIconButton @bind-Toggled="@_isAdvancedMode"
-		                     Icon="@Icons.Material.Filled.DoNotDisturb" Color="@Color.Error" Title="Off"
-		                     ToggledIcon="@Icons.Material.Filled.CheckCircleOutline" ToggledColor="@Color.Success" ToggledTitle="On"/>
-		<MudIconButton @onclick="ToggleDark" Icon="@ModeIcon"/>
+		<MudPaper Class="pa-2">
+			<MudStack Row="true" AlignItems="AlignItems.Center">
+				<MudText>Advanced Options</MudText>
+				<MudSwitchM3 @bind-Value="@_isAdvancedMode" Icon="@Icons.Material.Filled.VisibilityOff" Color="@AdvancedColor" ThumbIcon="@Icons.Material.Filled.Done" ThumbOffIcon="@Icons.Material.Filled.Close" />
+
+			</MudStack>
+		</MudPaper>
+		<MudToggleIconButton @bind-Toggled="@_isDarkMode" Class="d-flex ml-7" Icon="@Icons.Material.Filled.LightMode" Color="@Color.Primary"
+							 ToggledIcon="@Icons.Material.Filled.DarkMode" ToggledColor="@Color.Tertiary" Title="Light" ToggledTitle="Dark" />
+
 	</MudAppBar>
 	<MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
-		<NavMenu/>
+		<NavMenu />
 	</MudDrawer>
 	<CascadingValue Value="_isAdvancedMode">
-		<MudMainContent>
-			<ConfigWizard/>
+		<MudMainContent Style="width: auto; height: 100vh;">
+			@Body
 		</MudMainContent>
 	</CascadingValue>
 </MudLayout>
 
 @code {
+	private MudThemeProvider _mudThemeProvider = new();
 	private bool _isDarkMode;
 	private bool _isAdvancedMode = false;
-	private MudThemeProvider _mudThemeProvider = new();
-	private string ModeIcon => _isDarkMode ? Icons.Material.Filled.DarkMode : Icons.Material.Filled.LightMode;
 	private bool _drawerOpen = false;
-	private void ToggleDark() => _isDarkMode = !_isDarkMode;
+	private Color AdvancedColor => _isAdvancedMode ? @Color.Success : @Color.Error;
 
 	protected override async Task OnAfterRenderAsync(bool firstRender)
 	{
@@ -47,7 +51,7 @@
 		_drawerOpen = !_drawerOpen;
 	}
 
-	public class CrispyThemeSpaceWalk
+	public class CustomTheme
 	{
 		public static MudTheme Theme
 		{
@@ -87,27 +91,27 @@
 						},
 						Palette = new MudBlazor.PaletteLight
 						{
-							AppbarBackground = new MudBlazor.Utilities.MudColor("#1A237E"),
-							Primary = new MudBlazor.Utilities.MudColor("#5C6BC0"),
-							Secondary = new MudBlazor.Utilities.MudColor("#013243"),
-							Tertiary = new MudBlazor.Utilities.MudColor("#007BA7"),
-							Info = new MudBlazor.Utilities.MudColor("#CF71AF"),
-							Success = new MudBlazor.Utilities.MudColor("#3CD070"),
-							Warning = new MudBlazor.Utilities.MudColor("#FFCC00"),
-							Error = new MudBlazor.Utilities.MudColor("#FF0000"),
-							Dark = new MudBlazor.Utilities.MudColor("#010B13"),
+							AppbarBackground = Colors.Indigo.Darken4,
+							Primary = Colors.Indigo.Lighten1,
+							Secondary = Colors.Indigo.Darken1,
+							Tertiary = Colors.Indigo.Lighten4,
+							Info = Colors.Indigo.Accent1,
+							Success = Colors.Green.Default,
+							Warning = Colors.Yellow.Default,
+							Error = Colors.Red.Default,
+							Dark = Colors.BlueGrey.Darken3,
 						},
 						PaletteDark = new MudBlazor.PaletteDark
 						{
-							AppbarBackground = new MudBlazor.Utilities.MudColor("#1A237E"),
-							Primary = new MudBlazor.Utilities.MudColor("5C6BC0"),
-							Secondary = new MudBlazor.Utilities.MudColor("#C5CAE9"),
-							Tertiary = new MudBlazor.Utilities.MudColor("#007BA7"),
-							Info = new MudBlazor.Utilities.MudColor("#884977"),
-							Success = new MudBlazor.Utilities.MudColor("#26734A"),
-							Warning = new MudBlazor.Utilities.MudColor("#B38B00"),
-							Error = new MudBlazor.Utilities.MudColor("#990000"),
-							Dark = new MudBlazor.Utilities.MudColor("#000000"),
+							AppbarBackground = Colors.Indigo.Darken4,
+							Primary = Colors.Indigo.Lighten1,
+							Secondary = Colors.Indigo.Darken1,
+							Tertiary = Colors.Indigo.Lighten4,
+							Info = Colors.Indigo.Accent1,
+							Success = Colors.Green.Default,
+							Warning = Colors.Yellow.Default,
+							Error = Colors.Red.Default,
+							Dark = Colors.BlueGrey.Darken3,
 						}
 					};
 			}

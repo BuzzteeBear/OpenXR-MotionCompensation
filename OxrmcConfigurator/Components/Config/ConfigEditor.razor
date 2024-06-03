@@ -13,7 +13,6 @@
 	private ConfigItem SelectedConfig { get; set; } = new(ConfigService.defaultApp);
 
 	private Tracker _selectedTracker;
-	private string? _lastName;
 	private bool _resetTracker = true; // (re)read tracker from config
 
 	public async Task SetTracker(Tracker tracker)

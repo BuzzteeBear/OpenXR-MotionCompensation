@@ -1,0 +1,123 @@
+﻿@page "/configwizard"
+
+@inject ISnackbar Snackbar
+
+@using MudBlazor.Extensions
+@using MudExtensions.Enums
+
+	<MudStack Row="true" Class="ma-3" AlignItems="AlignItems.Center">
+		<MudIconButton Icon="@Icons.Material.TwoTone.RestartAlt" Color="Color.Primary" Size="Size.Large" OnClick="(ResetWizard)">Reset</MudIconButton>
+		<MudStepper @ref="_stepper" Class="d-flex flex-1 pa-4 justify-center" Linear="true" Vertical="true" 
+		            PreventStepChangeAsync="new Func<StepChangeDirection, int, Task<bool>>(CheckChange)" HeaderSize="Size.Large" Variant="Variant.Filled" Color="Color.Primary"
+		            HeaderTextView="HeaderTextView.All">
+			<ChildContent>
+			
+				<MudStep Class="pa-4" Style="min-height: 700px;" Icon="@Icons.Material.TwoTone.AddCircle" Title="Reference Tracker" StatusChanged="StatusChanged" Order="0">
+					<TrackerPicker @ref="_trackerPicker"/>
+				</MudStep>
+				<MudStep Class="pa-4" Style="min-height: 700px;" Icon="@Icons.Material.TwoTone.BlurCircular" Title="Tracker Details" StatusChanged="StatusChanged" Order="1">
+					<TrackerDetails @ref="_trackerDetails" />
+				</MudStep>
+				<MudStep Class="pa-4" Style="min-height: 700px;" Icon="@Icons.Material.TwoTone.DensitySmall" Title="Miscellaneous" StatusChanged="StatusChanged" Order="2">
+					<h2>TODO</h2>
+				</MudStep>
+				<MudStep Class="pa-4" Style="min-height: 700px;" Icon="@Icons.Material.TwoTone.KeyboardAlt" Title="Keybindings" StatusChanged="StatusChanged" Order="3" Optional="true">
+					<h2>TODO</h2>
+				</MudStep>
+				
+
+				<MudStep Class="pa-4" Style="min-height: 700px;" Icon="@Icons.Material.TwoTone.Alarm" Title="Result Step" IsResultStep="true">
+					<ChildContent>
+						<div class="d-flex flex-column align-center justify-center" style="height: 200px">
+							<MudIconButton Icon="@Icons.Material.Filled.DoneAll" Size="Size.Large" Variant="Variant.Filled" Color="Color.Success"/>
+							<MudText>Your reservation successfully completed.</MudText>
+						</div>
+					</ChildContent>
+				</MudStep>
+			</ChildContent>
+		</MudStepper>
+	</MudStack>
+
+@code {
+	[CascadingParameter]
+	private bool Advanced
+	{
+		get => _advanced;
+		set
+		{
+			_advanced = value;
+			StateHasChanged();
+		}
+	}
+	private bool _advanced;
+
+	public void ResetWizard()
+	{
+		_stepper?.Reset();
+		_trackerPicker.Reset();
+		_trackerDetails.Reset();
+		StateHasChanged();
+	}
+
+	
+	MudStepper? _stepper = default!;
+	
+	// Tracker selection
+	TrackerPicker _trackerPicker = default!;
+
+	ConfigEntry? _trackerEntry;
+	private string _tracker = "";
+	public String SelectedTracker
+	{
+		get => _tracker;
+		set
+		{
+			if (value == _tracker)
+			{
+				return;
+			}
+			// TODO: reset necessary options
+			_tracker = value;
+			_trackerEntry = new ConfigEntry("Default", "tracker", "type", _tracker);
+		}
+	}
+
+    MudForm _form2 = new();
+    bool _addResultStep = true;
+	
+	// Tracker details
+	TrackerDetails _trackerDetails = default!;
+
+
+	private async Task<bool> CheckChange(StepChangeDirection direction, int targetIndex)
+	{
+		if (direction == StepChangeDirection.Backward)
+		{
+			// always allow stepping backwards
+			return false;
+		}
+		if (_stepper?.GetActiveIndex() == 0)
+		{
+			if (_trackerPicker.Tracker == null)
+			{
+				Snackbar.Add($"Please select a reference tracker option", Severity.Error);
+			}
+			return _trackerPicker.Tracker == null;
+		}
+		if (_stepper?.GetActiveIndex() == 2)
+		{
+			
+			StateHasChanged();
+			await Task.Delay(1000);
+			await _form2.Validate();
+			StateHasChanged();
+			return !_form2.IsValid;
+		}
+		return false;
+	}
+
+	private void StatusChanged(StepStatus status)
+    {
+        Snackbar.Add($"First step {status.ToDescriptionString()}.", Severity.Info);
+    }
+}

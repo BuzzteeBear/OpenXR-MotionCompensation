@@ -8,12 +8,11 @@
 		<UseWPF>true</UseWPF>
 		<Platforms>x64</Platforms>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<ApplicationIcon>OpenXR-MotionCompensation_White.ico</ApplicationIcon>
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <None Include="wwwroot\Images\Micra.jpg" />
-	  <None Include="wwwroot\Images\Motion_Controller.jpg" />
-	  <None Include="wwwroot\Images\Motion_Controller.png" />
+	  <Content Include="OpenXR-MotionCompensation_White.ico" />
 	</ItemGroup>
 
 	<ItemGroup>

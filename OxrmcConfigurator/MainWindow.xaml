@@ -6,12 +6,13 @@
         xmlns:blazor="clr-namespace:Microsoft.AspNetCore.Components.WebView.Wpf;assembly=Microsoft.AspNetCore.Components.WebView.Wpf"
         xmlns:local="clr-namespace:OxrmcConfigurator"
         xmlns:oxrmcConfigurator="clr-namespace:OxrmcConfigurator"
+        xmlns:shared="clr-namespace:OxrmcConfigurator.Shared"
         mc:Ignorable="d"
         Title="OXRMC Configurator" Height="900" Width="1600">
     <Grid>
-        <blazor:BlazorWebView HostPage="wwwroot\index.html" Services="{DynamicResource services}">
+        <blazor:BlazorWebView HostPage="wwwroot\index.html" StartPath="/configwizard" Services="{DynamicResource services}" UrlLoading="Handle_UrlLoading">
             <blazor:BlazorWebView.RootComponents>
-                <blazor:RootComponent Selector="#app" ComponentType="{x:Type oxrmcConfigurator:MainPage}" />
+                <blazor:RootComponent Selector="#app" ComponentType="{x:Type shared:MainPage}" />
             </blazor:BlazorWebView.RootComponents>
         </blazor:BlazorWebView>
     </Grid>

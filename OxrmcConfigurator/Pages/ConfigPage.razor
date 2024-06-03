@@ -1,0 +1,29 @@
+﻿@page "/config"
+
+@inject ConfigService ConfigService;
+
+
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.Center">
+	<MudStack AlignItems="AlignItems.Center" Justify="Justify.Center">
+		<MudSpacer />
+		<MudIcon Icon="@Icons.TwoTone.Build" Style="height:90px; width:90px;"/>
+		<MudText Typo="Typo.h1">UNDER CONSTRUCTION</MudText>
+	</MudStack>
+</MudStack>
+
+<!--
+<CascadingValue Value="@_selectedConfig">
+	<ConfigSelector OnItemChanged="@SetConfig"/>
+	<ConfigEditor/>
+</CascadingValue>
+-->
+
+@code {
+	private ConfigItem _selectedConfig = new(Model.ConfigService.defaultApp);
+
+	public async Task SetConfig(ConfigItem config)
+	{
+		_selectedConfig = config;
+	}
+}

@@ -1,0 +1,70 @@
+﻿
+
+	<MudRadioGroup T="int?" @bind-Value="Tracker" Color="Color.Primary">
+		<MudStack Justify="Justify.Center" AlignItems="AlignItems.Stretch">
+			@for (var i = 0; i < 5; i++)
+			{
+				int index = i;
+				<MudPaper Outlined="true" Style="@_itemColors[index]">
+					<MudRadio Class="d-flex pl-8" T="int?" Option="index">
+						<TrackerItem @ref=ItemRef Index="index"/>
+					</MudRadio>
+				</MudPaper>
+			}
+		</MudStack>
+	</MudRadioGroup>
+	<MudSpacer/>
+
+
+@code {
+	List<TrackerItem> _itemRefs = new();
+
+	TrackerItem ItemRef
+	{
+		set => _itemRefs.Add(value);
+	}
+
+	static string[] _trackerValues = { "controller", "vive", "srs", "flypt", "yaw" };
+	static string _primary = "background-color: var(--mud-palette-primary) !important;";
+	static string _transparent = "background-color: var(--mud-palette-transparent) !important;";
+
+	int? _tracker;
+
+	MudForm _form = new();
+
+	public int? Tracker
+	{
+		get => _tracker;
+		set
+		{
+			// TODO: reset step 2 if necessary
+			_tracker = value;
+			foreach (var item in _itemRefs)
+			{
+				item.OnTrackerChanged(value);
+			}
+			for (int i = 0; i < 5; i++)
+			{
+				_itemColors[i] = value == i ? _primary : _transparent;
+			}
+			StateHasChanged();
+		}
+	}
+
+	string[] _itemColors ={_transparent, _transparent, _transparent, _transparent, _transparent };
+
+	public async Task Validate()
+	{
+		await _form.Validate();
+	}
+
+	public bool IsValid()
+	{
+		return _form.IsValid;
+	}
+
+	public void Reset()
+	{
+		Tracker = null;
+	}
+}

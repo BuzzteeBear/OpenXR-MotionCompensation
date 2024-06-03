@@ -1,0 +1,51 @@
+﻿@using MudBlazor
+@using MudBlazor.Utilities
+
+<MudStack Class="pa-4" Row="true" Justify="Justify.SpaceEvenly" AlignItems="AlignItems.Center">
+	<MudAvatar Style="height:90px; width:90px;" Elevation="12">
+		<MudImage Src="@_images[Index]" Fluid="true"/>
+	</MudAvatar>
+	<MudSpacer/>
+	<MudStack Justify="Justify.FlexStart" Spacing="1">
+		<MudText Typo="Typo.h4">@_titles[Index]</MudText>
+		<MudText Typo="Typo.body1" Class="d-none d-md-flex">@_descriptions[Index]</MudText>
+		@if (_selected)
+		{
+			<MudText Color="Color.Surface" Typo="Typo.body2" Class="d-none d-md-flex">@_hints[Index]</MudText>
+		}
+	</MudStack>
+</MudStack>
+
+
+@code {
+    static string[] _images = { "img/controller.png", "img/vive.png", "img/srs.png", "img/flypt.png", "img/yaw.png" };
+    static string[] _titles = { "Motion Controller", "HTC Vive Tracker", "Sim Racing Studio", "FlyPT Mover", "Yaw VR" };
+    static string[] _descriptions =
+    {
+		"Use a handheld controller (matching your VR hmd) mounted onto your motion rig.",
+		"Use a HTC Vive tracker mounted onto your motion rig.",
+		"Use a Witmotion WT901C (RS232) sensor in combination with SimRacingStudio motion software.", 
+		"Use FlyPT Mover's motion compensation output module.",
+		"Use Yaw VR | 2 | 2.5 | 3 built-in sensors."
+	};
+	static string[] _hints =
+	{
+		"Please disable standby mode and ensure proper tracking at all times.",
+		"Supported OpenXR runtimes: SteamVR, VarjoXR",
+		"Please follow the official SRS OXRMC setup guide.",
+		"Add a 'Motion Compensation for OVRMC' output module to your Mover profile.",
+		"You can also use this option when your YawVR simulator is driven by SRS."
+	};
+
+    [Parameter]
+    public int Index { get; set; }
+
+    bool _selected = false;
+
+
+	public void OnTrackerChanged(int? newTracker)
+    {
+		_selected = newTracker == Index;
+		StateHasChanged();
+	}
+}
