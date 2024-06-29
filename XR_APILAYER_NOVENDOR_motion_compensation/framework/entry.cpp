@@ -68,10 +68,14 @@ XrResult __declspec(dllexport) XRAPI_CALL
 
     // Start logging to file.
     localAppData = std::filesystem::path(getenv("LOCALAPPDATA")) / LayerPrettyName;
-    CreateDirectoryA(localAppData.string().c_str(), nullptr);
+    bool creationError = CreateDirectoryA(localAppData.string().c_str(), nullptr);
     if (!logStream.is_open()) {
         std::string logFile = (localAppData / (LayerPrettyName + ".log")).string();
         logStream.open(logFile, std::ios_base::ate);
+    }
+    if (creationError && GetLastError() != ERROR_ALREADY_EXISTS)
+    {
+        ErrorLog("unable to create local appdata directory %s : %s", localAppData, utility::LastErrorMsg());
     }
 
     DebugLog("--> xrNegotiateLoaderApiLayerInterface");
