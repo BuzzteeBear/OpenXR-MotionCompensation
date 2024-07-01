@@ -2,7 +2,7 @@
 
 **DISCLAIMER: This software is distributed as-is, without any warranties or conditions of any kind. Use at your own risks!**
 
-Version: 0.3.5
+Version: 0.3.6
 
 **This document contains instructions on how to use OpenXR motion compensation [API layer](https://www.khronos.org/registry/OpenXR/specs/1.0/html/xrspec.html#api-layers).**
 
@@ -16,7 +16,7 @@ To be able to do that, the software needs to be informed on the motion rig movem
 
 Limitations:
 
-- The motion compensation API Layer is made for Windows 64-bit only.
+- The motion compensation API Layer is made for Microsoft Windows only.
 - The software (obviously) only works with VR/AR applications using an OpenXR runtime implementation.
 
 ## Contact

@@ -1,6 +1,14 @@
 OpenXR-MotionCompensation Changelog
 
-Version 0.3.4
+Version 0.3.6
+
+	Optional support for x86 / 32-bit applications:
+	- enabled compatibility older application without x64 executable (e.g. Richard Burns Rally)
+
+	Bugfixes:
+	- added workaround for audible error feedback in web browser
+
+Version 0.3.5
 
 	Physical tracker:
 	- allow moving reference position via keyboard shortcuts

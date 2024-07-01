@@ -8,10 +8,10 @@ More about [OpenXR](https://www.khronos.org/registry/OpenXR/specs/1.0/html/xrspe
 
 ## Purpose of this project
 
-When using a motion rig in combination with a VR headset (hmd) he movement of the rig causes the in-game camera to change along with your position in the real world. In simulations for example you're basically feel being pushed around inside the cockpit when the motion rig moves.  
+When using a motion simulator in combination with a VR headset (hmd) the movement of the simulator causes the in-game camera to change alongside your position in the real world. In flight or racing simulations for example you're basically feel being pushed around inside the cockpit when the motion rig moves.  
 Motion compensation reduces or ideally removes that effect by locking the in-game world to the pose of the motion rig.
 This software aims to provide an API layer for motion compensation to be used with applications and hmds supporting the OpenXR standard.  
-To be able to do that, the software needs to be informed on the motion rig movement / position. This can be achieved using a tracker, which is either a physical object attached to the motion rig and tracked by the VR runtime (e.g. a motion controller or a vive puck) or a virtual tracker using data from the motion software driving the motion rig. 
+To be able to do that, the software needs to be informed on the motion rig movement / position. This can be achieved using a tracker, which is either a physical object attached to the motion rig and tracked by the VR runtime (e.g. a motion controller or a vive puck) or a virtual tracker that is using data from the motion software driving the motion rig. 
  
 ## Building this project
 
@@ -25,13 +25,13 @@ Prerequisites:
 
 Limitations:
 
-- The API Layer is made for Windows 64-bit only.
+- The API Layer is made for Microsoft Windows only.
 
 DISCLAIMER: This software is distributed as-is, without any warranties or conditions of any kind. Use at your own risks.
 
 ## Special Thanks
-- This project wouldn't exist without the helpful advice and base source code provided by [Matthieu Bucchianeri](https://github.com/mbucchia), so we're very grateful for that. Kudos for his excellent contributions to the VR community.
-- [JetBrains s.r.o.](https://www.jetbrains.com/) has been so kind to provide the project, free of charge, with an open source software development license for their Resharper products. They have proven very helpful and greatly integrated into the Visual Studio IDE, that's used to develop this software.
+- This project wouldn't exist without the helpful advice and template source code provided by [Matthieu Bucchianeri](https://github.com/mbucchia), so we're very grateful for that. Kudos for his excellent contributions to the VR community.
+- [JetBrains s.r.o.](https://www.jetbrains.com/) has been so kind to provide the project with an open source software development license for their Resharper products, free of charge. These have proven to be very helpful and greatly integrated into the Visual Studio IDE, that is used to develop this software.
 
 ## Customization
 The easiest way to get a uable project set up is to use the `Clone a repository` function of Visual Studio with the url of this github repository. Make sure the project path does not contain any whitespaces (or the call of the python script for source code generation will fail). Also ensure that the [Visual Studio git client can handle LFS](https://stackoverflow.com/a/47921547) for the external sdk dependencies below. 
