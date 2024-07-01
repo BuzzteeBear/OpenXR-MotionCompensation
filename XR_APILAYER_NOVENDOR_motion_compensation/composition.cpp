@@ -757,7 +757,7 @@ namespace
                                     TLArg((int64_t)m_preferredSRGBColorFormat, "PreferredSRGBColorFormat"),
                                     TLArg((int64_t)m_preferredDepthFormat, "PreferredDepthFormat"));
 
-            TraceLoggingWriteStop(local, "CompositionFramework_Create", TLXArg(this, "CompositionFramework"));
+            TraceLoggingWriteStop(local, "CompositionFramework_Create", TLPArg(this, "CompositionFramework"));
         }
 
         ~CompositionFramework() override
@@ -1011,7 +1011,7 @@ namespace
                         }
                         else
                         {
-                            ErrorLog("%s: creating composition framework failed, for session %d",
+                            ErrorLog("%s: creating composition framework failed, for session %llu",
                                      __FUNCTION__,
                                      session);
                             TraceLoggingWriteStop(local,
@@ -1032,7 +1032,7 @@ namespace
                 else
                 {
                     // The session (likely) could not be handled.
-                    ErrorLog("%s: no graphics binding found for session %u, graphical overlay will not work", __FUNCTION__, session);
+                    ErrorLog("%s: no graphics binding found for session %llu, graphical overlay will not work", __FUNCTION__, session);
                     TraceLoggingWriteStop(local,
                                           "CompositionFrameworkFactory_getCompositionFramework",
                                           TLArg(false, "SessionKnown"));
@@ -1046,7 +1046,7 @@ namespace
         bool IsUsingD3D12(const XrSession session) override
         {
             TraceLocalActivity(local);
-            TraceLoggingWriteStart(local, "CompositionFrameworkFactory_IsUsingD3D12", TLPArg(session, "Session"));
+            TraceLoggingWriteStart(local, "CompositionFrameworkFactory_IsUsingD3D12", TLXArg(session, "Session"));
 
             auto binding = m_applicationBindings.find(session);
             if (m_applicationBindings.end() == binding)
@@ -1093,12 +1093,12 @@ namespace
                 if (extensionName == XR_KHR_D3D11_ENABLE_EXTENSION_NAME)
                 {
                     has_XR_KHR_D3D11_enable = true;
-                    Log("session %u has D3D11 extension enabled", session);
+                    Log("session %llu has D3D11 extension enabled", session);
                 }
                 if (extensionName == XR_KHR_D3D12_ENABLE_EXTENSION_NAME)
                 {
                     has_XR_KHR_D3D12_enable = true;
-                    Log("session %u has D3D12 extension enabled", session);
+                    Log("session %llu has D3D12 extension enabled", session);
                 }
             }
 
@@ -1108,7 +1108,7 @@ namespace
             {
                 if (has_XR_KHR_D3D11_enable && entry->type == XR_TYPE_GRAPHICS_BINDING_D3D11_KHR)
                 {
-                    Log("session %u is using D3D11 graphics binding", session);
+                    Log("session %llu is using D3D11 graphics binding", session);
                     auto* binding = new XrGraphicsBindingD3D11KHR{
                         XR_TYPE_GRAPHICS_BINDING_D3D11_KHR,
                         nullptr,
@@ -1119,7 +1119,7 @@ namespace
                 }
                 if (has_XR_KHR_D3D12_enable && entry->type == XR_TYPE_GRAPHICS_BINDING_D3D12_KHR)
                 {
-                    Log("session %u is using D3D12 graphics binding", session);
+                    Log("session %llu is using D3D12 graphics binding", session);
                     auto* binding =
                         new XrGraphicsBindingD3D12KHR{XR_TYPE_GRAPHICS_BINDING_D3D12_KHR,
                                                       nullptr,
@@ -1132,7 +1132,7 @@ namespace
             }
             if (!m_applicationBindings.contains(session))
             {
-                Log("session %u is using neither D3D11 nor D3D12 graphics binding", session);
+                Log("session %llu is using neither D3D11 nor D3D12 graphics binding", session);
             }
 
             TraceLoggingWriteStop(local, "CompositionFrameworkFactory_CreateSession", TLXArg(session, "Session"));

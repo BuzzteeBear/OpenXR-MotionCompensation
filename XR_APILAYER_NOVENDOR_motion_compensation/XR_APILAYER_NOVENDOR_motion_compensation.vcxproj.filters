@@ -134,6 +134,7 @@
       <Filter>Framework</Filter>
     </None>
     <None Include="packages.config" />
+    <None Include="XR_APILAYER_NOVENDOR_motion_compensation_32.json" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Sounds.rc" />

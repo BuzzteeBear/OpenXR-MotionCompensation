@@ -24,7 +24,7 @@ namespace tracker
     bool ControllerBase::GetPoseDelta(XrPosef& poseDelta, XrSession session, XrTime time)
     {
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "ControllerBase::GetPoseDelta", TLPArg(session, "Session"), TLArg(time, "Time"));
+        TraceLoggingWriteStart(local, "ControllerBase::GetPoseDelta", TLXArg(session, "Session"), TLArg(time, "Time"));
 
         // pose already calculated for requested time
         if (time == m_LastPoseTime)
@@ -34,7 +34,7 @@ namespace tracker
             TraceLoggingWriteStop(local,
                                   "ControllerBase::GetPoseDelta",
                                   TLArg(xr::ToString(m_LastPoseDelta).c_str(), "LastDelta"));
-            DebugLog("delta(%u) reused", time);
+            DebugLog("delta(%llu) reused", time);
             return true;
         }
         if (XrPosef curPose{Pose::Identity()}; GetPose(curPose, session, time))
@@ -60,7 +60,7 @@ namespace tracker
                 m_LastPoseTime = time;
             }
 
-            DebugLog("delta(%u): %s", time, xr::ToString(poseDelta).c_str());
+            DebugLog("delta(%llu): %s", time, xr::ToString(poseDelta).c_str());
             TraceLoggingWriteStop(local,
                                   "ControllerBase::GetPoseDelta",
                                   TLArg(true, "Success"),
@@ -77,7 +77,7 @@ namespace tracker
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local,
                                "ControllerBase::ResetReferencePose",
-                               TLPArg(session, "Session"),
+                               TLXArg(session, "Session"),
                                TLArg(time, "Time"));
 
         if (XrPosef curPose; GetPose(curPose, session, time))
@@ -107,7 +107,7 @@ namespace tracker
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local,
                                "ControllerBase::GetControllerPose",
-                               TLPArg(session, "Session"),
+                               TLXArg(session, "Session"),
                                TLArg(time, "Time"));
 
         if (!m_PhysicalEnabled)
@@ -129,7 +129,7 @@ namespace tracker
 
                 TraceLoggingWriteTagged(local,
                                         "ControllerBase::GetControllerPose",
-                                        TLPArg(layer->m_ActionSet, "xrSyncActions"));
+                                        TLXArg(layer->m_ActionSet, "xrSyncActions"));
                 if (const XrResult result = layer->xrSyncActions(session, &syncInfo); XR_FAILED(result))
                 {
                     if (reportError)
@@ -147,10 +147,8 @@ namespace tracker
 
                 TraceLoggingWriteTagged(local,
                                         "ControllerBase::GetControllerPose",
-                                        TLPArg(layer->m_PoseAction, "xrGetActionStatePose"));
-                if (const XrResult result =
-                        GetInstance()->xrGetActionStatePose(session, &getActionStateInfo, &actionStatePose);
-                    XR_FAILED(result))
+                                        TLXArg(layer->m_PoseAction, "xrGetActionStatePose"));
+                if (const XrResult result = GetInstance()->xrGetActionStatePose(session, &getActionStateInfo, &actionStatePose); XR_FAILED(result))
                 {
                     if (reportError)
                     {
@@ -176,9 +174,7 @@ namespace tracker
                 }
             }
 
-            if (const XrResult result =
-                    GetInstance()->OpenXrApi::xrLocateSpace(layer->m_TrackerSpace, layer->m_StageSpace, time, &location);
-                XR_FAILED(result))
+            if (const XrResult result = GetInstance()->OpenXrApi::xrLocateSpace(layer->m_TrackerSpace, layer->m_StageSpace, time, &location);XR_FAILED(result))
             {
                 if (reportError)
                 {
@@ -192,7 +188,7 @@ namespace tracker
                                             TLArg(m_LastPoseTime, "LastGoodTime"));
                     if (!m_FallBackUsed)
                     {
-                        Log("Warning: requested time (%u) is out of bounds, using last known tracker pose (%u)",
+                        Log("Warning: requested time (%llu) is out of bounds, using last known tracker pose (%llu)",
                             time,
                             m_LastPoseTime);
                         m_FallBackUsed = true;
@@ -587,7 +583,7 @@ namespace tracker
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local,
                                "TrackerBase::LogCurrentTrackerPoses",
-                               TLPArg(session, "Session"),
+                               TLXArg(session, "Session"),
                                TLArg(time, "Time"),
                                TLArg(activated, "Activated"));
 
@@ -743,7 +739,7 @@ namespace tracker
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local,
                                "OpenXrTracker::ResetReferencePose",
-                               TLPArg(session, "Session"),
+                               TLXArg(session, "Session"),
                                TLArg(time, "Time"));
 
         std::unique_lock lock(m_SampleMutex); 
@@ -798,7 +794,7 @@ namespace tracker
     bool OpenXrTracker::GetPose(XrPosef& trackerPose, XrSession session, XrTime time)
     {
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "OpenXrTracker::GetPose", TLPArg(session, "Session"), TLArg(time, "Time"));
+        TraceLoggingWriteStart(local, "OpenXrTracker::GetPose", TLXArg(session, "Session"), TLArg(time, "Time"));
         
         bool success{false}; 
         
@@ -1006,7 +1002,7 @@ namespace tracker
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local,
                                "VirtualTracker::ResetReferencePose",
-                               TLPArg(session, "Session"),
+                               TLXArg(session, "Session"),
                                TLArg(time, "Time"));
         bool success = true;
         if (m_LoadPoseFromFile)
@@ -1064,7 +1060,7 @@ namespace tracker
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local,
                                "VirtualTracker::ApplyCorManipulation",
-                               TLPArg(session, "Session"),
+                               TLXArg(session, "Session"),
                                TLArg(time, "Time"));
         if (m_Manipulator)
         {
@@ -1167,7 +1163,7 @@ namespace tracker
     bool VirtualTracker::GetPose(XrPosef& trackerPose, const XrSession session, const XrTime time)
     {
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "VirtualTracker::GetPose", TLPArg(session, "Session"), TLArg(time, "Time"));
+        TraceLoggingWriteStart(local, "VirtualTracker::GetPose", TLXArg(session, "Session"), TLArg(time, "Time"));
 
         Dof dof{};
         if (!ReadData(time, dof))
@@ -1249,7 +1245,7 @@ namespace tracker
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local,
                                "VirtualTracker::LoadReferencePose",
-                               TLPArg(session, "Session"),
+                               TLXArg(session, "Session"),
                                TLArg(time, "Time"));
 
         bool success = true;
@@ -1288,7 +1284,7 @@ namespace tracker
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local,
                                "YawTracker::ResetReferencePose",
-                               TLPArg(session, "Session"),
+                               TLXArg(session, "Session"),
                                TLArg(time, "Time"));
         bool useGameEngineValues;
         if (GetConfig()->GetBool(Cfg::UseYawGeOffset, useGameEngineValues) && useGameEngineValues)
@@ -1453,7 +1449,7 @@ namespace tracker
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local,
                                "CorManipulator::ApplyManipulation",
-                               TLPArg(session, "Session"),
+                               TLXArg(session, "Session"),
                                TLArg(time, "Time"));
 
         if (!m_Initialized)
@@ -1489,7 +1485,7 @@ namespace tracker
             vibration.duration = XR_MIN_HAPTIC_DURATION;
             vibration.frequency = XR_FREQUENCY_UNSPECIFIED;
 
-            TraceLoggingWriteTagged(local, "ApplyManipulation", TLPArg(layer->m_HapticAction, "xrApplyHapticFeedback"));
+            TraceLoggingWriteTagged(local, "ApplyManipulation", TLXArg(layer->m_HapticAction, "xrApplyHapticFeedback"));
             XrHapticActionInfo hapticActionInfo{XR_TYPE_HAPTIC_ACTION_INFO};
             hapticActionInfo.action = layer->m_HapticAction;
             if (const XrResult result = layer->xrApplyHapticFeedback(session,
@@ -1547,21 +1543,20 @@ namespace tracker
     bool CorManipulator::GetPose(XrPosef& trackerPose, XrSession session, XrTime time)
     {
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "CorManipulator::GetPose", TLPArg(session, "Session"), TLArg(time, "Time"));
+        TraceLoggingWriteStart(local, "CorManipulator::GetPose", TLXArg(session, "Session"), TLArg(time, "Time"));
 
         const bool success = GetControllerPose(trackerPose, session, time);
 
         TraceLoggingWriteStop(local,
                               "CorManipulator::GetPose",
-                              TLArg(success, "Success"),
-                              TLArg(xr::ToString(trackerPose).c_str(), "TrackerPose"));
+                              TLArg(success, "Success")); // removed parameter
         return success;
     }
 
     void CorManipulator::GetButtonState(XrSession session, bool& moveButton, bool& positionButton)
     {
          TraceLocalActivity(local);
-         TraceLoggingWriteStart(local, "CorManipulator::GetButtonState", TLPArg(session, "Session"));
+         TraceLoggingWriteStart(local, "CorManipulator::GetButtonState", TLXArg(session, "Session"));
 
          auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
          if (!layer)
@@ -1576,7 +1571,7 @@ namespace tracker
             // sync actions
             TraceLoggingWriteTagged(local,
                                     "CorManipulator::GetButtonState",
-                                    TLPArg(layer->m_ActionSet, "xrSyncActions"));
+                                    TLXArg(layer->m_ActionSet, "xrSyncActions"));
             constexpr XrActionsSyncInfo syncInfo{XR_TYPE_ACTIONS_SYNC_INFO, nullptr, 0, nullptr};
             if (const XrResult result = GetInstance()->xrSyncActions(session, &syncInfo); XR_FAILED(result))
             {
@@ -1589,7 +1584,7 @@ namespace tracker
             // obtain current action state
             TraceLoggingWriteTagged(local,
                                     "CorManipulator::GetButtonState",
-                                    TLPArg(layer->m_MoveAction, "xrGetActionStateBoolean"));
+                                    TLXArg(layer->m_MoveAction, "xrGetActionStateBoolean"));
             XrActionStateGetInfo moveInfo{XR_TYPE_ACTION_STATE_GET_INFO};
             moveInfo.action = layer->m_MoveAction;
 
@@ -1611,7 +1606,7 @@ namespace tracker
 
             TraceLoggingWriteTagged(local,
                                     "CorManipulator::GetButtonState",
-                                    TLPArg(layer->m_PositionAction, "xrGetActionStateBoolean"));
+                                    TLXArg(layer->m_PositionAction, "xrGetActionStateBoolean"));
             XrActionStateGetInfo positionInfo{XR_TYPE_ACTION_STATE_GET_INFO};
             positionInfo.action = layer->m_PositionAction;
 
