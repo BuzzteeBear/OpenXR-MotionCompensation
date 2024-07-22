@@ -1043,7 +1043,7 @@ namespace openxr_api_layer
             const XrSpace refSpaceForCompensation = spaceComp ? baseSpace : space;
 
             // manipulate pose using tracker
-            XrPosef trackerDelta{Pose::Identity()},refToStage, stageToRef;
+            XrPosef trackerDelta{Pose::Identity()}, refDelta{Pose::Identity()}, refToStage, stageToRef;
             ;
             bool apply = true;
             if (m_TestRotation)
@@ -1058,13 +1058,13 @@ namespace openxr_api_layer
                     const XrPosef poseStage = Pose::Multiply(poseToCompensate, stageToRef);
                     m_HmdModifier->Apply(trackerDelta, poseStage);
                 }
-                trackerDelta = Pose::Multiply(Pose::Multiply(stageToRef, trackerDelta), refToStage);
+                refDelta = xr::Normalize(Pose::Multiply(Pose::Multiply(stageToRef, trackerDelta), refToStage));
             }
             if (apply)
             {
                 m_RecoveryStart = 0;
 
-                location->pose = Pose::Multiply(location->pose, trackerDelta);
+                location->pose = Pose::Multiply(location->pose, refDelta);
 
                 if (baseComp)
                 {
@@ -1222,7 +1222,7 @@ namespace openxr_api_layer
                             Pose::Multiply(Pose::Multiply(*m_EyeToHmd, views[0].pose), stageToRef);
                         m_HmdModifier->Apply(trackerDelta, hmdPoseStage);
                     }
-                    trackerDelta = Pose::Multiply(Pose::Multiply(stageToRef, trackerDelta), refToStage);
+                    const XrPosef refDelta = Pose::Multiply(Pose::Multiply(stageToRef, trackerDelta), refToStage);
                     for (uint32_t i = 0; i < *viewCountOutput; i++)
                     {
                         DebugLog("xrLocateView(%llu): eye (%llu) original pose = %s",
@@ -1236,7 +1236,7 @@ namespace openxr_api_layer
                                                 TLArg(xr::ToString(views[i].pose).c_str(), "OriginalViewPose"));
 
                         // apply manipulation
-                        views[i].pose = xr::Normalize(Pose::Multiply(views[i].pose, trackerDelta));
+                        views[i].pose = xr::Normalize(Pose::Multiply(views[i].pose, refDelta));
 
                         DebugLog("xrLocateView(%llu): eye (%llu) compensated pose = %s",
                                  displayTime,
@@ -1485,12 +1485,10 @@ namespace openxr_api_layer
         XrFrameEndInfo chainFrameEndInfo = *frameEndInfo;
 
         XrPosef delta{Pose::Identity()};
-        XrPosef deltaInverse{Pose::Identity()};
         std::vector<XrPosef> cachedEyePoses;
         if (m_Activated)
         {
            delta = m_DeltaCache.GetSample(time);
-           deltaInverse = Pose::Invert(delta);
            m_DeltaCache.CleanUp(time);
            cachedEyePoses =
                m_UseEyeCache ? m_EyeCache.GetSample(time) : std::vector<XrPosef>();
@@ -1561,6 +1559,19 @@ namespace openxr_api_layer
                                         TLArg(projectionLayer->layerFlags, "ProjectionLayerFlags"),
                                         TLXArg(projectionLayer->space, "ProjectionLayerSpace"));
 
+                // apply reverse manipulation to projection-layer pose
+                XrPosef refToStage, stageToRef;
+                if (!GetRefToStage(projectionLayer->space, &refToStage, &stageToRef))
+                {
+                    ErrorLog(
+                        "%s: unable to determine reference/stage transformation pose for projection layer space: %llu",
+                        __FUNCTION__,
+                        projectionLayer->space);
+                    
+                    resetLayers.push_back(chainFrameEndInfo.layers[i]);
+                    continue;
+                }
+
                 auto projectionViews = new std::vector<XrCompositionLayerProjectionView>{};
                 resetViews.push_back(projectionViews);
                 projectionViews->resize(projectionLayer->viewCount);
@@ -1584,8 +1595,11 @@ namespace openxr_api_layer
                         TLArg(xr::ToString((*projectionViews)[j].fov).c_str(), "Fov"));
 
                     XrPosef revertedEyePose =
-                        m_UseEyeCache ? cachedEyePoses[j]
-                                      : xr::Normalize(Pose::Multiply((*projectionViews)[j].pose, deltaInverse));
+                        m_UseEyeCache
+                            ? cachedEyePoses[j]
+                            : xr::Normalize(Pose::Multiply(
+                                  (*projectionViews)[j].pose,
+                                  Pose::Invert(Pose::Multiply(Pose::Multiply(stageToRef, delta), refToStage))));
 
                     (*projectionViews)[j].pose = revertedEyePose;
                     DebugLog("xrEndFrame: reverted view(%u) pose = %s", j, xr::ToString(revertedEyePose).c_str());
@@ -1622,7 +1636,19 @@ namespace openxr_api_layer
                                         TLArg(xr::ToString(quadLayer->pose).c_str(), "QuadLayerPose"));
 
                 // apply reverse manipulation to quad layer pose
-                XrPosef revertedPose = xr::Normalize(Pose::Multiply(quadLayer->pose, deltaInverse));
+                XrPosef refToStage, stageToRef;
+                if (!GetRefToStage(quadLayer->space, &refToStage, &stageToRef))
+                {
+                    ErrorLog("%s: unable to determine reference/stage transformation pose for quad layer space: %llu",
+                             __FUNCTION__,
+                             quadLayer->space);
+                    resetLayers.push_back(chainFrameEndInfo.layers[i]);
+                    continue;
+                }
+
+                XrPosef revertedPose = xr::Normalize(
+                    Pose::Multiply(Pose::Multiply(Pose::Multiply(quadLayer->pose, stageToRef), Pose::Invert(delta)),
+                                   refToStage));
 
                 DebugLog("xrEndFrame: reverted quad layer pose = %s", xr::ToString(revertedPose).c_str());
                 TraceLoggingWriteTagged(local,

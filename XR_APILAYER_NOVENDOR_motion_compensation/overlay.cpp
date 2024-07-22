@@ -443,10 +443,13 @@ namespace openxr_api_layer::graphics
                      xr::ToString(refToStage).c_str());
 
             // calculate tracker pose
-            const XrPosef trackerPose = xr::math::Pose::Multiply(referencePose, refToStage);
+            const XrPosef trackerPose = xr::Normalize(xr::math::Pose::Multiply(referencePose, refToStage));
 
             // calculate reference pose
-            const XrPosef refPose = mcActivated ? xr::math::Pose::Multiply(trackerPose, delta) : trackerPose;
+            const XrPosef refPose =
+                mcActivated ? xr::Normalize(
+                                  xr::math::Pose::Multiply(xr::math::Pose::Multiply(referencePose, delta), refToStage))
+                            : trackerPose;
 
             DebugLog("overlay reference pose: %s", xr::ToString(refPose).c_str());
             if (mcActivated)
