@@ -614,7 +614,6 @@ namespace tracker
         ControllerBase::SetReferencePose(pose);
         if (m_Sampler)
         {
-            m_Sampler->StopSampling();
             m_Sampler->StartSampling();
         }
 
