@@ -181,7 +181,6 @@ namespace tracker
         {
             m_Filename = "Local\\YawVRGEFile";
         }
-        bool ResetReferencePose(XrSession session, XrTime time) override;
         bool ReadSource(XrTime now, utility::Dof& dof) override;
 
       protected:
@@ -190,9 +189,7 @@ namespace tracker
       private:
         struct YawData
         {
-            float yaw, pitch, roll, battery, rotationHeight, rotationForwardHead;
-            bool sixDof, usePos;
-            float autoX, autoY;
+            float yaw, pitch, roll;
         };
     };
 

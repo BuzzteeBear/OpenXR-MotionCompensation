@@ -21,7 +21,6 @@ enum class Cfg
     TrackerOffsetRight,
     TrackerOffsetYaw,
     TrackerConstantPitch,
-    UseYawGeOffset,
     LegacyMode,
     CorX,
     CorY,
@@ -138,7 +137,6 @@ class ConfigManager
         {Cfg::TrackerOffsetRight, {"tracker", "offset_right"}},
         {Cfg::TrackerOffsetYaw, {"tracker", "offset_yaw_angle"}},
 
-        {Cfg::UseYawGeOffset, {"tracker", "use_yaw_ge_offset"}},
         {Cfg::TrackerConstantPitch, {"tracker", "constant_pitch_angle"}},
 
         {Cfg::LegacyMode, {"tracker", "legacy_mode"}},

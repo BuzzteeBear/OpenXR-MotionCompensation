@@ -163,7 +163,6 @@ Upon starting an OpenXR application with the API layer active for the first time
 <li>values starting with <code>cor_</code> are not meant for manual editing in the config file but are instead populated on saving the current configuration.</li>
 </ul>
 </li>
-<li><code>use_yaw_ge_offset</code> enables the use of offset values defined in Yaw Game Engine instead of the ones specified in the config file.</li>
 <li><code>constant_pitch_angle</code> compensates for a constant pitch offset in the input data of a virtual tracker. This may be helpful on a yaw2 motion simulator, if you decide to have a more reclined neutral position by adding a constant on the pitch axis telemetry, but still want to use the built-in sensors for motion compensation.</li>
 <li><code>marker_size</code> sets the size of the cor / reference tracker marker displayed in the overlay. The value corresponds to the length of one arrow in cm.</li>
 <li><code>connection_timeout</code> sets the time (in seconds) the tracker needs to be unresponsive before motion compensation is automatically deactivated. Setting a negative value disables automatic deactivation.</li>
