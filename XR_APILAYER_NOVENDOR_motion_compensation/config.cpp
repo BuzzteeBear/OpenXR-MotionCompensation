@@ -103,7 +103,8 @@ bool ConfigManager::Init(const std::string& application)
     else
     {
         std::string actualLocation = coreIni;
-        std::string designatedDir = (std::filesystem::path(getenv("USERPROFILE")) / "AppData" / "local" / LayerPrettyName).string();
+        std::string designatedDir =
+            (std::filesystem::path(getenv("USERPROFILE")) / "AppData" / "local" / LayerPrettyName).string();
         std::ranges::transform(actualLocation, actualLocation.begin(), ::toupper);
         std::ranges::transform(designatedDir, designatedDir.begin(), ::toupper);
 
@@ -114,14 +115,12 @@ bool ConfigManager::Init(const std::string& application)
             m_Values[Cfg::LogVerbose] = "0";
             m_Values[Cfg::Enabled] = "0";
 
-            ErrorLog("%s: unexpected app data location: %s",
-                     __FUNCTION__,
-                     actualLocation.c_str());
+            ErrorLog("%s: unexpected app data location: %s", __FUNCTION__, actualLocation.c_str());
             ErrorLog("%s: expected: %s", __FUNCTION__, designatedDir.c_str());
             TraceLoggingWriteStop(local, "ConfigManager::Init", TLArg("Disable", "Exit"));
             return true;
         }
-     
+
         ErrorLog("%s: unable to find config file %s", __FUNCTION__, coreIni.c_str());
         TraceLoggingWriteStop(local, "ConfigManager::Init", TLArg("Failure", "Exit"));
         return false;

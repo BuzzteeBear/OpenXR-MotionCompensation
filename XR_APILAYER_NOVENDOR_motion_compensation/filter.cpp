@@ -209,8 +209,7 @@ namespace filter
         m_ThirdStage = rotation;
     }
 
-    PassThroughStabilizer::PassThroughStabilizer(const std::vector<utility::DofValue>& relevant)
-        : m_Relevant(relevant)
+    PassThroughStabilizer::PassThroughStabilizer(const std::vector<utility::DofValue>& relevant) : m_Relevant(relevant)
     {
         auto SetFactor = [this](const Cfg key, const DofValue value) {
             GetConfig()->GetFloat(key, m_Factor.data[value]);

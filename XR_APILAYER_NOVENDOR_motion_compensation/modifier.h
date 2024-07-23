@@ -11,7 +11,6 @@ namespace modifier
         virtual void Apply(XrPosef& target, const XrPosef& reference) const = 0;
 
       protected:
-
         bool m_ApplyTranslation{false}, m_ApplyRotation{false};
         float m_Pitch{1.f}, m_Roll{1.f}, m_Yaw{1.f}, m_Sway{1.f}, m_Heave{1.f}, m_Surge{1.f};
         XrPosef m_FwdToStage{xr::math::Pose::Identity()}, m_StageToFwd{xr::math::Pose::Identity()};

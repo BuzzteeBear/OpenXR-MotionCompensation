@@ -56,6 +56,7 @@ namespace input
             RotRight,
             RotLeft
         };
+
       public:
         explicit InputHandler(openxr_api_layer::OpenXrLayer* layer);
         bool Init();
@@ -70,7 +71,7 @@ namespace input
         void SaveConfig(XrTime time, bool forApp) const;
         static void ToggleVerbose();
 
-    private:
+      private:
         openxr_api_layer::OpenXrLayer* m_Layer;
         KeyboardInput m_Input;
     };

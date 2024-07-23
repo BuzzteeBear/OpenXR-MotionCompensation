@@ -78,7 +78,7 @@ namespace utility
             }
             else
             {
-                DebugLog("AddSample(%s) at %llu: inserted", m_SampleType.c_str(), time); 
+                DebugLog("AddSample(%s) at %llu: inserted", m_SampleType.c_str(), time);
             }
             m_Cache[time] = sample;
             TraceLoggingWriteStop(local, "Cache::AddSample");
@@ -135,7 +135,10 @@ namespace utility
                                           TLArg(m_SampleType.c_str(), "Type"),
                                           TLArg("Earlier", "Match"),
                                           TLArg(lowerIt->first, "Time"));
-                    DebugLog("GetSample(%s) at %llu: earlier match found: %llu", m_SampleType.c_str(), time, lowerIt->first);
+                    DebugLog("GetSample(%s) at %llu: earlier match found: %llu",
+                             m_SampleType.c_str(),
+                             time,
+                             lowerIt->first);
 
                     return lowerIt->second;
                 }
@@ -157,7 +160,10 @@ namespace utility
                                           TLArg(m_SampleType.c_str(), "Type"),
                                           TLArg("Estimated Both", "Match"),
                                           TLArg(it->first, "Time"));
-                    ErrorLog("GetSample(%s) at %llu: using best match: %llu ", m_SampleType.c_str(), time, returnIt->first);
+                    ErrorLog("GetSample(%s) at %llu: using best match: %llu ",
+                             m_SampleType.c_str(),
+                             time,
+                             returnIt->first);
 
                     return returnIt->second;
                 }
@@ -176,7 +182,10 @@ namespace utility
                 auto lowerIt = it;
                 --lowerIt;
                 // lower entry is last in cache-> use it
-                ErrorLog("GetSample(%s) at %llu: using best match: t = %llu ", m_SampleType.c_str(), time, lowerIt->first);
+                ErrorLog("GetSample(%s) at %llu: using best match: t = %llu ",
+                         m_SampleType.c_str(),
+                         time,
+                         lowerIt->first);
                 TraceLoggingWriteStop(local,
                                       "Cache::GetSample",
                                       TLArg(m_SampleType.c_str(), "Type"),

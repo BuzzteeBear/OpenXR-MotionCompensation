@@ -219,7 +219,7 @@ class ConfigManager
         {Cfg::KeySaveConfig, {"shortcuts", "save_config"}},
         {Cfg::KeySaveConfigApp, {"shortcuts", "save_config_app"}},
         {Cfg::KeyReloadConfig, {"shortcuts", "reload_config"}},
-       
+
         {Cfg::KeyVerbose, {"shortcuts", "toggle_verbose_logging"}},
         {Cfg::KeyRecorder, {"shortcuts", "toggle_recording"}},
         {Cfg::KeyLogTracker, {"shortcuts", "log_tracker_pose"}},
@@ -228,7 +228,6 @@ class ConfigManager
         {Cfg::LogVerbose, {"debug", "log_verbose"}},
         {Cfg::RecordSamples, {"debug", "record_stabilizer_samples"}},
         {Cfg::TestRotation, {"debug", "testrotation"}}};
-
 
     std::set<Cfg> m_KeysToSave{Cfg::TransStrength,
                                Cfg::RotStrength,

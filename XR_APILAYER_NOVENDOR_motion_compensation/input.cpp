@@ -313,7 +313,7 @@ namespace input
         // trigger interaction suggestion and action set attachment if necessary
         if (m_Layer->m_Activated || m_Layer->LazyInit(time))
         {
-            success =  m_Layer->m_Tracker->ResetReferencePose(m_Layer->m_Session, time);
+            success = m_Layer->m_Tracker->ResetReferencePose(m_Layer->m_Session, time);
         }
         if (success)
         {
@@ -324,7 +324,8 @@ namespace input
             // failed to update reference pose -> deactivate mc
             if (m_Layer->m_Activated)
             {
-                ErrorLog("%s: motion compensation deactivated because tracker reference pose could not be calibrated", __FUNCTION__);
+                ErrorLog("%s: motion compensation deactivated because tracker reference pose could not be calibrated",
+                         __FUNCTION__);
                 m_Layer->m_Activated = false;
             }
             AudioOut::Execute(Event::Error);
@@ -483,7 +484,8 @@ namespace input
                                TLArg(index, "Index"));
 
         std::string path;
-        if (const auto buttons = m_Mapping.find(profile); buttons != m_Mapping.end() && (int) buttons->second.size() > index)
+        if (const auto buttons = m_Mapping.find(profile);
+            buttons != m_Mapping.end() && (int)buttons->second.size() > index)
         {
             path = buttons->second.at(index);
         }

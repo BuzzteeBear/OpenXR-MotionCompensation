@@ -225,7 +225,6 @@ namespace openxr_api_layer
         m_DeltaCache.SetTolerance(toleranceTime);
         m_EyeCache.SetTolerance(toleranceTime);
 
-        
         // initialize keyboard input handler
         if (!m_Input->Init())
         {
@@ -524,7 +523,7 @@ namespace openxr_api_layer
                                 TLArg(createInfo->faceCount, "FaceCount"),
                                 TLArg(createInfo->arraySize, "ArraySize"),
                                 TLArg(createInfo->mipCount, "MipCount"));
- 
+
         if (XR_FAILED(result))
         {
             TraceLoggingWriteStop(local, "OpenXrLayer::xrCreateSwapchain", TLArg(xr::ToCString(result), "Result"));
@@ -559,11 +558,11 @@ namespace openxr_api_layer
         }
 
         m_Overlay->CreateSwapchain(*swapchain, createInfo);
-        
+
         TraceLoggingWriteStop(local,
-                                   "OpenXrLayer::xrCreateSwapchain",
-                                   TLXArg(session, "Session"),
-                                   TLArg(xr::ToCString(result), "Result"));
+                              "OpenXrLayer::xrCreateSwapchain",
+                              TLXArg(session, "Session"),
+                              TLArg(xr::ToCString(result), "Result"));
         return result;
     }
 
@@ -578,7 +577,7 @@ namespace openxr_api_layer
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "OpenXrLayer::xrDestroySwapchain", TLXArg(swapchain, "Swapchain"));
         DebugLog("xrDestroySwapchain %llu", swapchain);
-        
+
         if (XR_SUCCEEDED(result))
         {
             m_Overlay->DestroySwapchain(swapchain);
@@ -596,9 +595,7 @@ namespace openxr_api_layer
             return OpenXrApi::xrAcquireSwapchainImage(swapchain, acquireInfo, index);
         }
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local,
-                               "OpenXrLayer::xrAcquireSwapchainImage", 
-                               TLXArg(swapchain, "Swapchain"));
+        TraceLoggingWriteStart(local, "OpenXrLayer::xrAcquireSwapchainImage", TLXArg(swapchain, "Swapchain"));
 
         if (!m_Overlay->m_Initialized)
         {
@@ -638,9 +635,7 @@ namespace openxr_api_layer
             return result;
         }
         const XrResult result = m_Overlay->ReleaseSwapchainImage(swapchain, releaseInfo);
-        TraceLoggingWriteStop(local,
-                              "OpenXrLayer::xrReleaseSwapchainImage",
-                              TLArg(xr::ToCString(result), "Result"));
+        TraceLoggingWriteStop(local, "OpenXrLayer::xrReleaseSwapchainImage", TLArg(xr::ToCString(result), "Result"));
         return result;
     }
 
@@ -771,7 +766,9 @@ namespace openxr_api_layer
             }
         }
 
-        auto addBinding = [this, &bindings, profile](XrAction action, const std::string& path, const std::string& name) {
+        auto addBinding = [this, &bindings, profile](XrAction action,
+                                                     const std::string& path,
+                                                     const std::string& name) {
             XrActionSuggestedBinding newBinding{action};
             if (const XrResult result = xrStringToPath(GetXrInstance(), path.c_str(), &newBinding.binding);
                 XR_SUCCEEDED(result))
@@ -782,10 +779,7 @@ namespace openxr_api_layer
             }
             else
             {
-                ErrorLog("%s: unable to create XrPath from %s: %s",
-                         __FUNCTION__,
-                         path.c_str(),
-                         xr::ToCString(result));
+                ErrorLog("%s: unable to create XrPath from %s: %s", __FUNCTION__, path.c_str(), xr::ToCString(result));
                 return false;
             }
         };
@@ -968,7 +962,7 @@ namespace openxr_api_layer
             subActionPath.c_str(),
             xr::ToString(createInfo->poseInActionSpace).c_str());
 
-         if (m_CompensateControllers)
+        if (m_CompensateControllers)
         {
             Log("action space for motion controller compensation added: %llu", *space);
             m_ActionSpaces.insert(*space);
@@ -1150,8 +1144,7 @@ namespace openxr_api_layer
 
         if (isViewSpace(refSpace))
         {
-            DebugLog("xrLocateViews(%llu): omitting manipulation against view space (%llu)",
-                     displayTime, refSpace);
+            DebugLog("xrLocateViews(%llu): omitting manipulation against view space (%llu)", displayTime, refSpace);
             TraceLoggingWriteStop(local,
                                   "OpenXrLayer::xrLocateViews",
                                   TLArg(true, "RefSpaceIsView"),
@@ -1304,7 +1297,10 @@ namespace openxr_api_layer
         {
             for (uint32_t i = 0; i < *viewCountOutput; i++)
             {
-                DebugLog("xrLocateView(%llu): eye (%u) original pose = %s", displayTime, i, xr::ToString(views[i].pose).c_str());
+                DebugLog("xrLocateView(%llu): eye (%u) original pose = %s",
+                         displayTime,
+                         i,
+                         xr::ToString(views[i].pose).c_str());
                 TraceLoggingWriteTagged(local,
                                         "OpenXrLayer::xrLocateViews",
                                         TLArg(i, "Index"),
@@ -1314,7 +1310,10 @@ namespace openxr_api_layer
                 // apply manipulation
                 views[i].pose = xr::Normalize(Pose::Multiply(m_EyeOffsets[i].pose, location.pose));
 
-                DebugLog("xrLocateView(%llu): eye (%u) compensated pose = %s", displayTime, i, xr::ToString(views[i].pose).c_str());
+                DebugLog("xrLocateView(%llu): eye (%u) compensated pose = %s",
+                         displayTime,
+                         i,
+                         xr::ToString(views[i].pose).c_str());
                 TraceLoggingWriteTagged(local,
                                         "OpenXrLayer::xrLocateViews",
                                         TLArg(i, "Index"),
@@ -1449,7 +1448,7 @@ namespace openxr_api_layer
     {
         if (!m_Enabled || !isSessionHandled(session))
         {
-           return OpenXrApi::xrEndFrame(session, frameEndInfo);
+            return OpenXrApi::xrEndFrame(session, frameEndInfo);
         }
 
         TraceLocalActivity(local);
@@ -1457,8 +1456,8 @@ namespace openxr_api_layer
 
         if (frameEndInfo->type != XR_TYPE_FRAME_END_INFO)
         {
-           TraceLoggingWriteStop(local, "OpenXrLayer::xrEndFrame", TLArg(false, "TypeCheck"));
-           return XR_ERROR_VALIDATION_FAILURE;
+            TraceLoggingWriteStop(local, "OpenXrLayer::xrEndFrame", TLArg(false, "TypeCheck"));
+            return XR_ERROR_VALIDATION_FAILURE;
         }
 
         XrTime time = frameEndInfo->displayTime;
@@ -1472,14 +1471,13 @@ namespace openxr_api_layer
         std::unique_lock lock(m_FrameLock);
 
         // update last frame time
-        if (m_UpdateRefSpaceTime >= std::exchange(m_LastFrameTime, time) &&
-            m_UpdateRefSpaceTime < time)
+        if (m_UpdateRefSpaceTime >= std::exchange(m_LastFrameTime, time) && m_UpdateRefSpaceTime < time)
         {
-           // (re)locate all static reference spaces
-           for (const XrSpace& space : m_StaticRefSpaces)
-           {
-               LocateRefSpace(space);
-           }
+            // (re)locate all static reference spaces
+            for (const XrSpace& space : m_StaticRefSpaces)
+            {
+                LocateRefSpace(space);
+            }
         }
 
         XrFrameEndInfo chainFrameEndInfo = *frameEndInfo;
@@ -1488,53 +1486,48 @@ namespace openxr_api_layer
         std::vector<XrPosef> cachedEyePoses;
         if (m_Activated)
         {
-           delta = m_DeltaCache.GetSample(time);
-           m_DeltaCache.CleanUp(time);
-           cachedEyePoses =
-               m_UseEyeCache ? m_EyeCache.GetSample(time) : std::vector<XrPosef>();
-           m_EyeCache.CleanUp(time);
+            delta = m_DeltaCache.GetSample(time);
+            m_DeltaCache.CleanUp(time);
+            cachedEyePoses = m_UseEyeCache ? m_EyeCache.GetSample(time) : std::vector<XrPosef>();
+            m_EyeCache.CleanUp(time);
         }
 
         if (m_Overlay)
         {
-           m_Overlay->DrawOverlay(m_Tracker->GetReferencePose(),
-                                  delta,
-                                  m_Activated,
-                                  session,
-                                  &chainFrameEndInfo,
-                                  this);
-           m_Overlay->ReleaseAllSwapChainImages();
+            m_Overlay
+                ->DrawOverlay(m_Tracker->GetReferencePose(), delta, m_Activated, session, &chainFrameEndInfo, this);
+            m_Overlay->ReleaseAllSwapChainImages();
         }
 
         if (!m_Activated)
         {
-           if (m_Tracker->m_Calibrated)
-           {
-               if (m_RecorderActive)
-               {
+            if (m_Tracker->m_Calibrated)
+            {
+                if (m_RecorderActive)
+                {
                     // request pose delta to force recording
                     m_Tracker->GetPoseDelta(delta, session, time);
-               }
-               if (!m_SuppressInteraction)
-               {
+                }
+                if (!m_SuppressInteraction)
+                {
                     m_Tracker->ApplyCorManipulation(session, time);
-               }
-           }
-           m_Input->HandleKeyboardInput(time);
-           if (m_AutoActivator)
-           {
+                }
+            }
+            m_Input->HandleKeyboardInput(time);
+            if (m_AutoActivator)
+            {
                 m_AutoActivator->ActivateIfNecessary(time);
-           }
+            }
 
-           m_XrSyncCalled = false;
+            m_XrSyncCalled = false;
 
-           XrResult result = OpenXrApi::xrEndFrame(session, &chainFrameEndInfo);
+            XrResult result = OpenXrApi::xrEndFrame(session, &chainFrameEndInfo);
 
-           TraceLoggingWriteStop(local,
-                                 "OpenXrLayer::xrEndFrame",
-                                 TLArg(false, "Activated"),
-                                 TLArg(xr::ToCString(result), "Result"));
-           return result;
+            TraceLoggingWriteStop(local,
+                                  "OpenXrLayer::xrEndFrame",
+                                  TLArg(false, "Activated"),
+                                  TLArg(xr::ToCString(result), "Result"));
+            return result;
         }
 
         std::vector<const XrCompositionLayerBaseHeader*> resetLayers{};
@@ -1545,10 +1538,10 @@ namespace openxr_api_layer
         // use pose cache for reverse calculation
         for (uint32_t i = 0; i < chainFrameEndInfo.layerCount; i++)
         {
-           XrCompositionLayerBaseHeader baseHeader = *chainFrameEndInfo.layers[i];
-           XrCompositionLayerBaseHeader* resetBaseHeader{nullptr};
-           if (XR_TYPE_COMPOSITION_LAYER_PROJECTION == baseHeader.type)
-           {
+            XrCompositionLayerBaseHeader baseHeader = *chainFrameEndInfo.layers[i];
+            XrCompositionLayerBaseHeader* resetBaseHeader{nullptr};
+            if (XR_TYPE_COMPOSITION_LAYER_PROJECTION == baseHeader.type)
+            {
                 DebugLog("xrEndFrame: projection layer index: %u, space: %llu", i, baseHeader.space);
 
                 const auto* projectionLayer =
@@ -1567,7 +1560,7 @@ namespace openxr_api_layer
                         "%s: unable to determine reference/stage transformation pose for projection layer space: %llu",
                         __FUNCTION__,
                         projectionLayer->space);
-                    
+
                     resetLayers.push_back(chainFrameEndInfo.layers[i]);
                     continue;
                 }
@@ -1619,9 +1612,9 @@ namespace openxr_api_layer
                                                                                    projectionViews->data()};
                 resetProjectionLayers.push_back(resetProjectionLayer);
                 resetBaseHeader = reinterpret_cast<XrCompositionLayerBaseHeader*>(resetProjectionLayer);
-           }
-           else if (XR_TYPE_COMPOSITION_LAYER_QUAD == baseHeader.type && !isViewSpace(baseHeader.space))
-           {
+            }
+            else if (XR_TYPE_COMPOSITION_LAYER_QUAD == baseHeader.type && !isViewSpace(baseHeader.space))
+            {
                 // compensate quad layers unless they are relative to view space
                 DebugLog("xrEndFrame: quad layer index: %u, space: %llu", i, baseHeader.space);
 
@@ -1666,15 +1659,15 @@ namespace openxr_api_layer
                                                                         quadLayer->size};
                 resetQuadLayers.push_back(resetQuadLayer);
                 resetBaseHeader = reinterpret_cast<XrCompositionLayerBaseHeader*>(resetQuadLayer);
-           }
-           if (resetBaseHeader)
-           {
+            }
+            if (resetBaseHeader)
+            {
                 resetLayers.push_back(resetBaseHeader);
-           }
-           else
-           {
+            }
+            else
+            {
                 resetLayers.push_back(chainFrameEndInfo.layers[i]);
-           }
+            }
         }
         m_Input->HandleKeyboardInput(time);
 
@@ -1692,15 +1685,15 @@ namespace openxr_api_layer
         // clean up memory
         for (auto projection : resetProjectionLayers)
         {
-           delete projection;
+            delete projection;
         }
         for (auto quad : resetQuadLayers)
         {
-           delete quad;
+            delete quad;
         }
         for (auto views : resetViews)
         {
-           delete views;
+            delete views;
         }
 
         TraceLoggingWriteStop(local,
@@ -2022,7 +2015,7 @@ namespace openxr_api_layer
                     ErrorLog("%s: unable to create action space: %s", __FUNCTION__, xr::ToCString(result));
                     success = false;
                 }
-            
+
                 TraceLoggingWriteTagged(local,
                                         "OpenXrLayer::CreateTrackerActions",
                                         TLXArg(m_TrackerSpace, "ActionSpace"));
@@ -2301,7 +2294,11 @@ namespace openxr_api_layer
     bool OpenXrLayer::TestRotation(XrPosef* pose, const XrTime time, const bool reverse) const
     {
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "OpenXrLayer::TestRotation", TLArg(time, "Time"), TLArg(reverse, "Reverse"), TLArg(xr::ToString(*pose).c_str(), "OriginalPose"));
+        TraceLoggingWriteStart(local,
+                               "OpenXrLayer::TestRotation",
+                               TLArg(time, "Time"),
+                               TLArg(reverse, "Reverse"),
+                               TLArg(xr::ToString(*pose).c_str(), "OriginalPose"));
 
         // save current location
         const XrVector3f pos = pose->position;
@@ -2320,9 +2317,7 @@ namespace openxr_api_layer
         // reapply translation
         pose->position = pos;
 
-        TraceLoggingWriteStop(local,
-                               "OpenXrLayer::TestRotation",
-                               TLArg(xr::ToString(*pose).c_str(), "Pose"));
+        TraceLoggingWriteStop(local, "OpenXrLayer::TestRotation", TLArg(xr::ToString(*pose).c_str(), "Pose"));
 
         return true;
     }

@@ -115,7 +115,7 @@ namespace output
 
     bool PoseRecorder::Toggle(bool isCalibrated)
     {
-        if (!m_Started.load() )
+        if (!m_Started.load())
         {
             if (isCalibrated)
             {
@@ -165,10 +165,8 @@ namespace output
             return;
         }
 
-        
         const XrPosef deltaFwd = xr::Normalize(Multiply(Multiply(pose, m_InvertedRef), m_StageToFwd));
         const XrVector3f angles = utility::ToEulerAngles(deltaFwd.orientation);
-        
 
         m_Poses[type] = {deltaFwd.position, angles};
 
@@ -326,7 +324,7 @@ namespace output
         default:
             break;
         }
-        
+
         TraceLoggingWriteStop(local, "PoseAndDofRecorder::AddDofValues", TLArg(true, "Success"));
     }
 

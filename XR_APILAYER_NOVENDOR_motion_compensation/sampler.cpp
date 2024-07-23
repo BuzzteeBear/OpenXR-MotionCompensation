@@ -102,7 +102,7 @@ namespace sampler
         {
             constexpr Dof zero{};
             m_Recorder->AddDofValues(zero, Sampled);
-            m_Recorder->AddDofValues(zero, Momentary);      
+            m_Recorder->AddDofValues(zero, Momentary);
         }
 
         TraceLoggingWriteStop(local, "Sampler::StopSampling");

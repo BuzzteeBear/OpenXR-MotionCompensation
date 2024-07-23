@@ -58,9 +58,12 @@ namespace openxr_api_layer::graphics
                                TLArg(m_D3D12inUse, "D3D12inUse"));
 
         uint32_t imageCount;
-        if (const XrResult result = GetInstance()->xrEnumerateSwapchainImages(swapchain, 0, &imageCount, nullptr); XR_FAILED(result))
+        if (const XrResult result = GetInstance()->xrEnumerateSwapchainImages(swapchain, 0, &imageCount, nullptr);
+            XR_FAILED(result))
         {
-            TraceLoggingWriteStop(local, "Overlay::CreateSwapchain", TLArg(xr::ToCString(result),"EnumerateImages_Count"));
+            TraceLoggingWriteStop(local,
+                                  "Overlay::CreateSwapchain",
+                                  TLArg(xr::ToCString(result), "EnumerateImages_Count"));
             return;
         }
         if (imageCount == 0)
@@ -92,24 +95,23 @@ namespace openxr_api_layer::graphics
                          XR_TYPE_SWAPCHAIN_IMAGE_D3D11_KHR);
                 TraceLoggingWriteStop(local, "Overlay::CreateSwapchain", TLArg(false, "ImageType_Match"));
                 return;
-
             }
             // dump the descriptor for the first texture returned by the runtime for debug purposes.
             {
                 D3D11_TEXTURE2D_DESC desc;
                 d3dImages[0].texture->GetDesc(&desc);
                 TraceLoggingWriteTagged(local,
-                                  "Overlay::CreateSwapchain",
-                                  TLArg(desc.Width, "Width"),
-                                  TLArg(desc.Height, "Height"),
-                                  TLArg(desc.ArraySize, "ArraySize"),
-                                  TLArg(desc.MipLevels, "MipCount"),
-                                  TLArg(desc.SampleDesc.Count, "SampleCount"),
-                                  TLArg((int)desc.Format, "Format"),
-                                  TLArg((int)desc.Usage, "Usage"),
-                                  TLArg(desc.BindFlags, "BindFlags"),
-                                  TLArg(desc.CPUAccessFlags, "CPUAccessFlags"),
-                                  TLArg(desc.MiscFlags, "MiscFlags"));
+                                        "Overlay::CreateSwapchain",
+                                        TLArg(desc.Width, "Width"),
+                                        TLArg(desc.Height, "Height"),
+                                        TLArg(desc.ArraySize, "ArraySize"),
+                                        TLArg(desc.MipLevels, "MipCount"),
+                                        TLArg(desc.SampleDesc.Count, "SampleCount"),
+                                        TLArg((int)desc.Format, "Format"),
+                                        TLArg((int)desc.Usage, "Usage"),
+                                        TLArg(desc.BindFlags, "BindFlags"),
+                                        TLArg(desc.CPUAccessFlags, "CPUAccessFlags"),
+                                        TLArg(desc.MiscFlags, "MiscFlags"));
             }
 
             std::vector<ID3D11Texture2D*> textures{};
@@ -227,7 +229,7 @@ namespace openxr_api_layer::graphics
                              __FUNCTION__,
                              swapchain,
                              xr::ToCString(result));
-                }               
+                }
             }
         }
 
@@ -264,7 +266,7 @@ namespace openxr_api_layer::graphics
             TraceLoggingWriteStop(local, "Overlay::ReleaseSwapchainImage", TLArg(true, "Release_Postponed"));
             return XR_SUCCESS;
         }
-        
+
         const XrResult result = GetInstance()->OpenXrApi::xrReleaseSwapchainImage(swapchain, releaseInfo);
         TraceLoggingWriteStop(local, "Overlay::ReleaseSwapchainImage", TLArg(xr::ToCString(result), "Result"));
         return result;
@@ -288,7 +290,8 @@ namespace openxr_api_layer::graphics
 
                 constexpr XrSwapchainImageReleaseInfo releaseInfo{XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO, nullptr};
                 swapchain.second.doRelease = false;
-                if (const XrResult result = GetInstance()->OpenXrApi::xrReleaseSwapchainImage(swapchain.first, &releaseInfo);
+                if (const XrResult result =
+                        GetInstance()->OpenXrApi::xrReleaseSwapchainImage(swapchain.first, &releaseInfo);
                     XR_SUCCEEDED(result))
                 {
                     DebugLog("ReleaseAllSwapChainImages: swapchain(%llu) released", swapchain.first);
@@ -362,7 +365,7 @@ namespace openxr_api_layer::graphics
                                TLArg(xr::ToString(referencePose).c_str(), "ReferencePose"),
                                TLArg(xr::ToString(delta).c_str(), "Delta"),
                                TLArg(mcActivated, "MC_Activated"));
-       if (!(m_Initialized && m_OverlayActive))
+        if (!(m_Initialized && m_OverlayActive))
         {
             TraceLoggingWriteStop(local, "Overlay::DrawOverlay", TLArg(false, "CompositionFramework"));
             return;
@@ -485,7 +488,10 @@ namespace openxr_api_layer::graphics
                 const auto colorTexture = m_Textures[eye].first;
 
                 // copy from application texture
-                if (!composition->getApplicationDevice()->CopyAppTexture(m_Swapchains[swapchain], eye, colorTexture, true))
+                if (!composition->getApplicationDevice()->CopyAppTexture(m_Swapchains[swapchain],
+                                                                         eye,
+                                                                         colorTexture,
+                                                                         true))
                 {
                     ErrorLog("%s: unable to copy app texture for swapchain: %llu", __FUNCTION__, swapchain);
                     m_Initialized = false;
@@ -501,7 +507,10 @@ namespace openxr_api_layer::graphics
                 composition->serializePostComposition();
 
                 // copy back to application texture
-                if (!composition->getApplicationDevice()->CopyAppTexture(m_Swapchains[swapchain], eye, colorTexture, false))
+                if (!composition->getApplicationDevice()->CopyAppTexture(m_Swapchains[swapchain],
+                                                                         eye,
+                                                                         colorTexture,
+                                                                         false))
                 {
                     ErrorLog("%s: unable to copy app texture for swapchain: %llu", __FUNCTION__, swapchain);
                     m_Initialized = false;
@@ -517,7 +526,7 @@ namespace openxr_api_layer::graphics
         }
         TraceLoggingWriteStop(local, "Overlay::DrawOverlay", TLArg(true, "Success"));
     }
-    
+
     bool Overlay::InitializeTextures(uint32_t eye, XrSwapchain swapchain, const ICompositionFramework* composition)
     {
         TraceLoggingActivity<g_traceProvider> local;
@@ -546,17 +555,14 @@ namespace openxr_api_layer::graphics
                                              1,
                                              1};
             auto colorTexture = composition->getCompositionDevice()->createTexture(createInfo);
-  
+
             // create depth texture
             createInfo.usageFlags = XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
             createInfo.format = DXGI_FORMAT_D32_FLOAT;
             auto depthTexture = composition->getCompositionDevice()->createTexture(createInfo);
             m_Textures.push_back({colorTexture, depthTexture});
 
-            DebugLog("overlay(%u) color and depth texture created: %u x %u",
-                     eye,
-                     createInfo.width,
-                     createInfo.height);
+            DebugLog("overlay(%u) color and depth texture created: %u x %u", eye, createInfo.width, createInfo.height);
             TraceLoggingWriteTagged(local,
                                     "Overlay::InitializeTextures",
                                     TLPArg(colorTexture.get(), "ColorTexture"),
@@ -666,29 +672,29 @@ namespace openxr_api_layer::graphics
 
         // right
         std::vector<SimpleMeshVertex> vertices = CreateMarkerMesh({-tip, 0.f, 0.f},
-                                                                {-point65, point05, 0.f},
-                                                                {-point6, point1, 0.f},
-                                                                {-bottom, 0.f, 0.f},
-                                                                reference ? DarkRed : DarkMagenta,
-                                                                reference ? Red : Magenta,
-                                                                reference ? LightRed : LightMagenta);
+                                                                  {-point65, point05, 0.f},
+                                                                  {-point6, point1, 0.f},
+                                                                  {-bottom, 0.f, 0.f},
+                                                                  reference ? DarkRed : DarkMagenta,
+                                                                  reference ? Red : Magenta,
+                                                                  reference ? LightRed : LightMagenta);
         // up
         std::vector<SimpleMeshVertex> top = CreateMarkerMesh({0.f, tip, 0.f},
-                                                           {0.f, point65, point05},
-                                                           {0.f, point6, point1},
-                                                           {0.f, bottom, 0.f},
-                                                           reference ? DarkBlue : DarkCyan,
-                                                           reference ? Blue : Cyan,
-                                                           reference ? LightBlue : LightCyan);
+                                                             {0.f, point65, point05},
+                                                             {0.f, point6, point1},
+                                                             {0.f, bottom, 0.f},
+                                                             reference ? DarkBlue : DarkCyan,
+                                                             reference ? Blue : Cyan,
+                                                             reference ? LightBlue : LightCyan);
         // forward
         vertices.insert(vertices.end(), top.begin(), top.end());
         std::vector<SimpleMeshVertex> front = CreateMarkerMesh({0.f, 0.f, tip},
-                                                             {point05, 0.f, point65},
-                                                             {point1, 0.f, point6},
-                                                             {0.f, 0.f, bottom},
-                                                             reference ? DarkGreen : DarkYellow,
-                                                             reference ? Green : Yellow,
-                                                             reference ? LightGreen : LightYellow);
+                                                               {point05, 0.f, point65},
+                                                               {point1, 0.f, point6},
+                                                               {0.f, 0.f, bottom},
+                                                               reference ? DarkGreen : DarkYellow,
+                                                               reference ? Green : Yellow,
+                                                               reference ? LightGreen : LightYellow);
         vertices.insert(vertices.end(), front.begin(), front.end());
 
         TraceLoggingWriteStop(local, "Overlay::CreateMarker");
@@ -697,12 +703,12 @@ namespace openxr_api_layer::graphics
     }
 
     std::vector<SimpleMeshVertex> Overlay::CreateMarkerMesh(const XrVector3f& top,
-                                                          const XrVector3f& innerMiddle,
-                                                          const XrVector3f& outerMiddle,
-                                                          const XrVector3f& bottom,
-                                                          const XrVector3f& darkColor,
-                                                          const XrVector3f& pureColor,
-                                                          const XrVector3f& lightColor)
+                                                            const XrVector3f& innerMiddle,
+                                                            const XrVector3f& outerMiddle,
+                                                            const XrVector3f& bottom,
+                                                            const XrVector3f& darkColor,
+                                                            const XrVector3f& pureColor,
+                                                            const XrVector3f& lightColor)
     {
         std::vector<SimpleMeshVertex> vertices;
         const DirectX::XMVECTOR dxTop = xr::math::LoadXrVector3(top);
@@ -734,7 +740,7 @@ namespace openxr_api_layer::graphics
             vertices.push_back({xrSide1, darkColor});
             vertices.push_back({xrSide0, darkColor});
 
-             // middle outer
+            // middle outer
             vertices.push_back({xrSide1, darkColor});
             vertices.push_back({xrSide2, pureColor});
             vertices.push_back({xrSide3, pureColor});

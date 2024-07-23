@@ -54,60 +54,62 @@ namespace openxr_api_layer
 
         XrResult xrDestroyInstance(XrInstance instance) override;
         XrResult xrCreateInstance(const XrInstanceCreateInfo* createInfo) override;
-        XrResult XRAPI_CALL xrGetSystem(XrInstance instance, const XrSystemGetInfo* getInfo, XrSystemId* systemId) override;
+        XrResult XRAPI_CALL xrGetSystem(XrInstance instance,
+                                        const XrSystemGetInfo* getInfo,
+                                        XrSystemId* systemId) override;
         XrResult XRAPI_CALL xrPollEvent(XrInstance instance, XrEventDataBuffer* eventData) override;
         XrResult XRAPI_CALL xrCreateSession(XrInstance instance,
-                                 const XrSessionCreateInfo* createInfo,
-                                 XrSession* session) override;
+                                            const XrSessionCreateInfo* createInfo,
+                                            XrSession* session) override;
         XrResult XRAPI_CALL xrBeginSession(XrSession session, const XrSessionBeginInfo* beginInfo) override;
         XrResult XRAPI_CALL xrEndSession(XrSession session) override;
         XrResult XRAPI_CALL xrDestroySession(XrSession session) override;
         XrResult XRAPI_CALL xrCreateSwapchain(XrSession session,
-                                   const XrSwapchainCreateInfo* createInfo,
-                                   XrSwapchain* swapchain) override;
+                                              const XrSwapchainCreateInfo* createInfo,
+                                              XrSwapchain* swapchain) override;
         XrResult XRAPI_CALL xrDestroySwapchain(XrSwapchain swapchain) override;
         XrResult XRAPI_CALL xrAcquireSwapchainImage(XrSwapchain swapchain,
-                                         const XrSwapchainImageAcquireInfo* acquireInfo,
-                                         uint32_t* index) override;
+                                                    const XrSwapchainImageAcquireInfo* acquireInfo,
+                                                    uint32_t* index) override;
         XrResult XRAPI_CALL xrReleaseSwapchainImage(XrSwapchain swapchain,
-                                         const XrSwapchainImageReleaseInfo* releaseInfo) override;
+                                                    const XrSwapchainImageReleaseInfo* releaseInfo) override;
         XrResult XRAPI_CALL xrGetCurrentInteractionProfile(XrSession session,
-                                                XrPath topLevelUserPath,
-                                                XrInteractionProfileState* interactionProfile) override;
+                                                           XrPath topLevelUserPath,
+                                                           XrInteractionProfileState* interactionProfile) override;
         XrResult XRAPI_CALL xrAttachSessionActionSets(XrSession session,
                                                       const XrSessionActionSetsAttachInfo* attachInfo) override;
         XrResult XRAPI_CALL
         xrSuggestInteractionProfileBindings(XrInstance instance,
                                             const XrInteractionProfileSuggestedBinding* suggestedBindings) override;
         XrResult XRAPI_CALL xrCreateReferenceSpace(XrSession session,
-                                        const XrReferenceSpaceCreateInfo* createInfo,
-                                        XrSpace* space) override;
+                                                   const XrReferenceSpaceCreateInfo* createInfo,
+                                                   XrSpace* space) override;
         XrResult XRAPI_CALL xrCreateActionSpace(XrSession session,
-                                     const XrActionSpaceCreateInfo* createInfo,
-                                     XrSpace* space) override;
+                                                const XrActionSpaceCreateInfo* createInfo,
+                                                XrSpace* space) override;
         XrResult XRAPI_CALL xrLocateSpace(XrSpace space,
                                           XrSpace baseSpace,
                                           XrTime time,
                                           XrSpaceLocation* location) override;
         XrResult XRAPI_CALL xrLocateViews(XrSession session,
-                               const XrViewLocateInfo* viewLocateInfo,
-                               XrViewState* viewState,
-                               uint32_t viewCapacityInput,
-                               uint32_t* viewCountOutput,
-                               XrView* views) override;
+                                          const XrViewLocateInfo* viewLocateInfo,
+                                          XrViewState* viewState,
+                                          uint32_t viewCapacityInput,
+                                          uint32_t* viewCountOutput,
+                                          XrView* views) override;
         XrResult XRAPI_CALL xrSyncActions(XrSession session, const XrActionsSyncInfo* syncInfo) override;
         XrResult XRAPI_CALL xrWaitFrame(XrSession session,
-                             const XrFrameWaitInfo* frameWaitInfo,
-                             XrFrameState* frameState) override;
+                                        const XrFrameWaitInfo* frameWaitInfo,
+                                        XrFrameState* frameState) override;
         XrResult XRAPI_CALL xrBeginFrame(XrSession session, const XrFrameBeginInfo* frameBeginInfo) override;
         XrResult XRAPI_CALL xrEndFrame(XrSession session, const XrFrameEndInfo* frameEndInfo) override;
-        
+
         void SetForwardRotation(const XrPosef& pose) const;
         bool GetRefToStage(XrSpace space, XrPosef* refToStage, XrPosef* stageToRef);
         std::shared_ptr<graphics::ICompositionFrameworkFactory> GetCompositionFactory();
 
         XrActionSet m_ActionSet{XR_NULL_HANDLE};
-        XrAction m_PoseAction{XR_NULL_HANDLE}; 
+        XrAction m_PoseAction{XR_NULL_HANDLE};
         XrAction m_MoveAction{XR_NULL_HANDLE};
         XrAction m_PositionAction{XR_NULL_HANDLE};
         XrAction m_HapticAction{XR_NULL_HANDLE};

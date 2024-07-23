@@ -37,14 +37,14 @@ namespace tracker
         bool m_FallBackUsed{false};
         bool m_ConnectionLost{false};
         std::shared_ptr<output::RecorderBase> m_Recorder{std::make_shared<output::NoRecorder>()};
-        
+
       private:
         virtual void ApplyFilters(XrPosef& trackerPose){};
         virtual void ApplyModifier(XrPosef& trackerPose){};
 
         bool m_PhysicalEnabled{false};
     };
-   
+
     class TrackerBase : public ControllerBase
     {
       public:
@@ -75,7 +75,7 @@ namespace tracker
 
         bool m_SkipLazyInit{false};
         bool m_Calibrated{false};
-       
+
       protected:
         void ApplyFilters(XrPosef& pose) override;
         void ApplyModifier(XrPosef& pose) override;
@@ -119,8 +119,7 @@ namespace tracker
         class PhysicalSource : public utility::DataSource
         {
           public:
-            explicit PhysicalSource(OpenXrTracker* tracker)
-                : m_Tracker(tracker){};
+            explicit PhysicalSource(OpenXrTracker* tracker) : m_Tracker(tracker){};
             bool Open(int64_t time) override;
 
           private:
@@ -165,7 +164,6 @@ namespace tracker
         utility::Mmf m_Mmf;
         float m_OffsetForward{0.0f}, m_OffsetDown{0.0f}, m_OffsetRight{0.0f}, m_OffsetYaw{0.0f}, m_PitchConstant{0.0f};
         DirectX::XMVECTOR m_ConstantPitchQuaternion{};
-        
 
       private:
         bool LoadReferencePose(XrSession session, XrTime time);
@@ -192,16 +190,17 @@ namespace tracker
       private:
         struct YawData
         {
-           float yaw, pitch, roll, battery, rotationHeight, rotationForwardHead;
-           bool sixDof, usePos;
-           float autoX, autoY;
+            float yaw, pitch, roll, battery, rotationHeight, rotationForwardHead;
+            bool sixDof, usePos;
+            float autoX, autoY;
         };
     };
 
     class SixDofTracker : public VirtualTracker
     {
       protected:
-        SixDofTracker(const std::vector<utility::DofValue>& relevant) : VirtualTracker(relevant){}
+        SixDofTracker(const std::vector<utility::DofValue>& relevant) : VirtualTracker(relevant)
+        {}
         bool ReadSource(XrTime now, utility::Dof& dof) override;
 
       private:
@@ -262,7 +261,7 @@ namespace tracker
         bool m_MoveActive{false};
         bool m_PositionActive{false};
     };
-    
+
     struct ViveTrackerInfo
     {
         bool Init();

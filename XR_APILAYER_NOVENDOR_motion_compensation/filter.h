@@ -51,6 +51,7 @@ namespace filter
         XrVector3f m_OneMinusAlpha{m_Strength, m_Strength, m_Strength};
         XrVector3f m_Ema{0, 0, 0};
         [[nodiscard]] XrVector3f EmaFunction(XrVector3f current, XrVector3f stored) const;
+
       private:
         float m_VerticalFactor{1.f};
     };
@@ -127,7 +128,8 @@ namespace filter
     class PassThroughStabilizer : public StabilizerBase
     {
       public:
-        explicit PassThroughStabilizer(const std::vector<utility::DofValue>& relevant);;
+        explicit PassThroughStabilizer(const std::vector<utility::DofValue>& relevant);
+        ;
         void SetStrength(float strength) override{};
         void SetStartTime(int64_t now) override{};
         void Insert(utility::Dof& dof, int64_t now) override;
@@ -159,8 +161,7 @@ namespace filter
     class EmaStabilizer : public LowPassStabilizer
     {
       public:
-        explicit EmaStabilizer(const std::vector<utility::DofValue>& relevant)
-            : LowPassStabilizer(relevant){};
+        explicit EmaStabilizer(const std::vector<utility::DofValue>& relevant) : LowPassStabilizer(relevant){};
         void SetStrength(float strength) override;
         void SetStartTime(int64_t now) override;
         void Insert(utility::Dof& dof, int64_t now) override;
@@ -172,8 +173,7 @@ namespace filter
     class BiQuadStabilizer : public LowPassStabilizer
     {
       public:
-        explicit BiQuadStabilizer(const std::vector<utility::DofValue>& relevant)
-            : LowPassStabilizer(relevant){};
+        explicit BiQuadStabilizer(const std::vector<utility::DofValue>& relevant) : LowPassStabilizer(relevant){};
         void SetStrength(float strength) override;
         void SetStartTime(int64_t now) override;
         void Insert(utility::Dof& dof, int64_t now) override;

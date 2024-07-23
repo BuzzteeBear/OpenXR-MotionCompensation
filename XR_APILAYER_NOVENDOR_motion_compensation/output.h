@@ -48,6 +48,7 @@ namespace output
       public:
         static void Execute(Event event);
         static void CountDown(int seconds);
+
       private:
         inline static const std::map<Event, int> m_SoundResources{{Event::Error, ERROR_WAV},
                                                                   {Event::Load, LOADED_WAV},
@@ -95,7 +96,7 @@ namespace output
     };
 
     enum RecorderPoseInput
-    { 
+    {
         Unfiltered = 0,
         Filtered,
         Modified,
@@ -128,7 +129,7 @@ namespace output
     {
       public:
         bool Toggle(bool isCalibrated) override;
-        void SetFwdToStage(const XrPosef& pose) override {};
+        void SetFwdToStage(const XrPosef& pose) override{};
         void AddFrameTime(XrTime time) override{};
         void AddPose(const XrPosef& pose, RecorderPoseInput type) override{};
         void AddDofValues(const utility::Dof& dofValues, RecorderDofInput type) override{};
@@ -145,12 +146,12 @@ namespace output
         void AddFrameTime(XrTime time) override;
         void AddPose(const XrPosef& pose, RecorderPoseInput type) override;
         void AddDofValues(const utility::Dof& dofValues, RecorderDofInput type) override{};
-        void Write(bool sampled , bool newLine) override;
+        void Write(bool sampled, bool newLine) override;
 
       protected:
         std::atomic_bool m_Started{false}, m_PoseRecorded{false};
         bool m_RecordSamples{false};
-        
+
         std::ofstream m_FileStream;
         XrTime m_FrameTime{};
         std::string m_HeadLine{"Elapsed (ms); Time; FrameTime; "
@@ -163,7 +164,7 @@ namespace output
         std::mutex m_RecorderMutex;
         int64_t m_StartTime{0};
 
-    private:
+      private:
         virtual bool Start();
         virtual void Stop();
 
@@ -188,5 +189,4 @@ namespace output
       private:
         DofSample m_DofValues{};
     };
-
 } // namespace output
