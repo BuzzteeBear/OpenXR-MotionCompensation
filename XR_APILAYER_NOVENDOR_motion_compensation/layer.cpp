@@ -1218,7 +1218,7 @@ namespace openxr_api_layer
                     const XrPosef refDelta = Pose::Multiply(Pose::Multiply(stageToRef, trackerDelta), refToStage);
                     for (uint32_t i = 0; i < *viewCountOutput; i++)
                     {
-                        DebugLog("xrLocateView(%llu): eye (%llu) original pose = %s",
+                        DebugLog("xrLocateView(%llu): eye (%u) original pose = %s",
                                  displayTime,
                                  i,
                                  xr::ToString(views[i].pose).c_str());
@@ -1231,7 +1231,7 @@ namespace openxr_api_layer
                         // apply manipulation
                         views[i].pose = xr::Normalize(Pose::Multiply(views[i].pose, refDelta));
 
-                        DebugLog("xrLocateView(%llu): eye (%llu) compensated pose = %s",
+                        DebugLog("xrLocateView(%llu): eye (%u) compensated pose = %s",
                                  displayTime,
                                  i,
                                  xr::ToString(views[i].pose).c_str());
