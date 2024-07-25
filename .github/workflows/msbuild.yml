@@ -3,38 +3,38 @@
 # separate terms of service, privacy policy, and support
 # documentation.
 
-name: MSBuild
+name: Build
 
 on:
   workflow_dispatch:
   
 env:
-  # name of the project to build
-  PROJECT_NAME: XR_APILAYER_NOVENDOR_motion_compensation
+  # Path to the solution file relative to the root of the project.
+  SOLUTION_FILE_PATH: .
 
   # Configuration type to build.
-  # You can convert this to a build matrix if you need coverage of multiple configuration types.
-  # https://docs.github.com/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
   BUILD_CONFIGURATION: Release
-
+  
 permissions:
   contents: read
+  id-token: write
+  attestations: write
 
 jobs:
   build:
     runs-on: windows-latest
+    
+    strategy:
+      matrix:
+        platform: [win32, x64]
 
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Setup Python
-      uses: actions/setup-python@v5
+    - name: Check out repository
+      uses: actions/checkout@v4
       with:
-        python-version: '3.10'
-        
-    - name: Write out Python version
-      run: python -c "import sys; print(sys.version)"
-
+        lfs: true
+        submodules: true
+    
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v2
       with:
@@ -46,6 +46,15 @@ jobs:
 
     - name: Build
       working-directory: ${{env.GITHUB_WORKSPACE}}
-      # Add additional options to the MSBuild command line here (like platform or verbosity level).
-      # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
-      run: msbuild /t:rebuild /p:Configuration=${{env.BUILD_CONFIGURATION}} /v:diag .\${{env.PROJECT_NAME}}\${{env.PROJECT_NAME}}.vcxproj
+      run: msbuild /t:rebuild /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=${{matrix.platform}} /v:diag  ${{env.SOLUTION_FILE_PATH}}
+      
+    - name: Attest provenance
+      uses: actions/attest-build-provenance@v1
+      with:
+        subject-path: 'bin\${{matrix.platform}}\${{env.BUILD_CONFIGURATION}}\*.dll'
+      
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: binary (${{matrix.platform}})
+        path: bin\${{matrix.platform}}\${{env.BUILD_CONFIGURATION}}\*.dll
