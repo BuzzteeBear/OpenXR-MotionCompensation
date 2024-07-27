@@ -1,0 +1,115 @@
+﻿<!doctype html>
+<!-- to be used with visual studio extension 'markup editor' for auto html generation -->
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, minimal-ui">
+	<style>
+		html {
+		  font-size: 18px;
+		  max-width: 100%;
+		}
+		body {
+			box-sizing: border-box;
+			min-width: 200px;
+			max-width: 1200px;
+			margin: 0 auto;
+			color: #444;
+			font-family:  "Segoe UI",Helvetica,Arial,sans-serif;
+			font-weight: 300;
+			line-height: 1.45;
+			padding: .25rem;
+		}
+
+		h1,
+		h2,
+		h3,
+		h4,
+		h5,
+		h6 {
+		  font-family: Helvetica, sans-serif;
+		}
+
+		h1,
+		h2 {
+		  border-bottom: 2px solid #fafafa;
+		  margin-bottom: 1.15rem;
+		  padding-bottom: .5rem;
+		  text-align: center;
+		  border-bottom: 1px solid #21262d;
+		}
+	</style>
+	<title>OpenXR Motion Compensation</title>
+</head>
+<body>
+	<content><h1 id="openxr-motion-compensation">OpenXR Motion Compensation</h1>
+<p>This document is meant for developers willing to contribute. For just <strong>using the software</strong>, check out the <a href="https://github.com/BuzzteeBear/OpenXR-MotionCompensation/blob/main/docs/README.md"><strong>user guide</strong> here</a>.</p>
+<p>This repository contains the source project for a basic <a href="https://www.khronos.org/registry/OpenXR/specs/1.0/html/xrspec.html#api-layers">OpenXR API layer</a> for motion compensation.
+It is based on the <a href="https://github.com/mbucchia/OpenXR-Layer-Template">OpenXR API layer template</a> by Matthieu Bucchianeri.
+More about <a href="https://www.khronos.org/registry/OpenXR/specs/1.0/html/xrspec.html">OpenXR</a> and the <a href="https://www.khronos.org/registry/OpenXR/specs/1.0/loader.html">OpenXR Loader</a>.</p>
+<h2 id="purpose-of-this-project">Purpose of this project</h2>
+<p>When using a motion simulator in combination with a VR headset (hmd) the movement of the simulator causes the in-game camera to change alongside your position in the real world. In flight or racing simulations for example you're basically feel being pushed around inside the cockpit when the motion rig moves.<br />
+Motion compensation reduces or ideally removes that effect by locking the in-game world to the pose of the motion rig.
+This software aims to provide an API layer for motion compensation to be used with applications and hmds supporting the OpenXR standard.<br />
+To be able to do that, the software needs to be informed on the motion rig movement / position. This can be achieved using a tracker, which is either a physical object attached to the motion rig and tracked by the VR runtime (e.g. a motion controller or a vive puck) or a virtual tracker that is using data from the motion software driving the motion rig.</p>
+<h2 id="building-this-project">Building this project</h2>
+<p>Prerequisites:</p>
+<ul>
+<li>Visual Studio 2022 or above;</li>
+<li>NuGet package manager (installed via Visual Studio Installer);</li>
+<li>Python 3 interpreter (installed via Visual Studio Installer or externally available in your PATH).</li>
+<li>Inno Setup Compiler for creating an installation executable</li>
+<li>Git client with LFS support installed</li>
+</ul>
+<p>Limitations:</p>
+<ul>
+<li>The API Layer is made for Microsoft Windows only.</li>
+</ul>
+<p>DISCLAIMER: This software is distributed as-is, without any warranties or conditions of any kind. Use at your own risks.</p>
+<h2 id="special-thanks">Special Thanks</h2>
+<ul>
+<li>This project wouldn't exist without the helpful advice and template source code provided by <a href="https://github.com/mbucchia">Matthieu Bucchianeri</a>, so we're very grateful for that. Kudos for his excellent contributions to the VR community.</li>
+<li><a href="https://www.jetbrains.com/">JetBrains s.r.o.</a> has been so kind to provide the project with an open source software development license for their Resharper products, free of charge. These have proven to be very helpful and greatly integrated into the Visual Studio IDE, that is used to develop this software.</li>
+</ul>
+<h2 id="customization">Customization</h2>
+<p>The easiest way to get a uable project set up is to use the <code>Clone a repository</code> function of Visual Studio with the url of this github repository. Make sure the project path does not contain any whitespaces (or the call of the python script for source code generation will fail). Also ensure that the <a href="https://stackoverflow.com/a/47921547">Visual Studio git client can handle LFS</a> for the external sdk dependencies below.</p>
+<h3 id="make-sure-to-pull-all-3-git-submodules-dependencies">Make sure to pull all 3 Git submodules dependencies:</h3>
+<ul>
+<li><code>external/OpenXR-SDK-Source</code>: This repository contains some critical definition files for generating and building the API layer.</li>
+<li><code>external/OpenXR-SDK</code>: This repository contains the official Khronos SDK (pre-built), with the OpenXR header files needed for OpenXR development.</li>
+<li><code>external/OpenXR-MixedReality</code>: This repository contains (among other things) a collection of utilities to conveniently write OpenXR code.</li>
+</ul>
+<h3 id="use-the-developers-installuninstall-scripts-under-scriptuninstall-layer.ps1">Use the developer's install/uninstall scripts under <code>script\[Un]install-layer.ps1</code>.</h3>
+<p>You will need to use these scripts to enable/disable the API layer from within your output folder (eg: run <code>bin\x64\Debug\Install-Layer.ps1</code> to activate the debug version of the layer during development).</p>
+<p>WARNING: Keep track of the content of your registry under <code>HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\OpenXR\1\ApiLayers\Implicit</code>. You don't want to have multiple copies of the API layer active at once!</p>
+<h3 id="use-the-windows-performance-recorder-profile-wprp-tracelogging-in-scriptstracing.wprp">Use the Windows Performance Recorder Profile (WPRP) tracelogging in <code>scripts\Tracing.wprp</code>.</h3>
+<p><a href="https://docs.microsoft.com/en-us/windows/win32/tracelogging/trace-logging-portal">Tracelogging</a> can become very useful for debugging locally and to investigate user issues. Update the GUID associate with your traces:</p>
+<p>To capture a trace for the API layer:</p>
+<ul>
+<li>Open a command line prompt or powershell in administrator mode and in a folder where you have write permissions</li>
+<li>Begin recording a trace with the command: <code>wpr -start path\to\Tracing.wprp -filemode</code></li>
+<li>Leave that command prompt open</li>
+<li>Reproduce the crash/issue</li>
+<li>Back to the command prompt, finish the recording with: <code>wpr -stop output.etl</code></li>
+<li>These files are highly compressible!</li>
+</ul>
+<p>Use an application such as <a href="https://apps.microsoft.com/store/detail/tabnalysis/9NQLK2M4RP4J?hl=en-id&amp;gl=ID">Tabnalysis</a> to inspect the content of the trace file.</p>
+<h3 id="customize-the-layer-code">Customize the layer code</h3>
+<p>NOTE: Because an OpenXR API layer is tied to a particular instance, you may retrieve the <code>XrInstance</code> handle at any time by invoking <code>OpenXrApi::GetXrInstance()</code>.</p>
+<h3 id="declare-openxr-functions-to-override-in-xr_apilayer_novendor_templateframeworklayer_apis.py">Declare OpenXR functions to override in <code>XR_APILAYER_NOVENDOR_template\framework\layer_apis.py</code></h3>
+<p>Update the definitions as follows:</p>
+<ul>
+<li><code>override_functions</code>: the list of OpenXR functions to intercept and to populate a &quot;chain&quot; for. To override the implementation of each function, simply implement a virtual method with the same name and prototype in the <code>OpenXrLayer</code> class in <code>XR_APILAYER_NOVENDOR_template\layer.cpp</code>. To call the real OpenXR implementation for the function, simply invoke the corresponding method in the <code>OpenXrApi</code> base class.</li>
+<li><code>requested_functions</code>: the list of OpenXR functinos that the API layer may use. This list is used to create wrappers to the real OpenXR implementation without overriding the function. To invoke a function, simply call the corresponding method in the <code>OpenXrApi</code> base class.</li>
+<li><code>extensions</code>: if any of the function declared in the lists above is not part of the OpenXR core spec, you must specify the corresponding extensions to search in (eg: <code>XR_KHR_D3D11_enable</code>).</li>
+</ul>
+<h3 id="optional-require-openxr-extensions-in-xr_apilayer_novendor_templateframeworkdispatch.cpp">(Optional) Require OpenXR extensions in <code>XR_APILAYER_NOVENDOR_template\framework\dispatch.cpp</code></h3>
+<p>If the API layer requires a specific OpenXR extension, update the <code>implicitExtensions</code> vector in <code>XR_APILAYER_NOVENDOR_template\framework\dispatch.cpp</code> to list the extensions to request.</p>
+<p>WARNING: Not all OpenXR runtimes may support all extensions. The API layer will interrogate the OpenXR runtime (and upstream layers) and only request the extensions that are advertised by the platform. You can subsequently call <code>GetGrantedExtensions()</code> to retrieve the list of implicit extensions that were successfully requested.</p>
+<h3 id="optional-use-general-tracelogging-patterns">(Optional) Use general tracelogging patterns</h3>
+<p>Writing the calls to <code>TraceLoggingWrite()</code> in each function implemented by the layer may be tedious... You can look at the source code of the <a href="https://github.com/mbucchia/Pimax-OpenXR/tree/main/pimax-openxr">PimaxXR runtime</a>, which implements the tracelogging calls for all functions of the core OpenXR specification plus a handful of extensions. You may copy/paste the <code>TraceLoggingWrite()</code> calls from it.</p>
+<h2 id="additional-information">Additional Information</h2>
+<p>More details on how to use the OXRMC software can be found in the user guide <code>OpenXR-MotionCompensation_User_Guide.md</code>.</p>
+</content>
+</body>
+</html>

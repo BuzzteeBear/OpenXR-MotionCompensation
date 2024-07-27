@@ -43,8 +43,8 @@ Name: "x86"; Description: "{cm:x86Description}"; Flags: unchecked
 [Files]
 Source: "{#SolutionDir}\configuration\{#AppName}.ini"; DestDir: "{localappdata}\{#AppName}"; Flags: onlyifdoesntexist uninsneveruninstall
 Source: "{#SolutionDir}\changelog.txt"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#SolutionDir}\userguide\{#AppName}_User_Guide.html"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#SolutionDir}\userguide\{#AppName}_User_Guide.html"; DestDir: "{localappdata}\{#AppName}"; Flags: ignoreversion
+Source: "{#SolutionDir}\docs\Readme.html"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SolutionDir}\docs\Readme.html"; DestDir: "{localappdata}\{#AppName}"; Flags: ignoreversion
 Source: "{#SolutionDir}\scripts\Trace_{#AppName}.wprp"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SolutionDir}\bin\x64\Release\XR_APILAYER_NOVENDOR_motion_compensation.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SolutionDir}\XR_APILAYER_NOVENDOR_motion_compensation\XR_APILAYER_NOVENDOR_motion_compensation.json"; DestDir: "{app}"; Flags: ignoreversion
@@ -477,7 +477,7 @@ var
 begin
   if MsgBox(ExpandConstant('Do you want to open the user guide?'), mbConfirmation, MB_YESNO) = IDYES then
   begin
-    FilePath := ExpandConstant('{app}\{#AppName}_User_Guide.html');
+    FilePath := ExpandConstant('{app}\Readme.html');
     if not ShellExec('open', 'file:///' + FilePath, '', '', SW_SHOW, ewNoWait, ErrorCode) then
     begin
       MsgBox('Unable to open ' + FilePath + '. ErrorCode: ' + Format('%d',[ErrorCode]), mbError, MB_OK);

@@ -4,7 +4,7 @@
 
 Version: 0.3.6
 
-**This document contains instructions on how to use OpenXR motion compensation [API layer](https://www.khronos.org/registry/OpenXR/specs/1.0/html/xrspec.html#api-layers).**
+**This document contains instructions on how to use OpenXR motion compensation [API layer](https://www.khronos.org/registry/OpenXR/specs/1.0/html/xrspec.html#api-layers). A developers manual can be found [here](https://github.com/BuzzteeBear/OpenXR-MotionCompensation/blob/main/docs/Developers_Manual.md)**
 
 ## Purpose of OpenXR Motion Compensation 
 

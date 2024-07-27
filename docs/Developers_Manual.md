@@ -1,6 +1,6 @@
 # OpenXR Motion Compensation
 
-This document is meant for developers willing to contribute. For just **using the software**, check out the [**user guide** here](https://github.com/BuzzteeBear/OpenXR-MotionCompensation/blob/main/userguide/OpenXR-MotionCompensation_User_Guide.md).
+This document is meant for developers willing to contribute. For just **using the software**, check out the [**user guide** here](https://github.com/BuzzteeBear/OpenXR-MotionCompensation/blob/main/docs/README.md).
 
 This repository contains the source project for a basic [OpenXR API layer](https://www.khronos.org/registry/OpenXR/specs/1.0/html/xrspec.html#api-layers) for motion compensation. 
 It is based on the [OpenXR API layer template](https://github.com/mbucchia/OpenXR-Layer-Template) by Matthieu Bucchianeri. 

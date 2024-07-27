@@ -11,8 +11,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Files", "Solution 
 		.gitattributes = .gitattributes
 		.gitignore = .gitignore
 		LICENSE = LICENSE
-		userguide\OpenXR-MotionCompensation_User_Guide.md = userguide\OpenXR-MotionCompensation_User_Guide.md
-		README.md = README.md
+		docs\Developers_Manual.md = docs\Developers_Manual.md
+		docs\README.md = docs\README.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Scripts", "Scripts", "{EB45E753-7121-4593-A978-8F31F3F3482B}"
