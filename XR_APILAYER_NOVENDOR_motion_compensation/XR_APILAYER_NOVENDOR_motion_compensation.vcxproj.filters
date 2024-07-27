@@ -137,7 +137,7 @@
     <None Include="XR_APILAYER_NOVENDOR_motion_compensation_32.json" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="Sounds.rc" />
+    <ResourceCompile Include="Resources.rc" />
   </ItemGroup>
   <ItemGroup>
     <Media Include="sounds\up.wav">

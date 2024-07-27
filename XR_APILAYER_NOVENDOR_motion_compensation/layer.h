@@ -45,7 +45,8 @@ namespace openxr_api_layer
 
     const std::string LayerPrettyName = "OpenXR-MotionCompensation";
     const std::string LayerName = "XR_APILAYER_NOVENDOR_motion_compensation";
-    const std::string VersionString = std::string(VERSION_STRING) + " - " + VERSION_NUMBER + " [" + PLATFORM "]";
+    const std::string VersionString = std::string(VERSION_STRING) + " - " VERSION_MAJOR + "." + +VERSION_MINOR + "." +
+                                      VERSION_PATCH + " [" + PLATFORM "]";
 
     class OpenXrLayer final : public openxr_api_layer::OpenXrApi
     {

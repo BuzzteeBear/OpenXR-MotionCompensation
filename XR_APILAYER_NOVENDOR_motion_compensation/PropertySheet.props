@@ -2,17 +2,25 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros">
-    <VersionNumber>0.3.6</VersionNumber>
     <VersionString>beta</VersionString>
+    <VersionMajor>0</VersionMajor>
+    <VersionMinor>3</VersionMinor>
+    <VersionPatch>7</VersionPatch>
   </PropertyGroup>
   <PropertyGroup />
   <ItemDefinitionGroup />
   <ItemGroup>
-    <BuildMacro Include="VersionNumber">
-      <Value>$(VersionNumber)</Value>
-    </BuildMacro>
     <BuildMacro Include="VersionString">
       <Value>$(VersionString)</Value>
+    </BuildMacro>
+    <BuildMacro Include="VersionMajor">
+      <Value>$(VersionMajor)</Value>
+    </BuildMacro>
+    <BuildMacro Include="VersionMinor">
+      <Value>$(VersionMinor)</Value>
+    </BuildMacro>
+    <BuildMacro Include="VersionPatch">
+      <Value>$(VersionPatch)</Value>
     </BuildMacro>
   </ItemGroup>
 </Project>

@@ -1,6 +1,6 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Visual C++ generated include file.
-// Used by Sounds.rc
+// Used by Resources.rc
 //
 #define ACTIVATED_WAV                   101
 #define BACK_WAV                        102

@@ -107,7 +107,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>LAYER_NAME="$(ProjectName)";VERSION_NUMBER="$(VersionNumber)";VERSION_STRING="$(VersionString)";PLATFORM="$(Platform)";_DEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;_SILENCE_ALL_MS_EXT_DEPRECATION_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>LAYER_NAME="$(ProjectName)";VERSION_MAJOR="$(VersionMajor)";VERSION_MINOR="$(VersionMinor)";VERSION_PATCH="$(VersionPatch)";VERSION_STRING="$(VersionString)";PLATFORM="$(Platform)";_DEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;_SILENCE_ALL_MS_EXT_DEPRECATION_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -145,12 +145,15 @@
     <PreBuildEvent>
       <Message>Generating layer dispatcher...</Message>
     </PreBuildEvent>
+    <ResourceCompile>
+      <PreprocessorDefinitions>SUFFIX="_32.dll";LAYER_NAME="$(ProjectName)";VERSION_MAJOR=$(VersionMajor);VERSION_MINOR=$(VersionMinor);VERSION_PATCH=$(VersionPatch);VERSION_STRING="$(VersionString)";VERSION_STRING="$(VersionString)";PLATFORM="$(Platform)"</PreprocessorDefinitions>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>LAYER_NAME="$(ProjectName)";VERSION_NUMBER="$(VersionNumber)";VERSION_STRING="$(VersionString)";PLATFORM="$(Platform)";_DEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;_SILENCE_ALL_MS_EXT_DEPRECATION_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>LAYER_NAME="$(ProjectName)";VERSION_MAJOR="$(VersionMajor)";VERSION_MINOR="$(VersionMinor)";VERSION_PATCH="$(VersionPatch)";VERSION_STRING="$(VersionString)";PLATFORM="$(Platform)";_DEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;_SILENCE_ALL_MS_EXT_DEPRECATION_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -188,6 +191,9 @@
     <PreBuildEvent>
       <Message>Generating layer dispatcher...</Message>
     </PreBuildEvent>
+    <ResourceCompile>
+      <PreprocessorDefinitions>SUFFIX=".dll";LAYER_NAME="$(ProjectName)";VERSION_MAJOR=$(VersionMajor);VERSION_MINOR=$(VersionMinor);VERSION_PATCH=$(VersionPatch);VERSION_STRING="$(VersionString)";VERSION_STRING="$(VersionString)";PLATFORM="$(Platform)"</PreprocessorDefinitions>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -195,7 +201,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>LAYER_NAME="$(ProjectName)";VERSION_NUMBER="$(VersionNumber)";VERSION_STRING="$(VersionString)";PLATFORM="$(Platform)";DEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>LAYER_NAME="$(ProjectName)";VERSION_MAJOR="$(VersionMajor)";VERSION_MINOR="$(VersionMinor)";VERSION_PATCH="$(VersionPatch)";VERSION_STRING="$(VersionString)";PLATFORM="$(Platform)";DEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -243,6 +249,9 @@
       <Message>
       </Message>
     </CustomBuildStep>
+    <ResourceCompile>
+      <PreprocessorDefinitions>SUFFIX="_32.dll";LAYER_NAME="$(ProjectName)";VERSION_MAJOR=$(VersionMajor);VERSION_MINOR=$(VersionMinor);VERSION_PATCH=$(VersionPatch);VERSION_STRING="$(VersionString)";PLATFORM="$(Platform)"</PreprocessorDefinitions>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -250,7 +259,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>LAYER_NAME="$(ProjectName)";VERSION_NUMBER="$(VersionNumber)";VERSION_STRING="$(VersionString)";PLATFORM="$(Platform)";DEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>LAYER_NAME="$(ProjectName)";VERSION_MAJOR="$(VersionMajor)";VERSION_MINOR="$(VersionMinor)";VERSION_PATCH="$(VersionPatch)";VERSION_STRING="$(VersionString)";PLATFORM="$(Platform)";DEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -298,6 +307,9 @@
       <Message>
       </Message>
     </CustomBuildStep>
+    <ResourceCompile>
+      <PreprocessorDefinitions>SUFFIX=".dll";LAYER_NAME="$(ProjectName)";VERSION_MAJOR=$(VersionMajor);VERSION_MINOR=$(VersionMinor);VERSION_PATCH=$(VersionPatch);VERSION_STRING="$(VersionString)";VERSION_STRING="$(VersionString)";PLATFORM="$(Platform)"</PreprocessorDefinitions>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="config.h" />
@@ -357,7 +369,7 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="Sounds.rc">
+    <ResourceCompile Include="Resources.rc">
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)\sounds;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)\sounds;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)\sounds;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
