@@ -37,7 +37,6 @@ namespace openxr_api_layer::log {
                                  "OpenXRMotionCompensation",
                                  (0x40633bc2, 0xca4a, 0x4c13, 0x88, 0xb6, 0x7a, 0x55, 0xed, 0x74, 0xe0, 0x61));
 
-    TraceLoggingActivity<g_traceProvider> g_traceActivity;
 
     namespace {
 
@@ -48,18 +47,20 @@ namespace openxr_api_layer::log {
             GetLocalTime(&lt);
 
             char buf[1024];
-            size_t offset = sprintf(buf,
-                                    "%d-%02d-%02d %02d:%02d:%02d.%03d: ",
-                                    lt.wYear,
-                                    lt.wMonth,
-                                    lt.wDay,
-                                    lt.wHour,
-                                    lt.wMinute,
-                                    lt.wSecond,
-                                    lt.wMilliseconds);
+            const size_t offset = sprintf(buf,
+                                          "%d-%02d-%02d %02d:%02d:%02d.%03d: ",
+                                          lt.wYear,
+                                          lt.wMonth,
+                                          lt.wDay,
+                                          lt.wHour,
+                                          lt.wMinute,
+                                          lt.wSecond,
+                                          lt.wMilliseconds);
 
             vsnprintf_s(buf + offset, sizeof(buf) - offset, _TRUNCATE, (fmt + "\n").c_str(), va);
-            TraceLoggingWrite(g_traceProvider, "Log", TLArg(buf, "Msg"));
+
+            TraceLocalActivity(local);
+            TraceLoggingWriteTagged(local, "Log", TLArg(buf, "Msg"));
             if (logStream.is_open()) {
                 logStream << buf;
                 logStream.flush();

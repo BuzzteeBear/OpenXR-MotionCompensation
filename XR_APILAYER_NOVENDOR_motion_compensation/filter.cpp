@@ -282,7 +282,7 @@ namespace filter
         {
             DebugLog("stabilizer filters are %s", m_Blocking ? "blocking" : "disabled");
             TraceLoggingWriteStop(local,
-                                  "EmaStabilizer::SetFrequencies",
+                                  "LowPassStabilizer::SetFrequencies",
                                   TLArg(m_Disabled, "Disabled"),
                                   TLArg(m_Blocking, "Blocked"));
             return;
@@ -321,7 +321,7 @@ namespace filter
             }
         }
         TraceLoggingWriteStop(local,
-                              "EmaStabilizer::Insert",
+                              "LowPassStabilizer::Disabled",
                               TLArg(m_Disabled, "Disabled"),
                               TLArg(m_Blocking, "Blocked"));
         return m_Disabled;
@@ -341,13 +341,13 @@ namespace filter
     void EmaStabilizer::SetStartTime(int64_t now)
     {
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "LowPassStabilizer::SetStartTime", TLArg(now, "Now"));
+        TraceLoggingWriteStart(local, "EmaStabilizer::SetStartTime", TLArg(now, "Now"));
 
         std::unique_lock lock(m_SampleMutex);
         m_LastSampleTime = now;
         m_Initialized = false;
 
-        TraceLoggingWriteStop(local, "LowPassStabilizer::SetStartTime");
+        TraceLoggingWriteStop(local, "EmaStabilizer::SetStartTime");
     }
 
     void EmaStabilizer::Insert(utility::Dof& dof, int64_t now)
@@ -403,13 +403,13 @@ namespace filter
     void BiQuadStabilizer::SetStrength(float strength)
     {
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "BiQuadStabilizer::SetFrequency", TLArg(strength, "Strength"));
+        TraceLoggingWriteStart(local, "BiQuadStabilizer::SetStrength", TLArg(strength, "Strength"));
 
         std::unique_lock lock(m_SampleMutex);
         SetFrequencies(strength);
         ResetFilters();
 
-        TraceLoggingWriteStop(local, "BiQuadStabilizer::SetFrequency");
+        TraceLoggingWriteStop(local, "BiQuadStabilizer::SetStrength");
     }
 
     void BiQuadStabilizer::SetStartTime(int64_t now)

@@ -986,7 +986,7 @@ namespace openxr_api_layer
                                TLXArg(space, "Space"),
                                TLXArg(baseSpace, "BaseSpace"),
                                TLArg(time, "Time"));
-        DebugLog("xrLocateSpace(%llu): space = %llu, baseSpace = %llu", time, space, baseSpace);
+        DebugLog("xrLocateSpace(%lld): space = %llu, baseSpace = %llu", time, space, baseSpace);
 
         if (location->type != XR_TYPE_SPACE_LOCATION)
         {
@@ -998,7 +998,7 @@ namespace openxr_api_layer
         const XrResult result = OpenXrApi::xrLocateSpace(space, baseSpace, time, location);
         if (XR_FAILED(result))
         {
-            ErrorLog("%s: xrLocateSpace(%llu) failed: %s", __FUNCTION__, time, xr::ToCString(result));
+            ErrorLog("%s: xrLocateSpace(%lld) failed: %s", __FUNCTION__, time, xr::ToCString(result));
             TraceLoggingWriteStop(local,
                                   "OpenXrLayer::xrLocateSpace",
                                   TLArg(xr::ToCString(result), "LocateSpaceResult"));
@@ -1026,7 +1026,7 @@ namespace openxr_api_layer
 
         if (m_Activated && ((spaceComp && !baseComp) || (!spaceComp && baseComp)))
         {
-            DebugLog("xrLocateSpace(%llu): original pose = %s", time, xr::ToString(location->pose).c_str());
+            DebugLog("xrLocateSpace(%lld): original pose = %s", time, xr::ToString(location->pose).c_str());
             TraceLoggingWriteTagged(local,
                                     "OpenXrLayerxrLocateSpace",
                                     TLArg(xr::ToString(location->pose).c_str(), "OriginalPose"),
@@ -1080,7 +1080,7 @@ namespace openxr_api_layer
                 // save pose for use in xrEndFrame, if there isn't one from xrLocateViews already
                 m_DeltaCache.AddSample(time, trackerDelta, false);
             }
-            DebugLog("xrLocateSpace(%llu): compensated pose = %s", time, xr::ToString(location->pose).c_str());
+            DebugLog("xrLocateSpace(%lld): compensated pose = %s", time, xr::ToString(location->pose).c_str());
             TraceLoggingWriteTagged(local,
                                     "OpenXrLayerxrLocateSpace",
                                     TLArg(xr::ToString(location->pose).c_str(), "CompensatedPose"));
@@ -1118,7 +1118,7 @@ namespace openxr_api_layer
         const XrTime displayTime = viewLocateInfo->displayTime;
         const XrSpace refSpace = viewLocateInfo->space;
 
-        DebugLog("xrLocateViews(%llu): reference space = %llu", displayTime, refSpace);
+        DebugLog("xrLocateViews(%lld): reference space = %llu", displayTime, refSpace);
         TraceLoggingWriteTagged(local,
                                 "OpenXrLayer::xrLocateViews",
                                 TLArg(xr::ToCString(viewLocateInfo->viewConfigurationType), "ViewConfigurationType"),
@@ -1144,7 +1144,7 @@ namespace openxr_api_layer
 
         if (isViewSpace(refSpace))
         {
-            DebugLog("xrLocateViews(%llu): omitting manipulation against view space (%llu)", displayTime, refSpace);
+            DebugLog("xrLocateViews(%lld): omitting manipulation against view space (%llu)", displayTime, refSpace);
             TraceLoggingWriteStop(local,
                                   "OpenXrLayer::xrLocateViews",
                                   TLArg(true, "RefSpaceIsView"),
@@ -1218,7 +1218,7 @@ namespace openxr_api_layer
                     const XrPosef refDelta = Pose::Multiply(Pose::Multiply(stageToRef, trackerDelta), refToStage);
                     for (uint32_t i = 0; i < *viewCountOutput; i++)
                     {
-                        DebugLog("xrLocateView(%llu): eye (%u) original pose = %s",
+                        DebugLog("xrLocateView(%lld): eye (%u) original pose = %s",
                                  displayTime,
                                  i,
                                  xr::ToString(views[i].pose).c_str());
@@ -1231,7 +1231,7 @@ namespace openxr_api_layer
                         // apply manipulation
                         views[i].pose = xr::Normalize(Pose::Multiply(views[i].pose, refDelta));
 
-                        DebugLog("xrLocateView(%llu): eye (%u) compensated pose = %s",
+                        DebugLog("xrLocateView(%lld): eye (%u) compensated pose = %s",
                                  displayTime,
                                  i,
                                  xr::ToString(views[i].pose).c_str());
@@ -1297,7 +1297,7 @@ namespace openxr_api_layer
         {
             for (uint32_t i = 0; i < *viewCountOutput; i++)
             {
-                DebugLog("xrLocateView(%llu): eye (%u) original pose = %s",
+                DebugLog("xrLocateView(%lld): eye (%u) original pose = %s",
                          displayTime,
                          i,
                          xr::ToString(views[i].pose).c_str());
@@ -1310,7 +1310,7 @@ namespace openxr_api_layer
                 // apply manipulation
                 views[i].pose = xr::Normalize(Pose::Multiply(m_EyeOffsets[i].pose, location.pose));
 
-                DebugLog("xrLocateView(%llu): eye (%u) compensated pose = %s",
+                DebugLog("xrLocateView(%lld): eye (%u) compensated pose = %s",
                          displayTime,
                          i,
                          xr::ToString(views[i].pose).c_str());
@@ -1399,7 +1399,7 @@ namespace openxr_api_layer
 
         const XrResult result = OpenXrApi::xrWaitFrame(session, frameWaitInfo, frameState);
 
-        DebugLog("xrWaitFrame predicted time: %llu, predicted period: %lld",
+        DebugLog("xrWaitFrame predicted time: %lld, predicted period: %lld",
                  frameState->predictedDisplayTime,
                  frameState->predictedDisplayPeriod);
         TraceLoggingWriteStop(local,
@@ -1462,7 +1462,7 @@ namespace openxr_api_layer
 
         XrTime time = frameEndInfo->displayTime;
 
-        DebugLog("xrEndFrame(%llu)", time);
+        DebugLog("xrEndFrame(%lld)", time);
         TraceLoggingWriteTagged(local,
                                 "OpenXrLayer::xrEndFrame",
                                 TLArg(time, "DisplayTime"),
