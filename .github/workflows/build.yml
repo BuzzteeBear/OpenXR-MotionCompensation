@@ -55,6 +55,36 @@ jobs:
       
     - name: Upload artifact
       uses: actions/upload-artifact@v4
+      id: artifact-upload-step
       with:
-        name: binary (${{matrix.platform}})
+        name: oxrmc-binary-(${{matrix.platform}})
         path: bin\${{matrix.platform}}\${{env.BUILD_CONFIGURATION}}\*.dll
+        
+  merge:
+    runs-on: windows-latest
+    needs: build
+    outputs:
+      artifact-id: ${{ steps.artifact-merge-step.outputs.artifact-id }}
+    
+    steps:
+    - name: Merge artifacts
+      uses: actions/upload-artifact/merge@v4
+      id: artifact-merge-step
+      with:
+        name: oxrmc-binaries
+        delete-merged: true
+      
+  sign:
+    runs-on: windows-latest
+    needs: merge
+    
+    steps:
+    - name: Request SignPath signature
+      uses: signpath/github-action-submit-signing-request@v0.4
+      with:
+        api-token: ${{secrets.APPVEYOR_API_TOKEN}}
+        organization-id: 11e4bc12-01ae-4f8c-8c5f-233747e24ab1
+        project-slug: OpenXR-MotionCompensation
+        signing-policy-slug: test-signing
+        github-artifact-id: ${{needs.merge.outputs.artifact-id}}
+        wait-for-completion: true
