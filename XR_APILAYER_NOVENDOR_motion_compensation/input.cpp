@@ -485,7 +485,7 @@ namespace input
 
         std::string path;
         if (const auto buttons = m_Mapping.find(profile);
-            buttons != m_Mapping.end() && (int)buttons->second.size() > index)
+            buttons != m_Mapping.end() && static_cast<int>(buttons->second.size()) > index)
         {
             path = buttons->second.at(index);
         }

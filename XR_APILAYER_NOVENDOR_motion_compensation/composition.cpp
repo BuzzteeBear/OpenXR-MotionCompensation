@@ -117,11 +117,11 @@ namespace
                              SwapchainMode mode,
                              std::optional<bool> overrideShareable = {},
                              bool hasOwnership = true)
-            : m_swapchain(swapchain), m_infoOnCompositionDevice(infoOnApplicationDevice),
-              m_formatOnApplicationDevice(infoOnApplicationDevice.format), m_applicationDevice(applicationDevice),
-              m_compositionDevice(compositionDevice),
+            : m_swapchain(swapchain), m_formatOnApplicationDevice(infoOnApplicationDevice.format),
+              m_compositionDevice(compositionDevice), m_applicationDevice(applicationDevice),
               m_accessForRead((mode & SwapchainMode::Read) == SwapchainMode::Read),
-              m_accessForWrite((mode & SwapchainMode::Write) == SwapchainMode::Write)
+              m_accessForWrite((mode & SwapchainMode::Write) == SwapchainMode::Write),
+              m_infoOnCompositionDevice(infoOnApplicationDevice)
         {
             TraceLocalActivity(local);
             TraceLoggingWriteStart(local,
@@ -430,7 +430,7 @@ namespace
 
         XrSwapchainSubImage getSubImage() const override
         {
-            XrSwapchainSubImage subImage{};
+            XrSwapchainSubImage subImage;
             subImage.swapchain = m_swapchain;
             subImage.imageArrayIndex = 0;
             subImage.imageRect.offset.x = subImage.imageRect.offset.y = 0;
@@ -475,10 +475,10 @@ namespace
                                 IGraphicsDevice* applicationDevice,
                                 IGraphicsDevice* compositionDevice,
                                 SwapchainMode mode)
-            : m_infoOnCompositionDevice(infoOnApplicationDevice),
-              m_formatOnApplicationDevice(infoOnApplicationDevice.format),
+            : m_formatOnApplicationDevice(infoOnApplicationDevice.format),
               m_accessForRead((mode & SwapchainMode::Read) == SwapchainMode::Read),
-              m_accessForWrite((mode & SwapchainMode::Write) == SwapchainMode::Write)
+              m_accessForWrite((mode & SwapchainMode::Write) == SwapchainMode::Write),
+              m_infoOnCompositionDevice(infoOnApplicationDevice)
         {
             TraceLocalActivity(local);
             TraceLoggingWriteStart(local, "Swapchain_Create", TLArg("Non-Submittable", "Type"));
@@ -715,7 +715,6 @@ namespace
                                               reinterpret_cast<PFN_xrVoidFunction*>(&xrGetInstanceProperties)));
             XrInstanceProperties instanceProperties{XR_TYPE_INSTANCE_PROPERTIES};
             CHECK_XRCMD(xrGetInstanceProperties(instance, &instanceProperties));
-            const std::string_view runtimeName(instanceProperties.runtimeName);
             if (m_applicationDevice->getApi() == Api::D3D12)
             {
                 // despite of D3D12 textures having the shareable flag, they are not shareable with D3D11.
@@ -939,8 +938,8 @@ namespace
                                     XrInstance instance,
                                     PFN_xrGetInstanceProcAddr xrGetInstanceProcAddr_,
                                     CompositionApi compositionApi)
-            : m_instanceInfo(instanceInfo), m_instance(instance), xrGetInstanceProcAddr(xrGetInstanceProcAddr_),
-              m_compositionApi(compositionApi)
+            : m_instance(instance), xrGetInstanceProcAddr(xrGetInstanceProcAddr_), m_compositionApi(compositionApi),
+              m_instanceInfo(instanceInfo)
         {
             TraceLocalActivity(local);
             TraceLoggingWriteStart(local,

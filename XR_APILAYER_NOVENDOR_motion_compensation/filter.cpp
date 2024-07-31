@@ -486,7 +486,7 @@ namespace filter
         TraceLoggingWriteStop(local, "BiQuadStabilizer::ResetFilters");
     }
 
-    double BiQuadStabilizer::Filter(float dofValue, utility::DofValue value)
+    double BiQuadStabilizer::Filter(float dofValue, utility::DofValue value) const
     {
         if (value < yaw)
         {

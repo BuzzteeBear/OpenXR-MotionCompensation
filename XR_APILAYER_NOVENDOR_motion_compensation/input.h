@@ -25,7 +25,7 @@ namespace input
 
         std::map<Cfg, std::pair<std::set<int>, std::set<int>>> m_ShortCuts;
         std::map<std::set<int>, std::pair<bool, std::chrono::steady_clock::time_point>> m_KeyStates;
-        std::chrono::milliseconds m_KeyRepeatDelay{300ms};
+        std::chrono::milliseconds m_KeyRepeatDelay{std::chrono::milliseconds(300)};
         std::set<Cfg> m_FastActivities{Cfg::KeyTransInc,
                                        Cfg::KeyTransDec,
                                        Cfg::KeyRotInc,

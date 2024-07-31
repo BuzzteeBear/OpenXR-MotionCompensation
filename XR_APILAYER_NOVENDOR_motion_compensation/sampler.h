@@ -32,7 +32,7 @@ namespace sampler
         std::thread* m_Thread{nullptr};
         tracker::TrackerBase* m_Tracker{nullptr};
         std::shared_ptr<filter::StabilizerBase> m_Stabilizer{};
-        std::chrono::microseconds m_Interval{1ms};
+        std::chrono::microseconds m_Interval{std::chrono::milliseconds(1)};
         bool m_SampleRecording{false};
         std::shared_ptr<output::RecorderBase> m_Recorder{};
     };

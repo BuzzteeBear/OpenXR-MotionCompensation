@@ -180,7 +180,7 @@ namespace filter
 
       private:
         void ResetFilters();
-        double Filter(float dofValue, utility::DofValue value);
+        double Filter(float dofValue, utility::DofValue value) const;
 
         class BiQuadFilter
         {

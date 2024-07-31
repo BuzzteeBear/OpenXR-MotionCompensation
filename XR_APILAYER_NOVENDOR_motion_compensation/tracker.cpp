@@ -795,7 +795,7 @@ namespace tracker
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "OpenXrTracker::GetPose", TLXArg(session, "Session"), TLArg(time, "Time"));
         
-        bool success{false}; 
+        bool success; 
         
         if (!m_Sampler || !m_Calibrated)
         {

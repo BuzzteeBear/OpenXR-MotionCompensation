@@ -65,7 +65,7 @@ namespace tracker
         virtual bool ChangeRotation(float radian);
         virtual void ApplyCorManipulation(XrSession session, XrTime time){};
 
-        void SetModifierActive(const bool active) const;
+        void SetModifierActive(bool active) const;
 
         void LogCurrentTrackerPoses(XrSession session, XrTime time, bool activated);
         bool ToggleRecording() const;
