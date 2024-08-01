@@ -93,7 +93,7 @@ namespace openxr_api_layer
         // Dump the application name and OpenXR runtime information to help debugging issues.
         XrInstanceProperties instanceProperties = {XR_TYPE_INSTANCE_PROPERTIES};
         CHECK_XRCMD(OpenXrApi::xrGetInstanceProperties(GetXrInstance(), &instanceProperties));
-        m_RuntimeName = fmt::format("{} {}.{}.{}",
+        m_RuntimeName = std::format("{} {}.{}.{}",
                                     instanceProperties.runtimeName,
                                     XR_VERSION_MAJOR(instanceProperties.runtimeVersion),
                                     XR_VERSION_MINOR(instanceProperties.runtimeVersion),

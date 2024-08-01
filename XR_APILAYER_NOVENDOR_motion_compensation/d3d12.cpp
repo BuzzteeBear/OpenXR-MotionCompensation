@@ -251,7 +251,7 @@ namespace {
                             local,
                             "D3D12GraphicsDevice_Create",
                             TLArg(desc.Description, "Adapter"),
-                            TLArg(fmt::format("{}:{}", adapterLuid.HighPart, adapterLuid.LowPart).c_str(), " Luid"));
+                            TLArg(std::format("{}:{}", adapterLuid.HighPart, adapterLuid.LowPart).c_str(), " Luid"));
                         break;
                     }
                 }

@@ -56,7 +56,7 @@ namespace openxr_api_layer {
             auto info = apiLayerInfo->nextInfo;
             while (info) {
                 TraceLoggingWriteTagged(local, "xrCreateApiLayerInstance", TLArg(info->layerName, "LayerName"));
-                Log(fmt::format("Using layer: {}", info->layerName));
+                Log(std::format("Using layer: {}", info->layerName));
                 info = info->next;
             }
         }
@@ -137,7 +137,7 @@ namespace openxr_api_layer {
                     if (std::find_if(extensions.cbegin(), extensions.cend(), matchExtensionName) != extensions.cend()) {
                         filteredImplicitExtensions.push_back(extensionName);
                     } else {
-                        Log(fmt::format("Cannot satisfy implicit extension request: {}", extensionName));
+                        Log(std::format("Cannot satisfy implicit extension request: {}", extensionName));
                     }
                 }
 
@@ -170,14 +170,14 @@ namespace openxr_api_layer {
             TraceLoggingWriteTagged(local, "xrCreateApiLayerInstance", TLArg(ext.data(), "ExtensionName"));
 
             if (std::find(blockedExtensions.cbegin(), blockedExtensions.cend(), ext) == blockedExtensions.cend()) {
-                Log(fmt::format("Requested extension: {}", ext));
+                Log(std::format("Requested extension: {}", ext));
                 newEnabledExtensionNames.push_back(ext.data());
             } else {
-                Log(fmt::format("Blocking extension: {}", ext));
+                Log(std::format("Blocking extension: {}", ext));
             }
         }
         for (const auto& ext : filteredImplicitExtensions) {
-            Log(fmt::format("Requesting extension: {}", ext));
+            Log(std::format("Requesting extension: {}", ext));
             newEnabledExtensionNames.push_back(ext.c_str());
         }
         chainInstanceCreateInfo.enabledExtensionNames = newEnabledExtensionNames.data();
@@ -199,7 +199,7 @@ namespace openxr_api_layer {
                 result = openxr_api_layer::GetInstance()->xrCreateInstance(instanceCreateInfo);
             } catch (std::exception& exc) {
                 TraceLoggingWriteTagged(local, "xrCreateInstance_Error", TLArg(exc.what(), "Error"));
-                ErrorLog(fmt::format("xrCreateInstance: {}", exc.what()));
+                ErrorLog(std::format("xrCreateInstance: {}", exc.what()));
                 result = XR_ERROR_RUNTIME_FAILURE;
             }
 
@@ -215,7 +215,7 @@ namespace openxr_api_layer {
 
         TraceLoggingWriteStop(local, "xrCreateApiLayerInstance", TLArg(xr::ToCString(result), "Result"));
         if (XR_FAILED(result)) {
-            ErrorLog(fmt::format("xrCreateApiLayerInstance failed with {}", xr::ToCString(result)));
+            ErrorLog(std::format("xrCreateApiLayerInstance failed with {}", xr::ToCString(result)));
         }
 
         return result;
@@ -237,7 +237,7 @@ namespace openxr_api_layer {
             }
         } catch (std::exception& exc) {
             TraceLoggingWriteTagged(local, "xrGetInstanceProcAddr_Error", TLArg(exc.what(), "Error"));
-            ErrorLog(fmt::format("xrGetInstanceProcAddr: {}", exc.what()));
+            ErrorLog(std::format("xrGetInstanceProcAddr: {}", exc.what()));
             result = XR_ERROR_RUNTIME_FAILURE;
         }
 

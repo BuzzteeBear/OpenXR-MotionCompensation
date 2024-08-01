@@ -85,9 +85,6 @@ using Microsoft::WRL::ComPtr;
 #include <DirectXCollision.h>
 #include <DirectXTex.h>
 
-// FMT formatter.
-#include <fmt/format.h>
-
 // utility
 #include <utility.h>
 

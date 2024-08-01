@@ -478,7 +478,7 @@ namespace
                     local,
                     "D3D11GraphicsDevice_Create",
                     TLArg(desc.Description, "Adapter"),
-                    TLArg(fmt::format("{}:{}", m_adapterLuid.HighPart, m_adapterLuid.LowPart).c_str(), " Luid"));
+                    TLArg(std::format("{}:{}", m_adapterLuid.HighPart, m_adapterLuid.LowPart).c_str(), " Luid"));
             }
 
             // Query the necessary flavors of device which will let us use fences.

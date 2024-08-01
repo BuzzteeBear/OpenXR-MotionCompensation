@@ -172,13 +172,13 @@ namespace openxr_api_layer
 		catch (std::exception& exc)
 		{{
 			TraceLoggingWriteTagged(local, "{cur_cmd.name}_Error", TLArg(exc.what(), "Error"));
-			ErrorLog(fmt::format("{cur_cmd.name}: {{}}", exc.what()));
+			ErrorLog(std::format("{cur_cmd.name}: {{}}", exc.what()));
 			result = XR_ERROR_RUNTIME_FAILURE;
 		}}
 
 		TraceLoggingWriteStop(local, "{cur_cmd.name}", TLArg(xr::ToCString(result), "Result"));
 		if (XR_FAILED(result)) {{
-			ErrorLog(fmt::format("{cur_cmd.name} failed with {{}}", xr::ToCString(result)));
+			ErrorLog(std::format("{cur_cmd.name} failed with {{}}", xr::ToCString(result)));
 		}}
 
 		return result;
@@ -198,7 +198,7 @@ namespace openxr_api_layer
 		catch (std::exception& exc)
 		{{
 			TraceLoggingWriteTagged(local, "{cur_cmd.name}_Error", TLArg(exc.what(), "Error"));
-			ErrorLog(fmt::format("{cur_cmd.name}: {{}}", exc.what()));
+			ErrorLog(std::format("{cur_cmd.name}: {{}}", exc.what()));
 		}}
 
 		TraceLoggingWriteStop(local, "{cur_cmd.name}"));

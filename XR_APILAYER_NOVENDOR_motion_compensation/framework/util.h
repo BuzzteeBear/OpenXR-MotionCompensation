@@ -27,11 +27,11 @@
 namespace xr {
 
     static inline std::string ToString(XrVersion version) {
-        return fmt::format("{}.{}.{}", XR_VERSION_MAJOR(version), XR_VERSION_MINOR(version), XR_VERSION_PATCH(version));
+        return std::format("{}.{}.{}", XR_VERSION_MAJOR(version), XR_VERSION_MINOR(version), XR_VERSION_PATCH(version));
     }
 
     static inline std::string ToString(const XrPosef& pose) {
-        return fmt::format("p: ({:.3f}, {:.3f}, {:.3f}), o:({:.3f}, {:.3f}, {:.3f}, {:.3f})",
+        return std::format("p: ({:.3f}, {:.3f}, {:.3f}), o:({:.3f}, {:.3f}, {:.3f}, {:.3f})",
                            pose.position.x,
                            pose.position.y,
                            pose.position.z,
@@ -43,7 +43,7 @@ namespace xr {
 
     static inline std::string ToString(const utility::Dof& dof)
     {
-        return fmt::format("sway: {:f}, surge: {:f}, heave: {:f}, yaw: {:f}, roll: {:f}, pitch: {:f}",
+        return std::format("sway: {:f}, surge: {:f}, heave: {:f}, yaw: {:f}, roll: {:f}, pitch: {:f}",
                            dof.data[utility::sway],
                            dof.data[utility::surge],
                            dof.data[utility::heave],
@@ -54,30 +54,30 @@ namespace xr {
 
     static inline std::string ToString(const XrVector3f& vec)
     {
-        return fmt::format("({:.3f}, {:.3f}, {:.3f})", vec.x, vec.y, vec.z);
+        return std::format("({:.3f}, {:.3f}, {:.3f})", vec.x, vec.y, vec.z);
     }
 
     static inline std::string ToString(const XrQuaternionf& quat)
     {
-        return fmt::format("({:.3f}, {:.3f}, {:.3f}, {:.3f})", quat.x, quat.y, quat.z, quat.w);
+        return std::format("({:.3f}, {:.3f}, {:.3f}, {:.3f})", quat.x, quat.y, quat.z, quat.w);
     }
 
     static inline std::string ToString(const XrFovf& fov) {
-        return fmt::format(
+        return std::format(
             "(l:{:.3f}, r:{:.3f}, u:{:.3f}, d:{:.3f})", fov.angleLeft, fov.angleRight, fov.angleUp, fov.angleDown);
     }
 
     static inline std::string ToString(const math::NearFar& nearFar)
     {
-        return fmt::format("(n:{:.3f}, f:{:.3f})", nearFar.Near, nearFar.Far);
+        return std::format("(n:{:.3f}, f:{:.3f})", nearFar.Near, nearFar.Far);
     }
 
     static inline std::string ToString(const XrRect2Di& rect) {
-        return fmt::format("x:{}, y:{} w:{} h:{}", rect.offset.x, rect.offset.y, rect.extent.width, rect.extent.height);
+        return std::format("x:{}, y:{} w:{} h:{}", rect.offset.x, rect.offset.y, rect.extent.width, rect.extent.height);
     }
 
     static inline std::string ToString(const XrRect2Df& rect) {
-        return fmt::format("x:{}, y:{} w:{} h:{}", rect.offset.x, rect.offset.y, rect.extent.width, rect.extent.height);
+        return std::format("x:{}, y:{} w:{} h:{}", rect.offset.x, rect.offset.y, rect.extent.width, rect.extent.height);
     }
 
     static XrPosef Normalize(const XrPosef& pose)
