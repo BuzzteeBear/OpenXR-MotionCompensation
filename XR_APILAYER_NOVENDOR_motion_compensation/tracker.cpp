@@ -926,7 +926,8 @@ namespace tracker
         if (GetConfig()->GetFloat(Cfg::TrackerConstantPitch, value))
         {
             m_PitchConstant = fmod(value * angleToRadian + floatPi, 2.0f * floatPi) - floatPi;
-            m_ConstantPitchQuaternion = DirectX::XMQuaternionRotationRollPitchYaw(m_PitchConstant, 0.f, 0.f);
+            StoreXrQuaternion(&m_ConstantPitchQuaternion,
+                              DirectX::XMQuaternionRotationRollPitchYaw(m_PitchConstant, 0.f, 0.f));
         } 
         else
         {
@@ -1182,9 +1183,9 @@ namespace tracker
 
         if (0 != m_PitchConstant)
         {
-            StoreXrQuaternion(
-                &rigPose.orientation,
-                DirectX::XMQuaternionMultiply(m_ConstantPitchQuaternion, LoadXrQuaternion(rigPose.orientation)));
+            StoreXrQuaternion(&rigPose.orientation,
+                              DirectX::XMQuaternionMultiply(LoadXrQuaternion(m_ConstantPitchQuaternion),
+                                                            LoadXrQuaternion(rigPose.orientation)));
 
             TraceLoggingWriteTagged(local,
                                     "VirtualTracker::GetPose",

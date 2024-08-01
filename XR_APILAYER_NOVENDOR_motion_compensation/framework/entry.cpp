@@ -75,7 +75,7 @@ XrResult __declspec(dllexport) XRAPI_CALL
     }
     if (creationError && GetLastError() != ERROR_ALREADY_EXISTS)
     {
-        ErrorLog("unable to create local appdata directory %s : %s", localAppData, utility::LastErrorMsg());
+        ErrorLog("unable to create local appdata directory %s : %s", localAppData.c_str(), utility::LastErrorMsg().c_str());
     }
 
     DebugLog("--> xrNegotiateLoaderApiLayerInterface");

@@ -319,8 +319,8 @@ namespace {
             desc.Format = (DXGI_FORMAT)info.format;
             desc.Width = info.width;
             desc.Height = info.height;
-            desc.DepthOrArraySize = info.arraySize;
-            desc.MipLevels = info.mipCount;
+            desc.DepthOrArraySize = static_cast<uint16_t>(info.arraySize);
+            desc.MipLevels = static_cast<uint16_t>(info.mipCount);
             desc.SampleDesc.Count = info.sampleCount;
             desc.Flags = D3D12_RESOURCE_FLAG_NONE;
             D3D12_RESOURCE_STATES initialState = D3D12_RESOURCE_STATE_COMMON;

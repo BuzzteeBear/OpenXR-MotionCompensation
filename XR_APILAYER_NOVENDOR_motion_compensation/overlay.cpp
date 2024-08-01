@@ -591,7 +591,7 @@ namespace openxr_api_layer::graphics
         rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
         rtvDesc.Format = m_Swapchains[view.subImage.swapchain].format;
         rtvDesc.Texture2DArray.ArraySize = 1;
-        rtvDesc.Texture2DArray.FirstArraySlice = -1;
+        rtvDesc.Texture2DArray.FirstArraySlice = 0;
         rtvDesc.Texture2D.MipSlice = D3D11CalcSubresource(0, 0, 1);
         CHECK_HRCMD(device->CreateRenderTargetView(m_Textures[eye].first->getNativeTexture<D3D11>(),
                                                    &rtvDesc,
@@ -603,7 +603,7 @@ namespace openxr_api_layer::graphics
         depthDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
         depthDesc.Format = DXGI_FORMAT_D32_FLOAT;
         depthDesc.Texture2DArray.ArraySize = 1;
-        depthDesc.Texture2DArray.FirstArraySlice = -1;
+        depthDesc.Texture2DArray.FirstArraySlice = 0;
         depthDesc.Texture2D.MipSlice = D3D11CalcSubresource(0, 0, 1);
         CHECK_HRCMD(device->CreateDepthStencilView(m_Textures[eye].second->getNativeTexture<D3D11>(),
                                                    &depthDesc,

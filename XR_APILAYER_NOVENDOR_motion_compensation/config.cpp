@@ -43,7 +43,7 @@ bool ConfigManager::Init(const std::string& application)
     if ((_access(coreIni.c_str(), 0)) != -1)
     {
         // check global deactivation flag
-        char buffer[2048];
+        char buffer[2048]{};
         if (0 < GetPrivateProfileString(enabledKey->second.first.c_str(),
                                         enabledKey->second.second.c_str(),
                                         nullptr,
@@ -145,7 +145,7 @@ bool ConfigManager::GetBool(const Cfg key, bool& val)
             ErrorLog("%s: unable to convert value (%s) for key (%s) to integer: %s",
                      __FUNCTION__,
                      strVal.c_str(),
-                     m_Keys[key].first,
+                     m_Keys[key].first.c_str(),
                      e.what());
         }
     }
@@ -209,7 +209,6 @@ bool ConfigManager::GetString(const Cfg key, std::string& val)
         return false;
     }
     val = it->second;
-    auto x = m_Keys[key];
     TraceLoggingWrite(g_traceProvider,
                       "ConfigManager::GetString",
                       TLArg(m_Keys[key].first.c_str(), "Section"),
