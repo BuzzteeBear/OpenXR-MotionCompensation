@@ -58,7 +58,9 @@ jobs:
       id: artifact-upload-step
       with:
         name: oxrmc-binary-(${{matrix.platform}})
-        path: bin\${{matrix.platform}}\${{env.BUILD_CONFIGURATION}}\*.dll
+        path: |
+          bin\${{matrix.platform}}\${{env.BUILD_CONFIGURATION}}\*.dll
+          bin\${{matrix.platform}}\${{env.BUILD_CONFIGURATION}}\MmfReader\*.exe
         
   merge:
     runs-on: windows-2019
