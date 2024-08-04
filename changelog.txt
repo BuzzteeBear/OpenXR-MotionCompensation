@@ -1,5 +1,22 @@
 OpenXR-MotionCompensation Changelog
 
+Version 0.3.7
+	
+	Yaw Game Engine:
+	- removed ability to use offset values from GE (necessary interface will be removed in upcoming GE version)
+	
+	Miscellaneous:
+	- renamed user guide to README
+	- added version info to dlls
+	- removed outdated package dependency (fmt)
+	
+	Bugfixes:
+	- fixed third party overlay placement (e.g. OpenKneeboard in iRacing)
+	- downgraded build platform because latest seems to introduce (so far inexplicable) startup crash on some systems
+	- improved graphical overlay stability
+	- improved input stabilizer thread safety
+	- minor log/trace output fixes
+
 Version 0.3.6
 
 	Optional support for x86 / 32-bit applications:
