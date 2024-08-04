@@ -22,7 +22,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: windows-2019
     
     strategy:
       matrix:
@@ -61,7 +61,7 @@ jobs:
         path: bin\${{matrix.platform}}\${{env.BUILD_CONFIGURATION}}\*.dll
         
   merge:
-    runs-on: windows-latest
+    runs-on: windows-2019
     needs: build
     outputs:
       artifact-id: ${{ steps.artifact-merge-step.outputs.artifact-id }}
@@ -75,7 +75,7 @@ jobs:
         delete-merged: true
       
   sign:
-    runs-on: windows-latest
+    runs-on: windows-2019
     needs: merge
     
     steps:
