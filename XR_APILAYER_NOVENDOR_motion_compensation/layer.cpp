@@ -1205,6 +1205,8 @@ namespace openxr_api_layer
             }
             else if (m_Tracker->GetPoseDelta(trackerDelta, m_Session, displayTime))
             {
+                m_RecoveryStart = 0;
+
                 XrPosef refToStage, stageToRef;
                 if (GetRefToStage(refSpace, &refToStage, &stageToRef))
                 {
