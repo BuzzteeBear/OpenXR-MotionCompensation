@@ -8,7 +8,7 @@ Version: 0.3.7
 
 ## Purpose of OpenXR Motion Compensation 
 
-When using a motion rig in combination with a VR headset (hmd) he movement of the rig causes the in-game camera to change along with your position in the real world. In simulations for example you're basically feel being pushed around inside the cockpit when the motion rig moves.  
+When using a motion rig in combination with a VR headset (hmd) the movement of the rig causes the in-game camera to change along with your position in the real world. In simulations for example you're basically feel being pushed around inside the cockpit when the motion rig moves.  
 Motion compensation reduces or ideally removes that effect by locking the in-game world to the pose of the motion rig.
 This software aims to provide an API layer for motion compensation to be used with applications and hmds supporting the OpenXR standard.  
 To be able to do that, the software needs to be informed on the motion rig movement / position. This can be achieved using a tracker, which is either a physical object attached to the motion rig and tracked by the VR runtime (e.g. a motion controller or a vive puck) or a virtual tracker using data from the motion software driving the motion rig. 
@@ -32,7 +32,7 @@ You can also sponsor the project via [GitHub Sponsors](https://github.com/sponso
 ## Install
 
 ### Run installer executable
-Just double click the installation executable called `Install_OpenXR-MotionCompensation_<current_version>.exe` and follow the instructions.
+Just double-click the installation executable called `Install_OpenXR-MotionCompensation_<current_version>.exe` and follow the instructions.
 A few hints regarding the installation process:
 - If you're upgrading from a version prior to 0.2.0, it is recommended to target the installation directory already existing. This will allow the installer to transfer your existing configuration files into the `appdata/local/OpenXR-MotionCompensation` directory that is used from version 0.2.0 onward.
 - Using a sub directory of `program files` as installation target is recommended, especially for compatibility with WMR based headsets.
@@ -72,7 +72,7 @@ To remove the OpenXR-MotionCompensation layer just use windows settings/control 
 ## Configuration
 
 Configuration files can be found at `...\Users\*<Your_Username>*\AppData\Local\OpenXR-MotionCompensation\OpenXR-MotionCompensation.log`.
-After initial installation this directory contains the default configuration file `OpenXR-MotionCompensation.ini`. You can make changes to that file to configure options you want to be the same for all OpenXR applications.
+After initial installation this directory contains the default configuration file `OpenXR-MotionCompensation.ini`. You can make changes to that file to configure settings you want to be the same for all OpenXR applications.
 Upon starting an OpenXR application with the API layer active for the first time, a configuration file named after the application is created in the same directory. You can use it to copy (partial) sections from the default configuration file whenever you want to make changes only for that application specifically.
 
 ### Use of the Configuration file
@@ -185,7 +185,7 @@ To enable OXRMC to correlate translation and rotation of the rig to the virtual 
 - If you're using YawVR Game Engine you can also use the parameters `Head Distance` and `Height` in its Motion Compensation tab to specify the offset of the cor. Head distance is basically equal to `offset_forward` in the configration file. But note that the height parameter is measured upwards from the bottom of your play-space, so you'll need to have that setup correctly in order to use that feature.
 
 ### Adjusting cor location using a motion controller
-You can use (only) the left motion controller to move the cor position in virtual space. The virtual tracker has to be calibrated first. Make sure to activate the graphical overlay (`ctrl + d` by default) to see the cor marker in game. 
+You can use (only) the left motion controller to move the cor position in virtual space. The virtual tracker has to be calibrated first. It is recommended to activate the graphical overlay (`ctrl + d` by default) to see the cor marker in game. 
 - press and hold the trigger button to 'grab' and move the cor marker, this way you can make it reach positions that are obstructed in the real world.
 - while pressing the trigger:
   - moving the controller left/right, up/down, or forward/backward is pushing the cor marker in the same direction
@@ -194,7 +194,7 @@ You can use (only) the left motion controller to move the cor position in virtua
 - in order for the adjusted position to persist for upcoming sessions, save the configuration.
 
 ## Running your application
-1. make sure your using OpenXR as runtime in the application you wish to use motion compensation in
+1. make sure your using OpenXR as runtime in the application you wish to use motion compensation with
 2. start application
 3. center the in-app view
 4. activate the motion controller you configured and mount it on your motion rig
@@ -226,7 +226,7 @@ OXRMC can detect whether a reference tracker isn't available anymore if:
 - for a virtual tracker: the memory mapped file providing data for a virtual tracker is removed by windows due to inactivity of the sender  
 
 After detecting a loss of connection a configurable timeout period is used (`connection_timeout`), allowing two possible outcomes:
-- the connection is reestablished within the timeout period: motion compensation is continued (and the next potential connection loss resets the timeout period)
+- the connection is re-established within the timeout period: motion compensation is continued (and timeout period gets reset for the next potential connection loss)
 - the connection stays lost and motion compensation is automatically deactivated. At that point you get an audible warning about connection loss. 
   - If you try to reactivate and the tracker is available again, motion compensation is resumed (without the need for tracker re-calibration) 
   - Otherwise, the error feedback is repeated and motion compensation stays deactivated. When using a virtual tracker and having connection problems, you can use the MMF Reader app (see below) to cross check existence and current output values of the memory mapped file used for data exchange.
@@ -315,6 +315,7 @@ You can always request help on the [Discord server](https://discord.gg/BVWugph5X
   - hmd
   - game(s)
   - using OpenComposite or native OpenXR
+  - detailed description of the issue you're having
 
 ## Additional Notes
 

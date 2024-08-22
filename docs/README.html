@@ -47,7 +47,7 @@
 <p>Version: 0.3.7</p>
 <p><strong>This document contains instructions on how to use OpenXR motion compensation <a href="https://www.khronos.org/registry/OpenXR/specs/1.0/html/xrspec.html#api-layers">API layer</a>. A developers manual can be found <a href="https://github.com/BuzzteeBear/OpenXR-MotionCompensation/blob/main/docs/Developers_Manual.md">here</a></strong></p>
 <h2 id="purpose-of-openxr-motion-compensation">Purpose of OpenXR Motion Compensation</h2>
-<p>When using a motion rig in combination with a VR headset (hmd) he movement of the rig causes the in-game camera to change along with your position in the real world. In simulations for example you're basically feel being pushed around inside the cockpit when the motion rig moves.<br />
+<p>When using a motion rig in combination with a VR headset (hmd) the movement of the rig causes the in-game camera to change along with your position in the real world. In simulations for example you're basically feel being pushed around inside the cockpit when the motion rig moves.<br />
 Motion compensation reduces or ideally removes that effect by locking the in-game world to the pose of the motion rig.
 This software aims to provide an API layer for motion compensation to be used with applications and hmds supporting the OpenXR standard.<br />
 To be able to do that, the software needs to be informed on the motion rig movement / position. This can be achieved using a tracker, which is either a physical object attached to the motion rig and tracked by the VR runtime (e.g. a motion controller or a vive puck) or a virtual tracker using data from the motion software driving the motion rig.</p>
@@ -64,7 +64,7 @@ To be able to do that, the software needs to be informed on the motion rig movem
 You can also sponsor the project via <a href="https://github.com/sponsors/BuzzteeBear?o=esb">GitHub Sponsors</a></p>
 <h2 id="install">Install</h2>
 <h3 id="run-installer-executable">Run installer executable</h3>
-<p>Just double click the installation executable called <code>Install_OpenXR-MotionCompensation_&lt;current_version&gt;.exe</code> and follow the instructions.
+<p>Just double-click the installation executable called <code>Install_OpenXR-MotionCompensation_&lt;current_version&gt;.exe</code> and follow the instructions.
 A few hints regarding the installation process:</p>
 <ul>
 <li>If you're upgrading from a version prior to 0.2.0, it is recommended to target the installation directory already existing. This will allow the installer to transfer your existing configuration files into the <code>appdata/local/OpenXR-MotionCompensation</code> directory that is used from version 0.2.0 onward.</li>
@@ -105,7 +105,7 @@ According to user feedback following constraints seem to be working:</p>
 </ul>
 <h2 id="configuration">Configuration</h2>
 <p>Configuration files can be found at <code>...\Users\*&lt;Your_Username&gt;*\AppData\Local\OpenXR-MotionCompensation\OpenXR-MotionCompensation.log</code>.
-After initial installation this directory contains the default configuration file <code>OpenXR-MotionCompensation.ini</code>. You can make changes to that file to configure options you want to be the same for all OpenXR applications.
+After initial installation this directory contains the default configuration file <code>OpenXR-MotionCompensation.ini</code>. You can make changes to that file to configure settings you want to be the same for all OpenXR applications.
 Upon starting an OpenXR application with the API layer active for the first time, a configuration file named after the application is created in the same directory. You can use it to copy (partial) sections from the default configuration file whenever you want to make changes only for that application specifically.</p>
 <h3 id="use-of-the-configuration-file">Use of the Configuration file</h3>
 <p>What you can modify in a configuration file:</p>
@@ -249,7 +249,7 @@ The key <code>vertical_factor</code> is applied to translational filter strength
 <li>If you're using YawVR Game Engine you can also use the parameters <code>Head Distance</code> and <code>Height</code> in its Motion Compensation tab to specify the offset of the cor. Head distance is basically equal to <code>offset_forward</code> in the configration file. But note that the height parameter is measured upwards from the bottom of your play-space, so you'll need to have that setup correctly in order to use that feature.</li>
 </ul>
 <h3 id="adjusting-cor-location-using-a-motion-controller">Adjusting cor location using a motion controller</h3>
-<p>You can use (only) the left motion controller to move the cor position in virtual space. The virtual tracker has to be calibrated first. Make sure to activate the graphical overlay (<code>ctrl + d</code> by default) to see the cor marker in game.</p>
+<p>You can use (only) the left motion controller to move the cor position in virtual space. The virtual tracker has to be calibrated first. It is recommended to activate the graphical overlay (<code>ctrl + d</code> by default) to see the cor marker in game.</p>
 <ul>
 <li>press and hold the trigger button to 'grab' and move the cor marker, this way you can make it reach positions that are obstructed in the real world.</li>
 <li>while pressing the trigger:
@@ -263,7 +263,7 @@ The key <code>vertical_factor</code> is applied to translational filter strength
 </ul>
 <h2 id="running-your-application">Running your application</h2>
 <ol>
-<li>make sure your using OpenXR as runtime in the application you wish to use motion compensation in</li>
+<li>make sure your using OpenXR as runtime in the application you wish to use motion compensation with</li>
 <li>start application</li>
 <li>center the in-app view</li>
 <li>activate the motion controller you configured and mount it on your motion rig</li>
@@ -312,7 +312,7 @@ The key <code>vertical_factor</code> is applied to translational filter strength
 </ul>
 <p>After detecting a loss of connection a configurable timeout period is used (<code>connection_timeout</code>), allowing two possible outcomes:</p>
 <ul>
-<li>the connection is reestablished within the timeout period: motion compensation is continued (and the next potential connection loss resets the timeout period)</li>
+<li>the connection is re-established within the timeout period: motion compensation is continued (and timeout period gets reset for the next potential connection loss)</li>
 <li>the connection stays lost and motion compensation is automatically deactivated. At that point you get an audible warning about connection loss.
 <ul>
 <li>If you try to reactivate and the tracker is available again, motion compensation is resumed (without the need for tracker re-calibration)</li>
@@ -430,6 +430,7 @@ If don't have a clue where the cor of your motion rig is supposed to be, you can
 <li>hmd</li>
 <li>game(s)</li>
 <li>using OpenComposite or native OpenXR</li>
+<li>detailed description of the issue you're having</li>
 </ul>
 </li>
 </ul>
