@@ -145,7 +145,6 @@ namespace filter
     {
       public:
         explicit LowPassStabilizer(const std::vector<utility::DofValue>& relevant);
-        void Read(utility::Dof& dof) override;
 
       protected:
         void SetFrequencies(float strength);

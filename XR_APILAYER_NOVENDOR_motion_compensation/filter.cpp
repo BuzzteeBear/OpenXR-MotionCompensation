@@ -232,15 +232,14 @@ namespace filter
     void PassThroughStabilizer::Read(utility::Dof& dof)
     {
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "PassThroughStabilizer::Read");
+        TraceLoggingWriteStart(local, "PassThroughStabilizer::Read", TLArg(xr::ToString(dof).c_str(), "DofIn"));
 
         std::unique_lock lock(m_SampleMutex);
         for (const DofValue value : m_Relevant)
         {
             dof.data[value] = m_CurrentSample.data[value];
         }
-
-        TraceLoggingWriteStop(local, "PassThroughStabilizer::Read", TLArg(xr::ToString(dof).c_str(), "Dof"));
+        TraceLoggingWriteStop(local, "PassThroughStabilizer::Read", TLArg(xr::ToString(dof).c_str(), "DofOut"));
     }
 
     LowPassStabilizer::LowPassStabilizer(const std::vector<utility::DofValue>& relevant)
@@ -256,19 +255,6 @@ namespace filter
 
         DebugLog("stabilizer strength: %.4f", strength);
         TraceLoggingWriteStop(local, "LowPassStabilizer::LowPassStabilizer");
-    }
-
-    void LowPassStabilizer::Read(utility::Dof& dof)
-    {
-        TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "LowPassStabilizer::Read", TLArg(xr::ToString(dof).c_str(), "DofIn"));
-
-        std::unique_lock lock(m_SampleMutex);
-        for (const DofValue value : m_Relevant)
-        {
-            dof.data[value] = m_CurrentSample.data[value];
-        }
-        TraceLoggingWriteStop(local, "LowPassStabilizer::Read", TLArg(xr::ToString(dof).c_str(), "DofOut"));
     }
 
     void LowPassStabilizer::SetFrequencies(float strength)
