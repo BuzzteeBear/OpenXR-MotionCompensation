@@ -59,8 +59,7 @@ namespace openxr_api_layer::log {
 
             vsnprintf_s(buf + offset, sizeof(buf) - offset, _TRUNCATE, (fmt + "\n").c_str(), va);
 
-            TraceLocalActivity(local);
-            TraceLoggingWriteTagged(local, "Log", TLArg(buf, "Msg"));
+            TraceLoggingWrite(g_traceProvider, "Log", TLArg(buf, "Msg"));
             if (logStream.is_open()) {
                 logStream << buf;
                 logStream.flush();
