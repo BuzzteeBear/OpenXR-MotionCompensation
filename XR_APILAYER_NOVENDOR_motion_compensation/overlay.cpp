@@ -433,7 +433,7 @@ namespace openxr_api_layer::graphics
             XrPosef refToStage;
             if (!openXrLayer->GetRefToStage(lastProjectionLayer->space, &refToStage, nullptr))
             {
-                ErrorLog("%s(%llu): could not determine stage offset for projection reference space (%llu)",
+                ErrorLog("%s(%lld): could not determine stage offset for projection reference space (%llu)",
                          __FUNCTION__,
                          chainFrameEndInfo->displayTime,
                          lastProjectionLayer->space);

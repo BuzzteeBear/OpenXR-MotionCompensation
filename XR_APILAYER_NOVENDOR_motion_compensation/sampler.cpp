@@ -76,7 +76,7 @@ namespace sampler
         {
             StopSampling();
         }
-        m_IsSampling = true;
+        m_IsSampling.store(true);
         m_Thread = new std::thread(&Sampler::DoSampling, this);
 
         TraceLoggingWriteStop(local, "Sampler::StartSampling");
@@ -87,7 +87,7 @@ namespace sampler
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "Sampler::StopSampling");
 
-        m_IsSampling = false;
+        m_IsSampling.store(false);
         if (m_Thread)
         {
             if (m_Thread->joinable())
@@ -139,6 +139,6 @@ namespace sampler
             // wait for next sampling cycle
             std::this_thread::sleep_until(now + m_Interval);
         }
-        m_IsSampling = false;
+        m_IsSampling.store(false);
     }
 } // namespace sampler

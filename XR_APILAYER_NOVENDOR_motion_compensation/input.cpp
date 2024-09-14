@@ -83,7 +83,7 @@ namespace input
         bool isRepeat{false};
         const bool fast = m_Input.GetKeyState(Cfg::KeyFastModifier, isRepeat);
 
-        TraceLoggingWriteTagged(local, "KeyboardInput::Init", TLArg(fast, "Fast"));
+        TraceLoggingWriteTagged(local, "KeyboardInput::HandleKeyboardInput", TLArg(fast, "Fast"));
 
         if (m_Input.GetKeyState(Cfg::KeyActivate, isRepeat) && !isRepeat)
         {

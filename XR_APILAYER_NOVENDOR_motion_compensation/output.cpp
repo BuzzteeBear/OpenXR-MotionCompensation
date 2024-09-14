@@ -175,7 +175,7 @@ namespace output
             // update start time to avoid offset on elapsed time
             const std::chrono::nanoseconds now = std::chrono::steady_clock::now().time_since_epoch();
             m_StartTime = now.count();
-            m_PoseRecorded = true;
+            m_PoseRecorded.store(true);
         }
 
         TraceLoggingWriteStop(local, "PoseRecorder::AddReference", TLArg(true, "Success"));
@@ -262,7 +262,7 @@ namespace output
 
         if (m_FileStream.is_open())
         {
-            m_Started = true;
+            m_Started.store(true);
             const std::chrono::nanoseconds now = std::chrono::steady_clock::now().time_since_epoch();
             m_StartTime = now.count();
             m_FileStream << m_HeadLine << "\n";
@@ -285,9 +285,9 @@ namespace output
         TraceLoggingWriteStart(local, "PoseRecorder::Stop");
 
         std::unique_ptr<std::unique_lock<std::mutex>> lock{};
-        m_Started = false;
+        m_Started.store(false);
         m_StartTime = 0;
-        m_PoseRecorded = false;
+        m_PoseRecorded.store(false);
         if (m_FileStream.is_open())
         {
             m_FileStream.close();

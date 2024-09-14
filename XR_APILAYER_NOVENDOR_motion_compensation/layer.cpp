@@ -416,6 +416,7 @@ namespace openxr_api_layer
 
         const XrResult result = OpenXrApi::xrBeginSession(session, beginInfo);
         m_ViewConfigType = beginInfo->primaryViewConfigurationType;
+        m_XrSyncCalled.store(false);
 
         TraceLoggingWriteStop(local, "OpenXrLayer::xrBeginSession", TLArg(xr::ToCString(result), "Result"));
 
@@ -430,12 +431,12 @@ namespace openxr_api_layer
         }
 
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "OpenXrLayer::xrEndssion", TLXArg(session, "Session"));
+        TraceLoggingWriteStart(local, "OpenXrLayer::xrEndSession", TLXArg(session, "Session"));
         Log("xrEndSession");
 
         const XrResult result = OpenXrApi::xrEndSession(session);
 
-        TraceLoggingWriteStop(local, "OpenXrLayer::xrEndssion", TLArg(xr::ToCString(result), "Result"));
+        TraceLoggingWriteStop(local, "OpenXrLayer::xrEndSession", TLArg(xr::ToCString(result), "Result"));
 
         return result;
     }
@@ -1016,7 +1017,7 @@ namespace openxr_api_layer
         const bool baseComp = baseView || (m_CompensateControllers && baseAction);
 
         TraceLoggingWriteTagged(local,
-                                "OpenXrLayerxrLocateSpace",
+                                "OpenXrLayer::xrLocateSpace",
                                 TLArg(spaceView, "SpaceView"),
                                 TLArg(baseView, "BaseView"),
                                 TLArg(spaceAction, "SpaceAction"),
@@ -1028,7 +1029,7 @@ namespace openxr_api_layer
         {
             DebugLog("xrLocateSpace(%lld): original pose = %s", time, xr::ToString(location->pose).c_str());
             TraceLoggingWriteTagged(local,
-                                    "OpenXrLayerxrLocateSpace",
+                                    "OpenXrLayer::xrLocateSpace",
                                     TLArg(xr::ToString(location->pose).c_str(), "OriginalPose"),
                                     TLArg(location->locationFlags, "LocationFlags"));
 
@@ -1082,7 +1083,7 @@ namespace openxr_api_layer
             }
             DebugLog("xrLocateSpace(%lld): compensated pose = %s", time, xr::ToString(location->pose).c_str());
             TraceLoggingWriteTagged(local,
-                                    "OpenXrLayerxrLocateSpace",
+                                    "OpenXrLayer::xrLocateSpace",
                                     TLArg(xr::ToString(location->pose).c_str(), "CompensatedPose"));
         }
         TraceLoggingWriteStop(local, "OpenXrLayer::xrLocateSpace", TLArg(xr::ToCString(result), "Result"));

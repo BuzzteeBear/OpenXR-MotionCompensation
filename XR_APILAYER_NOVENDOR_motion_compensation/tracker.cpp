@@ -34,7 +34,7 @@ namespace tracker
             TraceLoggingWriteStop(local,
                                   "ControllerBase::GetPoseDelta",
                                   TLArg(xr::ToString(m_LastPoseDelta).c_str(), "LastDelta"));
-            DebugLog("delta(%llu) reused", time);
+            DebugLog("delta(%lld) reused", time);
             return true;
         }
         if (XrPosef curPose{Pose::Identity()}; GetPose(curPose, session, time))
@@ -60,7 +60,7 @@ namespace tracker
                 m_LastPoseTime = time;
             }
 
-            DebugLog("delta(%llu): %s", time, xr::ToString(poseDelta).c_str());
+            DebugLog("delta(%lld): %s", time, xr::ToString(poseDelta).c_str());
             TraceLoggingWriteStop(local,
                                   "ControllerBase::GetPoseDelta",
                                   TLArg(true, "Success"),
@@ -122,7 +122,6 @@ namespace tracker
         if (auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance()))
         {
             // Query the latest tracker pose.
-            XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
             if (!layer->m_XrSyncCalled.load())
             {
                 constexpr XrActionsSyncInfo syncInfo{XR_TYPE_ACTIONS_SYNC_INFO, nullptr, 0, nullptr};
@@ -173,7 +172,10 @@ namespace tracker
                     return false;
                 }
             }
-
+            TraceLoggingWriteTagged(local,
+                                    "ControllerBase::GetControllerPose",
+                                    TLXArg(layer->m_ActionSet, "xrLocateSpace"));
+            XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
             if (const XrResult result = GetInstance()->OpenXrApi::xrLocateSpace(layer->m_TrackerSpace, layer->m_StageSpace, time, &location);XR_FAILED(result))
             {
                 if (reportError)
@@ -188,7 +190,7 @@ namespace tracker
                                             TLArg(m_LastPoseTime, "LastGoodTime"));
                     if (!m_FallBackUsed)
                     {
-                        Log("Warning: requested time (%llu) is out of bounds, using last known tracker pose (%llu)",
+                        Log("Warning: requested time (%lld) is out of bounds, using last known tracker pose (%lld)",
                             time,
                             m_LastPoseTime);
                         m_FallBackUsed = true;
@@ -290,7 +292,7 @@ namespace tracker
         if (GetConfig()->GetBool(Cfg::StabilizerEnabled, samplerEnabled) && samplerEnabled)
         {
             m_Sampler = new sampler::Sampler(this, m_RelevantValues, m_Recorder);
-            m_Recorder->m_Sampling = true;
+            m_Recorder->m_Sampling.store(true);
             Log("input stabilizer enabled");
         }
     }
@@ -435,7 +437,7 @@ namespace tracker
         if (!m_Sampler)
         {
             m_Sampler = new sampler::Sampler(this, m_RelevantValues, m_Recorder);
-            m_Recorder->m_Sampling = true;
+            m_Recorder->m_Sampling.store(true);
             if (m_Calibrated)
             {
                 m_Sampler->StartSampling();
@@ -449,7 +451,7 @@ namespace tracker
         }
         delete m_Sampler;
         m_Sampler = nullptr;
-        m_Recorder->m_Sampling = false;
+        m_Recorder->m_Sampling.store(false);
         GetConfig()->SetValue(Cfg::StabilizerEnabled, false);
         AudioOut::Execute(Event::StabilizerOff);
 
@@ -775,18 +777,22 @@ namespace tracker
         std::unique_lock lock(m_SampleMutex); 
         LARGE_INTEGER now;
         QueryPerformanceCounter(&now);
+        TraceLoggingWriteTagged(local, "OpenXrTracker::ReadSource", TLArg(now.QuadPart, "QuadPart"));
         XrTime nowXr;
         if (XR_FAILED(
                 GetInstance()->xrConvertWin32PerformanceCounterToTimeKHR(GetInstance()->GetXrInstance(), &now, &nowXr)))
         {
+            TraceLoggingWriteStop(local, "OpenXrTracker::ReadSource", TLArg(false, "Conversion"));
             return false;
         }
         XrPosef controllerPose;
         if (!GetControllerPose(controllerPose, m_Session, nowXr))
         {
+            TraceLoggingWriteStop(local, "OpenXrTracker::ReadSource", TLArg(false, "Pose"));
             return false;
         }
         dof = PoseToDof(Pose::Multiply(m_RefToFwd, controllerPose));
+        TraceLoggingWriteStop(local, "OpenXrTracker::ReadSource", TLArg(true, "Success"));
         return true;
     }
 
