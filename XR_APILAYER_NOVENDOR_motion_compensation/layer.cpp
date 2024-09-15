@@ -1403,7 +1403,7 @@ namespace openxr_api_layer
     {
         if (!m_Enabled)
         {
-           return OpenXrApi::xrWaitFrame(session, frameWaitInfo, frameState);
+            return OpenXrApi::xrWaitFrame(session, frameWaitInfo, frameState);
         }
 
         TraceLocalActivity(local);
@@ -1427,7 +1427,7 @@ namespace openxr_api_layer
     {
         if (!m_Enabled)
         {
-           return OpenXrApi::xrBeginFrame(session, frameBeginInfo);
+            return OpenXrApi::xrBeginFrame(session, frameBeginInfo);
         }
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "OpenXrLayer::xrBeginFrame", TLXArg(session, "Session"));
@@ -1437,16 +1437,16 @@ namespace openxr_api_layer
 
         if (m_VarjoPollWorkaround && m_Enabled && m_PhysicalEnabled && !m_SuppressInteraction)
         {
-           TraceLoggingWriteTagged(local, "OpenXrLayer::xrBeginFrame", TLArg(true, "PollWorkaround"));
+            TraceLoggingWriteTagged(local, "OpenXrLayer::xrBeginFrame", TLArg(true, "PollWorkaround"));
 
-           // call xrPollEvent (if the app hasn't already) to acquire focus
-           XrEventDataBuffer buf{XR_TYPE_EVENT_DATA_BUFFER};
-           OpenXrApi::xrPollEvent(GetXrInstance(), &buf);
+            // call xrPollEvent (if the app hasn't already) to acquire focus
+            XrEventDataBuffer buf{XR_TYPE_EVENT_DATA_BUFFER};
+            OpenXrApi::xrPollEvent(GetXrInstance(), &buf);
         }
 
         if (m_Overlay && m_Overlay->m_Initialized)
         {
-           m_Overlay->ReleaseAllSwapChainImages();
+            m_Overlay->ReleaseAllSwapChainImages();
         }
 
         const XrResult result = OpenXrApi::xrBeginFrame(session, frameBeginInfo);
