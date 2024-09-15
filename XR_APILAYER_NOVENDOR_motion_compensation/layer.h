@@ -108,6 +108,7 @@ namespace openxr_api_layer
         void SetForwardRotation(const XrPosef& pose) const;
         bool GetRefToStage(XrSpace space, XrPosef* refToStage, XrPosef* stageToRef);
         std::shared_ptr<graphics::ICompositionFrameworkFactory> GetCompositionFactory();
+        bool SyncActions(const std::string& caller);
 
         XrActionSet m_ActionSet{XR_NULL_HANDLE};
         XrAction m_PoseAction{XR_NULL_HANDLE};
@@ -165,6 +166,7 @@ namespace openxr_api_layer
         bool m_VarjoPollWorkaround{false};
         XrTime m_LastFrameTime{0};
         XrTime m_UpdateRefSpaceTime{0};
+        std::chrono::time_point<std::chrono::steady_clock> m_LastActionSync{std::chrono::steady_clock::now()};
         std::set<XrSpace> m_StaticRefSpaces{};
         std::map<XrSpace, std::pair<XrPosef, XrPosef>> m_RefToStageMap{};
         std::unique_ptr<XrPosef> m_EyeToHmd{};

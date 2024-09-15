@@ -102,7 +102,7 @@ namespace tracker
         TraceLoggingWriteStop(local, "ControllerBase::SetReferencePose");
     }
 
-    bool ControllerBase::GetControllerPose(XrPosef& trackerPose, XrSession session, XrTime time, bool reportError)
+    bool ControllerBase::GetControllerPose(XrPosef& trackerPose, XrSession session, XrTime time)
     {
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local,
@@ -112,32 +112,19 @@ namespace tracker
 
         if (!m_PhysicalEnabled)
         {
-            if (reportError)
-            {
-                ErrorLog("%s: physical tracker disabled in config file", __FUNCTION__);
-            }
+            ErrorLog("%s: physical tracker disabled in config file", __FUNCTION__);
             TraceLoggingWriteStop(local, "ControllerBase::GetControllerPose", TLArg(false, "Success"));
             return false;
         }
+        
+
         if (auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance()))
         {
             // Query the latest tracker pose.
-            if (!layer->m_XrSyncCalled.load())
+            if (!layer->SyncActions("GetControllerPose"))
             {
-                constexpr XrActionsSyncInfo syncInfo{XR_TYPE_ACTIONS_SYNC_INFO, nullptr, 0, nullptr};
-
-                TraceLoggingWriteTagged(local,
-                                        "ControllerBase::GetControllerPose",
-                                        TLXArg(layer->m_ActionSet, "xrSyncActions"));
-                if (const XrResult result = layer->xrSyncActions(session, &syncInfo); XR_FAILED(result))
-                {
-                    if (reportError)
-                    {
-                        ErrorLog("%s: xrSyncActions failed: %s", __FUNCTION__, xr::ToCString(result));
-                    }
-                    TraceLoggingWriteStop(local, "ControllerBase::GetControllerPose", TLArg(false, "Success"));
-                    return false;
-                }
+                TraceLoggingWriteStop(local, "ControllerBase::GetControllerPose", TLArg(false, "Success"));
+                return false;
             }
             {
                 XrActionStatePose actionStatePose{XR_TYPE_ACTION_STATE_POSE, nullptr};
@@ -147,12 +134,11 @@ namespace tracker
                 TraceLoggingWriteTagged(local,
                                         "ControllerBase::GetControllerPose",
                                         TLXArg(layer->m_PoseAction, "xrGetActionStatePose"));
-                if (const XrResult result = GetInstance()->xrGetActionStatePose(session, &getActionStateInfo, &actionStatePose); XR_FAILED(result))
+                if (const XrResult result =
+                        GetInstance()->xrGetActionStatePose(session, &getActionStateInfo, &actionStatePose);
+                    XR_FAILED(result))
                 {
-                    if (reportError)
-                    {
-                        ErrorLog("%s: xrGetActionStatePose failed: %s", __FUNCTION__, xr::ToCString(result));
-                    }
+                    ErrorLog("%s: xrGetActionStatePose failed: %s", __FUNCTION__, xr::ToCString(result));
                     TraceLoggingWriteStop(local, "ControllerBase::GetControllerPose", TLArg(false, "Success"));
                     return false;
                 }
@@ -161,11 +147,7 @@ namespace tracker
                 {
                     if (!m_ConnectionLost)
                     {
-                        if (reportError)
-                        {
-                            ErrorLog("%s: unable to determine tracker pose - XrActionStatePose not active",
-                                     __FUNCTION__);
-                        }
+                        ErrorLog("%s: unable to determine tracker pose - XrActionStatePose not active", __FUNCTION__);
                         m_ConnectionLost = true;
                     }
                     TraceLoggingWriteStop(local, "ControllerBase::GetControllerPose", TLArg(false, "Success"));
@@ -178,10 +160,7 @@ namespace tracker
             XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
             if (const XrResult result = GetInstance()->OpenXrApi::xrLocateSpace(layer->m_TrackerSpace, layer->m_StageSpace, time, &location);XR_FAILED(result))
             {
-                if (reportError)
-                {
-                    ErrorLog("%s: xrLocateSpace failed: %s", __FUNCTION__, xr::ToCString(result));
-                }
+                ErrorLog("%s: xrLocateSpace failed: %s", __FUNCTION__, xr::ToCString(result));
                 if (XR_ERROR_TIME_INVALID == result && m_LastPoseTime != 0)
                 {
                     TraceLoggingWriteTagged(local,
@@ -210,10 +189,7 @@ namespace tracker
             {
                 if (!m_ConnectionLost)
                 {
-                    if (reportError)
-                    {
-                        ErrorLog("%s: unable to determine tracker pose - XrSpaceLocation not valid", __FUNCTION__);
-                    }
+                    ErrorLog("%s: unable to determine tracker pose - XrSpaceLocation not valid", __FUNCTION__);
                     m_ConnectionLost = true;
                 }
                 return false;
@@ -227,10 +203,7 @@ namespace tracker
             trackerPose = location.pose;
             return true;
         }
-        if (reportError)
-        {
-            ErrorLog("%s: unable to cast instance to OpenXrLayer", __FUNCTION__);
-        }
+        ErrorLog("%s: unable to cast instance to OpenXrLayer", __FUNCTION__);
         TraceLoggingWriteStop(local, "ControllerBase::GetControllerPose", TLArg(false, "Success"));
         return false;
     }
@@ -283,7 +256,6 @@ namespace tracker
 
         return angle;
     }
-
 
     TrackerBase::TrackerBase(const std::vector<DofValue>& relevant) : m_RelevantValues(relevant)
     {
@@ -1330,7 +1302,7 @@ namespace tracker
         SixDof mmfData{};
         if (!m_Mmf.Read(&mmfData, sizeof(mmfData), now))
         {
-            TraceLoggingWriteStop(local, "SixDofTracker::ReadSource", TLArg(false, "Success"));
+            TraceLoggingWriteStop(local, "SixDofTracker::ReadSource", TLArg(false, "Read"));
             return false;
         }
 
@@ -1404,7 +1376,7 @@ namespace tracker
         {
             m_Initialized = false;
             ErrorLog("%s: unable to cast layer to OpenXrLayer", __FUNCTION__);
-            TraceLoggingWriteStop(local, "CorManipulator::ApplyManipulation", TLArg(false, "Leyer_Valid"));
+            TraceLoggingWriteStop(local, "CorManipulator::ApplyManipulation", TLArg(false, "Layer_Valid"));
             return;
         }
 
@@ -1504,22 +1476,13 @@ namespace tracker
          {
             m_Initialized = false;
             ErrorLog("%s: unable to cast layer to OpenXrLayer", __FUNCTION__);
-            TraceLoggingWriteStop(local, "CorManipulator::GetButtonState", TLArg(false, "Leyer_Valid"));
+            TraceLoggingWriteStop(local, "CorManipulator::GetButtonState", TLArg(false, "Layer_Valid"));
             return;
          }
-         if (!layer->m_XrSyncCalled.load())
+         if (!layer->SyncActions("GetButtonState"))
          {
-            // sync actions
-            TraceLoggingWriteTagged(local,
-                                    "CorManipulator::GetButtonState",
-                                    TLXArg(layer->m_ActionSet, "xrSyncActions"));
-            constexpr XrActionsSyncInfo syncInfo{XR_TYPE_ACTIONS_SYNC_INFO, nullptr, 0, nullptr};
-            if (const XrResult result = GetInstance()->xrSyncActions(session, &syncInfo); XR_FAILED(result))
-            {
-                ErrorLog("%s: xrSyncActions failed: %s", __FUNCTION__, xr::ToCString(result));
-                TraceLoggingWriteStop(local, "CorManipulator::GetButtonState", TLArg(false, "XrSyncActionSuccces"));
-                return;
-            }
+             TraceLoggingWriteStop(local, "CorManipulator::GetButtonState", TLArg(false, "SyncActionSuccces"));
+             return;
          }
          {
             // obtain current action state
