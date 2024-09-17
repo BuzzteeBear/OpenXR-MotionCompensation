@@ -8,7 +8,6 @@
 // Generated from the TEXTINCLUDE 2 resource.
 //
 #include "winres.h"
-
 /////////////////////////////////////////////////////////////////////////////
 #undef APSTUDIO_READONLY_SYMBOLS
 
@@ -32,14 +31,12 @@ END
 
 2 TEXTINCLUDE 
 BEGIN
-    "#include ""winres.h""\r\n"
-    "\0"
+    "#include ""winres.h""\0"
 END
 
 3 TEXTINCLUDE 
 BEGIN
-    "\r\n"
-    "\0"
+    "#include ""resources.rc2""\0"
 END
 
 #endif    // APSTUDIO_INVOKED
@@ -142,51 +139,6 @@ STABILIZER_ON_WAV       WAVE                    "sounds\\stabilizer_on.wav"
 
 STABILIZER_OFF_WAV      WAVE                    "sounds\\stabilizer_off.wav"
 
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// Version
-//
-
-#define FILE_VERSION VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, 0
-#define STRINGIZER(string) #string
-#define STRING_VERSION(major,minor,build,revision) STRINGIZER(major) "." STRINGIZER(minor) "." STRINGIZER(build) "." STRINGIZER(revision)
-#define FILE_DESCRIPTION(platform) "OpenXR-MotionCompensation DLL (" STRINGIZER(platform) ")"
-#define NAME(layer, suffix) STRINGIZER(layer) STRINGIZER(suffix)
-
-VS_VERSION_INFO VERSIONINFO
- FILEVERSION FILE_VERSION
- PRODUCTVERSION FILE_VERSION
- FILEFLAGSMASK 0x3fL
-#ifdef _DEBUG
- FILEFLAGS 0x1L
-#else
- FILEFLAGS 0x0L
-#endif
- FILEOS 0x40004L
- FILETYPE 0x2L
- FILESUBTYPE 0x0L
-BEGIN
-    BLOCK "StringFileInfo"
-    BEGIN
-        BLOCK "040904b0"
-        BEGIN
-            VALUE "CompanyName", "BuzzteeBear"
-            VALUE "FileDescription", FILE_DESCRIPTION(PLATFORM)
-            VALUE "FileVersion", STRING_VERSION(VERSION_MAJOR,VERSION_MINOR,VERSION_PATCH,0)
-            VALUE "InternalName", NAME(LAYER_NAME,SUFFIX)
-            VALUE "LegalCopyright", "© Sebastian Veith"
-            VALUE "OriginalFilename", NAME(LAYER_NAME,SUFFIX)
-            VALUE "ProductName", "OpenXR-MotionCompensation"
-            VALUE "ProductVersion", STRING_VERSION(VERSION_MAJOR,VERSION_MINOR,VERSION_PATCH,0)
-        END
-    END
-    BLOCK "VarFileInfo"
-    BEGIN
-        VALUE "Translation", 0x409, 1200
-    END
-END
-
 #endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////
 
@@ -197,8 +149,7 @@ END
 //
 // Generated from the TEXTINCLUDE 3 resource.
 //
-
-
+#include "resources.rc2"
 /////////////////////////////////////////////////////////////////////////////
 #endif    // not APSTUDIO_INVOKED
 
