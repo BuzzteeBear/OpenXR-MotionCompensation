@@ -199,6 +199,9 @@ namespace tracker
         SixDofTracker(const std::vector<utility::DofValue>& relevant) : VirtualTracker(relevant)
         {}
         bool ReadSource(XrTime now, utility::Dof& dof) override;
+        XrPosef DataToPose(const utility::Dof& dof) override;
+        virtual void ExtractRotationQuaternion(const utility::Dof& dof, XrPosef& pose) = 0;
+        static void ExtractTranslationVector(const utility::Dof& dof, XrPosef& rigPose);
 
       private:
         struct SixDof
@@ -223,7 +226,7 @@ namespace tracker
         }
 
       protected:
-        XrPosef DataToPose(const utility::Dof& dof) override;
+        void ExtractRotationQuaternion(const utility::Dof& dof, XrPosef& rigPose) override;
     };
 
     class SrsTracker final : public SixDofTracker
@@ -235,7 +238,7 @@ namespace tracker
         }
 
       protected:
-        XrPosef DataToPose(const utility::Dof& dof) override;
+        void ExtractRotationQuaternion(const utility::Dof& dof, XrPosef& rigPose) override;
     };
 
     class CorManipulator : public ControllerBase

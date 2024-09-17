@@ -1325,36 +1325,43 @@ namespace tracker
         TraceLoggingWriteStop(local, "SixDofTracker::ReadSource", TLArg(true, "Success"));
         return true;
     }
-    
-    XrPosef FlyPtTracker::DataToPose(const Dof& dof)
+
+    XrPosef SixDofTracker::DataToPose(const Dof& dof)
     {
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "FlyPtTracker::DataToPose", TLArg(xr::ToString(dof).c_str(), "Dof"));
+        TraceLoggingWriteStart(local, "SixDofTracker::DataToPose", TLArg(xr::ToString(dof).c_str(), "Dof"));
 
         XrPosef rigPose{Pose::Identity()};
+        ExtractRotationQuaternion(dof, rigPose);
+        ExtractTranslationVector(dof, rigPose);
+
+        TraceLoggingWriteStop(local, "SixDofTracker::DataToPose", TLArg(xr::ToString(rigPose).c_str(), "Pose"));
+        return rigPose;
+    }
+
+    void SixDofTracker::ExtractTranslationVector(const utility::Dof& dof, XrPosef& rigPose)
+    {
+        // helper to rotate translation vector into 'local rig space'
+        StoreXrVector3(
+            &rigPose.position,
+            DirectX::XMVector3Rotate({dof.data[sway] / -1000.f, dof.data[heave] / 1000.f, dof.data[surge] / 1000.f},
+                                     LoadXrQuaternion(rigPose.orientation)));
+    }
+    
+    void FlyPtTracker::ExtractRotationQuaternion(const Dof& dof, XrPosef& rigPose)
+    {
         StoreXrQuaternion(&rigPose.orientation,
                           DirectX::XMQuaternionRotationRollPitchYaw(-dof.data[pitch] * angleToRadian,
                                                                     dof.data[yaw] * angleToRadian,
                                                                     dof.data[roll] * angleToRadian));
-        rigPose.position = XrVector3f{dof.data[sway] / -1000.f, dof.data[heave] / 1000.f, dof.data[surge] / 1000.f};
-
-        TraceLoggingWriteStop(local, "FlyPtTracker::DataToPose", TLArg(xr::ToString(rigPose).c_str(), "Pose"));
-        return rigPose;
     }
 
-    XrPosef SrsTracker::DataToPose(const Dof& dof)
+    void SrsTracker::ExtractRotationQuaternion(const Dof& dof, XrPosef& rigPose)
     {
-        TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "SrsTracker::DataToPose", TLArg(xr::ToString(dof).c_str(), "Dof"));
-
-        XrPosef rigPose{Pose::Identity()};
-        StoreXrQuaternion(&rigPose.orientation, DirectX::XMQuaternionRotationRollPitchYaw(dof.data[pitch] * angleToRadian,
-                                                                  dof.data[yaw] * angleToRadian,
-                                                                  -dof.data[roll] * angleToRadian));
-        rigPose.position = XrVector3f{dof.data[sway] / -1000.f, dof.data[heave] / 1000.f, dof.data[surge] / 1000.f};
-
-        TraceLoggingWriteStop(local, "SrsTracker::DataToPose", TLArg(xr::ToString(rigPose).c_str(), "Pose"));
-        return rigPose;
+        StoreXrQuaternion(&rigPose.orientation,
+                          DirectX::XMQuaternionRotationRollPitchYaw(dof.data[pitch] * angleToRadian,
+                                                                    dof.data[yaw] * angleToRadian,
+                                                                    -dof.data[roll] * angleToRadian));
     }
 
     void CorManipulator::ApplyManipulation(XrSession session, XrTime time)
