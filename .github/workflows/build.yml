@@ -87,6 +87,6 @@ jobs:
         api-token: ${{secrets.APPVEYOR_API_TOKEN}}
         organization-id: 11e4bc12-01ae-4f8c-8c5f-233747e24ab1
         project-slug: OpenXR-MotionCompensation
-        signing-policy-slug: test-signing
+        signing-policy-slug: release-signing
         github-artifact-id: ${{needs.merge.outputs.artifact-id}}
         wait-for-completion: true
