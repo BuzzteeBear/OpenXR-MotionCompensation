@@ -107,7 +107,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>LAYER_NAME="$(ProjectName)";VERSION_MAJOR="$(VersionMajor)";VERSION_MINOR="$(VersionMinor)";VERSION_PATCH="$(VersionPatch)";VERSION_STRING="$(VersionString)";PLATFORM="$(Platform)";_USE_MATH_DEFINES;_DEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>LAYER_NAME="$(ProjectName)";VERSION_MAJOR="$(VersionMajor)";VERSION_MINOR="$(VersionMinor)";VERSION_PATCH="$(VersionPatch)";VERSION_REVISION="$(VersionRevision)";VERSION_STRING="$(VersionString)";PLATFORM="$(Platform)";_USE_MATH_DEFINES;_DEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -146,14 +146,14 @@
       <Message>Generating layer dispatcher...</Message>
     </PreBuildEvent>
     <ResourceCompile>
-      <PreprocessorDefinitions>SUFFIX="_32.dll";LAYER_NAME="$(ProjectName)";VERSION_MAJOR=$(VersionMajor);VERSION_MINOR=$(VersionMinor);VERSION_PATCH=$(VersionPatch);VERSION_STRING="$(VersionString)";VERSION_STRING="$(VersionString)";PLATFORM="$(Platform)"</PreprocessorDefinitions>
+      <PreprocessorDefinitions>SUFFIX="_32.dll";LAYER_NAME="$(ProjectName)";VERSION_MAJOR=$(VersionMajor);VERSION_MINOR=$(VersionMinor);VERSION_PATCH=$(VersionPatch);VERSION_REVISION=$(VersionRevision);VERSION_STRING="$(VersionString)";VERSION_STRING="$(VersionString)";PLATFORM="$(Platform)"</PreprocessorDefinitions>
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>LAYER_NAME="$(ProjectName)";VERSION_MAJOR="$(VersionMajor)";VERSION_MINOR="$(VersionMinor)";VERSION_PATCH="$(VersionPatch)";VERSION_STRING="$(VersionString)";PLATFORM="$(Platform)";_USE_MATH_DEFINES;_DEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>LAYER_NAME="$(ProjectName)";VERSION_MAJOR="$(VersionMajor)";VERSION_MINOR="$(VersionMinor)";VERSION_PATCH="$(VersionPatch)";VERSION_REVISION="$(VersionRevision)";VERSION_STRING="$(VersionString)";PLATFORM="$(Platform)";_USE_MATH_DEFINES;_DEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -192,7 +192,7 @@
       <Message>Generating layer dispatcher...</Message>
     </PreBuildEvent>
     <ResourceCompile>
-      <PreprocessorDefinitions>SUFFIX=".dll";LAYER_NAME="$(ProjectName)";VERSION_MAJOR=$(VersionMajor);VERSION_MINOR=$(VersionMinor);VERSION_PATCH=$(VersionPatch);VERSION_STRING="$(VersionString)";VERSION_STRING="$(VersionString)";PLATFORM="$(Platform)"</PreprocessorDefinitions>
+      <PreprocessorDefinitions>SUFFIX=".dll";LAYER_NAME="$(ProjectName)";VERSION_MAJOR=$(VersionMajor);VERSION_MINOR=$(VersionMinor);VERSION_PATCH=$(VersionPatch);VERSION_REVISION=$(VersionRevision);VERSION_STRING="$(VersionString)";PLATFORM="$(Platform)"</PreprocessorDefinitions>
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -201,7 +201,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>LAYER_NAME="$(ProjectName)";VERSION_MAJOR="$(VersionMajor)";VERSION_MINOR="$(VersionMinor)";VERSION_PATCH="$(VersionPatch)";VERSION_STRING="$(VersionString)";PLATFORM="$(Platform)";_USE_MATH_DEFINES;DEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>LAYER_NAME="$(ProjectName)";VERSION_MAJOR="$(VersionMajor)";VERSION_MINOR="$(VersionMinor)";VERSION_PATCH="$(VersionPatch)";VERSION_REVISION="$(VersionRevision)";VERSION_STRING="$(VersionString)";PLATFORM="$(Platform)";_USE_MATH_DEFINES;DEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -250,7 +250,7 @@
       </Message>
     </CustomBuildStep>
     <ResourceCompile>
-      <PreprocessorDefinitions>SUFFIX="_32.dll";LAYER_NAME="$(ProjectName)";VERSION_MAJOR=$(VersionMajor);VERSION_MINOR=$(VersionMinor);VERSION_PATCH=$(VersionPatch);VERSION_STRING="$(VersionString)";PLATFORM="$(Platform)"</PreprocessorDefinitions>
+      <PreprocessorDefinitions>SUFFIX="_32.dll";LAYER_NAME="$(ProjectName)";VERSION_MAJOR=$(VersionMajor);VERSION_MINOR=$(VersionMinor);VERSION_PATCH=$(VersionPatch);VERSION_REVISION=$(VersionRevision);VERSION_STRING="$(VersionString)";PLATFORM="$(Platform)"</PreprocessorDefinitions>
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -259,7 +259,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>LAYER_NAME="$(ProjectName)";VERSION_MAJOR="$(VersionMajor)";VERSION_MINOR="$(VersionMinor)";VERSION_PATCH="$(VersionPatch)";VERSION_STRING="$(VersionString)";PLATFORM="$(Platform)";_USE_MATH_DEFINES;DEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>LAYER_NAME="$(ProjectName)";VERSION_MAJOR="$(VersionMajor)";VERSION_MINOR="$(VersionMinor)";VERSION_PATCH="$(VersionPatch)";VERSION_REVISION="$(VersionRevision)";VERSION_STRING="$(VersionString)";PLATFORM="$(Platform)";_USE_MATH_DEFINES;DEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -308,7 +308,7 @@
       </Message>
     </CustomBuildStep>
     <ResourceCompile>
-      <PreprocessorDefinitions>SUFFIX=".dll";LAYER_NAME="$(ProjectName)";VERSION_MAJOR=$(VersionMajor);VERSION_MINOR=$(VersionMinor);VERSION_PATCH=$(VersionPatch);VERSION_STRING="$(VersionString)";VERSION_STRING="$(VersionString)";PLATFORM="$(Platform)"</PreprocessorDefinitions>
+      <PreprocessorDefinitions>SUFFIX=".dll";LAYER_NAME="$(ProjectName)";VERSION_MAJOR=$(VersionMajor);VERSION_MINOR=$(VersionMinor);VERSION_PATCH=$(VersionPatch);VERSION_REVISION=$(VersionRevision);VERSION_STRING="$(VersionString)";PLATFORM="$(Platform)"</PreprocessorDefinitions>
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -359,6 +359,7 @@
     <None Include="framework\dispatch_generator.py" />
     <None Include="framework\layer_apis.py" />
     <None Include="packages.config" />
+    <None Include="Resources.rc2" />
     <None Include="XR_APILAYER_NOVENDOR_motion_compensation_32.json">
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</DeploymentContent>

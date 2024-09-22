@@ -2,7 +2,7 @@
 
 **DISCLAIMER: This software is distributed as-is, without any warranties or conditions of any kind. Use at your own risks!**
 
-Version: 0.3.7
+Version: CURRENT_DEV_BUILD
 
 **This document contains instructions on how to use OpenXR motion compensation [API layer](https://www.khronos.org/registry/OpenXR/specs/1.0/html/xrspec.html#api-layers). A developers manual can be found [here](https://github.com/BuzzteeBear/OpenXR-MotionCompensation/blob/main/docs/Developers_Manual.md)**
 

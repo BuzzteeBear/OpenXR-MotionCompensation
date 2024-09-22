@@ -5,13 +5,15 @@
     <VersionString>beta</VersionString>
     <VersionMajor>0</VersionMajor>
     <VersionMinor>3</VersionMinor>
-    <VersionPatch>7</VersionPatch>
+    <VersionPatch>8</VersionPatch>
+    <VersionRevision>0</VersionRevision>
   </PropertyGroup>
   <PropertyGroup />
   <ItemDefinitionGroup />
   <ItemGroup>
     <BuildMacro Include="VersionString">
       <Value>$(VersionString)</Value>
+      <EnvironmentVariable>true</EnvironmentVariable>
     </BuildMacro>
     <BuildMacro Include="VersionMajor">
       <Value>$(VersionMajor)</Value>
@@ -21,6 +23,9 @@
     </BuildMacro>
     <BuildMacro Include="VersionPatch">
       <Value>$(VersionPatch)</Value>
+    </BuildMacro>
+    <BuildMacro Include="VersionRevision">
+      <Value>$(VersionRevision)</Value>
     </BuildMacro>
   </ItemGroup>
 </Project>

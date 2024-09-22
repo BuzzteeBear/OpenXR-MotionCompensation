@@ -3,7 +3,7 @@
 // Version
 //
 
-#define FILE_VERSION VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, 0
+#define FILE_VERSION VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_REVISION
 #define STRINGIZER(string) #string
 #define STRING_VERSION(major,minor,build,revision) STRINGIZER(major) "." STRINGIZER(minor) "." STRINGIZER(build) "." STRINGIZER(revision)
 #define FILE_DESCRIPTION(platform) "OpenXR-MotionCompensation DLL (" STRINGIZER(platform) ")"
@@ -28,12 +28,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "BuzzteeBear"
             VALUE "FileDescription", FILE_DESCRIPTION(PLATFORM)
-            VALUE "FileVersion", STRING_VERSION(VERSION_MAJOR,VERSION_MINOR,VERSION_PATCH,0)
+            VALUE "FileVersion", STRING_VERSION(VERSION_MAJOR,VERSION_MINOR,VERSION_PATCH,VERSION_REVISION)
             VALUE "InternalName", NAME(LAYER_NAME,SUFFIX)
             VALUE "LegalCopyright", "© Sebastian Veith"
             VALUE "OriginalFilename", NAME(LAYER_NAME,SUFFIX)
             VALUE "ProductName", "OpenXR-MotionCompensation"
-            VALUE "ProductVersion", STRING_VERSION(VERSION_MAJOR,VERSION_MINOR,VERSION_PATCH,0)
+            VALUE "ProductVersion", STRING_VERSION(VERSION_MAJOR,VERSION_MINOR,VERSION_PATCH,VERSION_REVISION)
         END
     END
     BLOCK "VarFileInfo"

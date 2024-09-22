@@ -2,9 +2,8 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 ; make sure to adapt this path to your system before building the installer
-#define SolutionDir "P:\Development\OpenXR-MotionCompensation"
 #define AppName "OpenXR-MotionCompensation"
-#define AppVersion "0.3.7"
+#define AppVersion GetFileVersion("..\bin\x64\Release\XR_APILAYER_NOVENDOR_motion_compensation.dll")
 #define AppPublisher "oxrmc@mailbox.org"
 #define AppURL "https://github.com/BuzzteeBear/OpenXR-MotionCompensation"
 #define AppId "{A6E4E3AB-454E-4B79-BDCD-A11B4E1AAF4D}"
@@ -23,13 +22,13 @@ DefaultDirName={commonpf}\{#AppName}
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 DisableDirPage=auto
-LicenseFile={#SolutionDir}\installer\Disclaimer.txt
-OutputDir={#SolutionDir}\bin\Installer
+LicenseFile={#SourcePath}\..\installer\Disclaimer.txt
+OutputDir={#SourcePath}\..\bin\Installer
 OutputBaseFilename=Install_{#AppName}_{#AppVersion}
-SetupIconFile={#SolutionDir}\installer\{#AppName}.ico
-UninstallDisplayIcon={#SolutionDir}\installer\{#AppName}.ico 
-ArchitecturesAllowed=x64
-ArchitecturesInstallIn64BitMode=x64  
+SetupIconFile={#SourcePath}\..\installer\{#AppName}.ico
+UninstallDisplayIcon={#SourcePath}\..\installer\{#AppName}.ico 
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible  
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
@@ -41,16 +40,16 @@ UsePreviousTasks=yes
 Name: "x86"; Description: "{cm:x86Description}"; Flags: unchecked
 
 [Files]
-Source: "{#SolutionDir}\configuration\{#AppName}.ini"; DestDir: "{localappdata}\{#AppName}"; Flags: onlyifdoesntexist uninsneveruninstall
-Source: "{#SolutionDir}\changelog.txt"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#SolutionDir}\docs\Readme.html"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#SolutionDir}\docs\Readme.html"; DestDir: "{localappdata}\{#AppName}"; Flags: ignoreversion
-Source: "{#SolutionDir}\scripts\Trace_{#AppName}.wprp"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#SolutionDir}\bin\x64\Release\XR_APILAYER_NOVENDOR_motion_compensation.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#SolutionDir}\XR_APILAYER_NOVENDOR_motion_compensation\XR_APILAYER_NOVENDOR_motion_compensation.json"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#SolutionDir}\bin\Win32\Release\XR_APILAYER_NOVENDOR_motion_compensation_32.dll"; DestDir: "{app}"; Flags: ignoreversion; Tasks: x86
-Source: "{#SolutionDir}\XR_APILAYER_NOVENDOR_motion_compensation\XR_APILAYER_NOVENDOR_motion_compensation_32.json"; DestDir: "{app}"; Flags: ignoreversion; Tasks: x86
-Source: "{#SolutionDir}\bin\x64\Release\MmfReader\app.publish\MmfReader.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourcePath}\..\configuration\{#AppName}.ini"; DestDir: "{localappdata}\{#AppName}"; Flags: onlyifdoesntexist uninsneveruninstall
+Source: "{#SourcePath}\..\changelog.txt"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourcePath}\..\docs\Readme.html"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourcePath}\..\docs\Readme.html"; DestDir: "{localappdata}\{#AppName}"; Flags: ignoreversion
+Source: "{#SourcePath}\..\scripts\Trace_{#AppName}.wprp"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourcePath}\..\bin\x64\Release\XR_APILAYER_NOVENDOR_motion_compensation.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourcePath}\..\XR_APILAYER_NOVENDOR_motion_compensation\XR_APILAYER_NOVENDOR_motion_compensation.json"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourcePath}\..\bin\Win32\Release\XR_APILAYER_NOVENDOR_motion_compensation_32.dll"; DestDir: "{app}"; Flags: ignoreversion; Tasks: x86
+Source: "{#SourcePath}\..\XR_APILAYER_NOVENDOR_motion_compensation\XR_APILAYER_NOVENDOR_motion_compensation_32.json"; DestDir: "{app}"; Flags: ignoreversion; Tasks: x86
+Source: "{#SourcePath}\..\bin\x64\Release\MmfReader\app.publish\MmfReader.exe"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\OXRMC MMF Reader"; Filename: "{app}\MmfReader.exe"; WorkingDir: "{app}"
@@ -471,6 +470,34 @@ begin
     Log('Could not read from ' + RootKeyString + '\' + SubKeyName + '\' + ValueName + '.' );
 end;
 
+function FileReplaceString(const FileName, SearchString, ReplaceString: string):boolean;
+var
+  MyFile : TStrings;
+  MyText : string;
+begin
+  MyFile := TStringList.Create;
+
+  try
+    result := true;
+
+    try
+      MyFile.LoadFromFile(FileName);
+      MyText := MyFile.Text;
+
+      { Only save if text has been changed. }
+      if StringChangeEx(MyText, SearchString, ReplaceString, True) > 0 then
+      begin;
+        MyFile.Text := MyText;
+        MyFile.SaveToFile(FileName);
+      end;
+    except
+      result := false;
+    end;
+  finally
+    MyFile.Free;
+  end;
+end;
+
 procedure OpenUserGuide();
 var
   ErrorCode: Integer;
@@ -503,6 +530,8 @@ begin
     UninstallSubKeyName  := 'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{#AppId}_is1';
     AppendStringToRegValue(HKLM, UninstallSubKeyName, 'UninstallString', ' /log');
     AppendStringToRegValue(HKLM, UninstallSubKeyName, 'QuietUninstallString', ' /log');
+    FileReplaceString(ExpandConstant('{app}\Readme.html'),'CURRENT_DEV_BUILD','{#AppVersion}');
+    FileReplaceString(ExpandConstant('{localappdata}\{#AppName}\Readme.html'),'CURRENT_DEV_BUILD','{#AppVersion}');
     OpenUserGuide();
   end;
 end;
