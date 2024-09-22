@@ -44,6 +44,9 @@ namespace openxr_api_layer::graphics
     constexpr XrVector3f Magenta{1.f, 0.f, 1.f};
     constexpr XrVector3f DarkMagenta{0.25f, 0.f, 0.25f};
     constexpr XrVector3f LightMagenta{1.f, 0.15f, 1.f};
+    constexpr XrVector3f Grey{0.25f, 0.25f, 0.25f};
+    constexpr XrVector3f DarkGrey{0.0f, 0.0f, 0.0f};
+    constexpr XrVector3f LightGrey{0.75f, 0.75f, 0.75f};
 
     struct SwapchainImages
     {
@@ -66,6 +69,7 @@ namespace openxr_api_layer::graphics
         void ReleaseAllSwapChainImages();
         void SetMarkerSize();
         bool ToggleOverlay();
+        bool TogglePassthrough();
         void DrawOverlay(const XrPosef& referencePose,
                          const XrPosef& delta,
                          bool mcActivated,
@@ -84,7 +88,7 @@ namespace openxr_api_layer::graphics
                            const XrPosef& trackerPose,
                            bool mcActivated,
                            ICompositionFramework* composition);
-        static std::vector<SimpleMeshVertex> CreateMarker(bool reference);
+        static std::vector<SimpleMeshVertex> CreateMarker(bool reference, bool avoidMagenta);
         static std::vector<SimpleMeshVertex> CreateMarkerMesh(const XrVector3f& top,
                                                               const XrVector3f& innerMiddle,
                                                               const XrVector3f& outerMiddle,
@@ -93,9 +97,9 @@ namespace openxr_api_layer::graphics
                                                               const XrVector3f& pureColor,
                                                               const XrVector3f& lightColor);
 
-        bool m_OverlayActive{false};
+        bool m_OverlayActive{false}, m_PassthroughActive{false};
         XrVector3f m_MarkerSize{0.1f, 0.1f, 0.1f};
-        std::shared_ptr<ISimpleMesh> m_MeshRGB{}, m_MeshCMY{};
+        std::shared_ptr<ISimpleMesh> m_MeshRGB{}, m_MeshCMY{}, m_MeshCGY{};
         std::map<XrSwapchain, SwapchainState> m_Swapchains{};
         std::vector<std::pair<std::shared_ptr<IGraphicsTexture>, std::shared_ptr<IGraphicsTexture>>> m_Textures{};
         std::mutex m_DrawMutex;

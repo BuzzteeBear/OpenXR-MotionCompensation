@@ -202,6 +202,7 @@ The key <code>vertical_factor</code> is applied to translational filter strength
 <li><code>offset_forward</code>, <code>offset_back</code>, <code>offset_up</code>, <code>offset_down</code>, <code>offset_right</code>, <code>offset_left</code> - move center of rotation (cor) for a virtual tracker or neutral reference position for physical tracker. The directions are aligned with the forward vector set with the <code>calibrate</code> command. For virtual trackers changes made during runtime may be saved by using a save command (see below).</li>
 <li><code>rotate_right</code>, <code>rotate_left</code> - rotate the aforementioned forward vector around the gravitational (yaw-)axis. Note that these changes cannot be saved. Therefore changing the offset position AFTER rotating manually and saving the offset values will result in the cor being a different offset position after reloading those saved values.</li>
 <li><code>toggle_overlay</code> - activate/deactivate graphical overlay displaying the reference tracker position(s) (See <a href="#graphical-overlay">Graphical overlay</a> for details).</li>
+<li><code>toggle_overlay_passthrough</code> - activate/deactivate chroma keyed passthrough mode for graphical overlay (See <a href="#graphical-overlay">Graphical overlay</a> for details).</li>
 <li><code>toggle_cache</code> - change between calculated and cached eye positions</li>
 <li><code>fast_modifier</code> - press key(s) in addition to a filter or cor manipulation shortcut to increase amount of change per keypress/repetition. Filter modification will be sped up by factor 5 while cor manipulation will move/rotate 10 instead of 1 cm/degree</li>
 <li><code>save_config</code> -  write current filter strength and cor offsets to global config file</li>
@@ -304,6 +305,10 @@ The key <code>vertical_factor</code> is applied to translational filter strength
 </ul>
 </li>
 </ul>
+<h4 id="chroma-keyed-passthrough">Chroma Keyed Passthrough</h4>
+<p>You can use the <code>toggle_overlay_passthrough</code> shortcut to activate chroma keyed passthrough mode for the overlay. In this mode the marker(s) are displayed on a magenta colored canvas as background instead of the rendered game content. This allows you see the markers' positioning in the real world if your vr hmd (and runtime) support chroma keyed passthrough.
+This may be helpful when setting up/dialing in the cor position, or to compare tracking data coming from a motion controller or vive tracker with it's actual movement.
+Note that while th overlay is in passthrough mode, the magenta colored arrow is displayed in grey instead, to keep it from becoming (partially) transparent.</p>
 <h3 id="connection-loss">Connection Loss</h3>
 <p>OXRMC can detect whether a reference tracker isn't available anymore if:</p>
 <ul>

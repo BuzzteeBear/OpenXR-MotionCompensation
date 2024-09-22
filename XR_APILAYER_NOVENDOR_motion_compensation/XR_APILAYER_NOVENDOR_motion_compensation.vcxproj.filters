@@ -279,6 +279,12 @@
     <Media Include="sounds\stabilizer_on.wav">
       <Filter>Sounds</Filter>
     </Media>
+    <Media Include="sounds\passthrough_off.wav">
+      <Filter>Sounds</Filter>
+    </Media>
+    <Media Include="sounds\passthrough_on.wav">
+      <Filter>Sounds</Filter>
+    </Media>
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="$(MSBuildThisFileDirectory)..\..\natvis\wil.natvis" />

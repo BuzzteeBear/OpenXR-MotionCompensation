@@ -45,6 +45,7 @@ namespace openxr_api_layer::graphics
         m_Swapchains.clear();
         m_MeshRGB.reset();
         m_MeshCMY.reset();
+        m_MeshCGY.reset();
         m_InitializedSessions.erase(session);
 
         TraceLoggingWriteStop(local, "Overlay::DestroySession");
@@ -338,7 +339,7 @@ namespace openxr_api_layer::graphics
             TraceLoggingWriteStop(local,
                                   "Overlay::ToggleOverlay",
                                   TLArg(false, "Success"),
-                                  TLArg(m_OverlayActive, "OverlayACtive"));
+                                  TLArg(m_OverlayActive, "OverlayActive"));
             return false;
         }
         m_OverlayActive = !m_OverlayActive;
@@ -347,7 +348,33 @@ namespace openxr_api_layer::graphics
         TraceLoggingWriteStop(local,
                               "Overlay::ToggleOverlay",
                               TLArg(true, "Success"),
-                              TLArg(m_OverlayActive, "OverlayACtive"));
+                              TLArg(m_OverlayActive, "OverlayActive"));
+        return true;
+    }
+
+    bool Overlay::TogglePassthrough()
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "Overlay::TogglePassthrough");
+
+        if (!m_Initialized)
+        {
+            ErrorLog("%s: graphical overlay is not properly initialized", __FUNCTION__);
+            output::AudioOut::Execute(output::Event::Error);
+
+            TraceLoggingWriteStop(local,
+                                  "Overlay::TogglePassthrough",
+                                  TLArg(false, "Success"),
+                                  TLArg(m_PassthroughActive, "PassthroughActive"));
+            return false;
+        }
+        m_PassthroughActive = !m_PassthroughActive;
+        output::AudioOut::Execute(m_PassthroughActive ? output::Event::PassthroughOn : output::Event::PassthroughOff);
+
+        TraceLoggingWriteStop(local,
+                              "Overlay::TogglePassthrough",
+                              TLArg(true, "Success"),
+                              TLArg(m_PassthroughActive, "PassthroughActive"));
         return true;
     }
 
@@ -394,19 +421,22 @@ namespace openxr_api_layer::graphics
 
         if (!m_InitializedSessions.contains(session))
         {
-            std::vector<SimpleMeshVertex> vertices = CreateMarker(true);
+            std::vector<SimpleMeshVertex> vertices = CreateMarker(true, false);
             std::vector<uint16_t> indices;
             for (uint16_t i = 0; i < static_cast<uint16_t>(vertices.size()); i++)
             {
                 indices.push_back(i);
             }
             m_MeshRGB = composition->getCompositionDevice()->createSimpleMesh(vertices, indices, "RGB Mesh");
-            vertices = CreateMarker(false);
+            vertices = CreateMarker(false, false);
             m_MeshCMY = composition->getCompositionDevice()->createSimpleMesh(vertices, indices, "CMY Mesh");
+            vertices = CreateMarker(false, true);
+            m_MeshCGY = composition->getCompositionDevice()->createSimpleMesh(vertices, indices, "CGY Mesh");
             TraceLoggingWriteTagged(local,
                                     "Overlay::DrawOverlay",
                                     TLPArg(m_MeshRGB.get(), "MeshRGB"),
-                                    TLPArg(m_MeshCMY.get(), "MeshCMY"));
+                                    TLPArg(m_MeshCMY.get(), "MeshCMY"),
+                                    TLPArg(m_MeshCGY.get(), "MeshCGY"));
             m_InitializedSessions.insert(session);
             DebugLog("initialized marker meshes");
         }
@@ -614,6 +644,13 @@ namespace openxr_api_layer::graphics
         // clear depth buffer
         context->ClearDepthStencilView(depthStencilView.Get(), D3D11_CLEAR_DEPTH, 1.f, 0);
 
+        if (m_PassthroughActive)
+        {
+            // fill with magenta for chroma keyed passthrough
+            constexpr float background[4] = {1.0f, 0.0f, 1.0f, 1.0f};
+            context->ClearRenderTargetView(renderTargetView.Get(), background);
+        }
+
         // take over view projection
         xr::math::ViewProjection viewProjection{};
         viewProjection.Pose = view.pose;
@@ -647,13 +684,13 @@ namespace openxr_api_layer::graphics
         // draw tracker marker
         if (mcActivated)
         {
-            graphicsDevice->draw(m_MeshCMY, trackerPose, m_MarkerSize);
+            graphicsDevice->draw(m_PassthroughActive? m_MeshCGY : m_MeshCMY, trackerPose, m_MarkerSize);
         }
 
         context->Flush();
     }
 
-    std::vector<SimpleMeshVertex> Overlay::CreateMarker(bool reference)
+    std::vector<SimpleMeshVertex> Overlay::CreateMarker(bool reference, bool avoidMagenta)
     {
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "Overlay::CreateMarker", TLArg(reference, "Refernace"));
@@ -675,9 +712,15 @@ namespace openxr_api_layer::graphics
                                                                   {-point65, point05, 0.f},
                                                                   {-point6, point1, 0.f},
                                                                   {-bottom, 0.f, 0.f},
-                                                                  reference ? DarkRed : DarkMagenta,
-                                                                  reference ? Red : Magenta,
-                                                                  reference ? LightRed : LightMagenta);
+                                                                  reference      ? DarkRed
+                                                                  : avoidMagenta ? DarkGrey
+                                                                                 : DarkMagenta,
+                                                                  reference      ? Red
+                                                                  : avoidMagenta ? Grey
+                                                                                 : Magenta,
+                                                                  reference      ? LightRed
+                                                                  : avoidMagenta ? LightGrey
+                                                                                 : LightMagenta);
         // up
         std::vector<SimpleMeshVertex> top = CreateMarkerMesh({0.f, tip, 0.f},
                                                              {0.f, point65, point05},

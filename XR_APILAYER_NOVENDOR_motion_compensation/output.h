@@ -40,7 +40,9 @@ namespace output
         RecorderOn,
         RecorderOff,
         StabilizerOn,
-        StabilizerOff
+        StabilizerOff,
+        PassthroughOn,
+        PassthroughOff
     };
 
     class AudioOut
@@ -83,7 +85,9 @@ namespace output
                                                                   {Event::RecorderOn, RECORDER_ON_WAV},
                                                                   {Event::RecorderOff, RECORDER_OFF_WAV},
                                                                   {Event::StabilizerOn, STABILIZER_ON_WAV},
-                                                                  {Event::StabilizerOff, STABILIZER_OFF_WAV}};
+                                                                  {Event::StabilizerOff, STABILIZER_OFF_WAV},
+                                                                  {Event::PassthroughOn, PASSTHROUGH_ON_WAV},
+                                                                  {Event::PassthroughOff, PASSTHROUGH_OFF_WAV}};
     };
 
     constexpr uint32_t m_RecorderMax{36000}; // max 10 min @ 100 frames/s

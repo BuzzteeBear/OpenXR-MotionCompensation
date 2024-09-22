@@ -78,6 +78,7 @@ enum class Cfg
     KeyRotLeft,
     KeyFastModifier,
     KeyOverlay,
+    KeyPassthrough,
     KeyCache,
     KeyModifier,
     KeySaveConfig,
@@ -209,6 +210,7 @@ class ConfigManager
         {Cfg::KeyFastModifier, {"shortcuts", "fast_modifier"}},
 
         {Cfg::KeyOverlay, {"shortcuts", "toggle_overlay"}},
+        {Cfg::KeyPassthrough, {"shortcuts", "toggle_overlay_passthrough"}},
 
         {Cfg::KeyCache, {"shortcuts", "toggle_cache"}},
 

@@ -139,6 +139,10 @@ STABILIZER_ON_WAV       WAVE                    "sounds\\stabilizer_on.wav"
 
 STABILIZER_OFF_WAV      WAVE                    "sounds\\stabilizer_off.wav"
 
+PASSTHROUGH_ON_WAV      WAVE                    "sounds\\passthrough_on.wav"
+
+PASSTHROUGH_OFF_WAV     WAVE                    "sounds\\passthrough_off.wav"
+
 #endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////
 
