@@ -1678,6 +1678,14 @@ namespace openxr_api_layer
                 resetLayers.push_back(chainFrameEndInfo.layers[i]);
             }
         }
+        if (m_Tracker->m_Calibrated)
+        {
+            if (!m_SuppressInteraction)
+            {
+                m_Tracker->ApplyCorManipulation(session, time);
+            }
+        }
+
         m_Input->HandleKeyboardInput(time);
 
         XrFrameEndInfo resetFrameEndInfo{chainFrameEndInfo.type,
