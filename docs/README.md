@@ -40,11 +40,11 @@ A few hints regarding the installation process:
 - If something goes wrong on installation and you don't know what or why, you can check the log file `Setup Log <yyyy-mm-dd xxx>.txt` that is created in the `%TEMP%` folder.
 
 ### Conflict with other OpenXR API layers
-There may be issues with other OpenXR API layers that are installed on your system. For the most part they can be solved by using the correct order of installation (because that implicitly determines the order in which the layers are loaded). You can use the folowing tool (HKLM... variant) to examine (and potentially change) layer order and/or deactivate some layers for debugging: [OpenXR-API-Layers-GUI](https://github.com/fredemmott/OpenXR-API-Layers-GUI/releases/latest)  
+There may be issues with other OpenXR API layers that are installed on your system. For the most part they can be solved by using the correct order of installation (because that implicitly determines the order in which the layers are loaded). You can use the folowing tool to examine (and potentially change) layer order and/or deactivate some layers for debugging: [OpenXR-API-Layers-GUI](https://github.com/fredemmott/OpenXR-API-Layers-GUI/releases/latest)  
 According to user feedback following constraints seem to be working:
 - **XRNeckSaver** needs to be installed before OXRMC.
 - **OpenKneeBoard** needs to be installed before OXRMC. 
-  - but it is (or at least was at some point) putting its registry key in `...HKEY_CURRENT_USER/...` while OXRMC uses `...HKEY_LOCAL_MACHINE/...` . So if you're having trouble changing the loading order, try moving the key for OpenKneeboard from `Computer\HKEY_CURRENT_USER\SOFTWARE\Khronos\OpenXR\1\ApiLayers\Implicit` to `Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\OpenXR\1\ApiLayers\Implicit`.
+  - If you have an extremely old version of OpenKneeboard's registry value in `Computer\HKEY_CURRENT_USER\SOFTWARE\Khronos\OpenXR\1\ApiLayers\Implicit` instead of `...HKEY_LOCAL_MACHINE...`, use an up-to-date version instead, and remove the obsolete entry from `...HKEY_CURRENT_USER...\Implicit` with regedit or the OpenXR API layers GUI.
 - if you install one of the above after OXRMC, you can just run the OXRMC installer afterwards to modify loading order.
 - **OpenXR-Eye-Trackers**, **OpenXR-Quad-Views-Foveated**, **OpenXR-Varjo-Foveated** and **OpenXR-Toolkit** need to be installed/loaded after OXRMC, but the installer usually should ensure that automatically.
 
