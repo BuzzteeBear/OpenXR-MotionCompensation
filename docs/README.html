@@ -73,13 +73,13 @@ A few hints regarding the installation process:</p>
 <li>If something goes wrong on installation and you don't know what or why, you can check the log file <code>Setup Log &lt;yyyy-mm-dd xxx&gt;.txt</code> that is created in the <code>%TEMP%</code> folder.</li>
 </ul>
 <h3 id="conflict-with-other-openxr-api-layers">Conflict with other OpenXR API layers</h3>
-<p>There may be issues with other OpenXR API layers that are installed on your system. For the most part they can be solved by using the correct order of installation (because that implicitly determines the order in which the layers are loaded). You can use the folowing tool (HKLM... variant) to examine (and potentially change) layer order and/or deactivate some layers for debugging: <a href="https://github.com/fredemmott/OpenXR-API-Layers-GUI/releases/latest">OpenXR-API-Layers-GUI</a><br />
+<p>There may be issues with other OpenXR API layers that are installed on your system. For the most part they can be solved by using the correct order of installation (because that implicitly determines the order in which the layers are loaded). You can use the folowing tool to examine (and potentially change) layer order and/or deactivate some layers for debugging: <a href="https://github.com/fredemmott/OpenXR-API-Layers-GUI/releases/latest">OpenXR-API-Layers-GUI</a><br />
 According to user feedback following constraints seem to be working:</p>
 <ul>
 <li><strong>XRNeckSaver</strong> needs to be installed before OXRMC.</li>
 <li><strong>OpenKneeBoard</strong> needs to be installed before OXRMC.
 <ul>
-<li>but it is (or at least was at some point) putting its registry key in <code>...HKEY_CURRENT_USER/...</code> while OXRMC uses <code>...HKEY_LOCAL_MACHINE/...</code> . So if you're having trouble changing the loading order, try moving the key for OpenKneeboard from <code>Computer\HKEY_CURRENT_USER\SOFTWARE\Khronos\OpenXR\1\ApiLayers\Implicit</code> to <code>Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\OpenXR\1\ApiLayers\Implicit</code>.</li>
+<li>If you have an extremely old version of OpenKneeboard's registry value in <code>Computer\HKEY_CURRENT_USER\SOFTWARE\Khronos\OpenXR\1\ApiLayers\Implicit</code> instead of <code>...HKEY_LOCAL_MACHINE...</code>code>, use an up-to-date version instead, and remove the obsolete entry from <code>...HKEY_CURRENT_USER...\Implicit</code> with regedit or the OpenXR API layers GUI.</li>
 </ul>
 </li>
 <li>if you install one of the above after OXRMC, you can just run the OXRMC installer afterwards to modify loading order.</li>
