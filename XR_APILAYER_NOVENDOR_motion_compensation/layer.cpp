@@ -1510,19 +1510,17 @@ namespace openxr_api_layer
             m_Overlay->ReleaseAllSwapChainImages();
         }
 
+        if (!m_SuppressInteraction && m_Tracker->m_Calibrated)
+        {
+            m_Tracker->ApplyCorManipulation(session, time);
+        }
+
         if (!m_Activated)
         {
-            if (m_Tracker->m_Calibrated)
+            if (m_Tracker->m_Calibrated && m_RecorderActive)
             {
-                if (m_RecorderActive)
-                {
-                    // request pose delta to force recording
-                    m_Tracker->GetPoseDelta(delta, session, time);
-                }
-                if (!m_SuppressInteraction)
-                {
-                    m_Tracker->ApplyCorManipulation(session, time);
-                }
+                // request pose delta to force recording
+                m_Tracker->GetPoseDelta(delta, session, time);
             }
             m_Input->HandleKeyboardInput(time);
             if (m_AutoActivator)
@@ -1678,14 +1676,6 @@ namespace openxr_api_layer
                 resetLayers.push_back(chainFrameEndInfo.layers[i]);
             }
         }
-        if (m_Tracker->m_Calibrated)
-        {
-            if (!m_SuppressInteraction)
-            {
-                m_Tracker->ApplyCorManipulation(session, time);
-            }
-        }
-
         m_Input->HandleKeyboardInput(time);
 
         XrFrameEndInfo resetFrameEndInfo{chainFrameEndInfo.type,
