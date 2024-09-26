@@ -1,5 +1,22 @@
 OpenXR-MotionCompensation Changelog
 
+Version 0.3.8.0
+	
+	Overlay:
+	- added chroma keyed passthrough mode for overlay (usable in e.g. Virtual Desktop)
+	
+	FlyPT Mover:
+	- fixed direction of linear mc when motion rig is rotated (was global, now locally aligned with rig orientaion)
+	
+	Miscellaneous:
+	- allow COR manipulation while mc is activated
+	- added version info to DLLs (and switched to 4 numbers in versioning scheme)
+	
+	Bugfixes:
+	- fixed timeout for tracker connection loss in default (non-legacy) mode
+	- fixed handling of action sync for games supporting controller interaction (caused crash to desktop in MSFS and DCS with input stabilizer active)
+	- improved mutlithreading stability
+
 Version 0.3.7
 	
 	Yaw Game Engine:
