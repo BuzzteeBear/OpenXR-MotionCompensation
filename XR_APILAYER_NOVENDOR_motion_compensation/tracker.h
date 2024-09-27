@@ -26,7 +26,7 @@ namespace tracker
         virtual void SetReferencePose(const XrPosef& pose);
         virtual bool GetPose(XrPosef& trackerPose, XrSession session, XrTime time) = 0;
         virtual bool GetControllerPose(XrPosef& trackerPose, XrSession session, XrTime time);
-        static XrVector3f GetForwardVector(const XrQuaternionf& quaternion, bool inverted = false);
+        static XrVector3f GetForwardVector(const XrQuaternionf& quaternion);
         static XrQuaternionf GetYawRotation(const XrVector3f& forward, float yawAdjustment);
         static float GetYawAngle(const XrVector3f& forward);
 
@@ -82,8 +82,8 @@ namespace tracker
         bool CalibrateForward(XrSession session, XrTime time, float yawOffset);
         void SetForwardRotation(const XrPosef& pose) const;
 
-        XrVector3f m_Forward{0.f, 0.f, 1.f};
-        XrVector3f m_Right{-1.f, 0.f, 0.f};
+        XrVector3f m_Forward{0.f, 0.f, -1.f};
+        XrVector3f m_Right{1.f, 0.f, 0.f};
         XrVector3f m_Up{0.f, 1.f, 0.f};
         XrPosef m_ForwardPose{xr::math::Pose::Identity()};
         std::vector<utility::DofValue> m_RelevantValues{};

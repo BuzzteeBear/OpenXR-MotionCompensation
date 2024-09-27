@@ -408,14 +408,14 @@ namespace input
         if (Direction::RotLeft != dir && Direction::RotRight != dir)
         {
             const float amount = fast ? 0.1f : 0.01f;
-            const XrVector3f direction{Direction::Left == dir    ? amount
-                                       : Direction::Right == dir ? -amount
+            const XrVector3f direction{Direction::Left == dir    ? -amount
+                                       : Direction::Right == dir ? amount
                                                                  : 0.0f,
                                        Direction::Up == dir     ? amount
                                        : Direction::Down == dir ? -amount
                                                                 : 0.0f,
-                                       Direction::Fwd == dir    ? amount
-                                       : Direction::Back == dir ? -amount
+                                       Direction::Fwd == dir    ? -amount
+                                       : Direction::Back == dir ? amount
                                                                 : 0.0f};
             success = m_Layer->m_Tracker->ChangeOffset(direction);
         }

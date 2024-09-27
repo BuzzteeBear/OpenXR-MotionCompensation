@@ -208,16 +208,15 @@ namespace tracker
         return false;
     }
 
-    XrVector3f ControllerBase::GetForwardVector(const XrQuaternionf& quaternion, bool inverted)
+    XrVector3f ControllerBase::GetForwardVector(const XrQuaternionf& quaternion)
     {
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local,
                                "ControllerBase::GetForwardVector",
-                               TLArg(xr::ToString(quaternion).c_str(), "Quaternion"),
-                               TLArg(inverted, "Inverted"));
+                               TLArg(xr::ToString(quaternion).c_str(), "Quaternion"));
         XrVector3f forward;
         StoreXrVector3(&forward,
-                       DirectX::XMVector3Rotate(LoadXrVector3(XrVector3f{0.0f, 0.0f, inverted ? 1.0f : -1.0f}),
+                       DirectX::XMVector3Rotate(LoadXrVector3(XrVector3f{0.0f, 0.0f, 1.0f}),
                                                 LoadXrQuaternion(quaternion)));
         forward.y = 0;
         forward = Normalize(forward);
@@ -499,7 +498,7 @@ namespace tracker
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local,
                                "TrackerBase::ChangeOffset",
-                               TLArg(xr::ToString(modification).c_str(), "Modifiaction"),
+                               TLArg(xr::ToString(modification).c_str(), "Modification"),
                                TLArg(xr::ToString(this->m_ReferencePose).c_str(), "ReferencePose"));
         if (!m_Calibrated)
         {
@@ -999,7 +998,7 @@ namespace tracker
 
                 // calculate and apply translational offset
                 const XrVector3f offset =
-                    m_OffsetForward * m_Forward + m_OffsetRight * m_Right + XrVector3f{0.0f, -m_OffsetDown, 0.0f};
+                    -m_OffsetForward * m_Forward - m_OffsetRight * m_Right + XrVector3f{0.0f, -m_OffsetDown, 0.0f};
                 TraceLoggingWriteTagged(local,
                                         "VirtualTracker::ResetReferencePose",
                                         TLArg(xr::ToString(offset).c_str(), "Offset"));
@@ -1067,9 +1066,9 @@ namespace tracker
         const XrVector3f relativeToHmd{cosf(m_OffsetYaw) * modification.x + sinf(m_OffsetYaw) * modification.z,
                                        modification.y,
                                        cosf(m_OffsetYaw) * modification.z - sinf(m_OffsetYaw) * modification.x};
-        m_OffsetForward += relativeToHmd.z;
+        m_OffsetForward -= relativeToHmd.z;
         m_OffsetDown -= relativeToHmd.y;
-        m_OffsetRight -= relativeToHmd.x;
+        m_OffsetRight += relativeToHmd.x;
         GetConfig()->SetValue(Cfg::TrackerOffsetForward, m_OffsetForward * 100.0f);
         GetConfig()->SetValue(Cfg::TrackerOffsetDown, m_OffsetDown * 100.0f);
         GetConfig()->SetValue(Cfg::TrackerOffsetRight, m_OffsetRight * 100.0f);
@@ -1286,9 +1285,9 @@ namespace tracker
 
         XrPosef rigPose{Pose::Identity()};
         StoreXrQuaternion(&rigPose.orientation,
-                          DirectX::XMQuaternionRotationRollPitchYaw(dof.data[pitch] * angleToRadian,
+                          DirectX::XMQuaternionRotationRollPitchYaw(-dof.data[pitch] * angleToRadian,
                                                                     -dof.data[yaw] * angleToRadian,
-                                                                    -dof.data[roll] * angleToRadian));
+                                                                    dof.data[roll] * angleToRadian));
 
         TraceLoggingWriteStop(local, "YawTracker::DataToPose", TLArg(xr::ToString(rigPose).c_str(), "Pose"));
         return rigPose;
@@ -1344,24 +1343,24 @@ namespace tracker
         // helper to rotate translation vector into 'local rig space'
         StoreXrVector3(
             &rigPose.position,
-            DirectX::XMVector3Rotate({dof.data[sway] / -1000.f, dof.data[heave] / 1000.f, dof.data[surge] / 1000.f},
+            DirectX::XMVector3Rotate({dof.data[sway] / 1000.f, dof.data[heave] / 1000.f, dof.data[surge] / -1000.f},
                                      LoadXrQuaternion(rigPose.orientation)));
     }
     
     void FlyPtTracker::ExtractRotationQuaternion(const Dof& dof, XrPosef& rigPose)
     {
         StoreXrQuaternion(&rigPose.orientation,
-                          DirectX::XMQuaternionRotationRollPitchYaw(-dof.data[pitch] * angleToRadian,
+                          DirectX::XMQuaternionRotationRollPitchYaw(dof.data[pitch] * angleToRadian,
                                                                     dof.data[yaw] * angleToRadian,
-                                                                    dof.data[roll] * angleToRadian));
+                                                                    -dof.data[roll] * angleToRadian));
     }
 
     void SrsTracker::ExtractRotationQuaternion(const Dof& dof, XrPosef& rigPose)
     {
         StoreXrQuaternion(&rigPose.orientation,
-                          DirectX::XMQuaternionRotationRollPitchYaw(dof.data[pitch] * angleToRadian,
+                          DirectX::XMQuaternionRotationRollPitchYaw(-dof.data[pitch] * angleToRadian,
                                                                     dof.data[yaw] * angleToRadian,
-                                                                    -dof.data[roll] * angleToRadian));
+                                                                    dof.data[roll] * angleToRadian));
     }
 
     void CorManipulator::ApplyManipulation(XrSession session, XrTime time)
@@ -1552,8 +1551,8 @@ namespace tracker
          const XrPosef corPose = m_Tracker->GetReferencePose();
          const auto [relativeOrientation, relativePosition] = Pose::Multiply(m_LastPose, Pose::Invert(corPose));
          m_Tracker->ChangeOffset(relativePosition);
-         const float angleDelta = GetYawAngle(GetForwardVector(m_LastPose.orientation, false)) -
-                                  GetYawAngle(GetForwardVector(corPose.orientation, true));
+         const float angleDelta = GetYawAngle(GetForwardVector(m_LastPose.orientation)) -
+                                  GetYawAngle(GetForwardVector(corPose.orientation));
          m_Tracker->ChangeRotation(angleDelta);
 
          TraceLoggingWriteStop(local, "CorManipulator::ApplyPosition");
@@ -1587,7 +1586,7 @@ namespace tracker
                                 "CorManipulator::ApplyRotation",
                                 TLArg(xr::ToString(poseDelta).c_str(), "Delta"));
 
-         const float yawAngle = -GetYawAngle(GetForwardVector(poseDelta.orientation, true));
+         const float yawAngle = -GetYawAngle(GetForwardVector(poseDelta.orientation));
          m_Tracker->ChangeRotation(yawAngle);
 
          TraceLoggingWriteStop(local, "CorManipulator::ApplyRotation");

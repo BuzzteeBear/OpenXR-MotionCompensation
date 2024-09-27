@@ -168,14 +168,12 @@ namespace output
         const XrPosef deltaFwd = xr::Normalize(Multiply(Multiply(pose, m_InvertedRef), m_StageToFwd));
 
         //calculate angles
-        const XrVector3f angles = utility::ToEulerAngles(deltaFwd.orientation);
+        XrVector3f angles = utility::ToEulerAngles(deltaFwd.orientation);
 
         // rotate translations into rig orientation
-        XrVector3f translations = Pose::Invert(deltaFwd).position;
-        translations.x *= -1.f;
-        translations.y *= -1.f;
-
-        m_Poses[type] = {translations, angles};
+        XrVector3f translations = xr::Normalize(Pose::Invert(deltaFwd)).position;
+        
+        m_Poses[type] = {{-translations.x, -translations.y, translations.z}, {-angles.x, angles.y, -angles.z}};
 
         if (Modified == type && !m_PoseRecorded.load())
         {
