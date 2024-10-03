@@ -360,31 +360,7 @@ class ConfigManager
                                            {"OPENBRACKET", VK_OEM_4},
                                            {"BACKSLASH", VK_OEM_5},
                                            {"CLOSEBRACKET", VK_OEM_6},
-                                           {"QUOTE", VK_OEM_7},
-                                           {"GAMEPAD_A", VK_GAMEPAD_A},
-                                           {"GAMEPAD_B", VK_GAMEPAD_B},
-                                           {"GAMEPAD_X", VK_GAMEPAD_X},
-                                           {"GAMEPAD_Y", VK_GAMEPAD_Y},
-                                           {"GAMEPAD_RIGHT_SHOULDER", VK_GAMEPAD_RIGHT_SHOULDER},
-                                           {"GAMEPAD_LEFT_SHOULDER", VK_GAMEPAD_LEFT_SHOULDER},
-                                           {"GAMEPAD_LEFT_TRIGGER", VK_GAMEPAD_LEFT_TRIGGER},
-                                           {"GAMEPAD_RIGHT_TRIGGER", VK_GAMEPAD_RIGHT_TRIGGER},
-                                           {"GAMEPAD_DPAD_UP", VK_GAMEPAD_DPAD_UP},
-                                           {"GAMEPAD_DPAD_DOWN", VK_GAMEPAD_DPAD_DOWN},
-                                           {"GAMEPAD_DPAD_LEFT", VK_GAMEPAD_DPAD_LEFT},
-                                           {"GAMEPAD_DPAD_RIGHT", VK_GAMEPAD_DPAD_RIGHT},
-                                           {"GAMEPAD_START", VK_GAMEPAD_MENU},
-                                           {"GAMEPAD_VIEW", VK_GAMEPAD_VIEW},
-                                           {"GAMEPAD_LEFT_THUMBSTICK_BUTTON", VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON},
-                                           {"GAMEPAD_RIGHT_THUMBSTICK_BUTTON", VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON},
-                                           {"GAMEPAD_LEFT_THUMBSTICK_UP", VK_GAMEPAD_LEFT_THUMBSTICK_UP},
-                                           {"GAMEPAD_LEFT_THUMBSTICK_DOWN", VK_GAMEPAD_LEFT_THUMBSTICK_DOWN},
-                                           {"GAMEPAD_LEFT_THUMBSTICK_RIGHT", VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT},
-                                           {"GAMEPAD_LEFT_THUMBSTICK_LEFT", VK_GAMEPAD_LEFT_THUMBSTICK_LEFT},
-                                           {"GAMEPAD_RIGHT_THUMBSTICK_UP", VK_GAMEPAD_RIGHT_THUMBSTICK_UP},
-                                           {"GAMEPAD_RIGHT_THUMBSTICK_DOWN", VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN},
-                                           {"GAMEPAD_RIGHT_THUMBSTICK_RIGHT", VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT},
-                                           {"GAMEPAD_RIGHT_THUMBSTICK_LEFT", VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT}};
+                                           {"QUOTE", VK_OEM_7},};
     std::map<Cfg, std::string> m_Values{};
 };
 // Singleton accessor.

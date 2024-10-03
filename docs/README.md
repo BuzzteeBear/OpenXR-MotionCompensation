@@ -446,27 +446,3 @@ Name | Key
 `PRINT` | print key
 `HELP` | help key
 `EXEC` | execute key
-`GAMEPAD_A` | A button on gamepad
-`GAMEPAD_B` | B button on gamepad
-`GAMEPAD_X` | X button on gamepad
-`GAMEPAD_Y` | Y button on gamepad
-`GAMEPAD_RIGHT_SHOULDER` | right shoulder button on gamepad
-`GAMEPAD_LEFT_SHOULDER` | left shoulder button on gamepad
-`GAMEPAD_LEFT_TRIGGER` | left trigger button on gamepad
-`GAMEPAD_RIGHT_TRIGGER` | right trigger button on gamepad
-`GAMEPAD_DPAD_UP` | digital pad up on gamepad
-`GAMEPAD_DPAD_DOWN` | digital pad down on gamepad
-`GAMEPAD_DPAD_LEFT` | digital pad left on gamepad
-`GAMEPAD_DPAD_RIGHT` | digital pad right on gamepad
-`GAMEPAD_START` | start button on gamepad
-`GAMEPAD_VIEW` | view button on gamepad
-`GAMEPAD_LEFT_THUMBSTICK_BUTTON` | left thumbstick pressed on gamepad
-`GAMEPAD_RIGHT_THUMBSTICK_BUTTON` | right thumbstick pressed on gamepad
-`GAMEPAD_LEFT_THUMBSTICK_UP` | left thumbstick up on gamepad
-`GAMEPAD_LEFT_THUMBSTICK_DOWN` | left thumbstick down on gamepad
-`GAMEPAD_LEFT_THUMBSTICK_RIGHT` | left thumbstick left on gamepad
-`GAMEPAD_LEFT_THUMBSTICK_LEFT` | left thumbstick right on gamepad
-`GAMEPAD_RIGHT_THUMBSTICK_UP` | right thumbstick up on gamepad
-`GAMEPAD_RIGHT_THUMBSTICK_DOWN` | right thumbstick down on gamepad
-`GAMEPAD_RIGHT_THUMBSTICK_RIGHT` | right thumbstick left on gamepad
-`GAMEPAD_RIGHT_THUMBSTICK_LEFT` | right thumbstick right on gamepad
