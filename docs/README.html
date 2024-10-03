@@ -159,6 +159,7 @@ Upon starting an OpenXR application with the API layer active for the first time
 <li>the keys <code>offset_...</code>, <code>load_ref_pose_from_file</code> and <code>cor_...</code> are used to handle the configuration of the center of rotation (cor) for all available virtual trackers.
 <ul>
 <li>offset values are meant to be modified to specify how far away the cor is in terms of up/down, forward/backward left/right, and up/down direction relative to your headset. The yaw angle defines a counterclockwise rotation of the forward vector after positioning of the cor on calibration.</li>
+<li><code>non_neutral_calibration</code> with this option enabled, the current tracker values are taken into account on cor calibration. This allows for calibration while the motion simulator is not in neutral position. While possible, it is inadvisable to calibrate while the rig tilted on both pitch and roll axis, because even small inaccuracies in forward pose of the hmd can cause large error in cor positioning.</li>
 <li><code>load_ref_pose_from_file</code> can be enabled to reuse the exact cor position within vr playspace for the next sessions, independent of offset values and hmd position at calibration time.</li>
 <li>values starting with <code>cor_</code> are not meant for manual editing in the config file but are instead populated on saving the current configuration.</li>
 </ul>

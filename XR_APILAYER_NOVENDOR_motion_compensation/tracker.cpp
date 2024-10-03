@@ -235,8 +235,10 @@ namespace tracker
                                TLArg(yawAdjustment, "YawAdjustment"));
 
         XrQuaternionf rotation{};
-        StoreXrQuaternion(&rotation,
-                          DirectX::XMQuaternionRotationRollPitchYaw(0.0f, GetYawAngle(forward) + yawAdjustment, 0.0f));
+        StoreXrQuaternion(
+            &rotation,
+            DirectX::XMQuaternionNormalize(
+                DirectX::XMQuaternionRotationRollPitchYaw(0.0f, GetYawAngle(forward) + yawAdjustment, 0.0f)));
 
         TraceLoggingWriteStop(local,
                               "ControllerBase::GetYawRotation",
@@ -631,46 +633,28 @@ namespace tracker
         TraceLoggingWriteStop(local, "TrackerBase::ApplyModifier", TLArg(xr::ToString(pose).c_str(), "NewPose"));
     }
 
-    bool TrackerBase::CalibrateForward(XrSession session, XrTime time, float yawOffset)
+    bool TrackerBase::CalibrateForward(XrSession session, XrTime time)
     {
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local,
                                "TrackerBase::CalibrateForward",
-                               TLArg(time, "Time"),
-                               TLArg(yawOffset, "YawOffset"));
+                               TLArg(time, "Time"));
 
-        if (auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance()); !layer)
+        auto view = GetCurrentView(session, time);
+        if (!view.has_value())
         {
-            ErrorLog("%s: cast of layer failed", __FUNCTION__);
             TraceLoggingWriteStop(local, "TrackerBase::CalibrateForward", TLArg(false, "Success"));
             return false;
         }
-        else
-        {
-            XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
-            if (const XrResult result =
-                    layer->OpenXrApi::xrLocateSpace(layer->m_ViewSpace, layer->m_StageSpace, time, &location);
-                XR_FAILED(result))
-            {
-                ErrorLog("%s: xrLocateSpace(view) failed: %s", __FUNCTION__, xr::ToCString(result));
-                TraceLoggingWriteStop(local, "TrackerBase::CalibrateForward", TLArg(false, "Success"));
-                return false;
-            }
-            if (!Pose::IsPoseValid(location.locationFlags))
-            {
-                ErrorLog("%s: view space location invalid", __FUNCTION__);
-                TraceLoggingWriteStop(local, "TrackerBase::CalibrateForward", TLArg(false, "Success"));
-                return false;
-            }
-            // project forward and right vector of view onto 'floor plane'
-            m_Forward = GetForwardVector(location.pose.orientation);
-            m_Right = XrVector3f{-m_Forward.z, 0.0f, m_Forward.x};
+        // project forward and right vector of view onto 'floor plane'
+        m_Forward = GetForwardVector(view.value().orientation);
+        m_Right = XrVector3f{-m_Forward.z, 0.0f, m_Forward.x};
 
-            // calculate orientation parallel to floor
-            location.pose.orientation = GetYawRotation(m_Forward, yawOffset);
+        // calculate orientation parallel to floor
+        view.value().orientation = GetYawRotation(m_Forward, 0.f);
 
-            m_ForwardPose = location.pose;
-        }
+        m_ForwardPose = view.value();
+
         TraceLoggingWriteStop(local,
                               "TrackerBase::CalibrateForward",
                               TLArg(true, "Success"),
@@ -678,6 +662,40 @@ namespace tracker
                               TLArg(xr::ToString(this->m_Right).c_str(), "m_Right"),
                               TLArg(xr::ToString(this->m_ForwardPose).c_str(), "m_ForwardPose"));
         return true;
+    }
+
+    std::optional<XrPosef> TrackerBase::GetCurrentView(XrSession session, XrTime time)
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "TrackerBase::GetCurrentView", TLArg(time, "Time"));
+        OpenXrLayer* layer;
+        if (layer = reinterpret_cast<OpenXrLayer*>(GetInstance()); !layer)
+        {
+            ErrorLog("%s: cast of layer failed", __FUNCTION__);
+            TraceLoggingWriteStop(local, "TrackerBase::GetCurrentView", TLArg(false, "Success"));
+            return {};
+        }
+        XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
+        if (const XrResult result =
+                layer->OpenXrApi::xrLocateSpace(layer->m_ViewSpace, layer->m_StageSpace, time, &location);
+            XR_FAILED(result))
+        {
+            ErrorLog("%s: xrLocateSpace(view) failed: %s", __FUNCTION__, xr::ToCString(result));
+            TraceLoggingWriteStop(local, "TrackerBase::GetCurrentView", TLArg(false, "Success"));
+            return {};
+        }
+        if (!Pose::IsPoseValid(location.locationFlags))
+        {
+            ErrorLog("%s: view space location invalid", __FUNCTION__);
+            TraceLoggingWriteStop(local, "TrackerBase::GetCurrentView", TLArg(false, "Success"));
+            return {};
+        }
+
+        TraceLoggingWriteStop(local,
+                              "TrackerBase::GetCurrentView",
+                              TLArg(true, "Success"),
+                              TLArg(xr::ToString(location.pose).c_str(), "View"));
+        return std::optional(location.pose);
     }
 
     void TrackerBase::SetForwardRotation(const XrPosef& pose) const
@@ -717,7 +735,7 @@ namespace tracker
         std::unique_lock lock(m_SampleMutex); 
         m_Session = session;
         m_Calibrated = false;
-        CalibrateForward(session, time, 0.f);
+        CalibrateForward(session, time);
         SetForwardRotation(m_ForwardPose);
         if (!ControllerBase::ResetReferencePose(session, time))
         {
@@ -913,6 +931,15 @@ namespace tracker
 
         LogOffsetValues();
 
+        if (GetConfig()->GetBool(Cfg::TrackerNonNeutralCalibration, m_NonNeutralCalibration))
+        {
+            Log("tracker pose is %s incorporated into COR calibration", m_NonNeutralCalibration ? "" : "not" );
+        }
+        else
+        {
+            success = false;
+        }
+
         Log("constant pitch value = %.3f deg", m_PitchConstant / angleToRadian);
 
         if (GetConfig()->GetBool(Cfg::LoadRefPoseFromFile, m_LoadPoseFromFile))
@@ -988,14 +1015,14 @@ namespace tracker
         }
         else
         {
-            if (!CalibrateForward(session, time, m_OffsetYaw))
+            if (!CalibrateForward(session, time))
             {
                 success = false;
             }
             else
             {
                 XrPosef refPose = m_ForwardPose;
-
+                
                 // calculate and apply translational offset
                 const XrVector3f offset =
                     -m_OffsetForward * m_Forward - m_OffsetRight * m_Right + XrVector3f{0.0f, -m_OffsetDown, 0.0f};
@@ -1003,7 +1030,11 @@ namespace tracker
                                         "VirtualTracker::ResetReferencePose",
                                         TLArg(xr::ToString(offset).c_str(), "Offset"));
                 refPose.position = refPose.position + offset;
-                TrackerBase::SetReferencePose(refPose);
+                // apply yaw offset
+                refPose.orientation = GetYawRotation(GetForwardVector(refPose.orientation), m_OffsetYaw);
+                
+                TrackerBase::SetReferencePose(xr::Normalize(refPose));
+                
             }
         }
         m_Calibrated = success;
@@ -1178,6 +1209,44 @@ namespace tracker
                               TLArg(xr::ToString(trackerPose).c_str(), "TrackerPose"));
         return true;
     }
+
+    std::optional<XrPosef> VirtualTracker::GetCurrentView(XrSession session, XrTime time)
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "VirtualTracker::GetCurrentView", TLArg(time, "Time"));
+
+        auto view = TrackerBase ::GetCurrentView(session, time);
+        if (!view.has_value())
+        {
+            TraceLoggingWriteStop(local, "VirtualTracker::GetCurrentView", TLArg(false, "BaseSuccess"));
+            return {};
+        }
+        TraceLoggingWriteTagged(local,
+                                "VirtualTracker::GetCurrentView",
+                                TLArg(xr::ToString(view.value()).c_str(), "ViewPoseOriginal"));
+        // apply offset according to current virtual tracker pose
+        Dof dof{};
+        if (!ReadData(time, dof))
+        {
+            ErrorLog("%s: unable to get current virtual tracker pose for calibration", __FUNCTION__);
+            TraceLoggingWriteStop(local, "VirtualTracker::GetCurrentView", TLArg(false, "ReadSuccess"));
+            return {};
+        }
+        TraceLoggingWriteTagged(local, "VirtualTracker::GetCurrentView", TLArg(xr::ToString(dof).c_str(), "Data"));
+
+        XrPosef tracker = DataToPose(dof);
+        TraceLoggingWriteTagged(local,
+                                "VirtualTracker::GetCurrentView",
+                                TLArg(xr::ToString(tracker).c_str(), "Tracker"));
+
+        auto offsetView = ApplyTrackerOffsets(view.value(), dof);
+        TraceLoggingWriteStop(local,
+                              "VirtualTracker::GetCurrentView",
+                              TLArg(false, "Success"),
+                              TLArg(xr::ToString(offsetView).c_str(), "View"));
+        return offsetView;
+
+    }
     
     bool VirtualTracker::ReadData(XrTime time, Dof& dof)
     {
@@ -1254,6 +1323,113 @@ namespace tracker
         }
         TraceLoggingWriteStop(local, "VirtualTracker::LoadReferencePose", TLArg(false, "Success"));
         return success;
+    }
+
+    XrPosef VirtualTracker::ApplyTrackerOffsets(const XrPosef& view, const Dof& dof)
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local,
+                               "VirtualTracker::ApplyTrackerOffsets",
+                               TLArg(xr::ToString(view).c_str(), "View"),
+                               TLArg(xr::ToString(dof).c_str(), "Dof"));
+
+        if (!m_NonNeutralCalibration)
+        {
+            TraceLoggingWriteStop(local,
+                                   "VirtualTracker::ApplyTrackerOffsets",
+                                   TLArg(false, "Active"),
+                                   TLArg(xr::ToString(dof).c_str(), "Dof"));
+            return view;
+        }
+
+
+        using namespace DirectX;
+
+        // get tracker rotations
+        XrQuaternionf trackerYaw = DataToPose({0, 0, 0, dof.data[yaw], 0, 0}).orientation;
+        const XrQuaternionf trackerRoll = DataToPose({0, 0, 0, 0, dof.data[roll], 0}).orientation;
+        const XrQuaternionf trackerPitch = DataToPose({0, 0, 0, 0, 0, dof.data[pitch]}).orientation;
+        XrQuaternionf trackerPitchRoll;
+        StoreXrQuaternion(
+            &trackerPitchRoll,
+            XMQuaternionNormalize(XMQuaternionMultiply(LoadXrQuaternion(trackerPitch), LoadXrQuaternion(trackerRoll))));
+
+        TraceLoggingWriteTagged(local,
+                                "VirtualTracker::SetReferencePose",
+                                TLArg(xr::ToString(trackerYaw).c_str(), "Yaw"),
+                                TLArg(xr::ToString(trackerPitchRoll).c_str(), "PitchRoll"));
+
+        // get translations
+        const XrVector3f trackerTranslation =
+            DataToPose({dof.data[sway], dof.data[surge], dof.data[heave], 0, 0, 0}).position;
+        const XrVector3f viewTranslation = view.position;
+        TraceLoggingWriteTagged(local,
+                                "VirtualTracker::SetReferencePose",
+                                TLArg(xr::ToString(trackerYaw).c_str(), "Yaw"),
+                                TLArg(xr::ToString(trackerPitchRoll).c_str(), "PitchRoll"),
+                                TLArg(xr::ToString(trackerTranslation).c_str(), "TrackerTranslation"),
+                                TLArg(xr::ToString(viewTranslation).c_str(), "ViewTranslation"));
+
+        // calculate euler angles
+        const XrVector3f viewAngles = ToEulerAngles(view.orientation);
+        const XrVector3f trackerAngles = ToEulerAngles(trackerPitchRoll);
+        TraceLoggingWriteTagged(local,
+                                "VirtualTracker::SetReferencePose",
+                                TLArg(xr::ToString(viewAngles).c_str(), "ViewAngles"),
+                                TLArg(xr::ToString(trackerAngles).c_str(), "TrackerAngles"));
+
+
+        // transfer yaw component from pitch/roll to yaw to eliminate positional offset
+        StoreXrQuaternion(&trackerPitchRoll,
+                          XMQuaternionRotationRollPitchYaw(trackerAngles.x, 0.f, trackerAngles.z));
+        StoreXrQuaternion(
+            &trackerYaw,
+            XMQuaternionNormalize(XMQuaternionMultiply(LoadXrQuaternion(trackerYaw),
+                                                       XMQuaternionRotationRollPitchYaw(0.f, trackerAngles.y, 0.f))));
+        TraceLoggingWriteTagged(local,
+                                "VirtualTracker::SetReferencePose",
+                                TLArg(xr::ToString(trackerYaw).c_str(), "Yaw_Modified"),
+                                TLArg(xr::ToString(trackerPitchRoll).c_str(), "PitchRoll_Modified"));
+
+
+        // offset yaw angle of view to account for local pitch deviation of hmd pose
+        float yawCorrectionAngle = (trackerAngles.x > 1e-3f || trackerAngles.x < -1e-3f)
+                                       ? trackerAngles.y * (trackerAngles.x - viewAngles.x) / trackerAngles.x
+                                       : 0.f;
+        TraceLoggingWriteTagged(local,
+                                "VirtualTracker::SetReferencePose",
+                                TLArg(std::to_string(yawCorrectionAngle).c_str(), "YawCorrectionAngle"));
+
+        XrQuaternionf viewYawCorrected;
+        StoreXrQuaternion(&viewYawCorrected,
+                          XMQuaternionRotationRollPitchYaw(0.0f, viewAngles.y + yawCorrectionAngle, 0.0f));        
+
+        // apply rig offsets in local space 
+        XrPosef viewLocal{{0, 0, 0, 1}, XrVector3f{} - trackerTranslation};
+
+        // rotate from local tracker space into 'fwd' space (pitch first, roll second) 
+        XrPosef viewGlobal = Pose::Multiply(viewLocal, {trackerPitchRoll, {}});
+        
+        // apply yaw rotation without changing position vector 
+        StoreXrQuaternion(
+            &viewGlobal.orientation,
+            XMQuaternionNormalize(XMQuaternionMultiply(LoadXrQuaternion(viewGlobal.orientation),
+                                                       XMQuaternionInverse(LoadXrQuaternion(trackerYaw)))));
+        TraceLoggingWriteTagged(local,
+                                "VirtualTracker::SetReferencePose",
+                                TLArg(xr::ToString(viewGlobal).c_str(), "ViewGlobal_Rotated"));
+
+        // rotate view according to hmd yaw angle (including position)
+        viewGlobal = Pose::Multiply(viewGlobal, {viewYawCorrected, {}});
+
+        // add original view position
+        viewGlobal.position = viewGlobal.position + view.position;
+
+
+        TraceLoggingWriteStop(local,
+                               "VirtualTracker::SetReferencePose",
+                              TLArg(xr::ToString(viewGlobal).c_str(), "ViewGlobal"));
+        return xr::Normalize(viewGlobal);
     }
 
     bool YawTracker::ReadSource(XrTime now, Dof& dof)

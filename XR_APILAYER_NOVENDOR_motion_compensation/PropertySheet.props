@@ -5,7 +5,7 @@
     <VersionString>beta</VersionString>
     <VersionMajor>0</VersionMajor>
     <VersionMinor>3</VersionMinor>
-    <VersionPatch>8</VersionPatch>
+    <VersionPatch>9</VersionPatch>
     <VersionRevision>0</VersionRevision>
   </PropertyGroup>
   <PropertyGroup />

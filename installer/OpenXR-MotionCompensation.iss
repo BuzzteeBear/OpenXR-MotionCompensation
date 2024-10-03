@@ -80,6 +80,7 @@ Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "tracker"; Key: "
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "tracker"; Key: "offset_yaw_angle"; String: "0.0"; Flags: createkeyifdoesntexist 
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "tracker"; Key: "constant_pitch_angle"; String: "0.0"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "tracker"; Key: "legacy_mode"; String: "0"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "tracker"; Key: "non_neutral_calibration"; String: "1"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "tracker"; Key: "load_ref_pose_from_file"; String: "0"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "tracker"; Key: "cor_x"; String: "0.0"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "tracker"; Key: "cor_y"; String: "0.0"; Flags: createkeyifdoesntexist

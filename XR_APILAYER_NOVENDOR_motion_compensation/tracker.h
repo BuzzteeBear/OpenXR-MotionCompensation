@@ -79,7 +79,8 @@ namespace tracker
       protected:
         void ApplyFilters(XrPosef& pose) override;
         void ApplyModifier(XrPosef& pose) override;
-        bool CalibrateForward(XrSession session, XrTime time, float yawOffset);
+        bool CalibrateForward(XrSession session, XrTime time);
+        virtual std::optional<XrPosef> GetCurrentView(XrSession session, XrTime time);
         void SetForwardRotation(const XrPosef& pose) const;
 
         XrVector3f m_Forward{0.f, 0.f, -1.f};
@@ -157,6 +158,7 @@ namespace tracker
       protected:
         void SetReferencePose(const XrPosef& pose) override;
         bool GetPose(XrPosef& trackerPose, XrSession session, XrTime time) override;
+        std::optional<XrPosef> GetCurrentView(XrSession session, XrTime time) override;
         virtual bool ReadData(XrTime time, utility::Dof& dof);
         virtual XrPosef DataToPose(const utility::Dof& dof) = 0;
 
@@ -167,8 +169,10 @@ namespace tracker
 
       private:
         bool LoadReferencePose(XrSession session, XrTime time);
+        XrPosef ApplyTrackerOffsets(const XrPosef& view, const utility::Dof& dof);
 
         std::unique_ptr<CorManipulator> m_Manipulator{};
+        bool m_NonNeutralCalibration{false};
         bool m_LoadPoseFromFile{false};
 
         friend class Sampler;

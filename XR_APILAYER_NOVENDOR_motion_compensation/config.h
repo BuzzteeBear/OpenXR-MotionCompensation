@@ -20,6 +20,7 @@ enum class Cfg
     TrackerOffsetDown,
     TrackerOffsetRight,
     TrackerOffsetYaw,
+    TrackerNonNeutralCalibration,
     TrackerConstantPitch,
     LegacyMode,
     CorX,
@@ -137,6 +138,8 @@ class ConfigManager
         {Cfg::TrackerOffsetDown, {"tracker", "offset_down"}},
         {Cfg::TrackerOffsetRight, {"tracker", "offset_right"}},
         {Cfg::TrackerOffsetYaw, {"tracker", "offset_yaw_angle"}},
+
+        {Cfg::TrackerNonNeutralCalibration, {"tracker", "non_neutral_calibration"}},
 
         {Cfg::TrackerConstantPitch, {"tracker", "constant_pitch_angle"}},
 
