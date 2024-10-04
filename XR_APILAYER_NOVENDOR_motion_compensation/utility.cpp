@@ -109,6 +109,12 @@ namespace utility
         Close();
     }
 
+    void Mmf::SetWriteable(unsigned fileSize)
+    {
+        m_WriteAccess = true;
+        m_FileSize = fileSize;
+    }
+
     void Mmf::SetName(const std::string& name)
     {
         m_Name = name;
@@ -117,14 +123,22 @@ namespace utility
     bool Mmf::Open(const int64_t time)
     {
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "Mmf::Open", TLArg(time, "Time"));
+        TraceLoggingWriteStart(local, "Mmf::Open", TLArg(time, "Time"), TLArg(m_WriteAccess, "WriteAccess"));
 
         std::unique_lock lock(m_MmfLock);
-        m_FileHandle = OpenFileMapping(FILE_MAP_READ, FALSE, m_Name.c_str());
+        DWORD access = m_WriteAccess ? FILE_MAP_READ | FILE_MAP_WRITE : FILE_MAP_READ;
+
+        m_FileHandle = OpenFileMapping(access, FALSE, m_Name.c_str());
+
+        if (m_WriteAccess && !m_FileHandle)
+        {
+            m_FileHandle =
+                CreateFileMapping(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0, m_FileSize, m_Name.c_str());
+        }
 
         if (m_FileHandle)
         {
-            m_View = MapViewOfFile(m_FileHandle, FILE_MAP_READ, 0, 0, 0);
+            m_View = MapViewOfFile(m_FileHandle, access, 0, 0, 0);
             if (m_View != nullptr)
             {
                 m_LastRefresh = time;
@@ -158,10 +172,25 @@ namespace utility
 
     bool Mmf::Read(void* buffer, const size_t size, const int64_t time)
     {
-        TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "Mmf::Read", TLArg(time, "Time"));
+        return ReadWrite(buffer, size, time, false);
+    }
 
-        if (m_Check > 0 && time - m_LastRefresh > m_Check)
+    bool Mmf::Write(void* buffer, size_t size, int64_t time)
+    {
+        if (!m_WriteAccess)
+        {
+            ErrorLog("%s: unable to write to mmf %s: write access not set", __FUNCTION__, m_Name.c_str());
+            return false;
+        }
+        return ReadWrite(buffer, size, time, true);
+    }
+
+    bool Mmf::ReadWrite(void* buffer, const size_t size, const int64_t time, bool write)
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "Mmf::ReadWrite", TLArg(time, "Time"), TLArg(write, "Write"));
+
+        if (!m_WriteAccess && m_Check > 0 && time - m_LastRefresh > m_Check)
         {
             Close();
         }
@@ -174,20 +203,27 @@ namespace utility
         {
             try
             {
-                memcpy(buffer, m_View, size);
+                if (write)
+                {
+                    memcpy(m_View, buffer, size);
+                }
+                else
+                {
+                    memcpy(buffer, m_View, size);
+                }
             }
             catch (std::exception& e)
             {
-                ErrorLog("%s: unable to read from mmf %s: %s", __FUNCTION__, m_Name.c_str(), e.what());
+                ErrorLog("%s: unable to %s mmf %s: %s", __FUNCTION__, write ? "write to" : "read from", m_Name.c_str(), e.what());
                 // reset mmf connection
                 Close();
-                TraceLoggingWriteStop(local, "Mmf::Read", TLArg(false, "Memcpy"));
+                TraceLoggingWriteStop(local, "Mmf::ReadWrite", TLArg(false, "Memcpy"));
                 return false;
             }
-            TraceLoggingWriteStop(local, "Mmf::Read", TLArg(true, "Success"));
+            TraceLoggingWriteStop(local, "Mmf::ReadWrite", TLArg(true, "Success"));
             return true;
         }
-        TraceLoggingWriteStop(local, "Mmf::Read", TLArg(false, "View"));
+        TraceLoggingWriteStop(local, "Mmf::ReadWrite", TLArg(false, "View"));
         return false;
     }
 

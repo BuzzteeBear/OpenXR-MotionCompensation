@@ -263,7 +263,7 @@ namespace input
             m_Layer->m_TestRotStart = time;
             m_Layer->m_Activated = !m_Layer->m_Activated;
             Log("test rotation motion compensation % s", m_Layer->m_Activated ? "activated" : "deactivated");
-            AudioOut::Execute(m_Layer->m_Activated ? Event::Activated : Event::Deactivated);
+            EventSink::Execute(m_Layer->m_Activated ? Event::Activated : Event::Deactivated);
             TraceLoggingWriteStop(local, "InputHandler::ToggleActive");
             return;
         }
@@ -289,11 +289,11 @@ namespace input
                                              : "could not be activated");
         if (oldState != m_Layer->m_Activated)
         {
-            AudioOut::Execute(m_Layer->m_Activated ? Event::Activated : Event::Deactivated);
+            EventSink::Execute(m_Layer->m_Activated ? Event::Activated : Event::Deactivated);
         }
         else if (!m_Layer->m_Activated)
         {
-            AudioOut::Execute(Event::Error);
+            EventSink::Execute(Event::Error);
         }
 
         TraceLoggingWriteStop(local, "InputHandler::ToggleActive", TLArg(m_Layer->m_Activated, "Activated"));
@@ -308,7 +308,7 @@ namespace input
         {
             m_Layer->m_TestRotStart = time;
             Log("test rotation motion compensation recalibrated");
-            AudioOut::Execute(Event::Calibrated);
+            EventSink::Execute(Event::Calibrated);
             TraceLoggingWriteStop(local, "InputHandler::Recalibrate", TLArg(true, "Success"));
             return;
         }
@@ -321,7 +321,7 @@ namespace input
         }
         if (success)
         {
-            AudioOut::Execute(Event::Calibrated);
+            EventSink::Execute(Event::Calibrated);
         }
         else
         {
@@ -332,7 +332,7 @@ namespace input
                          __FUNCTION__);
                 m_Layer->m_Activated = false;
             }
-            AudioOut::Execute(Event::Error);
+            EventSink::Execute(Event::Error);
         }
         TraceLoggingWriteStop(local, "InputHandler::Recalibrate", TLArg(success, "Success"));
     }
@@ -344,7 +344,7 @@ namespace input
 
         if (!m_Layer->m_Overlay)
         {
-            AudioOut::Execute(Event::Error);
+            EventSink::Execute(Event::Error);
             ErrorLog("%s: overlay is deactivated in config file and cannot be activated", __FUNCTION__);
             TraceLoggingWriteStop(local, "InputHandler::ToggleOverlay");
             return;
@@ -361,7 +361,7 @@ namespace input
 
         if (!m_Layer->m_Overlay)
         {
-            AudioOut::Execute(Event::Error);
+            EventSink::Execute(Event::Error);
             ErrorLog("%s: overlay is deactivated in config file so passthrough mode cannot be activated", __FUNCTION__);
             TraceLoggingWriteStop(local, "InputHandler::TogglePassthrough");
             return;
@@ -379,7 +379,7 @@ namespace input
         m_Layer->m_UseEyeCache = !m_Layer->m_UseEyeCache;
         GetConfig()->SetValue(Cfg::CacheUseEye, m_Layer->m_UseEyeCache);
         Log("%s is used for reconstruction of eye positions", m_Layer->m_UseEyeCache ? "caching" : "calculation");
-        AudioOut::Execute(m_Layer->m_UseEyeCache ? Event::EyeCached : Event::EyeCalculated);
+        EventSink::Execute(m_Layer->m_UseEyeCache ? Event::EyeCached : Event::EyeCalculated);
 
         TraceLoggingWriteStop(local, "InputHandler::ToggleCache", TLArg(m_Layer->m_UseEyeCache, "Eye Cache"));
     }
@@ -391,7 +391,7 @@ namespace input
 
         const bool active = m_Layer->ToggleModifierActive();
         GetConfig()->SetValue(Cfg::FactorEnabled, active);
-        AudioOut::Execute(active ? Event::ModifierOn : Event::ModifierOff);
+        EventSink::Execute(active ? Event::ModifierOn : Event::ModifierOff);
 
         TraceLoggingWriteStop(local, "InputHandler::ToggleCache", TLArg(active, "Activated"));
     }
@@ -425,7 +425,7 @@ namespace input
             success = m_Layer->m_Tracker->ChangeRotation(Direction::RotRight == dir ? -amount : amount);
         }
 
-        AudioOut::Execute(!success                    ? Event::Error
+        EventSink::Execute(!success                    ? Event::Error
                           : Direction::Up == dir      ? Event::Up
                           : Direction::Down == dir    ? Event::Down
                           : Direction::Fwd == dir     ? Event::Forward
@@ -468,7 +468,7 @@ namespace input
                 m_Layer->m_Overlay->SetMarkerSize();
             }
         }
-        AudioOut::Execute(!success ? Event::Error : Event::Load);
+        EventSink::Execute(!success ? Event::Error : Event::Load);
 
         TraceLoggingWriteStop(local, "InputHandler::ReloadConfig", TLArg(success, "Success"));
     }
@@ -491,7 +491,7 @@ namespace input
 
         logVerbose = !logVerbose;
         Log("verbose logging %s\n", logVerbose ? "activated" : "off");
-        AudioOut::Execute(logVerbose ? Event::VerboseOn : Event::VerboseOff);
+        EventSink::Execute(logVerbose ? Event::VerboseOn : Event::VerboseOff);
 
         TraceLoggingWriteStop(local, "InputHandler::ToggleVerbose", TLArg(logVerbose, "LogVerbose"));
     }

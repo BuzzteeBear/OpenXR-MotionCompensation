@@ -390,7 +390,7 @@ namespace tracker
             GetConfig()->SetValue(Cfg::RotStrength, *currentValue);
             Log("rotational filter strength %screased to %f", increase ? "in" : "de", *currentValue);
         }
-        AudioOut::Execute(*currentValue == prevValue ? increase ? Event::Max : Event::Min
+        EventSink::Execute(*currentValue == prevValue ? increase ? Event::Max : Event::Min
                           : increase                 ? Event::Plus
                                                      : Event::Minus);
 
@@ -416,7 +416,7 @@ namespace tracker
                 m_Sampler->StartSampling();
             }
             GetConfig()->SetValue(Cfg::StabilizerEnabled, true);
-            AudioOut::Execute(Event::StabilizerOn);
+            EventSink::Execute(Event::StabilizerOn);
 
             Log("stabilizer activated");
             TraceLoggingWriteStop(local, "TrackerBase::ToggleStabilizer", TLArg(true, "Activated"));
@@ -426,7 +426,7 @@ namespace tracker
         m_Sampler = nullptr;
         m_Recorder->m_Sampling.store(false);
         GetConfig()->SetValue(Cfg::StabilizerEnabled, false);
-        AudioOut::Execute(Event::StabilizerOff);
+        EventSink::Execute(Event::StabilizerOff);
 
         Log("stabilizer off");
         TraceLoggingWriteStop(local, "TrackerBase::ToggleStabilizer", TLArg(false, "Activated"));
@@ -442,7 +442,7 @@ namespace tracker
         float prevStrength;
         if (!GetConfig()->GetFloat(Cfg::StabilizerStrength, prevStrength))
         {
-            AudioOut::Execute(Event::Error);
+            EventSink::Execute(Event::Error);
             TraceLoggingWriteStop(local, "TrackerBase::ModifyStabilizer", TLArg(false, "Success"));
             return;
         }
@@ -453,19 +453,19 @@ namespace tracker
         {
             newStrength = 0.f;
 
-            AudioOut::Execute(Event::Min);
+            EventSink::Execute(Event::Min);
             TraceLoggingWriteTagged(local, "TrackerBase::ModifyStabilizer", TLArg(true, "Minimum"));
         }
         else if (newStrength > 0.999f)
         {
             newStrength = 1.f;
 
-            AudioOut::Execute(Event::Max);
+            EventSink::Execute(Event::Max);
             TraceLoggingWriteTagged(local, "TrackerBase::ModifyStabilizer", TLArg(true, "Maximum"));
         }
         else
         {
-            AudioOut::Execute(increase ? Event::Plus : Event::Minus);
+            EventSink::Execute(increase ? Event::Plus : Event::Minus);
         }
 
         GetConfig()->SetValue(Cfg::StabilizerStrength, newStrength);

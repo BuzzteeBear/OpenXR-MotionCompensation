@@ -15,6 +15,12 @@ using namespace openxr_api_layer::log;
 using namespace utility;
 namespace output
 {
+    void EventSink::Execute(Event event)
+    {
+        AudioOut::Execute(event);
+        GetMmfOut()->Execute(event);
+    }
+
     void AudioOut::Execute(const Event event)
     {
         TraceLocalActivity(local);
@@ -37,10 +43,6 @@ namespace output
                          soundResource->second,
                          LastErrorMsg().c_str());
             }
-        }
-        else
-        {
-            ErrorLog("%s: unknown event identifier: %d", __FUNCTION__, event);
         }
         TraceLoggingWriteStop(local, "AudioOut::Execute");
     }
@@ -75,10 +77,141 @@ namespace output
         TraceLoggingWriteStop(local, "AudioOut::CountDown");
     }
 
+    MmfOut::MmfOut()
+    {
+        m_Thread = new std::thread(&MmfOut::UpdateMmf, this);
+    }
+
+    MmfOut::~MmfOut()
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "MmfOut::Destroy");
+
+        StopThread();
+
+        TraceLoggingWriteStop(local, "MmfOut::Destroy");
+    }
+
+    void MmfOut::Execute(Event event)
+    {
+        using namespace std::chrono;
+
+        if (!m_RelevantForMmf.contains(event))
+        {
+            return;
+        }
+
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "MmfOut::Execute", TLArg(static_cast<int>(event), "Event"));
+
+        auto now = time_point_cast<milliseconds>(system_clock::now()).time_since_epoch().count();
+
+        // check communication thread;
+        if (m_MmfError)
+        {
+            StopThread();
+            if (!m_LastError)
+            {
+                m_LastError = now;
+            }
+            else if (now - m_LastError > 1000)
+            {
+                // retry starting thread after a second
+                m_LastError = 0;
+                m_MmfError = false;
+                m_StopThread = false;
+                m_Thread = new std::thread(&MmfOut::UpdateMmf, this);
+            }
+        }
+
+        // queue up event
+        std::unique_lock lock(m_QueueMutex);
+        m_EventQueue.push_back({event, now});
+    }
+
+    void MmfOut::UpdateMmf()
+    {
+        using namespace std::chrono;
+        StatusInfo info{};
+
+        Mmf mmf;
+        mmf.SetWriteable(sizeof(info));
+        mmf.SetName("Local\\OXRMC_Status");
+
+        int64_t now = time_point_cast<nanoseconds>(steady_clock::now()).time_since_epoch().count();
+        
+        if (!mmf.Write(&info, sizeof(info), now))
+        {
+            m_MmfError.store(true);
+            return;
+        }
+
+        while (!m_StopThread.load())
+        {
+            std::this_thread::sleep_for(milliseconds(10));
+
+            now = time_point_cast<nanoseconds>(steady_clock::now()).time_since_epoch().count();
+
+            StatusInfo info;
+            if (!mmf.Read(&info, sizeof(info), now))
+            {
+                m_MmfError.store(true);
+                break;
+            }
+            if (info.event)
+            {
+                // waiting on processing
+                continue;
+            }
+
+            std::unique_lock lock(m_QueueMutex);
+            if (m_EventQueue.empty())
+            {
+                continue;
+            }
+
+            info.event = static_cast<int>(m_EventQueue.front().first);
+            info.eventTime = m_EventQueue.front().second;
+            if (!mmf.Write(&info, sizeof(info), now))
+            {
+                m_MmfError.store(true);
+                break;
+            }
+            m_EventQueue.pop_front();
+        }
+        m_StopThread.store(true);
+    }
+
+    void MmfOut::StopThread()
+    {
+        m_StopThread.store(true);
+        if (m_Thread)
+        {
+            if (m_Thread->joinable())
+            {
+                m_Thread->join();
+            }
+            delete m_Thread;
+            m_Thread = nullptr;
+            TraceLoggingWrite(g_traceProvider, "MmfOut::StopThread", TLArg(true, "Stopped"));
+        }
+    }
+
+    std::unique_ptr<MmfOut> g_MmfOut = nullptr;
+
+    MmfOut* GetMmfOut()
+    {
+        if (!g_MmfOut)
+        {
+            g_MmfOut = std::make_unique<MmfOut>();
+        }
+        return g_MmfOut.get();
+    }
+
     bool NoRecorder::Toggle(bool isCalibrated)
     {
         ErrorLog("%s: unable to toggle recording", __FUNCTION__);
-        AudioOut::Execute(Event::Error);
+        EventSink::Execute(Event::Error);
         return false;
     }
 
@@ -122,7 +255,7 @@ namespace output
                 return Start();
             }
             ErrorLog("%s: recording requires reference tracker to be calibrated", __FUNCTION__);
-            AudioOut::Execute(Event::Error);
+            EventSink::Execute(Event::Error);
             return false;
         }
         Stop();
@@ -273,12 +406,12 @@ namespace output
             m_FileStream << m_HeadLine << "\n";
             m_FileStream.flush();
 
-            AudioOut::Execute(Event::RecorderOn);
+            EventSink::Execute(Event::RecorderOn);
             TraceLoggingWriteStop(local, "PoseRecorder::Start", TLArg(true, "Success"));
             return true;
         }
 
-        AudioOut::Execute(Event::Error);
+        EventSink::Execute(Event::Error);
         ErrorLog("%s: unable to open output stream for file: %s", __FUNCTION__, fileName.c_str());
         TraceLoggingWriteStop(local, "PoseRecorder::Start", TLArg(false, "Success"));
         return false;
@@ -296,11 +429,11 @@ namespace output
         if (m_FileStream.is_open())
         {
             m_FileStream.close();
-            AudioOut::Execute(Event::RecorderOff);
+            EventSink::Execute(Event::RecorderOff);
             TraceLoggingWriteStop(local, "PoseRecorder::Stop", TLArg(true, "Stream_Closed"));
             return;
         }
-        AudioOut::Execute(Event::Error);
+        EventSink::Execute(Event::Error);
         ErrorLog("%s: recording stopped but output stream is already closed", __FUNCTION__);
         TraceLoggingWriteStop(local, "PoseRecorder::Stop", TLArg(false, "Stream_Closed"));
     }

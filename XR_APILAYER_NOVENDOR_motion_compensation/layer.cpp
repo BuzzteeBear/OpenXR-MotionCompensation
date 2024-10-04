@@ -114,7 +114,7 @@ namespace openxr_api_layer
         if (!m_Initialized)
         {
             ErrorLog("%s: initialization failed - config file missing or incomplete", __FUNCTION__);
-            AudioOut::Execute(Event::Error);
+            EventSink::Execute(Event::Error);
             TraceLoggingWriteStop(local,
                                   "OpenXrLayer::xrCreateInstance",
                                   TLArg(false, "Config_Valid"),
@@ -234,6 +234,8 @@ namespace openxr_api_layer
         // enable debug test rotation
         GetConfig()->GetBool(Cfg::TestRotation, m_TestRotation);
 
+        EventSink::Execute(m_Initialized ? Event::Initialized : Event::Error);
+
         Log("layer initialization completed\n");
         TraceLoggingWriteStop(local,
                               "OpenXrLayer::xrCreateInstance",
@@ -314,7 +316,7 @@ namespace openxr_api_layer
                     {
                         Log("tracker calibration lost");
                         m_Tracker->InvalidateCalibration();
-                        AudioOut::Execute(Event::CalibrationLost);
+                        EventSink::Execute(Event::CalibrationLost);
 
                         if (m_Activated)
                         {
@@ -2279,7 +2281,7 @@ namespace openxr_api_layer
         else if (m_RecoveryWait >= 0 && time - m_RecoveryStart > m_RecoveryWait)
         {
             ErrorLog("%s, tracker connection lost", __FUNCTION__);
-            AudioOut::Execute(Event::ConnectionLost);
+            EventSink::Execute(Event::ConnectionLost);
             m_Activated = false;
             m_RecoveryStart = -1;
         }

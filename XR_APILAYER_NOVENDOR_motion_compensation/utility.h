@@ -245,17 +245,22 @@ namespace utility
       public:
         Mmf();
         ~Mmf() override;
+        void SetWriteable(unsigned fileSize);
         void SetName(const std::string& name);
         bool Open(int64_t time) override;
         bool Read(void* buffer, size_t size, int64_t time);
+        bool Write(void* buffer, size_t size, int64_t time);
         void Close();
 
       private:
+        bool ReadWrite(void* buffer, size_t size, int64_t time, bool write);
         XrTime m_Check{1000000000}; // reopen mmf once a second by default
         XrTime m_LastRefresh{0};
         std::string m_Name;
         HANDLE m_FileHandle{nullptr};
+        DWORD m_FileSize{0};
         void* m_View{nullptr};
+        bool m_WriteAccess{false};
         bool m_ConnectionLost{false};
         std::mutex m_MmfLock;
     };

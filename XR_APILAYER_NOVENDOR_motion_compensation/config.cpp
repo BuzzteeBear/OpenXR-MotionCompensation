@@ -361,7 +361,7 @@ void ConfigManager::WriteConfig(const bool forApp)
         }
     }
     Log("current configuration %saved to %s", error ? "could not be " : "", configFile.c_str());
-    output::AudioOut::Execute(!error ? output::Event::Save : output::Event::Error);
+    output::EventSink::Execute(!error ? output::Event::Save : output::Event::Error);
 
     TraceLoggingWriteStop(local, "ConfigManager::WriteConfig", TLArg(!error, "Success"));
 }

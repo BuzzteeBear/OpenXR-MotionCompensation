@@ -153,7 +153,7 @@ namespace modifier
             ErrorLog("%s: compensating motion controllers and using pose modifier at hmd position are incompatible",
                      __FUNCTION__);
             Log("pose modifier at hmd position NOT activated");
-            output::AudioOut::Execute(output::Event::Error);
+            output::EventSink::Execute(output::Event::Error);
 
             // reset values to avoid activation via keyboard shortcut
             m_Pitch = 1.f;

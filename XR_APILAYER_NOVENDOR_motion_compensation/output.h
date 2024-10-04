@@ -7,7 +7,8 @@ namespace output
 {
     enum class Event
     {
-        Error = -1,
+        Error = 1,
+        Initialized,
         Load,
         Save,
         Activated,
@@ -43,6 +44,12 @@ namespace output
         StabilizerOff,
         PassthroughOn,
         PassthroughOff
+    };
+
+    class EventSink
+    {
+      public:
+        static void Execute(Event event);
     };
 
     class AudioOut
@@ -89,6 +96,44 @@ namespace output
                                                                   {Event::PassthroughOn, PASSTHROUGH_ON_WAV},
                                                                   {Event::PassthroughOff, PASSTHROUGH_OFF_WAV}};
     };
+
+    struct StatusInfo
+    {
+        int event;
+        int64_t eventTime;
+    };
+
+    class MmfOut
+    {
+      public:
+        MmfOut();
+        ~MmfOut();
+
+        void Execute(Event event);
+      private:
+        void UpdateMmf();
+        void StopThread();
+
+        std::set<Event> m_RelevantForMmf{
+            Event::Initialized,     Event::Error,          Event::Load,          Event::Save,
+            Event::Activated,       Event::Deactivated,    Event::Calibrated,    Event::DebugOn,
+            Event::DebugOff,        Event::ConnectionLost, Event::EyeCached,     Event::EyeCalculated,
+            Event::OverlayOn,       Event::OverlayOff,     Event::ModifierOn,    Event::ModifierOff,
+            Event::CalibrationLost, Event::VerboseOn,      Event::VerboseOff,    Event::RecorderOn,
+            Event::RecorderOff,     Event::StabilizerOn,   Event::StabilizerOff, Event::PassthroughOn,
+            Event::PassthroughOff};
+        std::thread* m_Thread{nullptr};
+        std::atomic_bool m_StopThread{false}, m_MmfError{false};
+        int64_t m_LastError{0};
+        std::deque <std::pair<Event, int64_t>> m_EventQueue;
+        std::mutex m_QueueMutex;
+    };
+
+    // Singleton accessor.
+    MmfOut* GetMmfOut();
+
+
+
 
     constexpr uint32_t m_RecorderMax{36000}; // max 10 min @ 100 frames/s
 

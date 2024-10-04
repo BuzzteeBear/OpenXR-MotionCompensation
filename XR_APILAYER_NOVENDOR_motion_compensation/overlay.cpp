@@ -334,7 +334,7 @@ namespace openxr_api_layer::graphics
         {
             m_OverlayActive = false;
             ErrorLog("%s: graphical overlay is not properly initialized", __FUNCTION__);
-            output::AudioOut::Execute(output::Event::Error);
+            output::EventSink::Execute(output::Event::Error);
 
             TraceLoggingWriteStop(local,
                                   "Overlay::ToggleOverlay",
@@ -343,7 +343,7 @@ namespace openxr_api_layer::graphics
             return false;
         }
         m_OverlayActive = !m_OverlayActive;
-        output::AudioOut::Execute(m_OverlayActive ? output::Event::OverlayOn : output::Event::OverlayOff);
+        output::EventSink::Execute(m_OverlayActive ? output::Event::OverlayOn : output::Event::OverlayOff);
 
         TraceLoggingWriteStop(local,
                               "Overlay::ToggleOverlay",
@@ -360,7 +360,7 @@ namespace openxr_api_layer::graphics
         if (!m_Initialized)
         {
             ErrorLog("%s: graphical overlay is not properly initialized", __FUNCTION__);
-            output::AudioOut::Execute(output::Event::Error);
+            output::EventSink::Execute(output::Event::Error);
 
             TraceLoggingWriteStop(local,
                                   "Overlay::TogglePassthrough",
@@ -369,7 +369,7 @@ namespace openxr_api_layer::graphics
             return false;
         }
         m_PassthroughActive = !m_PassthroughActive;
-        output::AudioOut::Execute(m_PassthroughActive ? output::Event::PassthroughOn : output::Event::PassthroughOff);
+        output::EventSink::Execute(m_PassthroughActive ? output::Event::PassthroughOn : output::Event::PassthroughOff);
 
         TraceLoggingWriteStop(local,
                               "Overlay::TogglePassthrough",
