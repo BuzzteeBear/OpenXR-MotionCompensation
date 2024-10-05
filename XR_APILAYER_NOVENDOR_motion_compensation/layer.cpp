@@ -114,7 +114,7 @@ namespace openxr_api_layer
         if (!m_Initialized)
         {
             ErrorLog("%s: initialization failed - config file missing or incomplete", __FUNCTION__);
-            EventSink::Execute(Event::Error);
+            EventSink::Execute(Event::Critical);
             TraceLoggingWriteStop(local,
                                   "OpenXrLayer::xrCreateInstance",
                                   TLArg(false, "Config_Valid"),
@@ -234,7 +234,7 @@ namespace openxr_api_layer
         // enable debug test rotation
         GetConfig()->GetBool(Cfg::TestRotation, m_TestRotation);
 
-        EventSink::Execute(m_Initialized ? Event::Initialized : Event::Error);
+        EventSink::Execute(m_Initialized ? Event::Initialized : Event::Critical);
 
         Log("layer initialization completed\n");
         TraceLoggingWriteStop(local,
@@ -316,7 +316,6 @@ namespace openxr_api_layer
                     {
                         Log("tracker calibration lost");
                         m_Tracker->InvalidateCalibration();
-                        EventSink::Execute(Event::CalibrationLost);
 
                         if (m_Activated)
                         {
@@ -1792,6 +1791,7 @@ namespace openxr_api_layer
                 TraceLoggingWriteStop(local,
                                       "OpenXrLayer::CreateStageSpace",
                                       TLPArg(xr::ToCString(result), "Result_xrCreateReferenceSpace"));
+                EventSink::Execute(Event::Critical);
                 m_Initialized = false;
                 return;
             }

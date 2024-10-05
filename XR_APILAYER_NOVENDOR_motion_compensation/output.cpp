@@ -79,7 +79,7 @@ namespace output
 
     MmfOut::MmfOut()
     {
-        m_Thread = new std::thread(&MmfOut::UpdateMmf, this);
+        m_Thread = new std::thread(&MmfOut::UpdateEventMmf, this);
     }
 
     MmfOut::~MmfOut()
@@ -96,7 +96,7 @@ namespace output
     {
         using namespace std::chrono;
 
-        if (!m_RelevantForMmf.contains(event))
+        if (!m_RelevantEvents.contains(event))
         {
             return;
         }
@@ -120,7 +120,7 @@ namespace output
                 m_LastError = 0;
                 m_MmfError = false;
                 m_StopThread = false;
-                m_Thread = new std::thread(&MmfOut::UpdateMmf, this);
+                m_Thread = new std::thread(&MmfOut::UpdateEventMmf, this);
             }
         }
 
@@ -129,14 +129,14 @@ namespace output
         m_EventQueue.push_back({event, now});
     }
 
-    void MmfOut::UpdateMmf()
+    void MmfOut::UpdateEventMmf()
     {
         using namespace std::chrono;
-        StatusInfo info{};
+        EventData info{};
 
         Mmf mmf;
         mmf.SetWriteable(sizeof(info));
-        mmf.SetName("Local\\OXRMC_Status");
+        mmf.SetName("Local\\OXRMC_Events");
 
         int64_t now = time_point_cast<nanoseconds>(steady_clock::now()).time_since_epoch().count();
         
@@ -152,7 +152,7 @@ namespace output
 
             now = time_point_cast<nanoseconds>(steady_clock::now()).time_since_epoch().count();
 
-            StatusInfo info;
+            EventData info;
             if (!mmf.Read(&info, sizeof(info), now))
             {
                 m_MmfError.store(true);

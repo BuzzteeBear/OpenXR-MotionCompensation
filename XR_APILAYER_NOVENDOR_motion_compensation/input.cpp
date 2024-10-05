@@ -293,7 +293,7 @@ namespace input
         }
         else if (!m_Layer->m_Activated)
         {
-            EventSink::Execute(Event::Error);
+            EventSink::Execute(Event::Critical);
         }
 
         TraceLoggingWriteStop(local, "InputHandler::ToggleActive", TLArg(m_Layer->m_Activated, "Activated"));
@@ -319,11 +319,7 @@ namespace input
         {
             success = m_Layer->m_Tracker->ResetReferencePose(m_Layer->m_Session, time);
         }
-        if (success)
-        {
-            EventSink::Execute(Event::Calibrated);
-        }
-        else
+        if (!success)
         {
             // failed to update reference pose -> deactivate mc
             if (m_Layer->m_Activated)
@@ -332,7 +328,7 @@ namespace input
                          __FUNCTION__);
                 m_Layer->m_Activated = false;
             }
-            EventSink::Execute(Event::Error);
+            EventSink::Execute(Event::Critical);
         }
         TraceLoggingWriteStop(local, "InputHandler::Recalibrate", TLArg(success, "Success"));
     }
@@ -468,7 +464,7 @@ namespace input
                 m_Layer->m_Overlay->SetMarkerSize();
             }
         }
-        EventSink::Execute(!success ? Event::Error : Event::Load);
+        EventSink::Execute(!success ? Event::Critical : Event::Load);
 
         TraceLoggingWriteStop(local, "InputHandler::ReloadConfig", TLArg(success, "Success"));
     }

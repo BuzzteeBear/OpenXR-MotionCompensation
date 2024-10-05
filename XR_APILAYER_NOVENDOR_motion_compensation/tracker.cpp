@@ -598,6 +598,7 @@ namespace tracker
     void TrackerBase::InvalidateCalibration()
     {
         m_Calibrated = false;
+        EventSink::Execute(Event::CalibrationLost);
         if (m_Sampler)
         {
             m_Sampler->StopSampling();
@@ -739,6 +740,7 @@ namespace tracker
         SetForwardRotation(m_ForwardPose);
         if (!ControllerBase::ResetReferencePose(session, time))
         {
+            EventSink::Execute(Event::CalibrationLost);
             TraceLoggingWriteStop(local, "OpenXrTracker::ResetReferencePose", TLArg(false, "Success"));
             return false;
         }
@@ -747,6 +749,7 @@ namespace tracker
                                                   {Pose::Invert(m_ReferencePose).orientation, {0, 0, 0}}));
         m_ReferencePose = Pose::Multiply(m_RefToFwd, m_ReferencePose);
 
+        EventSink::Execute(Event::Calibrated);
         TraceLoggingWriteStop(local, "OpenXrTracker::ResetReferencePose", TLArg(true, "Success"));
         return true;
     }
@@ -1034,7 +1037,8 @@ namespace tracker
                 refPose.orientation = GetYawRotation(GetForwardVector(refPose.orientation), m_OffsetYaw);
                 
                 TrackerBase::SetReferencePose(xr::Normalize(refPose));
-                
+
+                EventSink::Execute(Event::Calibrated);
             }
         }
         m_Calibrated = success;
@@ -1355,7 +1359,7 @@ namespace tracker
             XMQuaternionNormalize(XMQuaternionMultiply(LoadXrQuaternion(trackerPitch), LoadXrQuaternion(trackerRoll))));
 
         TraceLoggingWriteTagged(local,
-                                "VirtualTracker::SetReferencePose",
+                                "VirtualTracker::ApplyTrackerOffsets",
                                 TLArg(xr::ToString(trackerYaw).c_str(), "Yaw"),
                                 TLArg(xr::ToString(trackerPitchRoll).c_str(), "PitchRoll"));
 
@@ -1364,7 +1368,7 @@ namespace tracker
             DataToPose({dof.data[sway], dof.data[surge], dof.data[heave], 0, 0, 0}).position;
         const XrVector3f viewTranslation = view.position;
         TraceLoggingWriteTagged(local,
-                                "VirtualTracker::SetReferencePose",
+                                "VirtualTracker::ApplyTrackerOffsets",
                                 TLArg(xr::ToString(trackerYaw).c_str(), "Yaw"),
                                 TLArg(xr::ToString(trackerPitchRoll).c_str(), "PitchRoll"),
                                 TLArg(xr::ToString(trackerTranslation).c_str(), "TrackerTranslation"),
@@ -1374,7 +1378,7 @@ namespace tracker
         const XrVector3f viewAngles = ToEulerAngles(view.orientation);
         const XrVector3f trackerAngles = ToEulerAngles(trackerPitchRoll);
         TraceLoggingWriteTagged(local,
-                                "VirtualTracker::SetReferencePose",
+                                "VirtualTracker::ApplyTrackerOffsets",
                                 TLArg(xr::ToString(viewAngles).c_str(), "ViewAngles"),
                                 TLArg(xr::ToString(trackerAngles).c_str(), "TrackerAngles"));
 
@@ -1387,7 +1391,7 @@ namespace tracker
             XMQuaternionNormalize(XMQuaternionMultiply(LoadXrQuaternion(trackerYaw),
                                                        XMQuaternionRotationRollPitchYaw(0.f, trackerAngles.y, 0.f))));
         TraceLoggingWriteTagged(local,
-                                "VirtualTracker::SetReferencePose",
+                                "VirtualTracker::ApplyTrackerOffsets",
                                 TLArg(xr::ToString(trackerYaw).c_str(), "Yaw_Modified"),
                                 TLArg(xr::ToString(trackerPitchRoll).c_str(), "PitchRoll_Modified"));
 
@@ -1397,7 +1401,7 @@ namespace tracker
                                        ? trackerAngles.y * (trackerAngles.x - viewAngles.x) / trackerAngles.x
                                        : 0.f;
         TraceLoggingWriteTagged(local,
-                                "VirtualTracker::SetReferencePose",
+                                "VirtualTracker::ApplyTrackerOffsets",
                                 TLArg(std::to_string(yawCorrectionAngle).c_str(), "YawCorrectionAngle"));
 
         XrQuaternionf viewYawCorrected;
@@ -1416,7 +1420,7 @@ namespace tracker
             XMQuaternionNormalize(XMQuaternionMultiply(LoadXrQuaternion(viewGlobal.orientation),
                                                        XMQuaternionInverse(LoadXrQuaternion(trackerYaw)))));
         TraceLoggingWriteTagged(local,
-                                "VirtualTracker::SetReferencePose",
+                                "VirtualTracker::ApplyTrackerOffsets",
                                 TLArg(xr::ToString(viewGlobal).c_str(), "ViewGlobal_Rotated"));
 
         // rotate view according to hmd yaw angle (including position)
@@ -1427,7 +1431,7 @@ namespace tracker
 
 
         TraceLoggingWriteStop(local,
-                               "VirtualTracker::SetReferencePose",
+                               "VirtualTracker::ApplyTrackerOffsets",
                               TLArg(xr::ToString(viewGlobal).c_str(), "ViewGlobal"));
         return xr::Normalize(viewGlobal);
     }

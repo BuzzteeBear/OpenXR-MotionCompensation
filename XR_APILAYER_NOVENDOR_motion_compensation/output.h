@@ -8,6 +8,7 @@ namespace output
     enum class Event
     {
         Error = 1,
+        Critical,
         Initialized,
         Load,
         Save,
@@ -60,6 +61,7 @@ namespace output
 
       private:
         inline static const std::map<Event, int> m_SoundResources{{Event::Error, ERROR_WAV},
+                                                                  {Event::Critical, ERROR_WAV},
                                                                   {Event::Load, LOADED_WAV},
                                                                   {Event::Save, SAVED_WAV},
                                                                   {Event::Activated, ACTIVATED_WAV},
@@ -97,7 +99,7 @@ namespace output
                                                                   {Event::PassthroughOff, PASSTHROUGH_OFF_WAV}};
     };
 
-    struct StatusInfo
+    struct EventData
     {
         int event;
         int64_t eventTime;
@@ -111,17 +113,17 @@ namespace output
 
         void Execute(Event event);
       private:
-        void UpdateMmf();
+        void UpdateEventMmf();
         void StopThread();
 
-        std::set<Event> m_RelevantForMmf{
-            Event::Initialized,     Event::Error,          Event::Load,          Event::Save,
-            Event::Activated,       Event::Deactivated,    Event::Calibrated,    Event::DebugOn,
-            Event::DebugOff,        Event::ConnectionLost, Event::EyeCached,     Event::EyeCalculated,
-            Event::OverlayOn,       Event::OverlayOff,     Event::ModifierOn,    Event::ModifierOff,
-            Event::CalibrationLost, Event::VerboseOn,      Event::VerboseOff,    Event::RecorderOn,
-            Event::RecorderOff,     Event::StabilizerOn,   Event::StabilizerOff, Event::PassthroughOn,
-            Event::PassthroughOff};
+        std::set<Event> m_RelevantEvents{
+            Event::Error,         Event::Critical,        Event::Initialized,    Event::Load,
+            Event::Save,          Event::Activated,       Event::Deactivated,    Event::Calibrated,
+            Event::DebugOn,       Event::DebugOff,        Event::ConnectionLost, Event::EyeCached,
+            Event::EyeCalculated, Event::OverlayOn,       Event::OverlayOff,     Event::ModifierOn,
+            Event::ModifierOff,   Event::CalibrationLost, Event::VerboseOn,      Event::VerboseOff,
+            Event::RecorderOn,    Event::RecorderOff,     Event::StabilizerOn,   Event::StabilizerOff,
+            Event::PassthroughOn, Event::PassthroughOff};
         std::thread* m_Thread{nullptr};
         std::atomic_bool m_StopThread{false}, m_MmfError{false};
         int64_t m_LastError{0};
