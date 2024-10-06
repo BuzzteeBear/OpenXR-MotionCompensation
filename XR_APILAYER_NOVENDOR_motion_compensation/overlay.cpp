@@ -708,10 +708,10 @@ namespace openxr_api_layer::graphics
         }
 
         // right
-        std::vector<SimpleMeshVertex> vertices = CreateMarkerMesh({tip, 0.f, 0.f},
-                                                                  {point65, point05, 0.f},
-                                                                  {point6, point1, 0.f},
-                                                                  {bottom, 0.f, 0.f},
+        std::vector<SimpleMeshVertex> vertices = CreateMarkerMesh({tip, 0, 0},
+                                                                  {point65, point05, 0},
+                                                                  {point6, point1, 0},
+                                                                  {bottom, 0, 0},
                                                                   reference      ? DarkRed
                                                                   : avoidMagenta ? DarkGrey
                                                                                  : DarkMagenta,
@@ -722,19 +722,19 @@ namespace openxr_api_layer::graphics
                                                                   : avoidMagenta ? LightGrey
                                                                                  : LightMagenta);
         // up
-        std::vector<SimpleMeshVertex> top = CreateMarkerMesh({0.f, tip, 0.f},
-                                                             {0.f, point65, point05},
-                                                             {0.f, point6, point1},
-                                                             {0.f, bottom, 0.f},
+        std::vector<SimpleMeshVertex> top = CreateMarkerMesh({0, tip, 0},
+                                                             {0, point65, point05},
+                                                             {0, point6, point1},
+                                                             {0, bottom, 0},
                                                              reference ? DarkBlue : DarkCyan,
                                                              reference ? Blue : Cyan,
                                                              reference ? LightBlue : LightCyan);
         // forward
         vertices.insert(vertices.end(), top.begin(), top.end());
-        std::vector<SimpleMeshVertex> front = CreateMarkerMesh({0.f, 0.f, -tip},
-                                                               {point05, 0.f, -point65},
-                                                               {point1, 0.f, -point6},
-                                                               {0.f, 0.f, -bottom},
+        std::vector<SimpleMeshVertex> front = CreateMarkerMesh({0, 0, -tip},
+                                                               {point05, 0, -point65},
+                                                               {point1, 0, -point6},
+                                                               {0, 0, -bottom},
                                                                reference ? DarkGreen : DarkYellow,
                                                                reference ? Green : Yellow,
                                                                reference ? LightGreen : LightYellow);

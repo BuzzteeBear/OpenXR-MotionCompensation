@@ -2378,7 +2378,7 @@ namespace openxr_api_layer
 
         // remove translation to rotate around center
         pose->position = {0, 0, 0};
-        StoreXrPose(pose, XMMatrixMultiply(LoadXrPose(*pose), DirectX::XMMatrixRotationRollPitchYaw(0.f, angle, 0.f)));
+        StoreXrPose(pose, XMMatrixMultiply(LoadXrPose(*pose), DirectX::XMMatrixRotationRollPitchYaw(0, angle, 0)));
         // reapply translation
         pose->position = pos;
 

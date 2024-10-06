@@ -26,24 +26,24 @@
 namespace openxr_api_layer::graphics
 {
     // Colors
-    constexpr XrVector3f Red{1.f, 0.f, 0.f};
-    constexpr XrVector3f DarkRed{0.25f, 0.f, 0.f};
-    constexpr XrVector3f LightRed{1.f, 0.15f, 0.15f};
-    constexpr XrVector3f Green{0.f, 1.f, 0.f};
-    constexpr XrVector3f DarkGreen{0.f, 0.25f, 0.f};
-    constexpr XrVector3f LightGreen{0.15f, 1.f, 0.15f};
-    constexpr XrVector3f Blue{0.f, 0.f, 1.f};
-    constexpr XrVector3f DarkBlue{0.f, 0.f, 0.25f};
-    constexpr XrVector3f LightBlue{0.15f, 0.15f, 1.f};
-    constexpr XrVector3f Yellow{1.f, 1.f, 0.f};
-    constexpr XrVector3f DarkYellow{0.25f, 0.25f, 0.f};
-    constexpr XrVector3f LightYellow{1.f, 1.f, 0.15f};
-    constexpr XrVector3f Cyan{0.f, 1.f, 1.f};
-    constexpr XrVector3f DarkCyan{0.f, 0.25f, 0.25f};
-    constexpr XrVector3f LightCyan{0.15f, 1.f, 1.f};
-    constexpr XrVector3f Magenta{1.f, 0.f, 1.f};
-    constexpr XrVector3f DarkMagenta{0.25f, 0.f, 0.25f};
-    constexpr XrVector3f LightMagenta{1.f, 0.15f, 1.f};
+    constexpr XrVector3f Red{1, 0, 0};
+    constexpr XrVector3f DarkRed{0.25f, 0, 0};
+    constexpr XrVector3f LightRed{1, 0.15f, 0.15f};
+    constexpr XrVector3f Green{0, 1, 0};
+    constexpr XrVector3f DarkGreen{0, 0.25f, 0};
+    constexpr XrVector3f LightGreen{0.15f, 1, 0.15f};
+    constexpr XrVector3f Blue{0, 0, 1};
+    constexpr XrVector3f DarkBlue{0, 0, 0.25f};
+    constexpr XrVector3f LightBlue{0.15f, 0.15f, 1};
+    constexpr XrVector3f Yellow{1, 1, 0};
+    constexpr XrVector3f DarkYellow{0.25f, 0.25f, 0};
+    constexpr XrVector3f LightYellow{1, 1, 0.15f};
+    constexpr XrVector3f Cyan{0, 1, 1};
+    constexpr XrVector3f DarkCyan{0, 0.25f, 0.25f};
+    constexpr XrVector3f LightCyan{0.15f, 1, 1};
+    constexpr XrVector3f Magenta{1, 0, 1};
+    constexpr XrVector3f DarkMagenta{0.25f, 0, 0.25f};
+    constexpr XrVector3f LightMagenta{1, 0.15f, 1};
     constexpr XrVector3f Grey{0.25f, 0.25f, 0.25f};
     constexpr XrVector3f DarkGrey{0.0f, 0.0f, 0.0f};
     constexpr XrVector3f LightGrey{0.75f, 0.75f, 0.75f};

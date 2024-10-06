@@ -27,7 +27,7 @@ namespace tracker
         virtual bool GetPose(XrPosef& trackerPose, XrSession session, XrTime time) = 0;
         virtual bool GetControllerPose(XrPosef& trackerPose, XrSession session, XrTime time);
         static XrVector3f GetForwardVector(const XrQuaternionf& quaternion);
-        static XrQuaternionf GetYawRotation(const XrVector3f& forward, float yawAdjustment);
+        static XrQuaternionf GetLeveledRotation(const XrVector3f& forward, float yawAdjustment);
         static float GetYawAngle(const XrVector3f& forward);
 
         XrPosef m_ReferencePose{xr::math::Pose::Identity()};
@@ -79,14 +79,10 @@ namespace tracker
       protected:
         void ApplyFilters(XrPosef& pose) override;
         void ApplyModifier(XrPosef& pose) override;
-        bool CalibrateForward(XrSession session, XrTime time);
-        virtual std::optional<XrPosef> GetCurrentView(XrSession session, XrTime time);
+        virtual std::optional<XrPosef> GetForwardView(XrSession session, XrTime time);
+        static std::optional<XrPosef> GetCurrentView(XrSession session, XrTime time);
         void SetForwardRotation(const XrPosef& pose) const;
 
-        XrVector3f m_Forward{0.f, 0.f, -1.f};
-        XrVector3f m_Right{1.f, 0.f, 0.f};
-        XrVector3f m_Up{0.f, 1.f, 0.f};
-        XrPosef m_ForwardPose{xr::math::Pose::Identity()};
         std::vector<utility::DofValue> m_RelevantValues{};
         sampler::Sampler* m_Sampler{nullptr};
 
@@ -158,7 +154,7 @@ namespace tracker
       protected:
         void SetReferencePose(const XrPosef& pose) override;
         bool GetPose(XrPosef& trackerPose, XrSession session, XrTime time) override;
-        std::optional<XrPosef> GetCurrentView(XrSession session, XrTime time) override;
+        std::optional<XrPosef> GetForwardView(XrSession session, XrTime time) override;
         virtual bool ReadData(XrTime time, utility::Dof& dof);
         virtual XrPosef DataToPose(const utility::Dof& dof) = 0;
 
@@ -169,7 +165,7 @@ namespace tracker
 
       private:
         bool LoadReferencePose(XrSession session, XrTime time);
-        XrPosef ApplyTrackerOffsets(const XrPosef& view, const utility::Dof& dof);
+        void ApplyOffsets(const utility::Dof& dof, XrPosef& view);
 
         std::unique_ptr<CorManipulator> m_Manipulator{};
         bool m_NonNeutralCalibration{false};
