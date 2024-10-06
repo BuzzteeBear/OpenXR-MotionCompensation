@@ -7,7 +7,8 @@ namespace output
 {
     enum class Event
     {
-        Error = 1,
+        Silence = 0,
+        Error,
         Critical,
         Initialized,
         Load,
@@ -60,7 +61,8 @@ namespace output
         static void CountDown(int seconds);
 
       private:
-        inline static const std::map<Event, int> m_SoundResources{{Event::Error, ERROR_WAV},
+        inline static const std::map<Event, int> m_SoundResources{{Event::Silence, 0},
+                                                                  {Event::Error, ERROR_WAV},
                                                                   {Event::Critical, ERROR_WAV},
                                                                   {Event::Load, LOADED_WAV},
                                                                   {Event::Save, SAVED_WAV},

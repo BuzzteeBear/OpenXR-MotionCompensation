@@ -454,6 +454,7 @@ namespace openxr_api_layer
         TraceLoggingWriteStart(local, "OpenXrLayer::xrDestroySession", TLXArg(session, "Session"));
 
         m_Tracker->InvalidateCalibration();
+        EventSink::Execute(Event::Silence);
 
         // clean up open xr session resources
         if (XR_NULL_HANDLE != m_TrackerSpace)
