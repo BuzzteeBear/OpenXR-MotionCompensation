@@ -248,7 +248,8 @@ class ConfigManager
                                Cfg::CorD,
                                Cfg::FactorEnabled,
                                Cfg::StabilizerEnabled,
-                               Cfg::StabilizerStrength};
+                               Cfg::StabilizerStrength,
+                               Cfg::LogVerbose};
 
     std::set<Cfg> m_CorValues{Cfg::CorX, Cfg::CorY, Cfg::CorZ, Cfg::CorA, Cfg::CorB, Cfg::CorC, Cfg::CorD};
 

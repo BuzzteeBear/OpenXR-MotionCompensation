@@ -18,7 +18,8 @@ namespace output
     void EventSink::Execute(Event event)
     {
         AudioOut::Execute(event);
-        GetMmfOut()->Execute(event);
+        GetEventMmf()->Execute(event);
+        GetStatusMmf()->Execute(event);
     }
 
     void AudioOut::Execute(const Event event)
@@ -77,22 +78,22 @@ namespace output
         TraceLoggingWriteStop(local, "AudioOut::CountDown");
     }
 
-    MmfOut::MmfOut()
+    EventMmf::EventMmf()
     {
-        m_Thread = new std::thread(&MmfOut::UpdateEventMmf, this);
+        m_Thread = new std::thread(&EventMmf::UpdateEventMmf, this);
     }
 
-    MmfOut::~MmfOut()
+    EventMmf::~EventMmf()
     {
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "MmfOut::Destroy");
+        TraceLoggingWriteStart(local, "EventMmf::Destroy");
 
         StopThread();
 
-        TraceLoggingWriteStop(local, "MmfOut::Destroy");
+        TraceLoggingWriteStop(local, "EventMmf::Destroy");
     }
 
-    void MmfOut::Execute(Event event)
+    void EventMmf::Execute(Event event)
     {
         using namespace std::chrono;
 
@@ -102,7 +103,7 @@ namespace output
         }
 
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "MmfOut::Execute", TLArg(static_cast<int>(event), "Event"));
+        TraceLoggingWriteStart(local, "EventMmf::Execute", TLArg(static_cast<int>(event), "Event"));
 
         auto now = time_point_cast<milliseconds>(system_clock::now()).time_since_epoch().count();
 
@@ -120,27 +121,27 @@ namespace output
                 m_LastError = 0;
                 m_MmfError = false;
                 m_StopThread = false;
-                m_Thread = new std::thread(&MmfOut::UpdateEventMmf, this);
+                m_Thread = new std::thread(&EventMmf::UpdateEventMmf, this);
             }
         }
 
         // queue up event
         std::unique_lock lock(m_QueueMutex);
         m_EventQueue.push_back({event, now});
+
+        TraceLoggingWriteStop(local, "EventMmf::Execute", TLArg(static_cast<int>(event), "Event"));
     }
 
-    void MmfOut::UpdateEventMmf()
+    void EventMmf::UpdateEventMmf()
     {
-        using namespace std::chrono;
         EventData info{};
 
         Mmf mmf;
         mmf.SetWriteable(sizeof(info));
         mmf.SetName("Local\\OXRMC_Events");
 
-        int64_t now = time_point_cast<nanoseconds>(steady_clock::now()).time_since_epoch().count();
         
-        if (!mmf.Write(&info, sizeof(info), now))
+        if (!mmf.Write(&info, sizeof(info)))
         {
             m_MmfError.store(true);
             return;
@@ -148,12 +149,10 @@ namespace output
 
         while (!m_StopThread.load())
         {
-            std::this_thread::sleep_for(milliseconds(10));
-
-            now = time_point_cast<nanoseconds>(steady_clock::now()).time_since_epoch().count();
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
             EventData info;
-            if (!mmf.Read(&info, sizeof(info), now))
+            if (!mmf.Read(&info, sizeof(info), 0))
             {
                 m_MmfError.store(true);
                 break;
@@ -172,7 +171,7 @@ namespace output
 
             info.event = static_cast<int>(m_EventQueue.front().first);
             info.eventTime = m_EventQueue.front().second;
-            if (!mmf.Write(&info, sizeof(info), now))
+            if (!mmf.Write(&info, sizeof(info)))
             {
                 m_MmfError.store(true);
                 break;
@@ -182,7 +181,7 @@ namespace output
         m_StopThread.store(true);
     }
 
-    void MmfOut::StopThread()
+    void EventMmf::StopThread()
     {
         m_StopThread.store(true);
         if (m_Thread)
@@ -193,21 +192,141 @@ namespace output
             }
             delete m_Thread;
             m_Thread = nullptr;
-            TraceLoggingWrite(g_traceProvider, "MmfOut::StopThread", TLArg(true, "Stopped"));
+            TraceLoggingWrite(g_traceProvider, "EventMmf::StopThread", TLArg(true, "Stopped"));
         }
     }
 
-    std::unique_ptr<MmfOut> g_MmfOut = nullptr;
+    std::unique_ptr<EventMmf> g_EventMmf = nullptr;
 
-    MmfOut* GetMmfOut()
+    EventMmf* GetEventMmf()
     {
-        if (!g_MmfOut)
+        if (!g_EventMmf)
         {
-            g_MmfOut = std::make_unique<MmfOut>();
+            g_EventMmf = std::make_unique<EventMmf>();
         }
-        return g_MmfOut.get();
+        return g_EventMmf.get();
     }
 
+    StatusMmf::StatusMmf()
+    {
+        m_Mmf.SetWriteable(sizeof(int));
+        m_Mmf.SetName("Local\\OXRMC_Status");
+
+    }
+
+    void StatusMmf::Execute(Event event)
+    {
+        if (!m_RelevantEvents.contains(event))
+        {
+            return;
+        }
+
+        int prevStatus = StatusToInt(m_Status);
+
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local,
+                               "EventMmf::Execute",
+                               TLArg(static_cast<int>(event), "Event"),
+                               TLArg(prevStatus, "PrevStatus"));
+
+        Status status = m_Status;
+        switch (event)
+        {
+        case Event::Initialized:
+            status.initialized = true;
+            break;
+        case Event::Calibrated:
+            status.calibrated = true;
+            status.connected = true;
+            break;
+        case Event::CalibrationLost:
+            status.calibrated = false;
+            break;
+        case Event::Activated:
+            status.activated = true;
+            break;
+        case Event::Deactivated:
+            status.activated = false;
+            break;
+        case Event::ConnectionLost:
+            status.activated = false;
+            status.connected = false;
+            break;
+        case Event::Critical:
+            status.activated = false;
+            status.critical = true;
+            break;
+        case Event::Error:
+            status.error = true;
+            break;
+        case Event::Load:
+            status.modified = false;
+            status.activated = false;
+            status.calibrated = false;
+            status.connected = false;
+            break;
+        case Event::Save:
+            status.error = false;
+            break;
+        case Event::Plus:
+        case Event::Minus:
+        case Event::Max:
+        case Event::Min:
+        case Event::Up:
+        case Event::Down:
+        case Event::Forward:
+        case Event::Back:
+        case Event::Left:
+        case Event::Right:
+        case Event::RotLeft:
+        case Event::RotRight:
+        case Event::EyeCached:
+        case Event::EyeCalculated:
+        case Event::ModifierOn:
+        case Event::ModifierOff:
+        case Event::VerboseOn:
+        case Event::VerboseOff:
+        case Event::StabilizerOn:
+        case Event::StabilizerOff:
+            status.modified = true;
+            break;
+        default:
+            break;
+        }
+        int newStatus = StatusToInt(status);
+        ;
+        TraceLoggingWriteTagged(local, "EventMmf::Execute", TLArg(newStatus , "NewStatus"));
+
+        if (prevStatus != newStatus)
+        {
+            if (m_Mmf.Write(&newStatus, sizeof(newStatus)))
+            {
+                m_Status = status;
+                TraceLoggingWriteStop(local, "EventMmf::Execute", TLArg(true, "Update"));
+                return;
+            }
+            TraceLoggingWriteStop(local, "EventMmf::Execute", TLArg(false, "Update"));
+            return;
+        }
+        TraceLoggingWriteStop(local, "EventMmf::Execute", TLArg(false, "Changed"));
+    }
+
+    int StatusMmf::StatusToInt(const Status& status)
+    {
+        return init * status.initialized + cal * status.calibrated + act * status.activated + crit * status.critical +
+               err * status.error + con * status.connected + mod * status.modified;
+    }
+
+    std::unique_ptr<StatusMmf> g_StatusMmf = nullptr;
+
+    StatusMmf* GetStatusMmf()
+    {
+        if (!g_StatusMmf)
+        {
+            g_StatusMmf = std::make_unique<StatusMmf>();
+        }
+        return g_StatusMmf.get();
+    }
     bool NoRecorder::Toggle(bool isCalibrated)
     {
         ErrorLog("%s: unable to toggle recording", __FUNCTION__);

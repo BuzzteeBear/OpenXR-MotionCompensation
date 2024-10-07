@@ -172,20 +172,20 @@ namespace utility
 
     bool Mmf::Read(void* buffer, const size_t size, const int64_t time)
     {
-        return ReadWrite(buffer, size, time, false);
+        return ReadWrite(buffer, size, false, time);
     }
 
-    bool Mmf::Write(void* buffer, size_t size, int64_t time)
+    bool Mmf::Write(void* buffer, size_t size)
     {
         if (!m_WriteAccess)
         {
             ErrorLog("%s: unable to write to mmf %s: write access not set", __FUNCTION__, m_Name.c_str());
             return false;
         }
-        return ReadWrite(buffer, size, time, true);
+        return ReadWrite(buffer, size, true);
     }
 
-    bool Mmf::ReadWrite(void* buffer, const size_t size, const int64_t time, bool write)
+    bool Mmf::ReadWrite(void* buffer, const size_t size, bool write, const int64_t time)
     {
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "Mmf::ReadWrite", TLArg(time, "Time"), TLArg(write, "Write"));

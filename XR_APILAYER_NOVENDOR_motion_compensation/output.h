@@ -86,11 +86,8 @@ namespace output
                                                                   {Event::ConnectionLost, CONNECTION_LOST_WAV},
                                                                   {Event::EyeCached, EYE_CACHED_WAV},
                                                                   {Event::EyeCalculated, EYE_CALCULATION_WAV},
-                                                                  {Event::OverlayOn, OVERLAY_ON_WAV},
-                                                                  {Event::OverlayOff, OVERLAY_OFF_WAV},
                                                                   {Event::ModifierOn, MODIFIER_ON_WAV},
                                                                   {Event::ModifierOff, MODIFIER_OFF_WAV},
-                                                                  {Event::CalibrationLost, CALIBRATION_LOST_WAV},
                                                                   {Event::VerboseOn, VERBOSE_ON_WAV},
                                                                   {Event::VerboseOff, VERBOSE_OFF_WAV},
                                                                   {Event::RecorderOn, RECORDER_ON_WAV},
@@ -107,11 +104,11 @@ namespace output
         int64_t eventTime;
     };
 
-    class MmfOut
+    class EventMmf
     {
       public:
-        MmfOut();
-        ~MmfOut();
+        EventMmf();
+        ~EventMmf();
 
         void Execute(Event event);
       private:
@@ -134,7 +131,79 @@ namespace output
     };
 
     // Singleton accessor.
-    MmfOut* GetMmfOut();
+    EventMmf* GetEventMmf();    
+
+    struct Status
+    {
+        
+        bool initialized;
+        bool calibrated;
+        bool activated;
+        bool critical;
+        bool error;
+        bool connected;
+        bool modified;
+
+    };
+    enum StatusFlags
+    {
+        init = 0x1,
+        cal = 0x2,
+        act = 0x4,
+        crit = 0x8,
+        err = 0x10,
+        con = 0x20,
+        mod = 0x40
+    };
+
+    class StatusMmf
+    {
+      public:
+        StatusMmf();
+        ~StatusMmf() = default;
+
+        void Execute(Event event);
+
+    private:
+        static int StatusToInt(const Status& status);
+
+        std::set<Event> m_RelevantEvents{Event::Error,
+                                         Event::Critical,
+                                         Event::Initialized,
+                                         Event::Load,
+                                         Event::Save,
+                                         Event::Activated,
+                                         Event::Deactivated,
+                                         Event::Calibrated,
+                                         Event::ConnectionLost,
+                                         Event::ModifierOff,
+                                         Event::CalibrationLost,
+                                         Event::Plus,
+                                         Event::Minus,
+                                         Event::Max,
+                                         Event::Min,
+                                         Event::Up,
+                                         Event::Down,
+                                         Event::Forward,
+                                         Event::Back,
+                                         Event::Left,
+                                         Event::Right,
+                                         Event::RotLeft,
+                                         Event::RotRight,
+                                         Event::EyeCached,
+                                         Event::EyeCalculated,
+                                         Event::ModifierOn,
+                                         Event::ModifierOff,
+                                         Event::VerboseOn,
+                                         Event::VerboseOff,
+                                         Event::StabilizerOn,
+                                         Event::StabilizerOff};
+        utility::Mmf m_Mmf{};
+        Status m_Status{};
+    };
+
+    // Singleton accessor.
+    StatusMmf* GetStatusMmf();
 
 
 
