@@ -136,6 +136,9 @@
     <None Include="packages.config" />
     <None Include="XR_APILAYER_NOVENDOR_motion_compensation_32.json" />
     <None Include="Resources.rc2" />
+    <None Include="output.cs">
+      <Filter>Header Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resources.rc" />

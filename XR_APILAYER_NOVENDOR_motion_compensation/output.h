@@ -3,51 +3,17 @@
 #pragma once
 #include "resource.h"
 
+// include definitions shared with c# mmf class library
+typedef int Int32;
+typedef int64_t Int64;
+#define public
+#define enum enum class
+#include "output.cs"
+#undef enum
+#undef public    
+
 namespace output
 {
-    enum class Event
-    {
-        Silence = 0,
-        Error,
-        Critical,
-        Initialized,
-        Load,
-        Save,
-        Activated,
-        Deactivated,
-        Calibrated,
-        Plus,
-        Minus,
-        Max,
-        Min,
-        Up,
-        Down,
-        Forward,
-        Back,
-        Left,
-        Right,
-        RotLeft,
-        RotRight,
-        DebugOn,
-        DebugOff,
-        ConnectionLost,
-        EyeCached,
-        EyeCalculated,
-        OverlayOn,
-        OverlayOff,
-        ModifierOn,
-        ModifierOff,
-        CalibrationLost,
-        VerboseOn,
-        VerboseOff,
-        RecorderOn,
-        RecorderOff,
-        StabilizerOn,
-        StabilizerOff,
-        PassthroughOn,
-        PassthroughOff
-    };
-
     class EventSink
     {
       public:
@@ -98,12 +64,6 @@ namespace output
                                                                   {Event::PassthroughOff, PASSTHROUGH_OFF_WAV}};
     };
 
-    struct EventData
-    {
-        int event;
-        int64_t eventTime;
-    };
-
     class EventMmf
     {
       public:
@@ -133,28 +93,7 @@ namespace output
     // Singleton accessor.
     EventMmf* GetEventMmf();    
 
-    struct Status
-    {
-        
-        bool initialized;
-        bool calibrated;
-        bool activated;
-        bool critical;
-        bool error;
-        bool connected;
-        bool modified;
-
-    };
-    enum StatusFlags
-    {
-        init = 0x1,
-        cal = 0x2,
-        act = 0x4,
-        crit = 0x8,
-        err = 0x10,
-        con = 0x20,
-        mod = 0x40
-    };
+   
 
     class StatusMmf
     {

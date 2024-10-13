@@ -157,7 +157,7 @@ namespace output
                 m_MmfError.store(true);
                 break;
             }
-            if (info.event)
+            if (info.id)
             {
                 // waiting on processing
                 continue;
@@ -169,7 +169,7 @@ namespace output
                 continue;
             }
 
-            info.event = static_cast<int>(m_EventQueue.front().first);
+            info.id = static_cast<int>(m_EventQueue.front().first);
             info.eventTime = m_EventQueue.front().second;
             if (!mmf.Write(&info, sizeof(info)))
             {
@@ -234,16 +234,24 @@ namespace output
         {
         case Event::Initialized:
             status.initialized = true;
+            status.critical = false;
+            status.error = false;
+            status.modified = false;
             break;
         case Event::Calibrated:
             status.calibrated = true;
             status.connected = true;
+            status.critical = false;
             break;
         case Event::CalibrationLost:
+            status.activated = false;
             status.calibrated = false;
             break;
         case Event::Activated:
+            status.calibrated = true;
             status.activated = true;
+            status.connected = true;
+            status.critical = false;
             break;
         case Event::Deactivated:
             status.activated = false;
@@ -264,9 +272,10 @@ namespace output
             status.activated = false;
             status.calibrated = false;
             status.connected = false;
+            status.error = false;
             break;
         case Event::Save:
-            status.error = false;
+            status.modified = false;
             break;
         case Event::Plus:
         case Event::Minus:
@@ -313,8 +322,14 @@ namespace output
 
     int StatusMmf::StatusToInt(const Status& status)
     {
-        return init * status.initialized + cal * status.calibrated + act * status.activated + crit * status.critical +
-               err * status.error + con * status.connected + mod * status.modified;
+        using enum StatusFlags;
+        return static_cast<int>(initialized) * status.initialized +
+               static_cast<int>(calibrated) * status.calibrated +
+               static_cast<int>(activated) * status.activated +
+               static_cast<int>(critical) * status.critical +
+               static_cast<int>(error) * status.error +
+               static_cast<int>(connected) * status.connected +
+               static_cast<int>(modified) * status.modified;
     }
 
     std::unique_ptr<StatusMmf> g_StatusMmf = nullptr;
