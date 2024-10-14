@@ -1,0 +1,9 @@
+﻿<Application x:Class="OxrmcDashboard.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:OxrmcDashboard"
+             StartupUri="pack://application:,,,/OxrmcDashboardLibrary;component/DashboardWindow.xaml">
+    <Application.Resources>
+         
+    </Application.Resources>
+</Application>

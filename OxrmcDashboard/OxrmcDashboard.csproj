@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <ApplicationIcon>icon\oxrmc_grey.ico</ApplicationIcon>
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+
+  
+
+  <ItemGroup>
+    <Resource Include="icon\oxrmc_grey.ico" />
+    <ProjectReference Include="..\OxrmcDashboardLibrary\OxrmcDashboardLibrary.csproj" />
+  </ItemGroup>
+
+</Project>

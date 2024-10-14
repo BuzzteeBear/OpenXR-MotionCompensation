@@ -1,0 +1,35 @@
+﻿<Window x:Class="OxrmcDashboard.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:local="clr-namespace:OxrmcDashboard"
+    mc:Ignorable="d"
+    Background="Black"
+    ResizeMode="NoResize"
+    Title="OXRMC Dashboard"
+    Width = "500"
+    Height="200">
+    <Grid >
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="1*" />
+            <ColumnDefinition Width="2*" />
+        </Grid.ColumnDefinitions>
+        <Viewbox Stretch="Uniform" Margin="20">
+            <Image
+                x:Name="OxrmcLoge"
+                Loaded="LoadLogo" />
+        </Viewbox>
+        <TextBlock
+                Grid.Column="1"
+                VerticalAlignment ="Center"
+                HorizontalAlignment ="Stretch"
+                FontSize="26"
+                Foreground="White"
+                Background="Black"
+                TextWrapping="WrapWithOverflow">
+                This is a placeholder for the OXRMC+ dashboard app. 
+                    Please install OXRMC+ to be able to actually use it.
+        </TextBlock>
+    </Grid>
+</Window>
