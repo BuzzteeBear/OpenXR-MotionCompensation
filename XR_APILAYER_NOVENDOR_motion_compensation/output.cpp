@@ -15,9 +15,12 @@ using namespace openxr_api_layer::log;
 using namespace utility;
 namespace output
 {
-    void EventSink::Execute(Event event)
+    void EventSink::Execute(Event event, bool silent)
     {
-        AudioOut::Execute(event);
+        if (!silent)
+        {
+            AudioOut::Execute(event);
+        }
         GetEventMmf()->Execute(event);
         GetStatusMmf()->Execute(event);
     }
@@ -234,49 +237,47 @@ namespace output
         {
         case Event::Initialized:
             status.initialized = true;
-            status.critical = false;
-            status.error = false;
-            status.modified = false;
-            break;
-        case Event::Calibrated:
-            status.calibrated = true;
-            status.connected = true;
-            status.critical = false;
-            break;
-        case Event::CalibrationLost:
+        case Event::Load:
             status.activated = false;
             status.calibrated = false;
+            status.critical = false;
+            status.modified = false;
+            status.connectionLost = false;
+            status.error = false;
             break;
+
         case Event::Activated:
-            status.calibrated = true;
             status.activated = true;
-            status.connected = true;
+        case Event::Calibrated:
+            status.calibrated = true;
+            status.connectionLost = true;
             status.critical = false;
             break;
+
+        case Event::CalibrationLost:
+            status.calibrated = false;
         case Event::Deactivated:
             status.activated = false;
             break;
+
         case Event::ConnectionLost:
             status.activated = false;
-            status.connected = false;
+            status.connectionLost = true;
             break;
+
         case Event::Critical:
             status.activated = false;
             status.critical = true;
             break;
+
         case Event::Error:
             status.error = true;
             break;
-        case Event::Load:
-            status.modified = false;
-            status.activated = false;
-            status.calibrated = false;
-            status.connected = false;
-            status.error = false;
-            break;
+
         case Event::Save:
             status.modified = false;
             break;
+
         case Event::Plus:
         case Event::Minus:
         case Event::Max:
@@ -328,7 +329,7 @@ namespace output
                static_cast<int>(activated) * status.activated +
                static_cast<int>(critical) * status.critical +
                static_cast<int>(error) * status.error +
-               static_cast<int>(connected) * status.connected +
+               static_cast<int>(connection) * status.connectionLost +
                static_cast<int>(modified) * status.modified;
     }
 

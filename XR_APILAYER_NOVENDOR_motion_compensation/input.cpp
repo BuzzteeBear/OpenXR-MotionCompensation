@@ -439,7 +439,7 @@ namespace input
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "InputHandler::ReloadConfig");
 
-        m_Layer->m_Tracker->InvalidateCalibration();
+        m_Layer->m_Tracker->InvalidateCalibration(true);
         m_Layer->m_Activated = false;
         bool success = GetConfig()->Init(m_Layer->m_Application);
         if (success)

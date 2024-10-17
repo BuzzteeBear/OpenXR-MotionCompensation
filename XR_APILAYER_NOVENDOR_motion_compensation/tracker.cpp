@@ -595,10 +595,10 @@ namespace tracker
         TraceLoggingWriteStop(local, "TrackerBase::SetReferencePose");
     }
 
-    void TrackerBase::InvalidateCalibration()
+    void TrackerBase::InvalidateCalibration(bool silent)
     {
         m_Calibrated = false;
-        EventSink::Execute(Event::CalibrationLost);
+        EventSink::Execute(Event::CalibrationLost, silent);
         if (m_Sampler)
         {
             m_Sampler->StopSampling();

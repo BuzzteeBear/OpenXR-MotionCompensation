@@ -58,7 +58,7 @@ namespace tracker
 
         [[nodiscard]] XrPosef GetReferencePose() const;
         void SetReferencePose(const XrPosef& pose) override;
-        virtual void InvalidateCalibration();
+        virtual void InvalidateCalibration(bool silent);
         virtual void SaveReferencePose(XrTime time) const {};
 
         virtual bool ChangeOffset(XrVector3f modification);

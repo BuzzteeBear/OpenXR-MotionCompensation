@@ -3,21 +3,23 @@
 #pragma once
 #include "resource.h"
 
-// include definitions shared with c# mmf class library
+// include definitions shared with c#
 typedef int Int32;
 typedef int64_t Int64;
 #define public
+#define record
 #define enum enum class
 #include "output.cs"
+#undef public
 #undef enum
-#undef public    
+#undef record  
 
 namespace output
 {
     class EventSink
     {
       public:
-        static void Execute(Event event);
+        static void Execute(Event event, bool silent = false);
     };
 
     class AudioOut

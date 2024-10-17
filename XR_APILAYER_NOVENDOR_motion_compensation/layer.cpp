@@ -315,7 +315,7 @@ namespace openxr_api_layer
                     if (m_Tracker->m_Calibrated)
                     {
                         Log("tracker calibration lost");
-                        m_Tracker->InvalidateCalibration();
+                        m_Tracker->InvalidateCalibration(false);
 
                         if (m_Activated)
                         {
@@ -453,8 +453,7 @@ namespace openxr_api_layer
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "OpenXrLayer::xrDestroySession", TLXArg(session, "Session"));
 
-        m_Tracker->InvalidateCalibration();
-        EventSink::Execute(Event::Silence);
+        m_Tracker->InvalidateCalibration(true);
 
         // clean up open xr session resources
         if (XR_NULL_HANDLE != m_TrackerSpace)

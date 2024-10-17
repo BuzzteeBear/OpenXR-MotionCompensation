@@ -52,14 +52,14 @@ namespace output
 		public Int64 eventTime;
 	};
 
-	public struct Status
+	public record struct Status
 	{
 		public bool initialized;
 		public bool calibrated;
 		public bool activated;
 		public bool critical;
 		public bool error;
-		public bool connected;
+		public bool connectionLost;
 		public bool modified;
 	};
 
@@ -70,7 +70,7 @@ namespace output
 		activated = 0x4,
 		critical = 0x8,
 		error = 0x10,
-		connected = 0x20,
+		connection = 0x20,
 		modified = 0x40
 	};
 }
