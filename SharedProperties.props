@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <ImportGroup Label="PropertySheets">
-    <Import Project="$(SolutionDir)SharedProperties.props" Label="Shared Properties" />
-  </ImportGroup>
-  <PropertyGroup />
-  <ItemDefinitionGroup />
+  <PropertyGroup Label="UserMacros">
+    <VersionString>beta</VersionString>
+    <VersionMajor>0</VersionMajor>
+    <VersionMinor>3</VersionMinor>
+    <VersionPatch>9</VersionPatch>
+    <VersionRevision>0</VersionRevision>
+  </PropertyGroup>
   <ItemGroup>
     <BuildMacro Include="VersionString">
       <Value>$(VersionString)</Value>

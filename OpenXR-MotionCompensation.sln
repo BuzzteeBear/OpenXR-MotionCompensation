@@ -10,9 +10,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Files", "Solution 
 		.clang-format = .clang-format
 		.gitattributes = .gitattributes
 		.gitignore = .gitignore
-		LICENSE = LICENSE
 		docs\Developers_Manual.md = docs\Developers_Manual.md
+		LICENSE = LICENSE
 		docs\README.md = docs\README.md
+		SharedProperties.props = SharedProperties.props
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Scripts", "Scripts", "{EB45E753-7121-4593-A978-8F31F3F3482B}"

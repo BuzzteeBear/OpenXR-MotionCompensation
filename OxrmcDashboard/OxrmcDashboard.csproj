@@ -1,5 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
+  <ImportGroup Label="PropertySheets">
+	<Import Project="$(SolutionDir)SharedProperties.props" Label="Shared Properties" />
+  </ImportGroup>
+  
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
@@ -8,9 +11,11 @@
     <UseWPF>true</UseWPF>
     <ApplicationIcon>icon\oxrmc_grey.ico</ApplicationIcon>
     <PlatformTarget>x64</PlatformTarget>
+    <BaseOutputPath>..\bin\x64</BaseOutputPath>
+    <Version>$(VersionMajor).$(VersionMinor).$(VersionPatch).$(VersionRevision)</Version>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <StartupObject>OxrmcDashboard.App</StartupObject>
   </PropertyGroup>
-
-  
 
   <ItemGroup>
     <Resource Include="icon\oxrmc_grey.ico" />
