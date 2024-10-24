@@ -7,6 +7,12 @@ name: Build
 
 on:
   workflow_dispatch:
+    inputs:
+      sign:
+        type: boolean
+        description: apply code-signing to binaries
+      version:
+        description: version to verify in code-signing process
   
 env:
   # Path to the solution file relative to the root of the project.
@@ -22,11 +28,13 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-2019
+    runs-on: windows-latest
     
     strategy:
       matrix:
         platform: [win32, x64]
+        
+    environment: ${{ matrix.platform }}
 
     steps:
     - name: Check out repository
@@ -48,45 +56,114 @@ jobs:
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: msbuild /t:rebuild /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=${{matrix.platform}} /v:diag  ${{env.SOLUTION_FILE_PATH}}
       
-    - name: Attest provenance
+    - name: Attest DLL provenance
       uses: actions/attest-build-provenance@v1
       with:
         subject-path: 'bin\${{matrix.platform}}\${{env.BUILD_CONFIGURATION}}\*.dll'
+          
+    - name: Attest MMF Reader provenance
+      if: ${{matrix.platform == 'x64'}}
+      uses: actions/attest-build-provenance@v1
+      with:
+        subject-path: 'bin\${{matrix.platform}}\${{env.BUILD_CONFIGURATION}}\MmfReader\*.exe'
+        
+    - name: Attest Dashboard provenance
+      if: ${{matrix.platform == 'x64'}}
+      uses: actions/attest-build-provenance@v1
+      with:
+        subject-path: 'bin\${{matrix.platform}}\${{env.BUILD_CONFIGURATION}}\net8.0-windows\*.exe'
       
     - name: Upload artifact
       uses: actions/upload-artifact@v4
-      id: artifact-upload-step
+      id: binary-upload-step
       with:
-        name: oxrmc-binary-(${{matrix.platform}})
-        path: |
-          bin\${{matrix.platform}}\${{env.BUILD_CONFIGURATION}}\*.dll
-          bin\${{matrix.platform}}\${{env.BUILD_CONFIGURATION}}\MmfReader\*.exe
+        name: oxrmc-bin-(${{matrix.platform}})
+        path: bin\
         
   merge:
-    runs-on: windows-2019
+    runs-on: windows-latest
     needs: build
     outputs:
-      artifact-id: ${{ steps.artifact-merge-step.outputs.artifact-id }}
+      artifact-id: ${{ steps.binary-merge-step.outputs.artifact-id }}
     
     steps:
     - name: Merge artifacts
       uses: actions/upload-artifact/merge@v4
-      id: artifact-merge-step
+      id: binary-merge-step
       with:
-        name: oxrmc-binaries
+        name: oxrmc-bin
         delete-merged: true
       
-  sign:
-    runs-on: windows-2019
+  build_installer:
+    runs-on: windows-latest
     needs: merge
+    outputs:
+      artifact-id: ${{ steps.installer-upload-step.outputs.artifact-id }}
     
     steps:
-    - name: Request SignPath signature
-      uses: signpath/github-action-submit-signing-request@v0.4
+    - name: Check out repository
+      uses: actions/checkout@v4
+      
+    - name: Request SignPath signature for binaries...
+      if: ${{inputs.sign}}
+      uses: signpath/github-action-submit-signing-request@v1
       with:
         api-token: ${{secrets.APPVEYOR_API_TOKEN}}
         organization-id: 11e4bc12-01ae-4f8c-8c5f-233747e24ab1
         project-slug: OpenXR-MotionCompensation
         signing-policy-slug: release-signing
         github-artifact-id: ${{needs.merge.outputs.artifact-id}}
-        wait-for-completion: true
+        output-artifact-directory: 'bin'
+        parameters: |
+          version: "${{ inputs.version }}" 
+        
+    - name: ... or just download binary artifacts
+      if: ${{!inputs.sign}}
+      uses: actions/download-artifact@v4
+      with:
+        name: oxrmc-bin
+        path: bin
+            
+    - name: Build inno setup installer
+      uses: Minionguyjpro/Inno-Setup-Action@v1.0.0
+      with:
+        path: installer/OpenXR-MotionCompensation.iss
+    
+    - name: Attest provenance
+      uses: actions/attest-build-provenance@v1
+      with:
+        subject-path: 'bin\installer\*.exe'
+      
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      id: installer-upload-step
+      with:
+        name: oxrmc-installer
+        path: 'bin\installer\*.exe'
+        
+    - name: Remove binary artifact
+      uses: geekyeggo/delete-artifact@v5
+      with:
+          name: oxrmc-bin
+        
+  sign_installer:
+    runs-on: windows-latest
+    needs: build_installer
+    if: ${{inputs.sign}}
+    
+    steps:
+    - name: Request SignPath signature for installer
+      uses: signpath/github-action-submit-signing-request@v1
+      with:
+        api-token: ${{secrets.APPVEYOR_API_TOKEN}}
+        organization-id: 11e4bc12-01ae-4f8c-8c5f-233747e24ab1
+        project-slug: OpenXR-MotionCompensation
+        signing-policy-slug: release-signing
+        github-artifact-id: ${{needs.build_installer.outputs.artifact-id}}
+        parameters: |
+          version: "${{ inputs.version }}" 
+        
+    - name: Remove installer artifact
+      uses: geekyeggo/delete-artifact@v5
+      with:
+          name: oxrmc-installer
