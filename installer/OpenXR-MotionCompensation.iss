@@ -50,9 +50,11 @@ Source: "{#SourcePath}\..\XR_APILAYER_NOVENDOR_motion_compensation\XR_APILAYER_N
 Source: "{#SourcePath}\..\bin\Win32\Release\XR_APILAYER_NOVENDOR_motion_compensation_32.dll"; DestDir: "{app}"; Flags: ignoreversion; Tasks: x86
 Source: "{#SourcePath}\..\XR_APILAYER_NOVENDOR_motion_compensation\XR_APILAYER_NOVENDOR_motion_compensation_32.json"; DestDir: "{app}"; Flags: ignoreversion; Tasks: x86
 Source: "{#SourcePath}\..\bin\x64\Release\MmfReader\app.publish\MmfReader.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourcePath}\..\bin\x64\Release\net8.0-windows\*"; DestDir: "{app}\OxrmcDashboard"; Excludes: "*.pdb"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\OXRMC MMF Reader"; Filename: "{app}\MmfReader.exe"; WorkingDir: "{app}"
+Name: "{group}\OXRMC Dashboard"; Filename: "{app}\OxrmcDashboard\OxrmcDashboard.exe"; WorkingDir: "{app}\OxrmcDashboard"
 
 [Registry]
 Root: HKLM; Subkey: "SOFTWARE\Khronos\OpenXR\1\ApiLayers\Implicit"; ValueName: "{app}\XR_APILAYER_NOVENDOR_motion_compensation.json"; ValueType: dword; ValueData: 0; Flags: createvalueifdoesntexist uninsdeletevalue; BeforeInstall: RemoveRegEntries(true); AfterInstall: ReorderApiLayerRegEntries(true)
@@ -504,7 +506,7 @@ var
   ErrorCode: Integer;
   FilePath: string;
 begin
-  if MsgBox(ExpandConstant('Do you want to open the user guide?'), mbConfirmation, MB_YESNO) = IDYES then
+  if MsgBox(ExpandConstant('Do you want to open the readme file?'), mbConfirmation, MB_YESNO) = IDYES then
   begin
     FilePath := ExpandConstant('{app}\Readme.html');
     if not ShellExec('open', 'file:///' + FilePath, '', '', SW_SHOW, ewNoWait, ErrorCode) then
