@@ -29,7 +29,20 @@ If you are (or know someone) willing and able to support the software developmen
 Donations to the project are very welcome and can be made via [Paypal](https://www.paypal.com/donate/?hosted_button_id=Q64DT2ADFCBU8).  
 You can also sponsor the project via [GitHub Sponsors](https://github.com/sponsors/BuzzteeBear?o=esb)
 
-## Install
+## Special Thanks
+- This project wouldn't exist without the helpful advice and template source code provided by [Matthieu Bucchianeri](https://github.com/mbucchia), so we're very grateful for that. Kudos for his excellent contributions to the VR community.
+- Thanks to [SignPath Foundation](https://signpath.org/) for providing open source code signing certificates.
+- [JetBrains s.r.o.](https://www.jetbrains.com/) has been so kind to provide the project with an open source software development license for their Resharper products, free of charge. These have proven to be very helpful and greatly integrated into the Visual Studio IDE, that is used to develop this software.
+
+## Code Signing Policy
+- Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/)
+- Team roles:
+  - contributors: [see GitHub](https://github.com/BuzzteeBear/OpenXR-MotionCompensation/graphs/contributors)
+  - owner, reviewer and approver : [Sebastian Veith](https://github.com/BuzzteeBear)
+- Privacy policy:
+  - This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it.
+
+## Installation
 
 ### Run installer executable
 Just double-click the installation executable called `Install_OpenXR-MotionCompensation_<current_version>.exe` and follow the instructions.
