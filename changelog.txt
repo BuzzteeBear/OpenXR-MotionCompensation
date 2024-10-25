@@ -5,6 +5,9 @@ Version 0.3.9.0
 	Virtual Tracker:
 	- enabled cor calibration outside of neutral rig postion
 	
+	Graphcal Overlay:
+	- display current tracker pose when mc is off
+	
 	Bugfixes:
 	- corrected receorded translations to match local rig reference
 

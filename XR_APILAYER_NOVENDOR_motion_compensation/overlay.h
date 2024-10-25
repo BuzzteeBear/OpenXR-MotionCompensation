@@ -72,13 +72,13 @@ namespace openxr_api_layer::graphics
         bool TogglePassthrough();
         void DrawOverlay(const XrPosef& referencePose,
                          const XrPosef& delta,
-                         bool mcActivated,
+                         bool calibrated,
+                         bool drawTracker,
                          XrSession session,
                          XrFrameEndInfo* chainFrameEndInfo,
                          OpenXrLayer* openXrLayer);
 
-        bool m_D3D12inUse{false};
-        bool m_Initialized{true};
+        bool m_D3D12inUse{false}, m_Initialized{true}, m_OverlayActive{false};
 
       private:
         bool InitializeTextures(uint32_t eye, XrSwapchain swapchain, const ICompositionFramework* composition);
@@ -86,7 +86,7 @@ namespace openxr_api_layer::graphics
                            uint32_t eye,
                            const XrPosef& refPose,
                            const XrPosef& trackerPose,
-                           bool mcActivated,
+                           bool drawTracker,
                            ICompositionFramework* composition);
         static std::vector<SimpleMeshVertex> CreateMarker(bool reference, bool avoidMagenta);
         static std::vector<SimpleMeshVertex> CreateMarkerMesh(const XrVector3f& top,
@@ -97,7 +97,7 @@ namespace openxr_api_layer::graphics
                                                               const XrVector3f& pureColor,
                                                               const XrVector3f& lightColor);
 
-        bool m_OverlayActive{false}, m_PassthroughActive{false};
+        bool m_PassthroughActive{false};
         XrVector3f m_MarkerSize{0.1f, 0.1f, 0.1f};
         std::shared_ptr<ISimpleMesh> m_MeshRGB{}, m_MeshCMY{}, m_MeshCGY{};
         std::map<XrSwapchain, SwapchainState> m_Swapchains{};

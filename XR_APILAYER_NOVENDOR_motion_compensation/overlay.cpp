@@ -335,7 +335,6 @@ namespace openxr_api_layer::graphics
             m_OverlayActive = false;
             ErrorLog("%s: graphical overlay is not properly initialized", __FUNCTION__);
             output::EventSink::Execute(output::Event::Error);
-
             TraceLoggingWriteStop(local,
                                   "Overlay::ToggleOverlay",
                                   TLArg(false, "Success"),
@@ -343,8 +342,9 @@ namespace openxr_api_layer::graphics
             return false;
         }
         m_OverlayActive = !m_OverlayActive;
-        output::EventSink::Execute(m_OverlayActive ? output::Event::OverlayOn : output::Event::OverlayOff);
 
+        Log("graphical overlay toggled %s", m_OverlayActive ? "on" : "off");
+        output::EventSink::Execute(m_OverlayActive ? output::Event::OverlayOn : output::Event::OverlayOff);
         TraceLoggingWriteStop(local,
                               "Overlay::ToggleOverlay",
                               TLArg(true, "Success"),
@@ -380,6 +380,7 @@ namespace openxr_api_layer::graphics
 
     void Overlay::DrawOverlay(const XrPosef& referencePose,
                               const XrPosef& delta,
+                              bool calibrated,
                               bool mcActivated,
                               XrSession session,
                               XrFrameEndInfo* chainFrameEndInfo,
@@ -476,13 +477,15 @@ namespace openxr_api_layer::graphics
                      xr::ToString(refToStage).c_str());
 
             // calculate tracker pose
-            const XrPosef trackerPose = xr::Normalize(xr::math::Pose::Multiply(referencePose, refToStage));
+            const XrPosef trackerPose = xr::Normalize(xr::math::Pose::Multiply(
+                (mcActivated || !calibrated) ? referencePose
+                                             : xr::math::Pose::Multiply(referencePose, xr::math::Pose::Invert(delta)),
+                refToStage));
 
             // calculate reference pose
-            const XrPosef refPose =
-                mcActivated ? xr::Normalize(
-                                  xr::math::Pose::Multiply(xr::math::Pose::Multiply(referencePose, delta), refToStage))
-                            : trackerPose;
+            const XrPosef refPose = xr::Normalize(
+                xr::math::Pose::Multiply(!mcActivated ? referencePose : xr::math::Pose::Multiply(referencePose, delta),
+                                         refToStage));
 
             DebugLog("overlay reference pose: %s", xr::ToString(refPose).c_str());
             if (mcActivated)
@@ -532,7 +535,7 @@ namespace openxr_api_layer::graphics
                 composition->serializePreComposition();
 
                 // draw marker on copied texture
-                RenderMarkers(view, eye, refPose, trackerPose, mcActivated, composition);
+                RenderMarkers(view, eye, refPose, trackerPose, mcActivated || calibrated, composition);
 
                 composition->serializePostComposition();
 
@@ -607,7 +610,7 @@ namespace openxr_api_layer::graphics
                                 uint32_t eye,
                                 const XrPosef& refPose,
                                 const XrPosef& trackerPose,
-                                bool mcActivated,
+                                bool drawTracker,
                                 ICompositionFramework* composition)
     {
         // perform actual rendering
@@ -682,7 +685,7 @@ namespace openxr_api_layer::graphics
         graphicsDevice->draw(m_MeshRGB, refPose, m_MarkerSize);
 
         // draw tracker marker
-        if (mcActivated)
+        if (drawTracker)
         {
             graphicsDevice->draw(m_PassthroughActive? m_MeshCGY : m_MeshCMY, trackerPose, m_MarkerSize);
         }

@@ -1503,11 +1503,21 @@ namespace openxr_api_layer
             cachedEyePoses = m_UseEyeCache ? m_EyeCache.GetSample(time) : std::vector<XrPosef>();
             m_EyeCache.CleanUp(time);
         }
+        else if (m_Tracker->m_Calibrated && (m_RecorderActive || (m_Overlay && m_Overlay->m_OverlayActive)))
+        {
+            // request pose delta to force recording and/or enable displaying tracker position
+            m_Tracker->GetPoseDelta(delta, session, time);
+        }
 
         if (m_Overlay)
         {
-            m_Overlay
-                ->DrawOverlay(m_Tracker->GetReferencePose(), delta, m_Activated, session, &chainFrameEndInfo, this);
+            m_Overlay->DrawOverlay(m_Tracker->GetReferencePose(),
+                                   delta,
+                                   m_Tracker->m_Calibrated,
+                                   m_Activated,
+                                   session,
+                                   &chainFrameEndInfo,
+                                   this);
             m_Overlay->ReleaseAllSwapChainImages();
         }
 
@@ -1518,11 +1528,6 @@ namespace openxr_api_layer
 
         if (!m_Activated)
         {
-            if (m_Tracker->m_Calibrated && m_RecorderActive)
-            {
-                // request pose delta to force recording
-                m_Tracker->GetPoseDelta(delta, session, time);
-            }
             m_Input->HandleKeyboardInput(time);
             if (m_AutoActivator)
             {
