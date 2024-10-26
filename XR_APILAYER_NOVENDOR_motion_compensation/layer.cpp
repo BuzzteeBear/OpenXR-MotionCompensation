@@ -325,6 +325,26 @@ namespace openxr_api_layer
                     }
                 }
             }
+            else if (XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED == eventData->type)
+            {
+                if (const auto event = reinterpret_cast<const XrEventDataSessionStateChanged*>(eventData);
+                    event && event->session == m_Session)
+                {
+                    Log("session transitioned to %s", xr::ToCString(event->state));
+                    if (event->state == XR_SESSION_STATE_UNKNOWN || event->state > XR_SESSION_STATE_EXITING)
+                    {
+                        ErrorLog("%s: unknown state: %d", __FUNCTION__, event->state);
+                    }
+                    else
+                    {
+                        m_SessionFocused.store(event->state == XR_SESSION_STATE_FOCUSED);
+                        if (m_Overlay)
+                        {
+                            m_Overlay->m_SessionVisible = event->state == XR_SESSION_STATE_VISIBLE || m_SessionFocused.load();
+                        }
+                    }
+                }
+            }
         }
         TraceLoggingWriteStop(local, "OpenXrLayer::xrPollEvent", TLArg(xr::ToCString(result), "Result"));
 
@@ -1394,7 +1414,14 @@ namespace openxr_api_layer
         }
         if (XR_SUCCESS != result)
         {
-            Log("xrSyncActions succeeded with: %s", xr::ToCString(result));
+            if (!std::exchange(m_SyncActionHint, true))
+            {
+                Log("xrSyncActions succeeded with: %s", xr::ToCString(result));
+            }
+        }
+        else if (std::exchange(m_SyncActionHint, false))
+        {
+            Log("xrSyncActions succeeded");
         }
         TraceLoggingWriteStop(local, "OpenXrLayer::xrSyncActions", TLArg(xr::ToCString(result), "Result"));
         return result;
@@ -2080,9 +2107,14 @@ namespace openxr_api_layer
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "OpenXrLayer::SyncActions", TLArg(caller.c_str(), "Caller"));
 
-        if (!m_Enabled || !m_PhysicalEnabled || m_SuppressInteraction)
+        if (!m_Enabled || !m_PhysicalEnabled || m_SuppressInteraction || !m_SessionFocused.load())
         {
-            TraceLoggingWriteStop(local, "OpenXrLayer::SyncActions", TLArg(false, "Enabled"));
+            TraceLoggingWriteStop(local,
+                                  "OpenXrLayer::SyncActions",
+                                  TLArg(m_Enabled, "Enabled"),
+                                  TLArg(m_PhysicalEnabled, "PhysicalEnabled"),
+                                  TLArg(m_SuppressInteraction, "SuppressInteraction"),
+                                  TLArg(m_SessionFocused.load(), "SessionFocused"));
             return true;
         }
 

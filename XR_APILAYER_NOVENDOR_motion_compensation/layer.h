@@ -118,6 +118,7 @@ namespace openxr_api_layer
         XrSpace m_TrackerSpace{XR_NULL_HANDLE};
         XrSpace m_ViewSpace{XR_NULL_HANDLE};
         XrSpace m_StageSpace{XR_NULL_HANDLE};
+        std::atomic_bool m_SessionFocused{false};
         std::atomic_bool m_XrSyncCalled{false};
 
       private:
@@ -164,6 +165,7 @@ namespace openxr_api_layer
         bool m_LegacyMode{false};
         bool m_RecorderActive{false};
         bool m_VarjoPollWorkaround{false};
+        bool m_SyncActionHint{false};
         XrTime m_LastFrameTime{0};
         XrTime m_UpdateRefSpaceTime{0};
         std::chrono::time_point<std::chrono::steady_clock> m_LastActionSync{std::chrono::steady_clock::now()};

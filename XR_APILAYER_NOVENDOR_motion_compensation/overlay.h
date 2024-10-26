@@ -78,7 +78,7 @@ namespace openxr_api_layer::graphics
                          XrFrameEndInfo* chainFrameEndInfo,
                          OpenXrLayer* openXrLayer);
 
-        bool m_D3D12inUse{false}, m_Initialized{true}, m_OverlayActive{false};
+        bool m_D3D12inUse{false}, m_Initialized{true}, m_OverlayActive{false}, m_SessionVisible{false}; 
 
       private:
         bool InitializeTextures(uint32_t eye, XrSwapchain swapchain, const ICompositionFramework* composition);
@@ -97,7 +97,7 @@ namespace openxr_api_layer::graphics
                                                               const XrVector3f& pureColor,
                                                               const XrVector3f& lightColor);
 
-        bool m_PassthroughActive{false};
+        bool m_PassthroughActive{false}, m_NoProjectionLayer{false};
         XrVector3f m_MarkerSize{0.1f, 0.1f, 0.1f};
         std::shared_ptr<ISimpleMesh> m_MeshRGB{}, m_MeshCMY{}, m_MeshCGY{};
         std::map<XrSwapchain, SwapchainState> m_Swapchains{};

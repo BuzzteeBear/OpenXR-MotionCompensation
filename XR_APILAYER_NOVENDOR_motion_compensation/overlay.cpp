@@ -393,9 +393,13 @@ namespace openxr_api_layer::graphics
                                TLArg(xr::ToString(referencePose).c_str(), "ReferencePose"),
                                TLArg(xr::ToString(delta).c_str(), "Delta"),
                                TLArg(mcActivated, "MC_Activated"));
-        if (!(m_Initialized && m_OverlayActive))
+        if (!(m_Initialized && m_OverlayActive && m_SessionVisible))
         {
-            TraceLoggingWriteStop(local, "Overlay::DrawOverlay", TLArg(false, "CompositionFramework"));
+            TraceLoggingWriteStop(local,
+                                  "Overlay::DrawOverlay",
+                                  TLArg(m_Initialized, "Initialized"),
+                                  TLArg(m_OverlayActive, "OverlayActive"),
+                                  TLArg(m_SessionVisible, "SessionVisible"));
             return;
         }
         TraceLoggingWriteTagged(local, "Overlay::DrawOverlay", TLArg(true, "Overlay_Active"));
@@ -455,11 +459,18 @@ namespace openxr_api_layer::graphics
             }
             if (!lastProjectionLayer)
             {
-                ErrorLog("%s: no projection layer found", __FUNCTION__);
-                TraceLoggingWriteStop(local, "Overlay::DrawOverlay", TLArg(false, "CompositionFramework"));
+                if (!std::exchange(m_NoProjectionLayer, true))
+                {
+                    ErrorLog("%s: no projection layer found", __FUNCTION__);
+                }
+                TraceLoggingWriteStop(local, "Overlay::DrawOverlay", TLArg(false, "ProjectionLayer"));
                 return;
             }
-
+            if (std::exchange(m_NoProjectionLayer, false))
+            {
+                Log("%s: projection layer found again", __FUNCTION__);
+            } 
+            
             // transfer tracker poses into projection reference space
             XrPosef refToStage;
             if (!openXrLayer->GetRefToStage(lastProjectionLayer->space, &refToStage, nullptr))
