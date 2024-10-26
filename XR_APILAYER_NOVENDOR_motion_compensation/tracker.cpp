@@ -1829,13 +1829,15 @@ namespace tracker
             }
             if ("controller" == trackerType)
             {
-                Log("motion controller is used as reference tracker");
+                Log("%s motion controller is used as reference tracker", GetConfig()->GetControllerSide().c_str());
                 TraceLoggingWriteStop(local, "GetTracker", TLPArg(trackerType.c_str(), "tracker"));
                 return std::make_unique<OpenXrTracker>();
             }
             if ("vive" == trackerType)
             {
-                Log("vive tracker is used as reference tracker");
+                std::string side;
+                GetConfig()->GetString(Cfg::TrackerSide, side);
+                Log("vive tracker (%s) is used as reference tracker", side.c_str());
                 TraceLoggingWriteStop(local, "GetTracker", TLPArg(trackerType.c_str(), "tracker"));
                 return std::make_unique<OpenXrTracker>();
             }
