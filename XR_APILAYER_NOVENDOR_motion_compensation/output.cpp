@@ -250,7 +250,7 @@ namespace output
             status.activated = true;
         case Event::Calibrated:
             status.calibrated = true;
-            status.connectionLost = true;
+            status.connectionLost = false;
             status.critical = false;
             break;
 

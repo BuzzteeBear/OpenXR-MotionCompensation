@@ -3,7 +3,7 @@
 
 namespace output
 {
-	enum Event
+	public enum Event
 	{
 		Silence = 0,
 		Error,
