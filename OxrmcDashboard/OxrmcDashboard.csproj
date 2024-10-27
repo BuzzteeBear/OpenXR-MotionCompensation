@@ -17,6 +17,7 @@
     <StartupObject>OxrmcDashboard.App</StartupObject>
     <Product>OpenXR-MotionCompensation</Product>
     <Description>Dashboard app for OpenXR Motion Compensation project</Description>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
   <ItemGroup>
