@@ -287,13 +287,18 @@ namespace tracker
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "TrackerBase::Init");
 
+        bool success = GetConfig()->GetBool(Cfg::LoadRefPoseFromFile, m_LoadPoseFromFile);
+        Log("reference pose is %s read from config file", m_LoadPoseFromFile ? "" : "not");
+
         m_TrackerModifier = std::make_unique<modifier::TrackerModifier>();
         ControllerBase::Init();
 
-        const bool success = LoadFilters();
+        success = !success ? success : LoadFilters();
 
-        TraceLoggingWriteStop(local, "TrackerBase::Init", TLArg(success, "Success"));
-
+        TraceLoggingWriteStop(local,
+                              "TrackerBase::Init",
+                              TLArg(success, "Success"),
+                              TLArg(m_LoadPoseFromFile, "m_LoadPoseFromFile"));
         return success;
     }
 
@@ -605,6 +610,33 @@ namespace tracker
         }
     }
 
+    void TrackerBase::SaveReferencePose() const
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "TrackerBase::SaveReferencePose");
+        if (m_Calibrated)
+        {
+            SaveReferencePoseImpl(m_ReferencePose);
+        }
+        TraceLoggingWriteStop(local, "TrackerBase::SaveReferencePose", TLArg(m_Calibrated, "Success"));
+    }
+
+    void TrackerBase::SaveReferencePoseImpl(const XrPosef& refPose) const
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "TrackerBase::SaveReferencePose");
+       
+        GetConfig()->SetValue(Cfg::CorX, refPose.position.x);
+        GetConfig()->SetValue(Cfg::CorY, refPose.position.y);
+        GetConfig()->SetValue(Cfg::CorZ, refPose.position.z);
+        GetConfig()->SetValue(Cfg::CorA, refPose.orientation.w);
+        GetConfig()->SetValue(Cfg::CorB, refPose.orientation.x);
+        GetConfig()->SetValue(Cfg::CorC, refPose.orientation.y);
+        GetConfig()->SetValue(Cfg::CorD, refPose.orientation.z);
+        
+        TraceLoggingWriteStop(local, "TrackerBase::SaveReferencePose", TLArg(m_Calibrated, "Success"));
+    }
+
     bool TrackerBase::ToggleRecording() const
     {
         return m_Recorder->Toggle(m_Calibrated);
@@ -632,6 +664,43 @@ namespace tracker
         m_TrackerModifier->Apply(pose, m_ReferencePose);
 
         TraceLoggingWriteStop(local, "TrackerBase::ApplyModifier", TLArg(xr::ToString(pose).c_str(), "NewPose"));
+    }
+
+    bool TrackerBase::LoadReferencePose()
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local,
+                               "TrackerBase::LoadReferencePose");
+
+        bool success = true;
+        XrPosef refPose;
+        auto ReadValue = [&success](Cfg key, float& value) {
+            if (!GetConfig()->GetFloat(key, value))
+            {
+                success = false;
+            }
+        };
+        ReadValue(Cfg::CorX, refPose.position.x);
+        ReadValue(Cfg::CorY, refPose.position.y);
+        ReadValue(Cfg::CorZ, refPose.position.z);
+        ReadValue(Cfg::CorA, refPose.orientation.w);
+        ReadValue(Cfg::CorB, refPose.orientation.x);
+        ReadValue(Cfg::CorC, refPose.orientation.y);
+        ReadValue(Cfg::CorD, refPose.orientation.z);
+        if (success && !Quaternion::IsNormalized(refPose.orientation))
+        {
+            ErrorLog("%s: rotation values are invalid in config file", __FUNCTION__);
+            Log("you may need to save cor position separately for native OpenXR and OpenComposite");
+            TraceLoggingWriteStop(local, "TrackerBase::LoadReferencePose", TLArg(false, "Success"));
+            return false;
+        }
+        if (success)
+        {
+            Log("reference pose successfully loaded from config file");
+            SetReferencePose(refPose);
+        }
+        TraceLoggingWriteStop(local, "TrackerBase::LoadReferencePose", TLArg(false, "Success"));
+        return success;
     }
 
     std::optional<XrPosef> TrackerBase::GetForwardView(XrSession session, XrTime time)
@@ -729,7 +798,8 @@ namespace tracker
         m_Session = session;
         m_Calibrated = false;
         auto forward = GetForwardView(session, time);
-        if (!forward.has_value() || !ControllerBase::ResetReferencePose(session, time))
+        if (!forward.has_value() ||
+            !(m_LoadPoseFromFile ? LoadReferencePose() : ControllerBase::ResetReferencePose(session, time)))
         {
             EventSink::Execute(Event::CalibrationLost);
             TraceLoggingWriteStop(local, "OpenXrTracker::ResetReferencePose", TLArg(false, "Success"));
@@ -738,11 +808,22 @@ namespace tracker
         SetForwardRotation(forward.value());
         m_RefToFwd = xr::Normalize(Pose::Multiply({forward.value().orientation, {0, 0, 0}},
                                                   {Pose::Invert(m_ReferencePose).orientation, {0, 0, 0}}));
-        m_ReferencePose = Pose::Multiply(m_RefToFwd, m_ReferencePose);
+        m_ReferencePose = xr::Normalize(Pose::Multiply(m_RefToFwd, m_ReferencePose));
 
         EventSink::Execute(Event::Calibrated);
         TraceLoggingWriteStop(local, "OpenXrTracker::ResetReferencePose", TLArg(true, "Success"));
         return true;
+    }
+
+    void OpenXrTracker::SaveReferencePose() const
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "OpenXrTracker::SaveReferencePose");
+        if (m_Calibrated)
+        {
+            SaveReferencePoseImpl(xr::Normalize(Pose::Multiply(Pose::Invert(m_RefToFwd), m_ReferencePose)));
+        }
+        TraceLoggingWriteStop(local, "OpenXrTracker::SaveReferencePose", TLArg(m_Calibrated, "Success"));
     }
 
     DataSource* OpenXrTracker::GetSource()
@@ -936,14 +1017,7 @@ namespace tracker
 
         Log("constant pitch value = %.3f deg", m_PitchConstant / angleToRadian);
 
-        if (GetConfig()->GetBool(Cfg::LoadRefPoseFromFile, m_LoadPoseFromFile))
-        {
-            Log("center of rotation is %s read from config file", m_LoadPoseFromFile ? "" : "not");
-        }
-        else
-        {
-            success = false;
-        }
+        
         if (!TrackerBase::Init())
         {
             success = false;
@@ -962,8 +1036,7 @@ namespace tracker
                               TLArg(m_OffsetForward, "m_OffsetForward"),
                               TLArg(m_OffsetDown, "m_OffsetDown"),
                               TLArg(m_OffsetRight, "m_OffsetRight"),
-                              TLArg(m_OffsetYaw, "m_OffsetYaw"),
-                              TLArg(m_LoadPoseFromFile, "m_LoadPoseFromFile"));
+                              TLArg(m_OffsetYaw, "m_OffsetYaw"));
         return success;
     }
 
@@ -1005,7 +1078,7 @@ namespace tracker
         bool success = true;
         if (m_LoadPoseFromFile)
         {
-            success = LoadReferencePose(session, time);
+            success = LoadReferencePose();
         }
         else
         {
@@ -1027,23 +1100,6 @@ namespace tracker
                               TLArg(success, "Success"),
                               TLArg(xr::ToString(this->m_ReferencePose).c_str(), "ReferencePose"));
         return success;
-    }
-
-    void VirtualTracker::SaveReferencePose(const XrTime time) const
-    {
-        TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "VirtualTracker::SaveReferencePose", TLArg(time, "Time"));
-        if (m_Calibrated)
-        {
-            GetConfig()->SetValue(Cfg::CorX, m_ReferencePose.position.x);
-            GetConfig()->SetValue(Cfg::CorY, m_ReferencePose.position.y);
-            GetConfig()->SetValue(Cfg::CorZ, m_ReferencePose.position.z);
-            GetConfig()->SetValue(Cfg::CorA, m_ReferencePose.orientation.w);
-            GetConfig()->SetValue(Cfg::CorB, m_ReferencePose.orientation.x);
-            GetConfig()->SetValue(Cfg::CorC, m_ReferencePose.orientation.y);
-            GetConfig()->SetValue(Cfg::CorD, m_ReferencePose.orientation.z);
-        }
-        TraceLoggingWriteStop(local, "VirtualTracker::SaveReferencePose", TLArg(m_Calibrated, "Success"));
     }
 
     void VirtualTracker::ApplyCorManipulation(XrSession session, XrTime time)
@@ -1253,7 +1309,6 @@ namespace tracker
             {
                 m_Recorder->AddDofValues(momentary, Momentary);
             }
-            
             if (!m_Sampler->ReadData(dof, time))
             {
                 TraceLoggingWriteStop(local, "VirtualTracker::ReadData", TLArg(false, "Success"));
@@ -1270,45 +1325,6 @@ namespace tracker
 
         TraceLoggingWriteStop(local, "VirtualTracker::ReadData", TLArg(true, "Success"));
         return true;
-    }
-
-    bool VirtualTracker::LoadReferencePose(const XrSession session, const XrTime time)
-    {
-        TraceLocalActivity(local);
-        TraceLoggingWriteStart(local,
-                               "VirtualTracker::LoadReferencePose",
-                               TLXArg(session, "Session"),
-                               TLArg(time, "Time"));
-
-        bool success = true;
-        XrPosef refPose;
-        auto ReadValue = [&success](Cfg key, float& value) {
-            if (!GetConfig()->GetFloat(key, value))
-            {
-                success = false;
-            }
-        };
-        ReadValue(Cfg::CorX, refPose.position.x);
-        ReadValue(Cfg::CorY, refPose.position.y);
-        ReadValue(Cfg::CorZ, refPose.position.z);
-        ReadValue(Cfg::CorA, refPose.orientation.w);
-        ReadValue(Cfg::CorB, refPose.orientation.x);
-        ReadValue(Cfg::CorC, refPose.orientation.y);
-        ReadValue(Cfg::CorD, refPose.orientation.z);
-        if (success && !Quaternion::IsNormalized(refPose.orientation))
-        {
-            ErrorLog("%s: rotation values are invalid in config file", __FUNCTION__);
-            Log("you may need to save cor position separately for native OpenXR and OpenComposite");
-            TraceLoggingWriteStop(local, "VirtualTracker::LoadReferencePose", TLArg(false, "Success"));
-            return false;
-        }
-        if (success)
-        {
-            Log("reference pose successfully loaded from config file");
-            SetReferencePose(refPose);
-        }
-        TraceLoggingWriteStop(local, "VirtualTracker::LoadReferencePose", TLArg(false, "Success"));
-        return success;
     }
 
     void VirtualTracker::ApplyOffsets(const Dof& dof, XrPosef& view)

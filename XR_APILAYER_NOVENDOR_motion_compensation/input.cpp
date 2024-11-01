@@ -474,7 +474,7 @@ namespace input
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "InputHandler::SaveConfig", TLArg(time, "Time"), TLArg(forApp, "AppSpecific"));
 
-        m_Layer->m_Tracker->SaveReferencePose(time);
+        m_Layer->m_Tracker->SaveReferencePose();
         GetConfig()->WriteConfig(forApp);
 
         TraceLoggingWriteStop(local, "InputHandler::SaveConfig");

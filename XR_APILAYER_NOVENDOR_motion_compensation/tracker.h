@@ -59,7 +59,8 @@ namespace tracker
         [[nodiscard]] XrPosef GetReferencePose() const;
         void SetReferencePose(const XrPosef& pose) override;
         virtual void InvalidateCalibration(bool silent);
-        virtual void SaveReferencePose(XrTime time) const {};
+        virtual void SaveReferencePose() const;
+        void SaveReferencePoseImpl(const XrPosef& refPose) const;
 
         virtual bool ChangeOffset(XrVector3f modification);
         virtual bool ChangeRotation(float radian);
@@ -79,10 +80,12 @@ namespace tracker
       protected:
         void ApplyFilters(XrPosef& pose) override;
         void ApplyModifier(XrPosef& pose) override;
+        bool LoadReferencePose();
         virtual std::optional<XrPosef> GetForwardView(XrSession session, XrTime time);
         static std::optional<XrPosef> GetCurrentView(XrSession session, XrTime time);
         void SetForwardRotation(const XrPosef& pose) const;
-
+        
+        bool m_LoadPoseFromFile{false};
         std::vector<utility::DofValue> m_RelevantValues{};
         sampler::Sampler* m_Sampler{nullptr};
 
@@ -102,6 +105,7 @@ namespace tracker
       public:
         OpenXrTracker();
         bool ResetReferencePose(XrSession session, XrTime time) override;
+        void SaveReferencePose() const override;
 
         utility::DataSource* GetSource() override;
         bool ReadSource(XrTime time, utility::Dof& dof) override;
@@ -142,7 +146,6 @@ namespace tracker
         bool LazyInit(XrTime time) override;
 
         bool ResetReferencePose(XrSession session, XrTime time) override;
-        void SaveReferencePose(XrTime time) const override;
 
         void ApplyCorManipulation(XrSession session, XrTime time) override;
         bool ChangeOffset(XrVector3f modification) override;
@@ -164,12 +167,10 @@ namespace tracker
         XrQuaternionf m_ConstantPitchQuaternion{};
 
       private:
-        bool LoadReferencePose(XrSession session, XrTime time);
         void ApplyOffsets(const utility::Dof& dof, XrPosef& view);
 
         std::unique_ptr<CorManipulator> m_Manipulator{};
         bool m_NonNeutralCalibration{false};
-        bool m_LoadPoseFromFile{false};
 
         friend class Sampler;
     };
