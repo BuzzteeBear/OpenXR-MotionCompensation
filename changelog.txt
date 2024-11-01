@@ -2,6 +2,9 @@ OpenXR-MotionCompensation Changelog
 
 Version 0.3.9.0
 
+	General:
+	- enabled (un)locking reference pose in VR playspace via keyboard shortcut
+
 	Virtual Tracker:
 	- enabled cor calibration outside of neutral rig postion
 	
@@ -9,7 +12,7 @@ Version 0.3.9.0
 	- display current tracker pose when mc is off
 	
 	Bugfixes:
-	- corrected receorded translations to match local rig reference
+	- corrected recorded translations to match local rig reference
 
 Version 0.3.8.0
 	

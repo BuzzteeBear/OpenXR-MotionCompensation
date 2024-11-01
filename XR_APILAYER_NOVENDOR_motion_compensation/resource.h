@@ -50,12 +50,14 @@
 #define STABILIZER_OFF_WAV              146
 #define PASSTHROUGH_ON_WAV              147
 #define PASSTHROUGH_OFF_WAV             148
+#define FILEPOSE_ON_WAV                 149
+#define FILEPOSE_OFF_WAV                150
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        149
+#define _APS_NEXT_RESOURCE_VALUE        151
 #define _APS_NEXT_COMMAND_VALUE         40001
 #define _APS_NEXT_CONTROL_VALUE         1001
 #define _APS_NEXT_SYMED_VALUE           101

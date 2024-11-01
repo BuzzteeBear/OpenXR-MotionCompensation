@@ -84,6 +84,7 @@ Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "tracker"; Key: "
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "tracker"; Key: "legacy_mode"; String: "0"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "tracker"; Key: "non_neutral_calibration"; String: "1"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "tracker"; Key: "load_ref_pose_from_file"; String: "0"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "tracker"; Key: "load_ref_pose_from_file_oc"; String: "0"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "tracker"; Key: "cor_x"; String: "0.0"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "tracker"; Key: "cor_y"; String: "0.0"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "tracker"; Key: "cor_z"; String: "0.0"; Flags: createkeyifdoesntexist
@@ -141,6 +142,8 @@ Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "cache"; Key: "to
 ; [shortcuts]
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "activate"; String: "CTRL+INS"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "calibrate"; String: "CTRL+DEL"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "lock_reference_pose"; String: "CTRL+SHIFT+HOME"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "release_reference_pose"; String: "CTRL+SHIFT+END"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "translation_increase"; String: "CTRL+PLUS"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "translation_decrease"; String: "CTRL+MINUS"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "rotation_increase"; String: "CTRL+0"; Flags: createkeyifdoesntexist

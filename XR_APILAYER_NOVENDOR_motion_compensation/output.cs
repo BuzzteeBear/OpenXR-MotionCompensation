@@ -43,8 +43,10 @@ namespace output
 		StabilizerOn,
 		StabilizerOff,
 		PassthroughOn,
-		PassthroughOff
-	};
+		PassthroughOff,
+        RefPoseLocked,
+        RefPoseReleased
+    };
 
 	public struct EventData
 	{

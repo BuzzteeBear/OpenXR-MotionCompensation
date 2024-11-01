@@ -1079,6 +1079,7 @@ namespace tracker
         if (m_LoadPoseFromFile)
         {
             success = LoadReferencePose();
+            EventSink::Execute(Event::Calibrated);
         }
         else
         {

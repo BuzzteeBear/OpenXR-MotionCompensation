@@ -19,12 +19,14 @@ namespace input
         TraceLoggingWriteStart(local, "KeyboardInput::Init");
         bool success = true;
         const std::set<Cfg> activities{
-            Cfg::KeyActivate, Cfg::KeyCalibrate,    Cfg::KeyTransInc,   Cfg::KeyTransDec,      Cfg::KeyRotInc,
-            Cfg::KeyRotDec,   Cfg::KeyStabilizer,   Cfg::KeyStabInc,    Cfg::KeyStabDec,       Cfg::KeyOffForward,
-            Cfg::KeyOffBack,  Cfg::KeyOffUp,        Cfg::KeyOffDown,    Cfg::KeyOffRight,      Cfg::KeyOffLeft,
-            Cfg::KeyRotRight, Cfg::KeyRotLeft,      Cfg::KeyOverlay,    Cfg::KeyPassthrough,   Cfg::KeyCache,
-            Cfg::KeyModifier, Cfg::KeyFastModifier, Cfg::KeySaveConfig, Cfg::KeySaveConfigApp, Cfg::KeyReloadConfig,
-            Cfg::KeyVerbose,  Cfg::KeyRecorder,     Cfg::KeyLogTracker, Cfg::KeyLogProfile};
+            Cfg::KeyActivate,    Cfg::KeyCalibrate,     Cfg::KeyLockRefPose,  Cfg::KeyReleaseRefPose,
+            Cfg::KeyTransInc,    Cfg::KeyTransDec,      Cfg::KeyRotInc,       Cfg::KeyRotDec,
+            Cfg::KeyStabilizer,  Cfg::KeyStabInc,       Cfg::KeyStabDec,      Cfg::KeyOffForward,
+            Cfg::KeyOffBack,     Cfg::KeyOffUp,         Cfg::KeyOffDown,      Cfg::KeyOffRight,
+            Cfg::KeyOffLeft,     Cfg::KeyRotRight,      Cfg::KeyRotLeft,      Cfg::KeyOverlay,
+            Cfg::KeyPassthrough, Cfg::KeyCache,         Cfg::KeyModifier,     Cfg::KeyFastModifier,
+            Cfg::KeySaveConfig,  Cfg::KeySaveConfigApp, Cfg::KeyReloadConfig, Cfg::KeyVerbose,
+            Cfg::KeyRecorder,    Cfg::KeyLogTracker,    Cfg::KeyLogProfile};
         const std::set<int> modifiers{VK_CONTROL, VK_SHIFT, VK_MENU};
         std::set<int> fastModifiers{};
         GetConfig()->GetShortcut(Cfg::KeyFastModifier, fastModifiers);
@@ -92,6 +94,14 @@ namespace input
         if (m_Input.GetKeyState(Cfg::KeyCalibrate, isRepeat) && !isRepeat)
         {
             Recalibrate(time);
+        }
+        if (m_Input.GetKeyState(Cfg::KeyLockRefPose, isRepeat) && !isRepeat)
+        {
+            LockRefPose();
+        }
+        if (m_Input.GetKeyState(Cfg::KeyReleaseRefPose, isRepeat) && !isRepeat)
+        {
+            ReleaseRefPose();
         }
         if (m_Input.GetKeyState(Cfg::KeyTransInc, isRepeat))
         {
@@ -333,6 +343,42 @@ namespace input
         TraceLoggingWriteStop(local, "InputHandler::Recalibrate", TLArg(success, "Success"));
     }
 
+    void InputHandler::LockRefPose() const
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "InputHandler::LockRefPose");
+
+        if (!m_Layer->m_Tracker->m_Calibrated)
+        {
+            ErrorLog("%s: reference pose needs to ba calibrated before it can be locked", __FUNCTION__);
+            EventSink::Execute(Event::Error);
+            TraceLoggingWriteStop(local, "InputHandler::LockRefPose", TLArg(false, "Calibrated"));
+            return;
+        }
+        m_Layer->m_Tracker->SaveReferencePose();
+        bool success = GetConfig()->WriteRefPoseValues();
+        if (success)
+        {
+            m_Layer->m_Tracker->m_LoadPoseFromFile = true;
+            success = GetConfig()->SetRefPoseFromFile(true);
+        }
+        EventSink::Execute(success ? Event::RefPoseLocked : Event::Error);
+
+        TraceLoggingWriteStop(local, "InputHandler::LockRefPose");
+    }
+
+    void InputHandler::ReleaseRefPose() const
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "InputHandler::LockRefPose");
+
+        m_Layer->m_Tracker->m_LoadPoseFromFile = false;
+        bool success = GetConfig()->SetRefPoseFromFile(false);
+        EventSink::Execute(success ? Event::RefPoseReleased : Event::Error);
+
+        TraceLoggingWriteStop(local, "InputHandler::LockRefPose");
+    }
+
     void InputHandler::ToggleOverlay() const
     {
         TraceLocalActivity(local);
@@ -473,8 +519,7 @@ namespace input
     {
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "InputHandler::SaveConfig", TLArg(time, "Time"), TLArg(forApp, "AppSpecific"));
-
-        m_Layer->m_Tracker->SaveReferencePose();
+        
         GetConfig()->WriteConfig(forApp);
 
         TraceLoggingWriteStop(local, "InputHandler::SaveConfig");

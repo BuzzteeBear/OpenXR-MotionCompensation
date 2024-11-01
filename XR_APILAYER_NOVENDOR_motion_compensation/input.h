@@ -63,6 +63,8 @@ namespace input
         void HandleKeyboardInput(XrTime time);
         void ToggleActive(XrTime time) const;
         void Recalibrate(XrTime time) const;
+        void LockRefPose() const;
+        void ReleaseRefPose() const;
         void ToggleOverlay() const;
         void TogglePassthrough() const;
         void ToggleCache() const;

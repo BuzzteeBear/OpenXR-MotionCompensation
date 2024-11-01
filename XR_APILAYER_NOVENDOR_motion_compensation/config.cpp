@@ -39,8 +39,8 @@ bool ConfigManager::Init(const std::string& application)
                      LastErrorMsg().c_str());
         }
     }
-    const std::string coreIni(localAppData.string() + "\\" + LayerPrettyName + ".ini");
-    if ((_access(coreIni.c_str(), 0)) != -1)
+    m_DefaultIni = localAppData.string() + "\\" + LayerPrettyName + ".ini";
+    if ((_access(m_DefaultIni.c_str(), 0)) != -1)
     {
         // check global deactivation flag
         char buffer[2048]{};
@@ -49,7 +49,7 @@ bool ConfigManager::Init(const std::string& application)
                                         nullptr,
                                         buffer,
                                         2047,
-                                        coreIni.c_str()) &&
+                                        m_DefaultIni.c_str()) &&
             std::string(buffer) != "1")
         {
             m_Values[Cfg::Enabled] = buffer;
@@ -63,7 +63,10 @@ bool ConfigManager::Init(const std::string& application)
         {
             const std::string section = entry.second.first;
             const std::string key =
-                entry.second.second + (m_UsesOpenComposite && m_CorValues.contains(entry.first) ? "_oc" : "");
+                entry.second.second +
+                (m_UsesOpenComposite && (entry.first == Cfg::LoadRefPoseFromFile || m_RefPoseKeys.contains(entry.first))
+                     ? "_oc"
+                     : "");
 
             if (0 <
                 GetPrivateProfileString(section.c_str(), key.c_str(), nullptr, buffer, 2047, m_ApplicationIni.c_str()))
@@ -77,7 +80,7 @@ bool ConfigManager::Init(const std::string& application)
                 m_Values[entry.first] = buffer;
             }
             else if ((0 <
-                      GetPrivateProfileString(section.c_str(), key.c_str(), nullptr, buffer, 2047, coreIni.c_str())))
+                      GetPrivateProfileString(section.c_str(), key.c_str(), nullptr, buffer, 2047, m_DefaultIni.c_str())))
             {
                 TraceLoggingWriteTagged(local,
                                         "ConfigManager::Init",
@@ -102,7 +105,7 @@ bool ConfigManager::Init(const std::string& application)
     }
     else
     {
-        std::string actualLocation = coreIni;
+        std::string actualLocation = m_DefaultIni;
         std::string designatedDir =
             (std::filesystem::path(getenv("USERPROFILE")) / "AppData" / "local" / LayerPrettyName).string();
         std::ranges::transform(actualLocation, actualLocation.begin(), ::toupper);
@@ -121,7 +124,7 @@ bool ConfigManager::Init(const std::string& application)
             return true;
         }
 
-        ErrorLog("%s: unable to find config file %s", __FUNCTION__, coreIni.c_str());
+        ErrorLog("%s: unable to find config file %s", __FUNCTION__, m_DefaultIni.c_str());
         TraceLoggingWriteStop(local, "ConfigManager::Init", TLArg("Failure", "Exit"));
         return false;
     }
@@ -312,58 +315,118 @@ void ConfigManager::WriteConfig(const bool forApp)
     TraceLocalActivity(local);
     TraceLoggingWriteStart(local, "ConfigManager::WriteConfig", TLArg(forApp, "AppSpecific"));
 
-    bool error{false};
+    bool success {true};
     const std::string configFile =
-        forApp ? m_ApplicationIni : localAppData.string() + "\\" + "OpenXR-MotionCompensation.ini";
+        forApp ? m_ApplicationIni : m_DefaultIni;
     for (const auto key : m_KeysToSave)
     {
-        if (const auto& keyEntry = m_Keys.find(key); m_Keys.end() != keyEntry)
+        success = !success ? success : WriteConfigEntry(key, configFile, false);
+    }
+    Log("current configuration %ssaved to %s", success ? "" : "could not be ", configFile.c_str());
+    output::EventSink::Execute(success ? output::Event::Save : output::Event::Error);
+    TraceLoggingWriteStop(local, "ConfigManager::WriteConfig", TLArg(success, "Success"));
+}
+
+bool ConfigManager::WriteRefPoseValues()
+{
+    TraceLocalActivity(local);
+    TraceLoggingWriteStart(local, "ConfigManager::WriteRefPoseValues");
+
+    bool success{true};
+    for (const auto key : m_RefPoseKeys)
+    {
+        success = !success ? success : WriteConfigEntry(key, m_DefaultIni, true);
+    }
+    if (!success)
+    {
+        ErrorLog("%s: current reference pose for %s games could not be updated in %s",
+                 __FUNCTION__,
+                 m_UsesOpenComposite ? "OpenComposite" : "native OpenXR",
+                 m_DefaultIni.c_str());
+    }
+    TraceLoggingWriteStop(local, "ConfigManager::WriteRefPoseValues", TLArg(success, "Success"));
+    return success;
+}
+
+bool ConfigManager::SetRefPoseFromFile(const bool active)
+{
+    TraceLocalActivity(local);
+    TraceLoggingWriteStart(local, "ConfigManager::SetRefPoseFromFile");
+
+    GetConfig()->SetValue(Cfg::LoadRefPoseFromFile, active);
+    bool success = WriteConfigEntry(Cfg::LoadRefPoseFromFile, m_DefaultIni, true);
+    
+    if (success)
+    {
+
+        Log("reference pose for %s games %s",
+            m_UsesOpenComposite ? "OpenComposite" : "native OpenXR",
+            active ? "locked" : "released");
+    }
+    else
+    {
+        ErrorLog("%s: reference pose for %s games pose could not be %s in %s",
+                 __FUNCTION__,
+                 m_UsesOpenComposite ? "OpenComposite" : "native OpenXR",
+                 active ? "locked" : "released",
+                 m_DefaultIni.c_str());
+    }
+    TraceLoggingWriteStop(local, "ConfigManager::SetRefPoseFromFile", TLArg(success, "Success"));
+    return success;
+}
+
+bool ConfigManager::WriteConfigEntry(Cfg key, const std::string& file, const bool addOcSuffix)
+{
+    TraceLocalActivity(local);
+    TraceLoggingWriteStart(local, "ConfigManager::WriteConfigEntry", TLArg(static_cast<int>(key), "key"));
+
+    bool success = true;
+
+    if (const auto& keyEntry = m_Keys.find(key); m_Keys.end() != keyEntry)
+    {
+        const std::string section = keyEntry->second.first;
+        const std::string keyName = keyEntry->second.second + (addOcSuffix && m_UsesOpenComposite ? "_oc" : "");
+
+        TraceLoggingWriteTagged(local,
+                                "ConfigManager::WriteConfigEntry",
+                                TLArg(keyEntry->second.first.c_str(), "section"),
+                                TLArg(keyEntry->second.second.c_str(), "key"));
+
+        if (const auto& valueEntry = m_Values.find(key); m_Values.end() != valueEntry)
         {
-            const std::string section = keyEntry->second.first;
-            const std::string keyName =
-                keyEntry->second.second + (m_UsesOpenComposite && m_CorValues.contains(keyEntry->first) ? "_oc" : "");
-            if (const auto& valueEntry = m_Values.find(key); m_Values.end() != valueEntry)
+            TraceLoggingWriteTagged(local,
+                                    "ConfigManager::WriteConfigEntry",
+                                    TLArg(valueEntry->second.c_str(), "value"));
+
+            if (!WritePrivateProfileString(section.c_str(),
+                                           keyName.c_str(),
+                                           valueEntry->second.c_str(),
+                                           file.c_str()) &&
+                2 != GetLastError())
             {
-                if (!WritePrivateProfileString(section.c_str(),
-                                               keyName.c_str(),
-                                               valueEntry->second.c_str(),
-                                               configFile.c_str()) &&
-                    2 != GetLastError())
-                {
-                    error = true;
-                    ErrorLog("%s: unable to write value %s into key %s to section %s in %s, error: %s",
-                             __FUNCTION__,
-                             valueEntry->second.c_str(),
-                             keyName.c_str(),
-                             section.c_str(),
-                             configFile.c_str(),
-                             LastErrorMsg().c_str());
-                }
-                else
-                {
-                    TraceLoggingWriteTagged(local,
-                                            "ConfigManager::WriteConfig",
-                                            TLArg(section.c_str(), "Section"),
-                                            TLArg(keyName.c_str(), "Key"),
-                                            TLArg(valueEntry->second.c_str(), "Value"));
-                }
-            }
-            else
-            {
-                error = true;
-                ErrorLog("%s: key not found in value map: %s:%s", __FUNCTION__, section.c_str(), keyName.c_str());
+                success = false;
+                ErrorLog("%s: unable to write value %s into key %s to section %s in %s, error: %s",
+                         __FUNCTION__,
+                         valueEntry->second.c_str(),
+                         keyName.c_str(),
+                         section.c_str(),
+                         file.c_str(),
+                         LastErrorMsg().c_str());
             }
         }
         else
         {
-            error = true;
-            ErrorLog("%s: key not found in key map: %d", __FUNCTION__, key);
+            success = false;
+            ErrorLog("%s: key not found in value map: %s:%s", __FUNCTION__, section.c_str(), keyName.c_str());
         }
     }
-    Log("current configuration %saved to %s", error ? "could not be " : "", configFile.c_str());
-    output::EventSink::Execute(!error ? output::Event::Save : output::Event::Error);
-
-    TraceLoggingWriteStop(local, "ConfigManager::WriteConfig", TLArg(!error, "Success"));
+    else
+    {
+        success = false;
+        ErrorLog("%s: key not found in key map: %d", __FUNCTION__, key);
+    }
+    TraceLoggingWriteStop(local, "ConfigManager::WriteConfigEntry", TLArg(success, "success"));
+    return success;
 }
 
 std::unique_ptr<ConfigManager> g_config = nullptr;

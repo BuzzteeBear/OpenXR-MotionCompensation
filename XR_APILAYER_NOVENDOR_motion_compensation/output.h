@@ -66,7 +66,9 @@ namespace output
                                                                   {Event::StabilizerOn, STABILIZER_ON_WAV},
                                                                   {Event::StabilizerOff, STABILIZER_OFF_WAV},
                                                                   {Event::PassthroughOn, PASSTHROUGH_ON_WAV},
-                                                                  {Event::PassthroughOff, PASSTHROUGH_OFF_WAV}};
+                                                                  {Event::PassthroughOff, PASSTHROUGH_OFF_WAV},
+                                                                  {Event::RefPoseLocked, FILEPOSE_ON_WAV},
+                                                                  {Event::RefPoseReleased, FILEPOSE_OFF_WAV}};
     };
 
     class EventMmf

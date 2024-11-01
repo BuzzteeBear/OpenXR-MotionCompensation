@@ -78,6 +78,8 @@ enum class Cfg
     KeyRotRight,
     KeyRotLeft,
     KeyFastModifier,
+    KeyLockRefPose,
+    KeyReleaseRefPose,
     KeyOverlay,
     KeyPassthrough,
     KeyCache,
@@ -112,9 +114,13 @@ class ConfigManager
     void SetValue(Cfg key, const std::string& val);
 
     void WriteConfig(bool forApp);
+    bool WriteRefPoseValues();
+    bool SetRefPoseFromFile(bool active);
+    bool WriteConfigEntry(Cfg key, const std::string& file, bool addOcSuffix);
 
   private:
     bool m_UsesOpenComposite{false};
+    std::string m_DefaultIni;
     std::string m_ApplicationIni;
 
     // needs to include all configurable values of enum ConfigKey
@@ -191,6 +197,9 @@ class ConfigManager
         {Cfg::KeyActivate, {"shortcuts", "activate"}},
         {Cfg::KeyCalibrate, {"shortcuts", "calibrate"}},
 
+        {Cfg::KeyLockRefPose, {"shortcuts", "lock_reference_pose"}},
+        {Cfg::KeyReleaseRefPose, {"shortcuts", "release_reference_pose"}},
+
         {Cfg::KeyTransInc, {"shortcuts", "translation_increase"}},
         {Cfg::KeyTransDec, {"shortcuts", "translation_decrease"}},
         {Cfg::KeyRotInc, {"shortcuts", "rotation_increase"}},
@@ -239,19 +248,12 @@ class ConfigManager
                                Cfg::TrackerOffsetRight,
                                Cfg::TrackerOffsetYaw,
                                Cfg::CacheUseEye,
-                               Cfg::CorX,
-                               Cfg::CorY,
-                               Cfg::CorZ,
-                               Cfg::CorA,
-                               Cfg::CorB,
-                               Cfg::CorC,
-                               Cfg::CorD,
                                Cfg::FactorEnabled,
                                Cfg::StabilizerEnabled,
                                Cfg::StabilizerStrength,
                                Cfg::LogVerbose};
 
-    std::set<Cfg> m_CorValues{Cfg::CorX, Cfg::CorY, Cfg::CorZ, Cfg::CorA, Cfg::CorB, Cfg::CorC, Cfg::CorD};
+    std::set<Cfg> m_RefPoseKeys{Cfg::CorX, Cfg::CorY, Cfg::CorZ, Cfg::CorA, Cfg::CorB, Cfg::CorC, Cfg::CorD};
 
     std::map<std::string, int> m_ShortCuts{{"BACK", VK_BACK},
                                            {"TAB", VK_TAB},

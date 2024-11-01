@@ -1,5 +1,7 @@
 // Microsoft Visual C++ generated resource script.
 //
+#pragma code_page(65001)
+
 #include "resource.h"
 
 #define APSTUDIO_READONLY_SYMBOLS
@@ -16,7 +18,6 @@
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
 LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
-#pragma code_page(1252)
 
 #ifdef APSTUDIO_INVOKED
 /////////////////////////////////////////////////////////////////////////////
@@ -142,6 +143,10 @@ STABILIZER_OFF_WAV      WAVE                    "sounds\\stabilizer_off.wav"
 PASSTHROUGH_ON_WAV      WAVE                    "sounds\\passthrough_on.wav"
 
 PASSTHROUGH_OFF_WAV     WAVE                    "sounds\\passthrough_off.wav"
+
+FILEPOSE_ON_WAV         WAVE                    "sounds\\file_pose_on.wav"
+
+FILEPOSE_OFF_WAV        WAVE                    "sounds\\file_pose_off.wav"
 
 #endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////

@@ -75,6 +75,7 @@ namespace tracker
         virtual bool ReadSource(XrTime time, utility::Dof& dof) = 0;
 
         bool m_SkipLazyInit{false};
+        bool m_LoadPoseFromFile{false};
         bool m_Calibrated{false};
 
       protected:
@@ -85,7 +86,7 @@ namespace tracker
         static std::optional<XrPosef> GetCurrentView(XrSession session, XrTime time);
         void SetForwardRotation(const XrPosef& pose) const;
         
-        bool m_LoadPoseFromFile{false};
+        
         std::vector<utility::DofValue> m_RelevantValues{};
         sampler::Sampler* m_Sampler{nullptr};
 

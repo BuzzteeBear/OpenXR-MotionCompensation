@@ -402,6 +402,8 @@
     <Media Include="sounds\error.wav" />
     <Media Include="sounds\eye_cached.wav" />
     <Media Include="sounds\eye_calculation.wav" />
+    <Media Include="sounds\file_pose_off.wav" />
+    <Media Include="sounds\file_pose_on.wav" />
     <Media Include="sounds\forward.wav" />
     <Media Include="sounds\left.wav" />
     <Media Include="sounds\loaded.wav" />
