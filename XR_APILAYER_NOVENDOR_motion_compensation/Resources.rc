@@ -148,6 +148,8 @@ FILEPOSE_ON_WAV         WAVE                    "sounds\\file_pose_on.wav"
 
 FILEPOSE_OFF_WAV        WAVE                    "sounds\\file_pose_off.wav"
 
+CALIBRATION_RESTORED_WAV WAVE                    "sounds\\calibration_restored.wav"
+
 #endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////
 

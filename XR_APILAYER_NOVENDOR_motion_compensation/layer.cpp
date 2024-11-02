@@ -394,7 +394,7 @@ namespace openxr_api_layer
                                             GetConfig()->GetBool(Cfg::PhysicalEarly, earlyPhysicalInit) &&
                                             earlyPhysicalInit)
                 {
-                    Log("preforming early initialization of physical tracker");
+                    Log("performing early initialization of physical tracker");
                     // initialize everything except tracker
                     LazyInit(0);
                 }

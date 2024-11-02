@@ -249,8 +249,9 @@ namespace output
         case Event::Activated:
             status.activated = true;
         case Event::Calibrated:
-            status.calibrated = true;
             status.connectionLost = false;
+        case Event::Restored:
+            status.calibrated = true;
             status.critical = false;
             break;
 

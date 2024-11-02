@@ -150,7 +150,7 @@ What you can modify in a configuration file:
   - `tolerance` - modify the time values are kept in cache for before deletion. This may affect eye calculation as well as cached eye positions.
 - `[shortcuts]`: can be used to configure shortcuts for different commands (See [List of keyboard bindings](#list-of-keyboard-bindings) for valid values):
   - `activate`- turn motion compensation on or off. Note that this implicitly triggers the calibration action (`calibrate`) if that hasn't been executed before.
-  - `calibrate` - calibrate the neutral reference pose of the tracker
+  - `calibrate` - calibrate (or restore, in case it's locked) the neutral reference pose of the tracker
   - `lock_reference_pose` - lock the current tracker reference pose within vr space. Reference tracker needs to be calibrated and this needs to be done for OpenCompsite and native OpenXR titles separately.
   - `release_reference_pose` - turn regular calibration mode (physical tracker pose / hmd pose + offset) back on. This toggles for OpenCompsite and native OpenXR titles separately. Can also be done by setting `load_ref_pose_from_file(_oc)` back to zero and reloading configuration / restarting game.
   - `translation_increase`, `translation_decrease` - modify the strength of the translational filter. Changes made during runtime can be saved by using a save command (see below).

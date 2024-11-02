@@ -394,6 +394,7 @@
     <Media Include="sounds\back.wav" />
     <Media Include="sounds\calibrated.wav" />
     <Media Include="sounds\calibration_lost.wav" />
+    <Media Include="sounds\calibration_restored.wav" />
     <Media Include="sounds\connection_lost.wav" />
     <Media Include="sounds\deactivated.wav" />
     <Media Include="sounds\debug_off.wav" />

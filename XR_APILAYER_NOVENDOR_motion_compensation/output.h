@@ -37,6 +37,7 @@ namespace output
                                                                   {Event::Activated, ACTIVATED_WAV},
                                                                   {Event::Deactivated, DEACTIVATED_WAV},
                                                                   {Event::Calibrated, CALIBRATED_WAV},
+                                                                  {Event::Restored, CALIBRATION_RESTORED_WAV},
                                                                   {Event::Plus, PLUS_WAV},
                                                                   {Event::Minus, MINUS_WAV},
                                                                   {Event::Max, MAX_WAV},
@@ -83,13 +84,13 @@ namespace output
         void StopThread();
 
         std::set<Event> m_RelevantEvents{
-            Event::Error,         Event::Critical,        Event::Initialized,    Event::Load,
-            Event::Save,          Event::Activated,       Event::Deactivated,    Event::Calibrated,
-            Event::DebugOn,       Event::DebugOff,        Event::ConnectionLost, Event::EyeCached,
-            Event::EyeCalculated, Event::OverlayOn,       Event::OverlayOff,     Event::ModifierOn,
-            Event::ModifierOff,   Event::CalibrationLost, Event::VerboseOn,      Event::VerboseOff,
-            Event::RecorderOn,    Event::RecorderOff,     Event::StabilizerOn,   Event::StabilizerOff,
-            Event::PassthroughOn, Event::PassthroughOff};
+            Event::Error,         Event::Critical,      Event::Initialized,     Event::Load,
+            Event::Save,          Event::Activated,     Event::Deactivated,     Event::Calibrated,
+            Event::Restored,      Event::DebugOn,       Event::DebugOff,        Event::ConnectionLost,
+            Event::EyeCached,     Event::EyeCalculated, Event::OverlayOn,       Event::OverlayOff,
+            Event::ModifierOn,    Event::ModifierOff,   Event::CalibrationLost, Event::VerboseOn,
+            Event::VerboseOff,    Event::RecorderOn,    Event::RecorderOff,     Event::StabilizerOn,
+            Event::StabilizerOff, Event::PassthroughOn, Event::PassthroughOff};
         std::thread* m_Thread{nullptr};
         std::atomic_bool m_StopThread{false}, m_MmfError{false};
         int64_t m_LastError{0};
@@ -113,37 +114,15 @@ namespace output
     private:
         static int StatusToInt(const Status& status);
 
-        std::set<Event> m_RelevantEvents{Event::Error,
-                                         Event::Critical,
-                                         Event::Initialized,
-                                         Event::Load,
-                                         Event::Save,
-                                         Event::Activated,
-                                         Event::Deactivated,
-                                         Event::Calibrated,
-                                         Event::ConnectionLost,
-                                         Event::ModifierOff,
-                                         Event::CalibrationLost,
-                                         Event::Plus,
-                                         Event::Minus,
-                                         Event::Max,
-                                         Event::Min,
-                                         Event::Up,
-                                         Event::Down,
-                                         Event::Forward,
-                                         Event::Back,
-                                         Event::Left,
-                                         Event::Right,
-                                         Event::RotLeft,
-                                         Event::RotRight,
-                                         Event::EyeCached,
-                                         Event::EyeCalculated,
-                                         Event::ModifierOn,
-                                         Event::ModifierOff,
-                                         Event::VerboseOn,
-                                         Event::VerboseOff,
-                                         Event::StabilizerOn,
-                                         Event::StabilizerOff};
+        std::set<Event> m_RelevantEvents{
+            Event::Error,     Event::Critical,       Event::Initialized,  Event::Load,
+            Event::Save,      Event::Activated,      Event::Deactivated,  Event::Calibrated,
+            Event::Restored,  Event::ConnectionLost, Event::ModifierOff,  Event::CalibrationLost,
+            Event::Plus,      Event::Minus,          Event::Max,          Event::Min,
+            Event::Up,        Event::Down,           Event::Forward,      Event::Back,
+            Event::Left,      Event::Right,          Event::RotLeft,      Event::RotRight,
+            Event::EyeCached, Event::EyeCalculated,  Event::ModifierOn,   Event::ModifierOff,
+            Event::VerboseOn, Event::VerboseOff,     Event::StabilizerOn, Event::StabilizerOff};
         utility::Mmf m_Mmf{};
         Status m_Status{};
     };

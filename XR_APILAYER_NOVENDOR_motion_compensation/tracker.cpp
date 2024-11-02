@@ -810,7 +810,7 @@ namespace tracker
                                                   {Pose::Invert(m_ReferencePose).orientation, {0, 0, 0}}));
         m_ReferencePose = xr::Normalize(Pose::Multiply(m_RefToFwd, m_ReferencePose));
 
-        EventSink::Execute(Event::Calibrated);
+        EventSink::Execute(m_LoadPoseFromFile ? Event::Restored : Event::Calibrated);
         TraceLoggingWriteStop(local, "OpenXrTracker::ResetReferencePose", TLArg(true, "Success"));
         return true;
     }
@@ -1079,7 +1079,7 @@ namespace tracker
         if (m_LoadPoseFromFile)
         {
             success = LoadReferencePose();
-            EventSink::Execute(Event::Calibrated);
+            EventSink::Execute(Event::Restored);
         }
         else
         {

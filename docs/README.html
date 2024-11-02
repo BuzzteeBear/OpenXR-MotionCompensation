@@ -216,7 +216,7 @@ The key <code>vertical_factor</code> is applied to translational filter strength
 <li><code>[shortcuts]</code>: can be used to configure shortcuts for different commands (See <a href="#list-of-keyboard-bindings">List of keyboard bindings</a> for valid values):
 <ul>
 <li><code>activate</code>- turn motion compensation on or off. Note that this implicitly triggers the calibration action (<code>calibrate</code>) if that hasn't been executed before.</li>
-<li><code>calibrate</code> - calibrate the neutral reference pose of the tracker</li>
+<li><code>calibrate</code> - calibrate (or restore, in case it's locked) the neutral reference pose of the tracker</li>
 <li><code>lock_reference_pose</code> - lock the current tracker reference pose within vr space. Reference tracker needs to be calibrated and this needs to be done for OpenCompsite and native OpenXR titles separately.</li>
 <li><code>release_reference_pose</code> - turn regular calibration mode (physical tracker pose / hmd pose + offset) back on. This toggles for OpenCompsite and native OpenXR titles separately. Can also be done by setting <code>load_ref_pose_from_file(_oc)</code> back to zero and reloading configuration / restarting game.</li>
 <li><code>translation_increase</code>, <code>translation_decrease</code> - modify the strength of the translational filter. Changes made during runtime can be saved by using a save command (see below).</li>
