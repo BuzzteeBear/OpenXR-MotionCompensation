@@ -67,21 +67,26 @@ namespace openxr_api_layer::graphics
                                        uint32_t* index);
         XrResult ReleaseSwapchainImage(XrSwapchain swapchain, const XrSwapchainImageReleaseInfo* releaseInfo);
         void ReleaseAllSwapChainImages();
-        void SetMarkerSize();
+        void ResetMarker();
+        void ResetCrosshair();
         bool ToggleOverlay();
         bool TogglePassthrough();
-        void DrawOverlay(const XrPosef& referencePose,
+        bool ToggleCrosshair();
+        void DrawMarkers(const XrPosef& referencePose,
                          const XrPosef& delta,
                          bool calibrated,
                          bool drawTracker,
                          XrSession session,
                          XrFrameEndInfo* chainFrameEndInfo,
                          OpenXrLayer* openXrLayer);
+        void DrawCrosshair(XrSession session, XrFrameEndInfo* chainFrameEndInfo, OpenXrLayer* openXrLayer);
 
-        bool m_D3D12inUse{false}, m_Initialized{true}, m_OverlayActive{false}, m_SessionVisible{false}; 
+        bool m_D3D12inUse{false}, m_SessionVisible{false}, m_MarkersInitialized{true}, m_MarkersActive{false},
+            m_CrosshairInitialized{true}, m_CrosshairActive{false};
 
       private:
         bool InitializeTextures(uint32_t eye, XrSwapchain swapchain, const ICompositionFramework* composition);
+        bool InitializeCrosshair(ICompositionFramework* composition, XrSpace viewSpace);
         void RenderMarkers(const XrCompositionLayerProjectionView& view,
                            uint32_t eye,
                            const XrPosef& refPose,
@@ -102,6 +107,9 @@ namespace openxr_api_layer::graphics
         std::shared_ptr<ISimpleMesh> m_MeshRGB{}, m_MeshCMY{}, m_MeshCGY{};
         std::map<XrSwapchain, SwapchainState> m_Swapchains{};
         std::vector<std::pair<std::shared_ptr<IGraphicsTexture>, std::shared_ptr<IGraphicsTexture>>> m_Textures{};
+        std::shared_ptr<ISwapchain> m_CrosshairSwapchain;
+        XrCompositionLayerQuad m_CrosshairLayer{XR_TYPE_COMPOSITION_LAYER_QUAD};
+        std::shared_ptr<std::vector<const XrCompositionLayerBaseHeader*>> m_LayersForSubmission{};
         std::mutex m_DrawMutex;
         std::set<XrSession> m_InitializedSessions{};
     };

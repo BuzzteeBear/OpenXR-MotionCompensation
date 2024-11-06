@@ -15,6 +15,9 @@
     <Filter Include="Sounds">
       <UniqueIdentifier>{e13eb219-74c7-4c3c-88cb-294dc1c6b62e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Images">
+      <UniqueIdentifier>{4e7ab859-fbce-433e-941f-246597876436}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h">
@@ -297,8 +300,15 @@
     <Media Include="sounds\calibration_restored.wav">
       <Filter>Sounds</Filter>
     </Media>
+    <Media Include="sounds\crosshair_on.wav" />
+    <Media Include="sounds\crosshair_off.wav" />
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="$(MSBuildThisFileDirectory)..\..\natvis\wil.natvis" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="images\crosshair.png">
+      <Filter>Images</Filter>
+    </Image>
   </ItemGroup>
 </Project>

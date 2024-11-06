@@ -384,7 +384,7 @@ namespace openxr_api_layer
                 m_LastFrameTime = 0;
                 m_UpdateRefSpaceTime = 0;
 
-                if (m_Overlay && m_Overlay->m_Initialized && m_CompositionFrameworkFactory)
+                if (m_Overlay && m_Overlay->m_MarkersInitialized && m_CompositionFrameworkFactory)
                 {
                     m_CompositionFrameworkFactory->CreateSession(createInfo, *session);
                     m_Overlay->m_D3D12inUse = m_CompositionFrameworkFactory->IsUsingD3D12(*session);
@@ -565,7 +565,7 @@ namespace openxr_api_layer
             createInfo->mipCount,
             createInfo->sampleCount);
 
-        if (!m_Overlay->m_Initialized)
+        if (!m_Overlay->m_MarkersInitialized)
         {
             ErrorLog("%s: overlay not properly initialized", __FUNCTION__);
             TraceLoggingWriteStop(local, "OpenXrLayer::xrCreateSwapchain", TLArg(false, "Overlay_Initialized"));
@@ -619,7 +619,7 @@ namespace openxr_api_layer
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "OpenXrLayer::xrAcquireSwapchainImage", TLXArg(swapchain, "Swapchain"));
 
-        if (!m_Overlay->m_Initialized)
+        if (!m_Overlay->m_MarkersInitialized)
         {
             const XrResult result = OpenXrApi::xrAcquireSwapchainImage(swapchain, acquireInfo, index);
             TraceLoggingWriteStop(local,
@@ -647,7 +647,7 @@ namespace openxr_api_layer
 
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "OpenXrLayer::xrReleaseSwapchainImage", TLXArg(swapchain, "Swapchain"));
-        if (!m_Overlay->m_Initialized)
+        if (!m_Overlay->m_MarkersInitialized)
         {
             const XrResult result = OpenXrApi::xrReleaseSwapchainImage(swapchain, releaseInfo);
             TraceLoggingWriteStop(local,
@@ -1472,7 +1472,7 @@ namespace openxr_api_layer
             OpenXrApi::xrPollEvent(GetXrInstance(), &buf);
         }
 
-        if (m_Overlay && m_Overlay->m_Initialized)
+        if (m_Overlay && m_Overlay->m_MarkersInitialized)
         {
             m_Overlay->ReleaseAllSwapChainImages();
         }
@@ -1530,7 +1530,7 @@ namespace openxr_api_layer
             cachedEyePoses = m_UseEyeCache ? m_EyeCache.GetSample(time) : std::vector<XrPosef>();
             m_EyeCache.CleanUp(time);
         }
-        else if (m_Tracker->m_Calibrated && (m_RecorderActive || (m_Overlay && m_Overlay->m_OverlayActive)))
+        else if (m_Tracker->m_Calibrated && (m_RecorderActive || (m_Overlay && m_Overlay->m_MarkersActive)))
         {
             // request pose delta to force recording and/or enable displaying tracker position
             m_Tracker->GetPoseDelta(delta, session, time);
@@ -1538,7 +1538,7 @@ namespace openxr_api_layer
 
         if (m_Overlay)
         {
-            m_Overlay->DrawOverlay(m_Tracker->GetReferencePose(),
+            m_Overlay->DrawMarkers(m_Tracker->GetReferencePose(),
                                    delta,
                                    m_Tracker->m_Calibrated,
                                    m_Activated,
@@ -1546,6 +1546,7 @@ namespace openxr_api_layer
                                    &chainFrameEndInfo,
                                    this);
             m_Overlay->ReleaseAllSwapChainImages();
+            m_Overlay->DrawCrosshair(session, &chainFrameEndInfo, this);
         }
 
         if (!m_SuppressInteraction && m_Tracker->m_Calibrated)

@@ -150,6 +150,18 @@ FILEPOSE_OFF_WAV        WAVE                    "sounds\\file_pose_off.wav"
 
 CALIBRATION_RESTORED_WAV WAVE                    "sounds\\calibration_restored.wav"
 
+CROSSHAIR_ON_WAV        WAVE                    "sounds\\crosshair_on.wav"
+
+CROSSHAIR_OFF_WAV       WAVE                    "sounds\\crosshair_off.wav"
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// PNG
+//
+
+CROSSHAIR_PNG           PNG                     "images\\crosshair.png"
+
 #endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////
 

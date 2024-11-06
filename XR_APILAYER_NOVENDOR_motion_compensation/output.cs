@@ -46,7 +46,9 @@ namespace output
 		PassthroughOn,
 		PassthroughOff,
         RefPoseLocked,
-        RefPoseReleased
+        RefPoseReleased,
+        CrosshairOn,
+        CrosshairOff,
     };
 
 	public struct EventData

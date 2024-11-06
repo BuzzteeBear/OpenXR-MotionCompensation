@@ -19,14 +19,14 @@ namespace input
         TraceLoggingWriteStart(local, "KeyboardInput::Init");
         bool success = true;
         const std::set<Cfg> activities{
-            Cfg::KeyActivate,    Cfg::KeyCalibrate,     Cfg::KeyLockRefPose,  Cfg::KeyReleaseRefPose,
-            Cfg::KeyTransInc,    Cfg::KeyTransDec,      Cfg::KeyRotInc,       Cfg::KeyRotDec,
-            Cfg::KeyStabilizer,  Cfg::KeyStabInc,       Cfg::KeyStabDec,      Cfg::KeyOffForward,
-            Cfg::KeyOffBack,     Cfg::KeyOffUp,         Cfg::KeyOffDown,      Cfg::KeyOffRight,
-            Cfg::KeyOffLeft,     Cfg::KeyRotRight,      Cfg::KeyRotLeft,      Cfg::KeyOverlay,
-            Cfg::KeyPassthrough, Cfg::KeyCache,         Cfg::KeyModifier,     Cfg::KeyFastModifier,
-            Cfg::KeySaveConfig,  Cfg::KeySaveConfigApp, Cfg::KeyReloadConfig, Cfg::KeyVerbose,
-            Cfg::KeyRecorder,    Cfg::KeyLogTracker,    Cfg::KeyLogProfile};
+            Cfg::KeyActivate,     Cfg::KeyCalibrate,  Cfg::KeyLockRefPose,   Cfg::KeyReleaseRefPose,
+            Cfg::KeyTransInc,     Cfg::KeyTransDec,   Cfg::KeyRotInc,        Cfg::KeyRotDec,
+            Cfg::KeyStabilizer,   Cfg::KeyStabInc,    Cfg::KeyStabDec,       Cfg::KeyOffForward,
+            Cfg::KeyOffBack,      Cfg::KeyOffUp,      Cfg::KeyOffDown,       Cfg::KeyOffRight,
+            Cfg::KeyOffLeft,      Cfg::KeyRotRight,   Cfg::KeyRotLeft,       Cfg::KeyOverlay,
+            Cfg::KeyPassthrough,  Cfg::KeyCrosshair,  Cfg::KeyCache,         Cfg::KeyModifier,
+            Cfg::KeyFastModifier, Cfg::KeySaveConfig, Cfg::KeySaveConfigApp, Cfg::KeyReloadConfig,
+            Cfg::KeyVerbose,      Cfg::KeyRecorder,   Cfg::KeyLogTracker,    Cfg::KeyLogProfile};
         const std::set<int> modifiers{VK_CONTROL, VK_SHIFT, VK_MENU};
         std::set<int> fastModifiers{};
         GetConfig()->GetShortcut(Cfg::KeyFastModifier, fastModifiers);
@@ -170,6 +170,10 @@ namespace input
         if (m_Input.GetKeyState(Cfg::KeyPassthrough, isRepeat) && !isRepeat)
         {
             TogglePassthrough();
+        }
+        if (m_Input.GetKeyState(Cfg::KeyCrosshair, isRepeat) && !isRepeat)
+        {
+            ToggleCrosshair();
         }
         if (m_Input.GetKeyState(Cfg::KeyCache, isRepeat) && !isRepeat)
         {
@@ -413,6 +417,23 @@ namespace input
         TraceLoggingWriteStop(local, "InputHandler::TogglePassthrough", TLArg(success, "Success"));
     }
 
+    void InputHandler::ToggleCrosshair() const
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "InputHandler::ToggleCrosshair");
+
+        if (!m_Layer->m_Overlay)
+        {
+            EventSink::Execute(Event::Error);
+            ErrorLog("%s: overlay is deactivated in config file so crosshair overlay cannot be activated", __FUNCTION__);
+            TraceLoggingWriteStop(local, "InputHandler::ToggleCrosshair");
+            return;
+        }
+        bool success = m_Layer->m_Overlay->ToggleCrosshair();
+
+        TraceLoggingWriteStop(local, "InputHandler::ToggleCrosshair", TLArg(success, "Success"));
+    }
+
     void InputHandler::ToggleCache() const
     {
         TraceLocalActivity(local);
@@ -507,7 +528,8 @@ namespace input
             }
             if (m_Layer->m_Overlay)
             {
-                m_Layer->m_Overlay->SetMarkerSize();
+                m_Layer->m_Overlay->ResetMarker();
+                m_Layer->m_Overlay->ResetCrosshair();
             }
         }
         EventSink::Execute(!success ? Event::Critical : Event::Load);

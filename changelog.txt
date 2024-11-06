@@ -9,7 +9,8 @@ Version 0.3.9.0
 	- enabled cor calibration outside of neutral rig postion
 	
 	Graphcal Overlay:
-	- display current tracker pose when mc is off
+	- added optional crosshair to help with forward calibration
+	- display current tracker pose while mc is off
 	
 	Bugfixes:
 	- corrected recorded translations to match local rig reference

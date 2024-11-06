@@ -69,7 +69,9 @@ namespace output
                                                                   {Event::PassthroughOn, PASSTHROUGH_ON_WAV},
                                                                   {Event::PassthroughOff, PASSTHROUGH_OFF_WAV},
                                                                   {Event::RefPoseLocked, FILEPOSE_ON_WAV},
-                                                                  {Event::RefPoseReleased, FILEPOSE_OFF_WAV}};
+                                                                  {Event::RefPoseReleased, FILEPOSE_OFF_WAV},
+                                                                  {Event::CrosshairOn, CROSSHAIR_ON_WAV},
+                                                                  {Event::CrosshairOff, CROSSHAIR_OFF_WAV}};
     };
 
     class EventMmf

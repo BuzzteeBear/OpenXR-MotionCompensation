@@ -259,9 +259,9 @@ namespace openxr_api_layer::graphics
         TraceLoggingWriteStart(local, "Overlay::ReleaseSwapchainImage", TLXArg(swapchain, "Swapchain"));
 
         const auto swapchainIt = m_Swapchains.find(swapchain);
-        if (m_OverlayActive && swapchainIt != m_Swapchains.end())
+        if (m_MarkersActive && swapchainIt != m_Swapchains.end())
         {
-            // Perform a delayed release: we still need to copy the texture in DrawOverlay()
+            // Perform a delayed release: we still need to copy the texture in DrawMarkers()
             swapchainIt->second.doRelease = true;
             DebugLog("ReleaseSwapchainImage(%llu): release postponed", swapchain);
             TraceLoggingWriteStop(local, "Overlay::ReleaseSwapchainImage", TLArg(true, "Release_Postponed"));
@@ -312,17 +312,37 @@ namespace openxr_api_layer::graphics
         TraceLoggingWriteStop(local, "Overlay::ReleaseAllSwapChainImages");
     }
 
-    void Overlay::SetMarkerSize()
+    void Overlay::ResetMarker()
     {
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "Overlay::SetMarkerSize");
+        TraceLoggingWriteStart(local, "Overlay::ResetMarker");
 
         float scaling{0.1f};
         GetConfig()->GetFloat(Cfg::MarkerSize, scaling);
         scaling /= 100.f;
         m_MarkerSize = {scaling, scaling, scaling};
 
-        TraceLoggingWriteStop(local, "Overlay::SetMarkerSize", TLArg(xr::ToString(m_MarkerSize).c_str(), "MarkerSize"));
+        TraceLoggingWriteStop(local, "Overlay::ResetMarker", TLArg(xr::ToString(m_MarkerSize).c_str(), "MarkerSize"));
+    }
+
+    void Overlay::ResetCrosshair()
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "Overlay::ResetCrosshair");
+
+        float distance = 100.f, scale = 1.f;
+        GetConfig()->GetFloat(Cfg::CrosshairDistance, distance);
+        GetConfig()->GetFloat(Cfg::CrosshairScale, scale);
+        distance = std::max(distance, 1.0f);
+        scale = std::max(scale, .01f);
+
+        m_CrosshairLayer.pose = xr::math::Pose::Translation({0.0f, 0.0f, distance * -.01f});
+        m_CrosshairLayer.size.width = m_CrosshairLayer.size.height = scale * distance * .02f;
+
+        TraceLoggingWriteStop(local,
+                              "Overlay::ResetCrosshair",
+                              TLArg(xr::ToString(m_CrosshairLayer.pose).c_str(), "CrosshairPose"),
+                              TLArg(std::to_string(m_CrosshairLayer.size.width).c_str(), "CrosshairSize"));
     }
 
     bool Overlay::ToggleOverlay()
@@ -330,25 +350,25 @@ namespace openxr_api_layer::graphics
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "Overlay::ToggleOverlay");
 
-        if (!m_Initialized)
+        if (!m_MarkersInitialized)
         {
-            m_OverlayActive = false;
-            ErrorLog("%s: graphical overlay is not properly initialized", __FUNCTION__);
+            m_MarkersActive = false;
+            ErrorLog("%s: marker overlay is not properly initialized", __FUNCTION__);
             output::EventSink::Execute(output::Event::Error);
             TraceLoggingWriteStop(local,
                                   "Overlay::ToggleOverlay",
                                   TLArg(false, "Success"),
-                                  TLArg(m_OverlayActive, "OverlayActive"));
+                                  TLArg(m_MarkersActive, "MarkersActive"));
             return false;
         }
-        m_OverlayActive = !m_OverlayActive;
+        m_MarkersActive = !m_MarkersActive;
 
-        Log("graphical overlay toggled %s", m_OverlayActive ? "on" : "off");
-        output::EventSink::Execute(m_OverlayActive ? output::Event::OverlayOn : output::Event::OverlayOff);
+        Log("graphical overlay toggled %s", m_MarkersActive ? "on" : "off");
+        output::EventSink::Execute(m_MarkersActive ? output::Event::OverlayOn : output::Event::OverlayOff);
         TraceLoggingWriteStop(local,
                               "Overlay::ToggleOverlay",
                               TLArg(true, "Success"),
-                              TLArg(m_OverlayActive, "OverlayActive"));
+                              TLArg(m_MarkersActive, "MarkersActive"));
         return true;
     }
 
@@ -357,9 +377,9 @@ namespace openxr_api_layer::graphics
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "Overlay::TogglePassthrough");
 
-        if (!m_Initialized)
+        if (!m_MarkersInitialized)
         {
-            ErrorLog("%s: graphical overlay is not properly initialized", __FUNCTION__);
+            ErrorLog("%s: marker overlay is not properly initialized", __FUNCTION__);
             output::EventSink::Execute(output::Event::Error);
 
             TraceLoggingWriteStop(local,
@@ -378,76 +398,105 @@ namespace openxr_api_layer::graphics
         return true;
     }
 
-    void Overlay::DrawOverlay(const XrPosef& referencePose,
+    bool Overlay::ToggleCrosshair()
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "Overlay::ToggleCrosshair");
+
+        if (!m_CrosshairInitialized)
+        {
+            ErrorLog("%s: crosshair overlay is not properly initialized", __FUNCTION__);
+            output::EventSink::Execute(output::Event::Error);
+
+            TraceLoggingWriteStop(local,
+                                  "Overlay::ToggleCrosshair",
+                                  TLArg(false, "Success"),
+                                  TLArg(m_CrosshairActive, "CrosshairActive"));
+            return false;
+        }
+        m_CrosshairActive = !m_CrosshairActive;
+        output::EventSink::Execute(m_CrosshairActive ? output::Event::CrosshairOn : output::Event::CrosshairOff);
+
+        TraceLoggingWriteStop(local,
+                              "Overlay::ToggleCrosshair",
+                              TLArg(true, "Success"),
+                              TLArg(m_CrosshairActive, "CrosshairActive"));
+        return true;
+    }
+
+    void Overlay::DrawMarkers(const XrPosef& referencePose,
                               const XrPosef& delta,
                               bool calibrated,
-                              bool mcActivated,
+                              bool drawTracker,
                               XrSession session,
                               XrFrameEndInfo* chainFrameEndInfo,
                               OpenXrLayer* openXrLayer)
     {
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local,
-                               "Overlay::DrawOverlay",
+                               "Overlay::DrawMarkers",
                                TLArg(chainFrameEndInfo->displayTime, "Time"),
                                TLArg(xr::ToString(referencePose).c_str(), "ReferencePose"),
                                TLArg(xr::ToString(delta).c_str(), "Delta"),
-                               TLArg(mcActivated, "MC_Activated"));
-        if (!(m_Initialized && m_OverlayActive && m_SessionVisible))
+                               TLArg(drawTracker, "DrawTracker"));
+        if (!(m_MarkersInitialized && m_MarkersActive && m_SessionVisible))
         {
             TraceLoggingWriteStop(local,
-                                  "Overlay::DrawOverlay",
-                                  TLArg(m_Initialized, "Initialized"),
-                                  TLArg(m_OverlayActive, "OverlayActive"),
+                                  "Overlay::DrawMarkers",
+                                  TLArg(m_MarkersInitialized, "MarkersInitialized"),
+                                  TLArg(m_MarkersActive, "MarkersActive"),
                                   TLArg(m_SessionVisible, "SessionVisible"));
             return;
         }
-        TraceLoggingWriteTagged(local, "Overlay::DrawOverlay", TLArg(true, "Overlay_Active"));
+        TraceLoggingWriteTagged(local, "Overlay::DrawMarkers", TLArg(true, "Overlay_Active"));
 
-        auto factory = openXrLayer->GetCompositionFactory();
-        if (!factory)
-        {
-            ErrorLog("%s: unable to retrieve composition framework factory", __FUNCTION__);
-            m_Initialized = false;
-            TraceLoggingWriteStop(local, "Overlay::DrawOverlay", TLArg(false, "CompositionFrameworkFactory"));
-            return;
-        }
-
-        ICompositionFramework* composition = factory->getCompositionFramework(session);
-        if (!composition)
-        {
-            ErrorLog("%s: unable to retrieve composition framework", __FUNCTION__);
-            m_Initialized = false;
-            TraceLoggingWriteStop(local, "Overlay::DrawOverlay", TLArg(false, "CompositionFramework"));
-            return;
-        }
-
-        std::unique_lock lock(m_DrawMutex);
-
-        if (!m_InitializedSessions.contains(session))
-        {
-            std::vector<SimpleMeshVertex> vertices = CreateMarker(true, false);
-            std::vector<uint16_t> indices;
-            for (uint16_t i = 0; i < static_cast<uint16_t>(vertices.size()); i++)
-            {
-                indices.push_back(i);
-            }
-            m_MeshRGB = composition->getCompositionDevice()->createSimpleMesh(vertices, indices, "RGB Mesh");
-            vertices = CreateMarker(false, false);
-            m_MeshCMY = composition->getCompositionDevice()->createSimpleMesh(vertices, indices, "CMY Mesh");
-            vertices = CreateMarker(false, true);
-            m_MeshCGY = composition->getCompositionDevice()->createSimpleMesh(vertices, indices, "CGY Mesh");
-            TraceLoggingWriteTagged(local,
-                                    "Overlay::DrawOverlay",
-                                    TLPArg(m_MeshRGB.get(), "MeshRGB"),
-                                    TLPArg(m_MeshCMY.get(), "MeshCMY"),
-                                    TLPArg(m_MeshCGY.get(), "MeshCGY"));
-            m_InitializedSessions.insert(session);
-            DebugLog("initialized marker meshes");
-        }
-
+        
         try
         {
+            auto factory = openXrLayer->GetCompositionFactory();
+            if (!factory)
+            {
+                ErrorLog("%s: unable to retrieve composition framework factory", __FUNCTION__);
+                m_MarkersInitialized = false;
+                TraceLoggingWriteStop(local, "Overlay::DrawMarkers", TLArg(false, "CompositionFrameworkFactory"));
+                return;
+            }
+
+            ICompositionFramework* composition = factory->getCompositionFramework(session);
+            if (!composition)
+            {
+                ErrorLog("%s: unable to retrieve composition framework", __FUNCTION__);
+                m_MarkersInitialized = false;
+                TraceLoggingWriteStop(local, "Overlay::DrawMarkers", TLArg(false, "CompositionFramework"));
+                return;
+            }
+
+            std::unique_lock lock(m_DrawMutex);
+
+            if (!m_InitializedSessions.contains(session))
+            {
+                std::vector<SimpleMeshVertex> vertices = CreateMarker(true, false);
+                std::vector<uint16_t> indices;
+                for (uint16_t i = 0; i < static_cast<uint16_t>(vertices.size()); i++)
+                {
+                    indices.push_back(i);
+                }
+                m_MeshRGB = composition->getCompositionDevice()->createSimpleMesh(vertices, indices, "RGB Mesh");
+                vertices = CreateMarker(false, false);
+                m_MeshCMY = composition->getCompositionDevice()->createSimpleMesh(vertices, indices, "CMY Mesh");
+                vertices = CreateMarker(false, true);
+                m_MeshCGY = composition->getCompositionDevice()->createSimpleMesh(vertices, indices, "CGY Mesh");
+                TraceLoggingWriteTagged(local,
+                                        "Overlay::DrawMarkers",
+                                        TLPArg(m_MeshRGB.get(), "MeshRGB"),
+                                        TLPArg(m_MeshCMY.get(), "MeshCMY"),
+                                        TLPArg(m_MeshCGY.get(), "MeshCGY"));
+                ResetMarker();
+
+                m_InitializedSessions.insert(session);
+                DebugLog("initialized marker meshes");
+            }
+
             const XrCompositionLayerProjection* lastProjectionLayer{};
             for (uint32_t i = 0; i < chainFrameEndInfo->layerCount; i++)
             {
@@ -463,14 +512,14 @@ namespace openxr_api_layer::graphics
                 {
                     ErrorLog("%s: no projection layer found", __FUNCTION__);
                 }
-                TraceLoggingWriteStop(local, "Overlay::DrawOverlay", TLArg(false, "ProjectionLayer"));
+                TraceLoggingWriteStop(local, "Overlay::DrawMarkers", TLArg(false, "ProjectionLayer"));
                 return;
             }
             if (std::exchange(m_NoProjectionLayer, false))
             {
                 Log("%s: projection layer found again", __FUNCTION__);
-            } 
-            
+            }
+
             // transfer tracker poses into projection reference space
             XrPosef refToStage;
             if (!openXrLayer->GetRefToStage(lastProjectionLayer->space, &refToStage, nullptr))
@@ -479,8 +528,8 @@ namespace openxr_api_layer::graphics
                          __FUNCTION__,
                          chainFrameEndInfo->displayTime,
                          lastProjectionLayer->space);
-                m_Initialized = false;
-                TraceLoggingWriteStop(local, "Overlay::DrawOverlay", TLArg(false, "RefToStage"));
+                m_MarkersInitialized = false;
+                TraceLoggingWriteStop(local, "Overlay::DrawMarkers", TLArg(false, "RefToStage"));
                 return;
             }
             DebugLog("overlay last projection layer space: %llu, pose to stage: %s",
@@ -489,17 +538,17 @@ namespace openxr_api_layer::graphics
 
             // calculate tracker pose
             const XrPosef trackerPose = xr::Normalize(xr::math::Pose::Multiply(
-                (mcActivated || !calibrated) ? referencePose
+                (drawTracker || !calibrated) ? referencePose
                                              : xr::math::Pose::Multiply(referencePose, xr::math::Pose::Invert(delta)),
                 refToStage));
 
             // calculate reference pose
             const XrPosef refPose = xr::Normalize(
-                xr::math::Pose::Multiply(!mcActivated ? referencePose : xr::math::Pose::Multiply(referencePose, delta),
+                xr::math::Pose::Multiply(!drawTracker ? referencePose : xr::math::Pose::Multiply(referencePose, delta),
                                          refToStage));
 
             DebugLog("overlay reference pose: %s", xr::ToString(refPose).c_str());
-            if (mcActivated)
+            if (drawTracker)
             {
                 DebugLog("overlay tracker pose: %s", xr::ToString(trackerPose).c_str());
             }
@@ -511,7 +560,7 @@ namespace openxr_api_layer::graphics
                 const XrRect2Di* imageRect = &view.subImage.imageRect;
 
                 TraceLoggingWriteTagged(local,
-                                        "Overlay::DrawOverlay",
+                                        "Overlay::DrawMarkers",
                                         TLArg(eye, "Eye"),
                                         TLArg(imageRect->extent.width, "Width"),
                                         TLArg(imageRect->extent.height, "Heigth"),
@@ -524,8 +573,8 @@ namespace openxr_api_layer::graphics
 
                 if (!InitializeTextures(eye, swapchain, composition))
                 {
-                    m_Initialized = false;
-                    TraceLoggingWriteStop(local, "Overlay::DrawOverlay", TLArg(false, "AppTexture_Copied"));
+                    m_MarkersInitialized = false;
+                    TraceLoggingWriteStop(local, "Overlay::DrawMarkers", TLArg(false, "AppTexture_Initialized"));
                     return;
                 }
 
@@ -538,15 +587,15 @@ namespace openxr_api_layer::graphics
                                                                          true))
                 {
                     ErrorLog("%s: unable to copy app texture for swapchain: %llu", __FUNCTION__, swapchain);
-                    m_Initialized = false;
-                    TraceLoggingWriteStop(local, "Overlay::DrawOverlay", TLArg(false, "AppTexure_Copied"));
+                    m_MarkersInitialized = false;
+                    TraceLoggingWriteStop(local, "Overlay::DrawMarkers", TLArg(false, "AppTexture_Copied"));
                     return;
                 }
 
                 composition->serializePreComposition();
 
                 // draw marker on copied texture
-                RenderMarkers(view, eye, refPose, trackerPose, mcActivated || calibrated, composition);
+                RenderMarkers(view, eye, refPose, trackerPose, drawTracker || calibrated, composition);
 
                 composition->serializePostComposition();
 
@@ -557,8 +606,8 @@ namespace openxr_api_layer::graphics
                                                                          false))
                 {
                     ErrorLog("%s: unable to copy app texture for swapchain: %llu", __FUNCTION__, swapchain);
-                    m_Initialized = false;
-                    TraceLoggingWriteStop(local, "Overlay::InitializeTextures", TLArg(false, "AppTexure_Copied"));
+                    m_MarkersInitialized = false;
+                    TraceLoggingWriteStop(local, "Overlay::DrawMarkers", TLArg(false, "AppTexture_Copied_Back"));
                     return;
                 }
             }
@@ -566,10 +615,88 @@ namespace openxr_api_layer::graphics
         catch (std::exception& e)
         {
             ErrorLog("%s: encountered exception: %s", __FUNCTION__, e.what());
-            m_Initialized = false;
+            m_MarkersInitialized = false;
         }
-        TraceLoggingWriteStop(local, "Overlay::DrawOverlay", TLArg(true, "Success"));
+        TraceLoggingWriteStop(local, "Overlay::DrawMarkers", TLArg(true, "Success"));
     }
+
+    void Overlay::DrawCrosshair(XrSession session, XrFrameEndInfo* chainFrameEndInfo, OpenXrLayer* openXrLayer)
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local,
+                               "Overlay::DrawCrosshair",
+                               TLArg(chainFrameEndInfo->displayTime, "Time"));
+        if (!(m_CrosshairInitialized && m_CrosshairActive && m_SessionVisible))
+        {
+            TraceLoggingWriteStop(local,
+                                  "Overlay::DrawMarkers",
+                                  TLArg(m_CrosshairInitialized, "CrosshairInitialized"),
+                                  TLArg(m_CrosshairActive, "CrosshairActive"),
+                                  TLArg(m_SessionVisible, "SessionVisible"));
+            return;
+        }
+        TraceLoggingWriteTagged(local, "Overlay::DrawCrosshair", TLArg(true, "Crosshair_Active"));
+
+        try
+        {
+            auto factory = openXrLayer->GetCompositionFactory();
+            if (!factory)
+            {
+                ErrorLog("%s: unable to retrieve composition framework factory", __FUNCTION__);
+                m_MarkersInitialized = false;
+                TraceLoggingWriteStop(local, "Overlay::DrawCrosshair", TLArg(false, "CompositionFrameworkFactory"));
+                return;
+            }
+
+            ICompositionFramework* composition = factory->getCompositionFramework(session);
+            if (!composition)
+            {
+                ErrorLog("%s: unable to retrieve composition framework", __FUNCTION__);
+                m_MarkersInitialized = false;
+                TraceLoggingWriteStop(local, "Overlay::DrawCrosshair", TLArg(false, "CompositionFramework"));
+                return;
+            }
+
+            if (!m_CrosshairSwapchain &&
+                !((m_CrosshairInitialized = InitializeCrosshair(composition, openXrLayer->m_ViewSpace))))
+            {
+                ErrorLog("%s: unable to initialize crosshair overlay");
+                TraceLoggingWriteStop(local, "Overlay::DrawCrosshair", TLArg(false, "Initialized"));
+                return;
+            }
+
+            // adjust crosshair rotation so it stays vertically/horizontally aligned
+            XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
+            if (const XrResult result = openXrLayer->OpenXrApi::xrLocateSpace(openXrLayer->m_ViewSpace,
+                                                                              openXrLayer->m_StageSpace,
+                                                                              chainFrameEndInfo->displayTime,
+                                                                              &location);
+                XR_SUCCEEDED(result) && xr::math::Pose::IsPoseValid(location.locationFlags))
+            {
+                const auto [pitch, yaw, roll] = utility::ToEulerAngles(location.pose.orientation);
+                xr::math::StoreXrQuaternion(&m_CrosshairLayer.pose.orientation,
+                                            DirectX::XMQuaternionRotationRollPitchYaw(0, 0, -roll));
+            }
+
+            // add crosshair layer
+            m_LayersForSubmission = std::make_shared<std::vector<const XrCompositionLayerBaseHeader*>>(
+                chainFrameEndInfo->layers,
+                chainFrameEndInfo->layers + chainFrameEndInfo->layerCount);
+
+            m_LayersForSubmission->push_back(reinterpret_cast<XrCompositionLayerBaseHeader*>(&m_CrosshairLayer));
+
+            chainFrameEndInfo->layers = m_LayersForSubmission->data();
+            chainFrameEndInfo->layerCount = static_cast<uint32_t>(m_LayersForSubmission->size());
+        }
+        catch (std::exception& e)
+        {
+            ErrorLog("%s: encountered exception: %s", __FUNCTION__, e.what());
+            m_CrosshairInitialized = false;
+        }
+
+        TraceLoggingWriteStop(local, "Overlay::DrawCrosshair", TLArg(true, "Success"));
+    }
+
 
     bool Overlay::InitializeTextures(uint32_t eye, XrSwapchain swapchain, const ICompositionFramework* composition)
     {
@@ -614,6 +741,92 @@ namespace openxr_api_layer::graphics
         }
 
         TraceLoggingWriteStop(local, "Overlay::InitializeTextures", TLArg(true, "Success"));
+        return true;
+    }
+
+    bool Overlay::InitializeCrosshair(ICompositionFramework* composition, XrSpace viewSpace)
+    {
+        TraceLoggingActivity<g_traceProvider> local;
+        TraceLoggingWriteStart(local, "Overlay::InitializeCrosshair");
+
+        // locate the resource in the dll.
+        const HRSRC imageResHandle = FindResource(openxr_api_layer::dllModule, MAKEINTRESOURCE(CROSSHAIR_PNG), "PNG");
+        if (!imageResHandle)
+        {
+            TraceLoggingWriteStop(local, "Overlay::InitializeCrosshair", TLArg(false, "FindResource"));
+            return false;
+        }
+
+        // load the resource to the HGLOBAL
+        const HGLOBAL imageResDataHandle = LoadResource(openxr_api_layer::dllModule, imageResHandle);
+        if (!imageResDataHandle)
+        {
+            TraceLoggingWriteStop(local, "Overlay::InitializeCrosshair", TLArg(false, "LoadResource"));
+            return false;
+        }
+
+        // lock the resource to retrieve memory pointer
+        const void* pImageFile = LockResource(imageResDataHandle);
+        if (!pImageFile)
+        {
+            TraceLoggingWriteStop(local, "Overlay::InitializeCrosshair", TLArg(false, "LockResource"));
+            return false;
+        }
+
+        // calculate the size
+        const DWORD imageFileSize = SizeofResource(openxr_api_layer::dllModule, imageResHandle);
+        if (!imageFileSize)
+        {
+            TraceLoggingWriteStop(local, "Overlay::InitializeCrosshair", TLArg(false, "ImageFileSize"));
+            return false;
+        }
+
+        // load image into texture
+        ID3D11Device* const device = composition->getCompositionDevice()->getNativeDevice<graphics::D3D11>();
+        auto image = std::make_unique<DirectX::ScratchImage>();
+        CHECK_HRCMD(DirectX::LoadFromWICMemory(pImageFile, imageFileSize, DirectX::WIC_FLAGS_NONE, nullptr, *image));
+
+        ComPtr<ID3D11Resource> crosshairTexture;
+        CHECK_HRCMD(DirectX::CreateTexture(device,
+                                           image->GetImages(),
+                                           1,
+                                           image->GetMetadata(),
+                                           crosshairTexture.ReleaseAndGetAddressOf()));
+
+        // create static swapchain
+        XrSwapchainCreateInfo crosshairSwapchainInfo{XR_TYPE_SWAPCHAIN_CREATE_INFO};
+        crosshairSwapchainInfo.createFlags = XR_SWAPCHAIN_CREATE_STATIC_IMAGE_BIT;
+        crosshairSwapchainInfo.usageFlags = XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
+        crosshairSwapchainInfo.arraySize = 1;
+        crosshairSwapchainInfo.format = static_cast<int64_t>(image->GetMetadata().format);
+        crosshairSwapchainInfo.width = static_cast<int32_t>(image->GetMetadata().width);
+        crosshairSwapchainInfo.height = static_cast<int32_t>(image->GetMetadata().height);
+        crosshairSwapchainInfo.mipCount = crosshairSwapchainInfo.sampleCount = crosshairSwapchainInfo.faceCount = 1;
+        m_CrosshairSwapchain =
+            composition->createSwapchain(crosshairSwapchainInfo,
+                                         graphics::SwapchainMode::Write | graphics::SwapchainMode::Submit);
+        if (!m_CrosshairSwapchain)
+        {
+            TraceLoggingWriteStop(local, "Overlay::InitializeCrosshair", TLArg(false, "CrosshairSwapchain"));
+            return false;
+        }
+
+        // copy static content into swapchain image
+        graphics::ISwapchainImage* const acquiredImage = m_CrosshairSwapchain->acquireImage();
+        ID3D11DeviceContext* const context =
+            composition->getCompositionDevice()->getNativeContext<graphics::D3D11>();
+        ID3D11Texture2D* const surface = acquiredImage->getTextureForWrite()->getNativeTexture<graphics::D3D11>();
+        context->CopyResource(surface, crosshairTexture.Get());
+        m_CrosshairSwapchain->releaseImage();
+        m_CrosshairSwapchain->commitLastReleasedImage();
+
+        // initialize crosshair quad layer
+        m_CrosshairLayer.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
+        m_CrosshairLayer.subImage = m_CrosshairSwapchain->getSubImage();
+        m_CrosshairLayer.eyeVisibility = XR_EYE_VISIBILITY_BOTH;
+        m_CrosshairLayer.space = viewSpace;
+        ResetCrosshair();
+
         return true;
     }
 

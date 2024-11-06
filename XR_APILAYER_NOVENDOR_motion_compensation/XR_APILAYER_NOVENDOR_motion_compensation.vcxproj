@@ -396,6 +396,8 @@
     <Media Include="sounds\calibration_lost.wav" />
     <Media Include="sounds\calibration_restored.wav" />
     <Media Include="sounds\connection_lost.wav" />
+    <Media Include="sounds\crosshair_off.wav" />
+    <Media Include="sounds\crosshair_on.wav" />
     <Media Include="sounds\deactivated.wav" />
     <Media Include="sounds\debug_off.wav" />
     <Media Include="sounds\debug_on.wav" />
@@ -430,6 +432,9 @@
     <Media Include="sounds\up.wav" />
     <Media Include="sounds\verbose_off.wav" />
     <Media Include="sounds\verbose_on.wav" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="images\crosshair.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

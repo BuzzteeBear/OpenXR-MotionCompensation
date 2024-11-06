@@ -141,6 +141,7 @@ namespace
             CHECK_XRCMD(xrGetInstanceProcAddr(instance,
                                               "xrEnumerateSwapchainImages",
                                               reinterpret_cast<PFN_xrVoidFunction*>(&xrEnumerateSwapchainImages)));
+
             if (hasOwnership)
             {
                 CHECK_XRCMD(xrGetInstanceProcAddr(instance,

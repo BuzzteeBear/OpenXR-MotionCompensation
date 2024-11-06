@@ -99,7 +99,11 @@ Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "tracker"; Key: "
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "tracker"; Key: "cor_b_oc"; String: "0.0"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "tracker"; Key: "cor_c_oc"; String: "0.0"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "tracker"; Key: "cor_d_oc"; String: "0.0"; Flags: createkeyifdoesntexist
-Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "tracker"; Key: "marker_size"; String: "10.0"; Flags: createkeyifdoesntexist
+
+; [overlay]
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "overlay"; Key: "marker_size"; String: "10.0"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "overlay"; Key: "crosshair_distance"; String: "100.0"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "overlay"; Key: "crosshair_scale"; String: "100.0"; Flags: createkeyifdoesntexist
 
 ; [translation_filter]
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "translation_filter"; Key: "strength"; String: "0.50"; Flags: createkeyifdoesntexist
@@ -144,6 +148,9 @@ Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key:
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "calibrate"; String: "CTRL+DEL"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "lock_reference_pose"; String: "CTRL+SHIFT+HOME"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "release_reference_pose"; String: "CTRL+SHIFT+END"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "toggle_overlay"; String: "CTRL+D"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "toggle_overlay_passthrough"; String: "CTRL+SHIFT+D"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "toggle_crosshair"; String: "CTRL+X"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "translation_increase"; String: "CTRL+PLUS"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "translation_decrease"; String: "CTRL+MINUS"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "rotation_increase"; String: "CTRL+0"; Flags: createkeyifdoesntexist
@@ -159,8 +166,6 @@ Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key:
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "offset_left"; String: "CTRL+LEFT"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "rotate_right"; String: "CTRL+PERIOD"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "rotate_left"; String: "CTRL+COMMA"; Flags: createkeyifdoesntexist
-Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "toggle_overlay"; String: "CTRL+D"; Flags: createkeyifdoesntexist
-Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "toggle_overlay_passthrough"; String: "CTRL+SHIFT+D"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "toggle_cache"; String: "CTRL+E"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "fast_modifier "; String: "ALT"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "shortcuts"; Key: "toggle_pose_modifier"; String: "CTRL+P"; Flags: createkeyifdoesntexist

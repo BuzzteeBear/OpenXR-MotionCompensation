@@ -67,6 +67,7 @@ namespace input
         void ReleaseRefPose() const;
         void ToggleOverlay() const;
         void TogglePassthrough() const;
+        void ToggleCrosshair() const;
         void ToggleCache() const;
         void ToggleModifier() const;
         void ChangeOffset(::input::InputHandler::Direction dir, bool fast) const;

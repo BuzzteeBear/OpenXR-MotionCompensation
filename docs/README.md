@@ -132,10 +132,13 @@ What you can modify in a configuration file:
     - `load_ref_pose_from_file` and `load_ref_pose_from_file_oc` are meant to be handled automatically when using `lock_reference_pose` and `release_reference_pose` shortcuts (see below). Enables locking the reference pose, which means to reuse the exact same reference position and orientation within VR playspace for the following sessions.
     - values starting with `cor_` are not meant for manual editing in the config file but are instead populated on locking the reference pose.  
   - `constant_pitch_angle` compensates for a constant pitch offset in the input data of a virtual tracker. This may be helpful on a yaw2 motion simulator, if you decide to have a more reclined neutral position by adding a constant on the pitch axis telemetry, but still want to use the built-in sensors for motion compensation.
-  - `marker_size` sets the size of the cor / reference tracker marker displayed in the overlay. The value corresponds to the length of one arrow in cm.
   - `connection_timeout` sets the time (in seconds) the tracker needs to be unresponsive before motion compensation is automatically deactivated. Setting a negative value disables automatic deactivation.
   - `connection_check` is only relevant for virtual trackers and determines the period (in seconds) for checking whether the memory mapped file used for data input is actually still actively used. Setting a negative value disables the check
   - `legacy mode` reverts the internal pose manipulation technique to the way it was prior to version 0.3.0
+- `[overlay] (see [Graphical overlay](#graphical-overlay)):
+  - `marker_size` sets the size of the cor / reference tracker marker displayed in the overlay. The value corresponds to the length of one arrow in cm.
+  - `crosshair_distance` sets the focal distance of the crosshair. The value is interpreted in cm.
+  - `crosshair_scale` adjusts the on-screen size of the rendered reticle.
 - `[translational_filter]` and `[rotational_filter]`: set the filtering magnitude (key `strength` with valid options between **0.0** and **1.0**) number of filtering stages (key `order`with valid options: **1, 2, 3**).  
   The key `vertical_factor` is applied to translational filter strength in vertical/heave direction only (Note that the filter strength is multiplied by the factor and the resulting product of strength * vertical_factor is clamped internally between 0.0 and 1.0).
 - `[input_stabilizer]`: [input stabilizer](#input-stabilizer) introduces temporal supersampling for reference tracker input data and (optionally) applies a butterworth/biquad low pass filter before handing over the values to the regular transalational and rotational filter stage.
@@ -153,14 +156,15 @@ What you can modify in a configuration file:
   - `calibrate` - calibrate (or restore, in case it's locked) the neutral reference pose of the tracker
   - `lock_reference_pose` - lock the current tracker reference pose within vr space. Reference tracker needs to be calibrated and this needs to be done for OpenCompsite and native OpenXR titles separately.
   - `release_reference_pose` - turn regular calibration mode (physical tracker pose / hmd pose + offset) back on. This toggles for OpenCompsite and native OpenXR titles separately. Can also be done by setting `load_ref_pose_from_file(_oc)` back to zero and reloading configuration / restarting game.
+  - `toggle_overlay` - activate/deactivate graphical overlay displaying the reference tracker position(s) (See [Graphical overlay](#graphical-overlay) for details).
+  - `toggle_overlay_passthrough` - activate/deactivate chroma keyed passthrough mode for graphical overlay (See [Chroma Keyed Passthrough](#chroma-keyed-passthrough) for details).
+  - `toggle_crosshair` - activate/deactivate rendering of a reticle in center of the view (See [Display Crosshair](#display-crosshair) for details).
   - `translation_increase`, `translation_decrease` - modify the strength of the translational filter. Changes made during runtime can be saved by using a save command (see below).
   - `rotation_increase`, `rotation_decrease` - see above, but for rotational filter
   - `toggle_stabilizer` - enable/disable [input stabilizer](#input-stabilizer)
   - `stabilizer_increase`, `stabilizer_decrease` - modify filter intensity for stabilizer stage filter
   - `offset_forward`, `offset_back`, `offset_up`, `offset_down`, `offset_right`, `offset_left` - move center of rotation (cor) for a virtual tracker or neutral reference position for physical tracker. The directions are aligned with the forward vector set with the `calibrate` command. For virtual trackers changes made during runtime may be saved by using a save command (see below).
   - `rotate_right`, `rotate_left` - rotate the aforementioned forward vector around the gravitational (yaw-)axis. Note that these changes cannot be saved. Therefore changing the offset position AFTER rotating manually and saving the offset values will result in the cor being a different offset position after reloading those saved values.
-  - `toggle_overlay` - activate/deactivate graphical overlay displaying the reference tracker position(s) (See [Graphical overlay](#graphical-overlay) for details).
-  - `toggle_overlay_passthrough` - activate/deactivate chroma keyed passthrough mode for graphical overlay (See [Graphical overlay](#graphical-overlay) for details).
   - `toggle_cache` - change between calculated and cached eye positions
   - `fast_modifier` - press key(s) in addition to a filter or cor manipulation shortcut to increase amount of change per keypress/repetition. Filter modification will be sped up by factor 5 while cor manipulation will move/rotate 10 instead of 1 cm/degree
   - `save_config` -  write current filter strength and cor offsets to global config file
@@ -225,7 +229,7 @@ You can use (only) the left motion controller to move the cor position in virtua
 - after modifying the config file(s) manually you can use the `reload_config` shortcut (**CTRL** + **SHIFT** + **L** by default) to restart the OXRMC software with the new values. 
 
 ### Graphical overlay
-You can enable/disable the overlay using the `toggle_overlay` shortcut. It displays a marker in your headset view for:
+You can enable/disable the marker overlay using the `toggle_overlay` shortcut. It displays a marker in your headset view for:
 - the currently calibrated neutral position of the reference tracker. **Note that the position of the marker does __not__ represent the tracker/cor position __before__ tracker calibration** 
   - the reference marker uses the following color coding:
     - blue arrow points upwards
@@ -238,10 +242,18 @@ You can enable/disable the overlay using the `toggle_overlay` shortcut. It displ
     - magenta instead of red
 
 #### Chroma Keyed Passthrough
-You can use the `toggle_overlay_passthrough` shortcut to activate chroma keyed passthrough mode for the overlay. In this mode the marker(s) are displayed on a magenta colored canvas as background instead of the rendered game content. This allows you see the markers' positioning in the real world if your vr hmd (and runtime) support chroma keyed passthrough.
+You can use the `toggle_overlay_passthrough` shortcut to activate chroma keyed passthrough while the marker overlay is activated. In this mode the marker(s) are displayed on a magenta colored canvas as background instead of the rendered game content. This allows you see the markers' positioning in the real world if your vr hmd (and runtime) support chroma keyed passthrough.
 This may be helpful when setting up/dialing in the cor position, or to compare tracking data coming from a motion controller or vive tracker with it's actual movement.
-Note that while th overlay is in passthrough mode, the magenta colored arrow is displayed in grey instead, to keep it from becoming (partially) transparent. 
+Note that while the overlay is in passthrough mode, the magenta colored arrow is displayed in grey instead, to keep it from becoming (partially) transparent. 
 
+#### Display Crosshair
+Independent of marker and passthrough you can have oxrmc display a reticle directly in front of you. Its goal is to make it easier to find the correct forward orientation for calibrating the COR position. It can be used to aim at some central in-game feature (assuming the vr view is correctly centered already) or at you real world steering wheel, yoke, etc in combination with passthrough mode.  
+The following aspects of the reticle can be customized (requires reloading of config file after edit):
+- render/focal distance: this should preferably match the distance of the object you're aiming for during calibration
+- on-screen scale: you can make the crosshair appear larger or smaller. Note that changing the render distance doesn't change angular size as long as the scale is kept constant.  
+
+At default values (distance = 1m, scale = 1.0) the reticle extends 1m to the left, right, top, and bottom respectively, the circle has a radius of 10 cm and the 'axis segments' are 10 cm wide (or tall) as well.
+ 
 ### Connection Loss
 OXRMC can detect whether a reference tracker isn't available anymore if: 
 - for a physical tracker: the runtime lost tracking of a motion controller / vive tracker 

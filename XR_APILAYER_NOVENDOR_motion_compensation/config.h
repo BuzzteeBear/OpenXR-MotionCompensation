@@ -32,6 +32,8 @@ enum class Cfg
     CorD,
     LoadRefPoseFromFile,
     MarkerSize,
+    CrosshairDistance,
+    CrosshairScale,
     TransStrength,
     TransOrder,
     TransVerticalFactor,
@@ -82,6 +84,7 @@ enum class Cfg
     KeyReleaseRefPose,
     KeyOverlay,
     KeyPassthrough,
+    KeyCrosshair,
     KeyCache,
     KeyModifier,
     KeySaveConfig,
@@ -160,7 +163,9 @@ class ConfigManager
         {Cfg::CorD, {"tracker", "cor_d"}},
         {Cfg::LoadRefPoseFromFile, {"tracker", "load_ref_pose_from_file"}},
 
-        {Cfg::MarkerSize, {"tracker", "marker_size"}},
+        {Cfg::MarkerSize, {"overlay", "marker_size"}},
+        {Cfg::CrosshairDistance, {"overlay", "crosshair_distance"}},
+        {Cfg::CrosshairScale, {"overlay", "crosshair_scale"}},
 
         {Cfg::TransStrength, {"translation_filter", "strength"}},
         {Cfg::TransOrder, {"translation_filter", "order"}},
@@ -223,6 +228,7 @@ class ConfigManager
 
         {Cfg::KeyOverlay, {"shortcuts", "toggle_overlay"}},
         {Cfg::KeyPassthrough, {"shortcuts", "toggle_overlay_passthrough"}},
+        {Cfg::KeyCrosshair, {"shortcuts", "toggle_crosshair"}},
 
         {Cfg::KeyCache, {"shortcuts", "toggle_cache"}},
 
