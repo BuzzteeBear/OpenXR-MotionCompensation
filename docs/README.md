@@ -139,6 +139,7 @@ What you can modify in a configuration file:
   - `marker_size` sets the size of the cor / reference tracker marker displayed in the overlay. The value corresponds to the length of one arrow in cm.
   - `crosshair_distance` sets the focal distance of the crosshair. The value is interpreted in cm.
   - `crosshair_scale` adjusts the on-screen size of the rendered reticle.
+  - `crosshair_lock_to_horizon` keep the crosshair center leveled instead of following your gaze.
 - `[translational_filter]` and `[rotational_filter]`: set the filtering magnitude (key `strength` with valid options between **0.0** and **1.0**) number of filtering stages (key `order`with valid options: **1, 2, 3**).  
   The key `vertical_factor` is applied to translational filter strength in vertical/heave direction only (Note that the filter strength is multiplied by the factor and the resulting product of strength * vertical_factor is clamped internally between 0.0 and 1.0).
 - `[input_stabilizer]`: [input stabilizer](#input-stabilizer) introduces temporal supersampling for reference tracker input data and (optionally) applies a butterworth/biquad low pass filter before handing over the values to the regular transalational and rotational filter stage.
@@ -251,6 +252,7 @@ Independent of marker and passthrough you can have oxrmc display a reticle direc
 The following aspects of the reticle can be customized (requires reloading of config file after edit):
 - render/focal distance: this should preferably match the distance of the object you're aiming for during calibration
 - on-screen scale: you can make the crosshair appear larger or smaller. Note that changing the render distance doesn't change angular size as long as the scale is kept constant.  
+- locking to horizon: if horizon lock is activated, the center of the reticle will stay leveled on the horizon (but it'll still following your gaze on the yaw axis). The locked center serves as indicator where the 'forward' vector will point to when calibrating.
 
 At default values (distance = 1m, scale = 1.0) the reticle extends 1m to the left, right, top, and bottom respectively, the circle has a radius of 10 cm and the 'axis segments' are 10 cm wide (or tall) as well.
  

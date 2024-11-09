@@ -34,6 +34,7 @@ enum class Cfg
     MarkerSize,
     CrosshairDistance,
     CrosshairScale,
+    CrosshairLockHorizon,
     TransStrength,
     TransOrder,
     TransVerticalFactor,
@@ -166,6 +167,8 @@ class ConfigManager
         {Cfg::MarkerSize, {"overlay", "marker_size"}},
         {Cfg::CrosshairDistance, {"overlay", "crosshair_distance"}},
         {Cfg::CrosshairScale, {"overlay", "crosshair_scale"}},
+        {Cfg::CrosshairLockHorizon, {"overlay", "crosshair_lock_to_horizon"}},
+        
 
         {Cfg::TransStrength, {"translation_filter", "strength"}},
         {Cfg::TransOrder, {"translation_filter", "order"}},

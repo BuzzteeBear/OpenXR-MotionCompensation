@@ -103,7 +103,8 @@ Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "tracker"; Key: "
 ; [overlay]
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "overlay"; Key: "marker_size"; String: "10.0"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "overlay"; Key: "crosshair_distance"; String: "100.0"; Flags: createkeyifdoesntexist
-Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "overlay"; Key: "crosshair_scale"; String: "100.0"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "overlay"; Key: "crosshair_scale"; String: "1.0"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "overlay"; Key: "crosshair_lock_to_horizon"; String: "0"; Flags: createkeyifdoesntexist
 
 ; [translation_filter]
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "translation_filter"; Key: "strength"; String: "0.50"; Flags: createkeyifdoesntexist

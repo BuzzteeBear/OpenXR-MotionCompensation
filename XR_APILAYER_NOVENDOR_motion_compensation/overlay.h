@@ -102,11 +102,12 @@ namespace openxr_api_layer::graphics
                                                               const XrVector3f& pureColor,
                                                               const XrVector3f& lightColor);
 
-        bool m_PassthroughActive{false}, m_NoProjectionLayer{false};
+        bool m_PassthroughActive{false}, m_NoProjectionLayer{false}, m_CrosshairLockToHorizon{false};
         XrVector3f m_MarkerSize{0.1f, 0.1f, 0.1f};
         std::shared_ptr<ISimpleMesh> m_MeshRGB{}, m_MeshCMY{}, m_MeshCGY{};
         std::map<XrSwapchain, SwapchainState> m_Swapchains{};
         std::vector<std::pair<std::shared_ptr<IGraphicsTexture>, std::shared_ptr<IGraphicsTexture>>> m_Textures{};
+        float m_CrosshairDistance{-1};
         std::shared_ptr<ISwapchain> m_CrosshairSwapchain;
         XrCompositionLayerQuad m_CrosshairLayer{XR_TYPE_COMPOSITION_LAYER_QUAD};
         std::shared_ptr<std::vector<const XrCompositionLayerBaseHeader*>> m_LayersForSubmission{};

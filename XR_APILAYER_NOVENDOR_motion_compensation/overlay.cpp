@@ -330,13 +330,15 @@ namespace openxr_api_layer::graphics
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "Overlay::ResetCrosshair");
 
+        GetConfig()->GetBool(Cfg::CrosshairLockHorizon, m_CrosshairLockToHorizon);
         float distance = 100.f, scale = 1.f;
         GetConfig()->GetFloat(Cfg::CrosshairDistance, distance);
         GetConfig()->GetFloat(Cfg::CrosshairScale, scale);
         distance = std::max(distance, 1.0f);
         scale = std::max(scale, .01f);
 
-        m_CrosshairLayer.pose = xr::math::Pose::Translation({0.0f, 0.0f, distance * -.01f});
+        m_CrosshairDistance = distance * -.01f;
+        m_CrosshairLayer.pose = xr::math::Pose::Translation({0.0f, 0.0f, m_CrosshairDistance});
         m_CrosshairLayer.size.width = m_CrosshairLayer.size.height = scale * distance * .02f;
 
         TraceLoggingWriteStop(local,
@@ -673,9 +675,29 @@ namespace openxr_api_layer::graphics
                                                                               &location);
                 XR_SUCCEEDED(result) && xr::math::Pose::IsPoseValid(location.locationFlags))
             {
+                TraceLoggingWriteTagged(local,
+                                        "Overlay::DrawCrosshair",
+                                        TLArg(xr::ToString(location.pose).c_str(), "View_Pose")); 
                 const auto [pitch, yaw, roll] = utility::ToEulerAngles(location.pose.orientation);
-                xr::math::StoreXrQuaternion(&m_CrosshairLayer.pose.orientation,
-                                            DirectX::XMQuaternionRotationRollPitchYaw(0, 0, -roll));
+                if (!m_CrosshairLockToHorizon)
+                {
+                    xr::math::StoreXrQuaternion(&m_CrosshairLayer.pose.orientation,
+                                                DirectX::XMQuaternionRotationRollPitchYaw(0, 0, -roll));
+                }
+                else
+                {
+                    xr::math::StoreXrQuaternion(&m_CrosshairLayer.pose.orientation,
+                                                DirectX::XMQuaternionNormalize(DirectX::XMQuaternionInverse(
+                                                    DirectX::XMQuaternionRotationRollPitchYaw(pitch, 0, roll))));
+                    xr::math::StoreXrVector3(
+                        &m_CrosshairLayer.pose.position,
+                        DirectX::XMVector3Rotate({0, 0, m_CrosshairDistance},
+                                                 xr::math::LoadXrQuaternion(m_CrosshairLayer.pose.orientation)));
+                }
+                TraceLoggingWriteTagged(local,
+                                        "Overlay::DrawCrosshair",
+                                        TLArg(xr::ToString(m_CrosshairLayer.pose).c_str(), "Crosshair_Pose"),
+                                        TLArg(m_CrosshairLockToHorizon, "Horizon_Locked")); 
             }
 
             // add crosshair layer
