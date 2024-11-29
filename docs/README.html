@@ -155,9 +155,9 @@ Upon starting an OpenXR application with the API layer active for the first time
 <li>The following tracker <code>type</code> keys are available:
 <ul>
 <li><code>controller</code>: use either the left or the right motion controller as reference tracker. Valid options for the key <code>side</code> are <code>left</code> and <code>right</code> (<strong>Note that changing the side or switching between motion controller and vive tracker requires a restart of the vr session</strong>)</li>
-<li><code>vive</code>: use a vive tracker as reference for motion compensation. The key <code>side</code> has to match the role assigned to the tracker. Valid options for that are:
+<li><code>vive</code>: use a vive tracker as reference for motion compensation. The key <code>role</code> has to match the role assigned to the tracker. Valid options for that are:
 <ul>
-<li><code>handheld_object</code> - which hand (left, right, any) doesn't matter. Having more than one active vive tracker assigned to that role may lead to conflicts, though.</li>
+<li><code>handheld_object</code> - which hand (left, right, any) doesn't matter. Having more than one active vive tracker assigned to that role will cause a conflict, though.</li>
 <li><code>left_foot</code></li>
 <li><code>right_foot</code></li>
 <li><code>left_shoulder</code></li>
@@ -282,18 +282,56 @@ The key <code>vertical_factor</code> is applied to translational filter strength
 <li>If you're using YawVR Game Engine you can also use the parameters <code>Head Distance</code> and <code>Height</code> in its Motion Compensation tab to specify the offset of the cor. Head distance is basically equal to <code>offset_forward</code> in the configration file. But note that the height parameter is measured upwards from the bottom of your play-space, so you'll need to have that setup correctly in order to use that feature.</li>
 </ul>
 <h3 id="adjusting-cor-location-using-a-motion-controller">Adjusting cor location using a motion controller</h3>
-<p>You can use (only) the left motion controller to move the cor position in virtual space. The virtual tracker has to be calibrated first. It is recommended to activate the graphical overlay (<strong>CTRL</strong> + <strong>D</strong> by default) to see the cor marker in game.</p>
+<p>You can use the (left or right, according to <code>side</code> parameter) motion controller to move the cor position in virtual space. The virtual tracker has to be calibrated first. It is recommended to activate the graphical overlay (<strong>CTRL</strong> + <strong>D</strong> by default) to see the cor marker in game.
+There are two actions</p>
 <ul>
-<li>press and hold the trigger button to 'grab' and move the cor marker, this way you can make it reach positions that are obstructed in the real world.</li>
-<li>while pressing the trigger:
+<li>Move: press and hold the move button to 'grab' and move the cor marker. Until the button is released, the cor will do the same movement as the controller (except for rotation on pitch or roll axis). By grabbing the cor with an offset, you can move it to positions that are obstructed in the real world.
 <ul>
 <li>moving the controller left/right, up/down, or forward/backward is pushing the cor marker in the same direction</li>
 <li>rotating the controller on the yaw axis is adjusting the cor marker accordingly. Rotation of the motion controller on pitch or roll axis are ignored.</li>
 </ul>
 </li>
-<li>press the menu button (or button 'a' on a valve index controller) to have the cor location snap to the current controller position. While this button is pressed, you cannot move the cor using the trigger.</li>
-<li>in order for the adjusted position to persist for upcoming sessions, save the configuration.</li>
+<li>Snap: press the snap button to have the cor location snap to the current controller position. While this button is pressed, you cannot move the cor using the trigger.</li>
 </ul>
+<p>In order for the adjusted position to persist for following sessions, save the configuration to config file.</p>
+<h4 id="button-mapping">Button Mapping</h4>
+<p>The following table shows button mappings for different motion controllers:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Controller</th>
+<th style="text-align: center;">Move (left/right)</th>
+<th style="text-align: center;">Snap (left/right)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">Oculus/Meta<br>HP Reverb<br>Pico<br>Vive Cosmos/Focus</td>
+<td style="text-align: center;">X / A</td>
+<td style="text-align: center;">Y / B</td>
+</tr>
+<tr>
+<td style="text-align: left;">Valve Index</td>
+<td style="text-align: center;">A</td>
+<td style="text-align: center;">B</td>
+</tr>
+<tr>
+<td style="text-align: left;">Vive Wand</td>
+<td style="text-align: center;">Trackpad</td>
+<td style="text-align: center;">Menu</td>
+</tr>
+<tr>
+<td style="text-align: left;">Windows Mixed Reality</td>
+<td style="text-align: center;">Trackpad</td>
+<td style="text-align: center;">Thumbstick</td>
+</tr>
+<tr>
+<td style="text-align: left;">OpenXR Fallback</td>
+<td style="text-align: center;">Select</td>
+<td style="text-align: center;">Menu</td>
+</tr>
+</tbody>
+</table>
 <h2 id="running-your-application">Running your application</h2>
 <ol>
 <li>make sure your using OpenXR as runtime in the application you wish to use motion compensation with</li>

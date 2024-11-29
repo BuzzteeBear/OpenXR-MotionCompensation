@@ -74,6 +74,7 @@ Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "startup"; Key: "
 ; [tracker]
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "tracker"; Key: "type"; String: "controller"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "tracker"; Key: "side"; String: "left"; Flags: createkeyifdoesntexist
+Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "tracker"; Key: "role"; String: "camera"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "tracker"; Key: "connection_timeout"; String: "3.0"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "tracker"; Key: "connection_check"; String: "1.0"; Flags: createkeyifdoesntexist
 Filename: "{localappdata}\{#AppName}\{#AppName}.ini"; Section: "tracker"; Key: "offset_forward"; String: "0.0"; Flags: createkeyifdoesntexist

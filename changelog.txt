@@ -4,9 +4,13 @@ Version 0.3.9.0
 
 	General:
 	- enabled (un)locking reference pose in VR playspace via keyboard shortcut
+	
+	Vive Tracker
+	- added dedicated config key for role
 
 	Virtual Tracker:
-	- enabled cor calibration outside of neutral rig postion
+	- enabled COR calibration outside of neutral rig position
+	- changed motion controller buttons to avoid accidental activation via trigger
 	
 	Graphcal Overlay:
 	- added optional crosshair to help with forward calibration

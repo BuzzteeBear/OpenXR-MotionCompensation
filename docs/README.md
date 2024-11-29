@@ -109,8 +109,8 @@ What you can modify in a configuration file:
 - `[tracker]`: 
   - The following tracker `type` keys are available:
     - `controller`: use either the left or the right motion controller as reference tracker. Valid options for the key `side` are `left` and `right` (**Note that changing the side or switching between motion controller and vive tracker requires a restart of the vr session**)
-    - `vive`: use a vive tracker as reference for motion compensation. The key `side` has to match the role assigned to the tracker. Valid options for that are:
-      - `handheld_object` - which hand (left, right, any) doesn't matter. Having more than one active vive tracker assigned to that role may lead to conflicts, though.
+    - `vive`: use a vive tracker as reference for motion compensation. The key `role` has to match the role assigned to the tracker. Valid options for that are:
+      - `handheld_object` - which hand (left, right, any) doesn't matter. Having more than one active vive tracker assigned to that role will cause a conflict, though.
       - `left_foot`
       - `right_foot`
       - `left_shoulder`
@@ -207,13 +207,25 @@ To enable OXRMC to correlate translation and rotation of the rig to the virtual 
 - If you're using YawVR Game Engine you can also use the parameters `Head Distance` and `Height` in its Motion Compensation tab to specify the offset of the cor. Head distance is basically equal to `offset_forward` in the configration file. But note that the height parameter is measured upwards from the bottom of your play-space, so you'll need to have that setup correctly in order to use that feature.
 
 ### Adjusting cor location using a motion controller
-You can use (only) the left motion controller to move the cor position in virtual space. The virtual tracker has to be calibrated first. It is recommended to activate the graphical overlay (**CTRL** + **D** by default) to see the cor marker in game. 
-- press and hold the trigger button to 'grab' and move the cor marker, this way you can make it reach positions that are obstructed in the real world.
-- while pressing the trigger:
+You can use the (left or right, according to `side` parameter) motion controller to move the cor position in virtual space. The virtual tracker has to be calibrated first. It is recommended to activate the graphical overlay (**CTRL** + **D** by default) to see the cor marker in game. 
+There are two actions
+- Move: press and hold the move button to 'grab' and move the cor marker. Until the button is released, the cor will do the same movement as the controller (except for rotation on pitch or roll axis). By grabbing the cor with an offset, you can move it to positions that are obstructed in the real world.
   - moving the controller left/right, up/down, or forward/backward is pushing the cor marker in the same direction
   - rotating the controller on the yaw axis is adjusting the cor marker accordingly. Rotation of the motion controller on pitch or roll axis are ignored.
-- press the menu button (or button 'a' on a valve index controller) to have the cor location snap to the current controller position. While this button is pressed, you cannot move the cor using the trigger.
-- in order for the adjusted position to persist for upcoming sessions, save the configuration.
+- Snap: press the snap button to have the cor location snap to the current controller position. While this button is pressed, you cannot move the cor using the trigger.
+  
+In order for the adjusted position to persist for following sessions, save the configuration to config file.  
+
+#### Button Mapping
+The following table shows button mappings for different motion controllers:
+
+| Controller                                                    | Move (left/right) | Snap (left/right) |
+|:--------------------------------------------------------------|:-----------------:|:-----------------:|
+| Oculus/Meta<br>HP Reverb<br>Pico<br>Vive Cosmos/Focus   | X / A             | Y / B             |
+| Valve Index                                                   | A                 | B                 |
+| Vive Wand                                                     | Trackpad          | Menu              |
+| Windows Mixed Reality                                         | Trackpad          | Thumbstick        | 
+| OpenXR Fallback                                               | Select            | Menu              | 
 
 ## Running your application
 1. make sure your using OpenXR as runtime in the application you wish to use motion compensation with

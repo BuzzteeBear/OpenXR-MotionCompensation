@@ -269,7 +269,7 @@ namespace tracker
         bool Init();
 
         bool active{false};
-        std::string role;
+        std::string path;
         inline static std::set<std::string> validRoles{"left_foot",
                                                        "left_shoulder",
                                                        "left_elbow",

@@ -180,7 +180,7 @@ namespace openxr_api_layer
             if (!m_SuppressInteraction)
             {
                 m_SubActionPath =
-                    m_ViveTracker.active ? m_ViveTracker.role : "/user/hand/" + GetConfig()->GetControllerSide();
+                    m_ViveTracker.active ? m_ViveTracker.path : "/user/hand/" + GetConfig()->GetControllerSide();
                 if (const XrResult pathResult =
                         xrStringToPath(GetXrInstance(), m_SubActionPath.c_str(), &m_XrSubActionPath);
                     XR_FAILED(result))
@@ -742,8 +742,8 @@ namespace openxr_api_layer
 
         const std::string trackerPath(m_SubActionPath + "/");
         const std::string posePath(trackerPath + "input/grip/pose");
-        const std::string movePath(m_VirtualTrackerUsed ? trackerPath + m_ButtonPath.GetSubPath(profile, 0) : "");
-        const std::string positionPath(m_VirtualTrackerUsed ? trackerPath + m_ButtonPath.GetSubPath(profile, 1) : "");
+        const std::string movePath(m_VirtualTrackerUsed ? trackerPath + m_InteractionPaths.GetSubPath(profile, 0) : "");
+        const std::string positionPath(m_VirtualTrackerUsed ? trackerPath + m_InteractionPaths.GetSubPath(profile, 1) : "");
         const std::string hapticPath(trackerPath + "output/haptic");
 
         bool isTrackerPath{false};
@@ -782,7 +782,7 @@ namespace openxr_api_layer
                 if (m_VirtualTrackerUsed)
                 {
                     tryOverride(m_MoveAction, movePath, "move", moveBindingOverriden);
-                    tryOverride(m_PositionAction, positionPath, "position", positionBindingOverriden);
+                    tryOverride(m_SnapAction, positionPath, "position", positionBindingOverriden);
                     tryOverride(m_HapticAction, hapticPath, "haptic", hapticBindingOverriden);
                 }
             }
@@ -822,7 +822,7 @@ namespace openxr_api_layer
         if (m_VirtualTrackerUsed && isTrackerPath && !positionBindingOverriden)
         {
             // suggestion is for tracker input but doesn't include position -> add it
-            addBinding(m_PositionAction, positionPath, "position");
+            addBinding(m_SnapAction, positionPath, "position");
         }
         if (m_VirtualTrackerUsed && isTrackerPath && !hapticBindingOverriden)
         {
@@ -2011,7 +2011,7 @@ namespace openxr_api_layer
                         if (const XrResult result = xrCreateAction(m_ActionSet, &actionCreateInfo, action);
                             XR_FAILED(result))
                         {
-                            ErrorLog("%s: unable to create action: %s", __FUNCTION__, name, xr::ToCString(result));
+                            ErrorLog("%s: unable to create %s action: %s", __FUNCTION__, name, xr::ToCString(result));
                             return false;
                         }
                         DebugLog("CreateTrackerActions: created %s action: %llu", name, *action);
@@ -2026,13 +2026,13 @@ namespace openxr_api_layer
                 if (m_VirtualTrackerUsed)
                 {
                     createAction(&m_MoveAction, XR_ACTION_TYPE_BOOLEAN_INPUT, "move", "Move");
-                    createAction(&m_PositionAction, XR_ACTION_TYPE_BOOLEAN_INPUT, "position", "Position");
+                    createAction(&m_SnapAction, XR_ACTION_TYPE_BOOLEAN_INPUT, "snap", "Snap");
                     createAction(&m_HapticAction, XR_ACTION_TYPE_VIBRATION_OUTPUT, "haptic", "Haptic");
 
                     TraceLoggingWriteTagged(local,
                                             "OpenXrLayer::CreateTrackerActions",
                                             TLXArg(m_MoveAction, "MoveAction"),
-                                            TLXArg(m_PositionAction, "ButtonAction"),
+                                            TLXArg(m_SnapAction, "SnapAction"),
                                             TLXArg(m_HapticAction, "HapticAction"));
                 }
                 m_ActionsCreated = success;
@@ -2209,73 +2209,80 @@ namespace openxr_api_layer
             // suggest fallback in case application does not suggest any bindings
             XrInteractionProfileSuggestedBinding suggestedBindings{XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING,
                                                                    nullptr};
-            std::vector<XrActionSuggestedBinding> bindings{};
-            XrActionSuggestedBinding poseBinding{m_PoseAction};
-            XrActionSuggestedBinding moveBinding{m_MoveAction};
-            XrActionSuggestedBinding positionBinding{m_PositionAction};
-            XrActionSuggestedBinding hapticBinding{m_HapticAction};
 
-            const std::string profile{m_ViveTracker.active ? "/interaction_profiles/htc/vive_tracker_htcx"
-                                                           : "/interaction_profiles/khr/simple_controller"};
+            const std::set<std::string> profiles = m_ViveTracker.active ? std::set<std::string>{"/interaction_profiles/htc/vive_tracker_htcx"}
+                                     : m_InteractionPaths.GetProfiles();
 
-            if (const XrResult profileResult =
-                    xrStringToPath(GetXrInstance(), profile.c_str(), &suggestedBindings.interactionProfile);
-                XR_FAILED(profileResult))
+            for (const auto& profile : profiles)
             {
-                ErrorLog("%s: unable to create XrPath from %s: %s", __FUNCTION__, profile.c_str(), xr::ToCString(profileResult));
-            }
-            else
-            {
-                const std::string trackerPath(m_SubActionPath + "/");
-                auto addBinding = [this, &bindings](const std::string& path,
-                                                    XrActionSuggestedBinding& binding,
-                                                    const std::string& action) {
-                    if (const XrResult result = xrStringToPath(GetXrInstance(), path.c_str(), &binding.binding);
-                        XR_FAILED(result))
-                    {
-                        ErrorLog("%s: unable to create XrPath from %s: %s",
-                                 __FUNCTION__,
-                                 path.c_str(),
-                                 xr::ToCString(result));
-                        return false;
-                    }
-                    bindings.push_back(binding);
-                    DebugLog("SuggestInteractionProfiles: added binding for %s action (%llu) with path: %s",
-                             action.c_str(),
-                             binding.action,
-                             path.c_str());
-                    return true;
-                };
-
-                if (addBinding(trackerPath + "input/grip/pose", poseBinding, "pose"))
+                if (const XrResult profileResult =
+                        xrStringToPath(GetXrInstance(), profile.c_str(), &suggestedBindings.interactionProfile);
+                    XR_FAILED(profileResult))
                 {
-                    // add move, position and haptic bindings for controller
-                    if (m_VirtualTrackerUsed)
+                    ErrorLog("%s: unable to create XrPath from %s: %s",
+                             __FUNCTION__,
+                             profile.c_str(),
+                             xr::ToCString(profileResult));
+                }
+                else
+                {
+                    std::vector<XrActionSuggestedBinding> bindings{};
+                    XrActionSuggestedBinding poseBinding{m_PoseAction};
+                    XrActionSuggestedBinding moveBinding{m_MoveAction};
+                    XrActionSuggestedBinding snapBinding{m_SnapAction};
+                    XrActionSuggestedBinding hapticBinding{m_HapticAction};
+
+                    const std::string trackerPath(m_SubActionPath + "/");
+                    auto addBinding = [this, &bindings](const std::string& path,
+                                                        XrActionSuggestedBinding& binding,
+                                                        const std::string& action) {
+                        if (const XrResult result = xrStringToPath(GetXrInstance(), path.c_str(), &binding.binding);
+                            XR_FAILED(result))
+                        {
+                            ErrorLog("%s: unable to create XrPath from %s: %s",
+                                     __FUNCTION__,
+                                     path.c_str(),
+                                     xr::ToCString(result));
+                            return false;
+                        }
+                        bindings.push_back(binding);
+
+                        DebugLog("SuggestInteractionProfiles: added binding for %s action (%llu) with path: %s",
+                                 action.c_str(),
+                                 binding.action,
+                                 path.c_str());
+                        return true;
+                    };
+
+                    if (addBinding(trackerPath + "input/grip/pose", poseBinding, "pose"))
                     {
-                        addBinding(trackerPath + m_ButtonPath.GetSubPath(profile, 0), moveBinding, "move");
-                        addBinding(trackerPath + m_ButtonPath.GetSubPath(profile, 1), positionBinding, "position");
-                        addBinding(trackerPath + "output/haptic", hapticBinding, "haptic");
-                    }
-                    suggestedBindings.suggestedBindings = bindings.data();
-                    suggestedBindings.countSuggestedBindings = static_cast<uint32_t>(bindings.size());
-                    if (const XrResult suggestResult =
-                            OpenXrApi::xrSuggestInteractionProfileBindings(GetXrInstance(), &suggestedBindings);
-                        XR_FAILED(suggestResult))
-                    {
-                        ErrorLog("%s: unable to suggest bindings: %s", __FUNCTION__, xr::ToCString(suggestResult));
-                        TraceLoggingWriteTagged(local,
-                                                "OpenXrLayer::SuggestInteractionProfiles",
-                                                TLArg(xr::ToCString(suggestResult), "SuggestBindings"));
-                    }
-                    else
-                    {
-                        m_InteractionProfileSuggested = true;
-                        m_SimpleProfileSuggested = true;
-                        Log("suggested %s as fallback", profile.c_str());
-                        TraceLoggingWriteTagged(local,
-                                          "OpenXrLayer::SuggestInteractionProfiles",
-                                          TLArg(caller.c_str(), "Caller"),
-                                          TLArg(profile.c_str(), "Profile"));
+                        // add move, position and haptic bindings for controller
+                        if (m_VirtualTrackerUsed)
+                        {
+                            addBinding(trackerPath + m_InteractionPaths.GetSubPath(profile, 0), moveBinding, "move");
+                            addBinding(trackerPath + m_InteractionPaths.GetSubPath(profile, 1), snapBinding, "snap");
+                            addBinding(trackerPath + "output/haptic", hapticBinding, "haptic");
+                        }
+                        suggestedBindings.suggestedBindings = bindings.data();
+                        suggestedBindings.countSuggestedBindings = static_cast<uint32_t>(bindings.size());
+                        if (const XrResult suggestResult =
+                                OpenXrApi::xrSuggestInteractionProfileBindings(GetXrInstance(), &suggestedBindings);
+                            XR_FAILED(suggestResult))
+                        {
+                            Log("cannot suggest %s as fallback: %s", profile.c_str(), xr::ToCString(suggestResult));
+                            TraceLoggingWriteTagged(local,
+                                                    "OpenXrLayer::SuggestInteractionProfiles",
+                                                    TLArg(xr::ToCString(suggestResult), "SuggestBindings"));
+                        }
+                        else
+                        {
+                            m_InteractionProfileSuggested = true;
+                            Log("suggested %s as fallback", profile.c_str());
+                            TraceLoggingWriteTagged(local,
+                                                    "OpenXrLayer::SuggestInteractionProfiles",
+                                                    TLArg(caller.c_str(), "Caller"),
+                                                    TLArg(profile.c_str(), "Profile"));
+                        }
                     }
                 }
             }

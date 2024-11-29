@@ -80,25 +80,31 @@ namespace input
         KeyboardInput m_Input;
     };
 
-    class ButtonPath
+    
+
+    class InteractionPaths
     {
       public:
+        std::set<std::string> GetProfiles();
         std::string GetSubPath(const std::string& profile, int index);
 
       private:
+        const std::vector<std::string> m_StandardButtons{"x", "y", "a", "b"};
+
         std::map<std::string, std::vector<std::string>> m_Mapping{
-            {"/interaction_profiles/khr/simple_controller", {"input/select", "input/menu"}},
-            {"/interaction_profiles/htc/vive_controller", {"input/trigger", "input/menu"}},
-            {"/interaction_profiles/microsoft/motion_controller", {"input/trigger", "input/menu"}},
-            {"/interaction_profiles/oculus/touch_controller", {"input/trigger", "input/menu"}},
-            {"/interaction_profiles/oculus/go_controller", {"input/trigger", "input/menu"}},
-            {"/interaction_profiles/valve/index_controller", {"input/trigger", "input/a/click"}},
-            {"/interaction_profiles/hp/mixed_reality_controller", {"input/trigger", "input/menu"}},
-            {"/interaction_profiles/samsung/odyssey_controller", {"input/trigger", "input/menu"}},
-            {"/interaction_profiles/bytedance/pico_neo3_controller", {"input/trigger", "input/menu"}},
-            {"/interaction_profiles/bytedance/pico4_controller", {"input/trigger", "input/menu"}},
-            {"/interaction_profiles/facebook/touch_controller_pro", {"input/trigger", "input/menu"}},
-            {"/interaction_profiles/htc/vive_cosmos_controller", {"input/trigger", "input/menu"}},
-            {"/interaction_profiles/htc/vive_focus3_controller", {"input/trigger", "input/menu"}}};
+            {"/interaction_profiles/khr/simple_controller", {"select", "menu", "select", "menu"}},
+            {"/interaction_profiles/bytedance/pico_neo3_controller", m_StandardButtons},
+            {"/interaction_profiles/bytedance/pico4_controller", m_StandardButtons},
+            {"/interaction_profiles/hp/mixed_reality_controller", m_StandardButtons},
+            {"/interaction_profiles/htc/vive_controller", {"trackpad", "menu", "trackpad", "menu"}},
+            {"/interaction_profiles/htc/vive_cosmos_controller", m_StandardButtons},
+            {"/interaction_profiles/htc/vive_focus3_controller", m_StandardButtons},
+            {"/interaction_profiles/microsoft/motion_controller", {"trackpad", "thumbstick", "trackpad", "thumbstick"}},
+            {"/interaction_profiles/oculus/touch_controller", m_StandardButtons},
+            {"/interaction_profiles/oculus/touch_pro_controller", m_StandardButtons},
+            {"/interaction_profiles/oculus/touch_plus_controller", m_StandardButtons},
+            {"/interaction_profiles/samsung/odyssey_controller", {"trackpad", "thumbstick", "trackpad", "thumbstick"}},
+            {"/interaction_profiles/valve/index_controller", {"a", "b", "a", "b"}},
+            {"/interaction_profiles/facebook/touch_controller_pro", m_StandardButtons}};
     };
 } // namespace input

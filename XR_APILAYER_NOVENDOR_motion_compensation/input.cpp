@@ -6,6 +6,7 @@
 #include "layer.h"
 #include "output.h"
 #include <log.h>
+#include <ranges>
 
 using namespace openxr_api_layer;
 using namespace log;
@@ -559,13 +560,27 @@ namespace input
         TraceLoggingWriteStop(local, "InputHandler::ToggleVerbose", TLArg(logVerbose, "LogVerbose"));
     }
 
-    std::string ButtonPath::GetSubPath(const std::string& profile, int index)
+    std::set<std::string> InteractionPaths::GetProfiles()
+    {
+        std::set<std::string> profiles;
+        for (const auto& profile : m_Mapping | std::views::keys)
+        {
+            profiles.insert(profile);
+        }
+        return profiles;
+    }
+
+    std::string InteractionPaths::GetSubPath(const std::string& profile, int index)
     {
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local,
-                               "ButtonPath::GetSubPath",
+                               "InteractionPaths::GetSubPath",
                                TLArg(profile.c_str(), "Profile"),
                                TLArg(index, "Index"));
+        if ("left" != GetConfig()->GetControllerSide())
+        {
+            index += 2;
+        }
 
         std::string path;
         if (const auto buttons = m_Mapping.find(profile);
@@ -577,7 +592,9 @@ namespace input
         {
             ErrorLog("%s: no button mapping (%d) found for profile: %s", __FUNCTION__, index, profile.c_str());
         }
-        TraceLoggingWriteStop(local, "ButtonPath::GetSubPath", TLArg(path.c_str(), "Path"));
+        path.insert(0, "input/");
+        path += "/click";
+        TraceLoggingWriteStop(local, "InteractionPaths::GetSubPath", TLArg(path.c_str(), "Path"));
 
         return path;
     }

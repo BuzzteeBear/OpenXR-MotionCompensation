@@ -14,6 +14,7 @@ enum class Cfg
     CompensateControllers,
     TrackerType,
     TrackerSide,
+    TrackerRole,
     TrackerTimeout,
     TrackerCheck,
     TrackerOffsetForward,
@@ -140,6 +141,7 @@ class ConfigManager
 
         {Cfg::TrackerType, {"tracker", "type"}},
         {Cfg::TrackerSide, {"tracker", "side"}},
+        {Cfg::TrackerRole, {"tracker", "role"}},
 
         {Cfg::TrackerTimeout, {"tracker", "connection_timeout"}},
         {Cfg::TrackerCheck, {"tracker", "connection_check"}},

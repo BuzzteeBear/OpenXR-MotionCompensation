@@ -1691,9 +1691,9 @@ namespace tracker
 
             TraceLoggingWriteTagged(local,
                                     "CorManipulator::GetButtonState",
-                                    TLXArg(layer->m_PositionAction, "xrGetActionStateBoolean"));
+                                    TLXArg(layer->m_SnapAction, "xrGetActionStateBoolean"));
             XrActionStateGetInfo positionInfo{XR_TYPE_ACTION_STATE_GET_INFO};
-            positionInfo.action = layer->m_PositionAction;
+            positionInfo.action = layer->m_SnapAction;
 
             XrActionStateBoolean positionButtonState{XR_TYPE_ACTION_STATE_BOOLEAN};
             if (const XrResult result = layer->xrGetActionStateBoolean(session, &positionInfo, &positionButtonState);
@@ -1788,15 +1788,15 @@ namespace tracker
                 TraceLoggingWriteStop(local, "ViveTrackerInfo::Init", TLArg(false, "Extansion_Granted"));
                 return false;
             }
-            std::string side;
-            if (!GetConfig()->GetString(Cfg::TrackerSide, side))
+            std::string role;
+            if (!GetConfig()->GetString(Cfg::TrackerRole, role))
             {
                 TraceLoggingWriteStop(local, "ViveTrackerInfo::Init", TLArg(false, "Side_Get"));
                 return false;
             }
-            if (!validRoles.contains(side))
+            if (!validRoles.contains(role))
             {
-                ErrorLog("%s: invalid role for vive tracker (= parameter 'side'): %s", __FUNCTION__, side.c_str());
+                ErrorLog("%s: invalid role for vive tracker: %s", __FUNCTION__, role.c_str());
                 std::string validOptions;
                 for (const auto& option : validRoles)
                 {
@@ -1806,15 +1806,15 @@ namespace tracker
                 TraceLoggingWriteStop(local, "ViveTrackerInfo::Init", TLArg(false, "Side_Valid"));
                 return false;
             }
-            role = "/user/vive_tracker_htcx/role/" + side;
-            Log("vive tracker is using role %s", role.c_str());
+            path = "/user/vive_tracker_htcx/role/" + role;
+            Log("vive tracker is using path %s", path.c_str());
             active = true;
         }
         TraceLoggingWriteStop(local,
                               "ViveTrackerInfo::Init",
                               TLArg(true, "Success"),
                               TLArg(active, "Active"),
-                              TLArg(role.c_str(), "Role"));
+                              TLArg(path.c_str(), "Path"));
         return true;
     }
 
@@ -1852,9 +1852,9 @@ namespace tracker
             }
             if ("vive" == trackerType)
             {
-                std::string side;
-                GetConfig()->GetString(Cfg::TrackerSide, side);
-                Log("vive tracker (%s) is used as reference tracker", side.c_str());
+                std::string role;
+                GetConfig()->GetString(Cfg::TrackerRole, role);
+                Log("vive tracker (%s) is used as reference tracker", role.c_str());
                 TraceLoggingWriteStop(local, "GetTracker", TLPArg(trackerType.c_str(), "tracker"));
                 return std::make_unique<OpenXrTracker>();
             }

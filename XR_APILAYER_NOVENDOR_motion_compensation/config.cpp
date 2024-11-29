@@ -271,11 +271,6 @@ bool ConfigManager::IsVirtualTracker()
 std::string ConfigManager::GetControllerSide()
 {
     std::string side{"left"};
-    if (IsVirtualTracker())
-    {
-        // default to left controller for virtual trackers
-        return side;
-    }
     if (!GetString(Cfg::TrackerSide, side))
     {
         ErrorLog("%s: unable to determine controller side. Defaulting to %s", __FUNCTION__, side.c_str());

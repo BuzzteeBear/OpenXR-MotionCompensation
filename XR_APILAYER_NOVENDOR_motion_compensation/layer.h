@@ -113,7 +113,7 @@ namespace openxr_api_layer
         XrActionSet m_ActionSet{XR_NULL_HANDLE};
         XrAction m_PoseAction{XR_NULL_HANDLE};
         XrAction m_MoveAction{XR_NULL_HANDLE};
-        XrAction m_PositionAction{XR_NULL_HANDLE};
+        XrAction m_SnapAction{XR_NULL_HANDLE};
         XrAction m_HapticAction{XR_NULL_HANDLE};
         XrSpace m_TrackerSpace{XR_NULL_HANDLE};
         XrSpace m_ViewSpace{XR_NULL_HANDLE};
@@ -157,7 +157,6 @@ namespace openxr_api_layer
         bool m_ActionSpaceCreated{false};
         bool m_ActionSetAttached{false};
         bool m_InteractionProfileSuggested{false};
-        bool m_SimpleProfileSuggested{false};
         bool m_Initialized{true};
         bool m_Activated{false};
         bool m_UseEyeCache{false};
@@ -180,7 +179,7 @@ namespace openxr_api_layer
         std::vector<XrView> m_EyeOffsets{};
         XrViewConfigurationType m_ViewConfigType{XR_VIEW_CONFIGURATION_TYPE_MAX_ENUM};
         tracker::ViveTrackerInfo m_ViveTracker;
-        input::ButtonPath m_ButtonPath;
+        input::InteractionPaths m_InteractionPaths;
         utility::Cache<XrPosef> m_DeltaCache{"delta", xr::math::Pose::Identity()};
         utility::Cache<std::vector<XrPosef>> m_EyeCache{"eyes",
                                                         std::vector<XrPosef>{xr::math::Pose::Identity(),
