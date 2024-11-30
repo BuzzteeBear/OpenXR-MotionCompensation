@@ -3,16 +3,17 @@ OpenXR-MotionCompensation Changelog
 Version 0.3.9.0
 
 	General:
-	- enabled (un)locking reference pose in VR playspace via keyboard shortcut
+	- enabled locking and unlocking reference pose/cor position in VR playspace via keyboard shortcut
 	
 	Vive Tracker
-	- added dedicated config key for role
+	- added dedicated config key for role (requires edit of config file on update)
 
 	Virtual Tracker:
 	- enabled COR calibration outside of neutral rig position
-	- changed motion controller buttons to avoid accidental activation via trigger
+	- enabled use of right motion controller for COR manipulation
+	- changed motion controller buttons for COR manipulation to avoid accidental trigger activation
 	
-	Graphcal Overlay:
+	Graphical Overlay:
 	- added optional crosshair to help with forward calibration
 	- display current tracker pose while mc is off
 	

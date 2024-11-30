@@ -23,7 +23,7 @@ namespace tracker
         virtual bool ResetReferencePose(XrSession session, XrTime time);
 
       protected:
-        virtual void SetReferencePose(const XrPosef& pose);
+        virtual void SetReferencePose(const XrPosef& pose, bool silent);
         virtual bool GetPose(XrPosef& trackerPose, XrSession session, XrTime time) = 0;
         virtual bool GetControllerPose(XrPosef& trackerPose, XrSession session, XrTime time);
         static XrVector3f GetForwardVector(const XrQuaternionf& quaternion);
@@ -57,7 +57,7 @@ namespace tracker
         virtual void ModifyStabilizer(bool increase, bool fast);
 
         [[nodiscard]] XrPosef GetReferencePose() const;
-        void SetReferencePose(const XrPosef& pose) override;
+        void SetReferencePose(const XrPosef& pose, bool silent) override;
         virtual void InvalidateCalibration(bool silent);
         virtual void SaveReferencePose() const;
         void SaveReferencePoseImpl(const XrPosef& refPose) const;
@@ -156,7 +156,7 @@ namespace tracker
         utility::DataSource* GetSource() override;
 
       protected:
-        void SetReferencePose(const XrPosef& pose) override;
+        void SetReferencePose(const XrPosef& pose, bool silent) override;
         bool GetPose(XrPosef& trackerPose, XrSession session, XrTime time) override;
         std::optional<XrPosef> GetForwardView(XrSession session, XrTime time) override;
         virtual bool ReadData(XrTime time, utility::Dof& dof);

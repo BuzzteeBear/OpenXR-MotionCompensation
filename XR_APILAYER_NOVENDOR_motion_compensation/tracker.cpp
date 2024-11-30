@@ -82,7 +82,7 @@ namespace tracker
 
         if (XrPosef curPose; GetPose(curPose, session, time))
         {
-            SetReferencePose(curPose);
+            SetReferencePose(curPose, false);
             TraceLoggingWriteStop(local, "ControllerBase::ResetReferencePose", TLArg(true, "Success"));
             return true;
         }
@@ -91,13 +91,16 @@ namespace tracker
         return false;
     }
 
-    void ControllerBase::SetReferencePose(const XrPosef& pose)
+    void ControllerBase::SetReferencePose(const XrPosef& pose, const bool silent)
     {
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "ControllerBase::SetReferencePose", TLArg(xr::ToString(pose).c_str(), "Pose"));
 
         m_ReferencePose = pose;
-        Log("tracker reference pose set");
+        if (!silent)
+        {
+            Log("tracker reference pose set");
+        }
 
         TraceLoggingWriteStop(local, "ControllerBase::SetReferencePose");
     }
@@ -515,7 +518,7 @@ namespace tracker
         }
 
         const XrPosef adjustment{{Quaternion::Identity()}, modification};
-        m_ReferencePose = Pose::Multiply(adjustment, m_ReferencePose);
+        SetReferencePose(Pose::Multiply(adjustment, m_ReferencePose), true);
         TraceLoggingWriteStop(local,
                               "TrackerBase::ChangeOffset",
                               TLArg(true, "Success"),
@@ -539,7 +542,7 @@ namespace tracker
 
         XrPosef adjustment{Pose::Identity()};
         StoreXrQuaternion(&adjustment.orientation, DirectX::XMQuaternionRotationRollPitchYaw(0.0f, radian, 0.0f));
-        SetReferencePose(Pose::Multiply(adjustment, m_ReferencePose));
+        SetReferencePose(Pose::Multiply(adjustment, m_ReferencePose), true);
 
         TraceLoggingWriteStop(local,
                               "TrackerBase::ChangeRotation",
@@ -583,7 +586,7 @@ namespace tracker
         TraceLoggingWriteStop(local, "TrackerBase::LogCurrentTrackerPose");
     }
 
-    void TrackerBase::SetReferencePose(const XrPosef& pose)
+    void TrackerBase::SetReferencePose(const XrPosef& pose, const bool silent)
     {
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "TrackerBase::SetReferencePose", TLArg(xr::ToString(pose).c_str(), "Pose"));
@@ -591,7 +594,7 @@ namespace tracker
         m_TransFilter->Reset(pose.position);
         m_RotFilter->Reset(pose.orientation);
         m_Calibrated = true;
-        ControllerBase::SetReferencePose(pose);
+        ControllerBase::SetReferencePose(pose, silent);
         if (m_Sampler)
         {
             m_Sampler->StartSampling();
@@ -697,7 +700,7 @@ namespace tracker
         if (success)
         {
             Log("reference pose successfully loaded from config file");
-            SetReferencePose(refPose);
+            SetReferencePose(refPose, false);
         }
         TraceLoggingWriteStop(local, "TrackerBase::LoadReferencePose", TLArg(false, "Success"));
         return success;
@@ -1090,7 +1093,7 @@ namespace tracker
             }
             else
             {
-                TrackerBase::SetReferencePose(xr::Normalize(forward.value()));
+                TrackerBase::SetReferencePose(xr::Normalize(forward.value()), false);
                 EventSink::Execute(Event::Calibrated);
             }
         }
@@ -1197,13 +1200,13 @@ namespace tracker
         return &m_Mmf;
     }
 
-    void VirtualTracker::SetReferencePose(const ::XrPosef& pose)
+    void VirtualTracker::SetReferencePose(const ::XrPosef& pose, const bool silent)
     {
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "VirtualTracker::SetReferencePose", TLArg(xr::ToString(pose).c_str(), "Pose"));
 
         SetForwardRotation(pose);
-        TrackerBase::SetReferencePose(pose);
+        TrackerBase::SetReferencePose(pose, silent);
 
         TraceLoggingWriteStop(local, "VirtualTracker::SetReferencePose");
     }
@@ -1621,7 +1624,7 @@ namespace tracker
                 {
                     ApplyTranslation();
                     ApplyRotation(poseDelta);
-                    SetReferencePose(m_LastPose);
+                    SetReferencePose(m_LastPose, true);
                 }
             }
         }
