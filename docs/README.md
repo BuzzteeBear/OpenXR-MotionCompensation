@@ -107,8 +107,8 @@ What you can modify in a configuration file:
   - `auto_activate_countdown`: enable audible countdown for the last 10 seconds before auto-activation. This is supposed to allow getting to neutral position and timely centering of in-game view.
   - `compensate_controllers`: enable motion compensation for motion controllers (that are not used as reference trackers). **This feature is considered to be in experimental state**. Note that enabling this feature will disable cor manipulation via motion controller. Changing this value requires the application top be restarted.
 - `[tracker]`: 
-  - The following tracker `type` keys are available:
-    - `controller`: use either the left or the right motion controller as reference tracker. Valid options for the key `side` are `left` and `right` (**Note that changing the side or switching between motion controller and vive tracker requires a restart of the vr session**)
+  - The following tracker `type` keys are available (**Note that changing side/role or switching between motion controller, vive tracker, and virtual tracker requires a restart of the application**):
+    - `controller`: use either the left or the right motion controller as reference tracker. Valid options for the key `side` are `left` and `right` 
     - `vive`: use a vive tracker as reference for motion compensation. The key `role` has to match the role assigned to the tracker. Valid options for that are:
       - `handheld_object` - which hand (left, right, any) doesn't matter. Having more than one active vive tracker assigned to that role will cause a conflict, though.
       - `left_foot`

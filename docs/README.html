@@ -152,9 +152,9 @@ Upon starting an OpenXR application with the API layer active for the first time
 </li>
 <li><code>[tracker]</code>:
 <ul>
-<li>The following tracker <code>type</code> keys are available:
+<li>The following tracker <code>type</code> keys are available (<strong>Note that changing side/role or switching between motion controller, vive tracker, and virtual tracker requires a restart of the application</strong>):
 <ul>
-<li><code>controller</code>: use either the left or the right motion controller as reference tracker. Valid options for the key <code>side</code> are <code>left</code> and <code>right</code> (<strong>Note that changing the side or switching between motion controller and vive tracker requires a restart of the vr session</strong>)</li>
+<li><code>controller</code>: use either the left or the right motion controller as reference tracker. Valid options for the key <code>side</code> are <code>left</code> and <code>right</code></li>
 <li><code>vive</code>: use a vive tracker as reference for motion compensation. The key <code>role</code> has to match the role assigned to the tracker. Valid options for that are:
 <ul>
 <li><code>handheld_object</code> - which hand (left, right, any) doesn't matter. Having more than one active vive tracker assigned to that role will cause a conflict, though.</li>

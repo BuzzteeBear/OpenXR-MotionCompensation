@@ -300,8 +300,12 @@
     <Media Include="sounds\calibration_restored.wav">
       <Filter>Sounds</Filter>
     </Media>
-    <Media Include="sounds\crosshair_on.wav" />
-    <Media Include="sounds\crosshair_off.wav" />
+    <Media Include="sounds\crosshair_off.wav">
+      <Filter>Sounds</Filter>
+    </Media>
+    <Media Include="sounds\crosshair_on.wav">
+      <Filter>Sounds</Filter>
+    </Media>
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="$(MSBuildThisFileDirectory)..\..\natvis\wil.natvis" />
