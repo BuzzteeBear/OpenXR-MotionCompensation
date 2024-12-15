@@ -45,7 +45,7 @@ namespace utility
     class Cache
     {
       public:
-        explicit Cache(const std::string& type, Sample fallback) : m_Fallback(fallback), m_SampleType(type){};
+        explicit Cache(std::string type, Sample fallback) : m_Fallback(fallback), m_SampleType(std::move(type)) {};
 
         void SetTolerance(const XrTime tolerance)
         {
@@ -84,7 +84,7 @@ namespace utility
             TraceLoggingWriteStop(local, "Cache::AddSample");
         }
 
-        Sample GetSample(XrTime time) const
+        Sample GetSample(XrTime time)
         {
             using namespace openxr_api_layer::log;
             TraceLocalActivity(local);
@@ -107,9 +107,10 @@ namespace utility
 
                     DebugLog("GetSample(%s) at %lld: exact match found", m_SampleType.c_str(), time);
 
+                    m_ReportError = true;
                     return it->second;
                 }
-                else if (it->first <= time + m_Tolerance)
+                if (it->first <= time + m_Tolerance)
                 {
                     // succeeding entry is within tolerance
                     TraceLoggingWriteStop(local,
@@ -119,6 +120,7 @@ namespace utility
                                           TLArg(it->first, "Time"));
                     DebugLog("GetSample(%s) at %lld: later match found: %lld", m_SampleType.c_str(), time, it->first);
 
+                    m_ReportError = true;
                     return it->second;
                 }
             }
@@ -140,13 +142,25 @@ namespace utility
                              time,
                              lowerIt->first);
 
+                    m_ReportError = true;
                     return lowerIt->second;
                 }
             }
-            ErrorLog("GetSample(%s) unable to find sample %lld+-%.3fms",
-                     m_SampleType.c_str(),
-                     time,
-                     m_Tolerance / 1000000.0);
+
+            auto ErrOut = [this, time](const std::string& msg,
+                                       const std::optional<XrTime> alternative,
+                                       const bool disableReport = true) {
+                if (m_ReportError)
+                {
+                    const std::string alt =
+                        alternative.has_value() ? ": t = " + std::to_string(alternative.value()) : "";
+                    ErrorLog("GetSample(%s) at %lld: %s%s", m_SampleType.c_str(), time, msg.c_str(), alt.c_str());
+                    m_ReportError = !disableReport;
+                }
+            };
+
+            ErrOut("unable to find sample", {}, false);
+
             if (!itIsEnd)
             {
                 if (!itIsBegin)
@@ -155,26 +169,22 @@ namespace utility
                     --lowerIt;
                     // both entries are valid -> select better match
                     auto returnIt = (time - lowerIt->first < it->first - time ? lowerIt : it);
+
+                    ErrOut("using best match", returnIt->first);
                     TraceLoggingWriteStop(local,
                                           "Cache::GetSample",
                                           TLArg(m_SampleType.c_str(), "Type"),
                                           TLArg("Estimated Both", "Match"),
                                           TLArg(it->first, "Time"));
-                    ErrorLog("GetSample(%s) at %lld: using best match: %lld ",
-                             m_SampleType.c_str(),
-                             time,
-                             returnIt->first);
-
                     return returnIt->second;
                 }
                 // higher entry is first in cache -> use it
-
+                ErrOut("using best match", it->first);
                 TraceLoggingWriteStop(local,
                                       "Cache::GetSample",
                                       TLArg(m_SampleType.c_str(), "Type"),
                                       TLArg("Estimated Later", "Match"),
                                       TLArg(it->first, "Time"));
-                ErrorLog("GetSample(%s) at %lld: using best match: t = %lld ", m_SampleType.c_str(), time, it->first);
                 return it->second;
             }
             if (!itIsBegin)
@@ -182,10 +192,7 @@ namespace utility
                 auto lowerIt = it;
                 --lowerIt;
                 // lower entry is last in cache-> use it
-                ErrorLog("GetSample(%s) at %lld: using best match: t = %lld ",
-                         m_SampleType.c_str(),
-                         time,
-                         lowerIt->first);
+                ErrOut("using best match", lowerIt->first);
                 TraceLoggingWriteStop(local,
                                       "Cache::GetSample",
                                       TLArg(m_SampleType.c_str(), "Type"),
@@ -194,7 +201,7 @@ namespace utility
                 return lowerIt->second;
             }
             // cache is empty -> return fallback
-            ErrorLog("GetSample(%s) at %lld: using fallback!!!", m_SampleType.c_str(), time);
+            ErrOut("using fallback!!!", {});
             TraceLoggingWriteStop(local,
                                   "Cache::GetSample",
                                   TLArg(m_SampleType.c_str(), "Type"),
@@ -231,6 +238,7 @@ namespace utility
         Sample m_Fallback;
         XrTime m_Tolerance{2000000};
         std::string m_SampleType;
+        bool m_ReportError{true};
     };
 
     class DataSource
