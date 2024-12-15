@@ -383,6 +383,8 @@ namespace openxr_api_layer
                 m_Session = *session;
                 m_LastFrameTime = 0;
                 m_UpdateRefSpaceTime = 0;
+                m_ActionSpaceCreated = false;
+                m_ActionSetAttached = false;
 
                 if (m_Overlay && m_Overlay->m_MarkersInitialized && m_CompositionFrameworkFactory)
                 {
@@ -491,7 +493,7 @@ namespace openxr_api_layer
             GetInstance()->xrDestroySpace(m_ViewSpace);
             m_ViewSpace = XR_NULL_HANDLE;
         }
-        m_ActionSpaceCreated = false;
+        
         m_ViewSpaces.clear();
         m_ActionSpaces.clear();
         m_StaticRefSpaces.clear();
@@ -530,7 +532,7 @@ namespace openxr_api_layer
 
         if (createInfo->type != XR_TYPE_SWAPCHAIN_CREATE_INFO)
         {
-            TraceLoggingWriteStop(local, "OpenXrLayer::xrAttachSessionActionSets", TLArg(false, "TypeCheck"));
+            TraceLoggingWriteStop(local, "OpenXrLayer::xrCreateSwapchain", TLArg(false, "TypeCheck"));
 
             return XR_ERROR_VALIDATION_FAILURE;
         }
@@ -1170,7 +1172,7 @@ namespace openxr_api_layer
 
         if (isViewSpace(refSpace))
         {
-            m_DeltaCache.AddSample(displayTime, Pose::Identity(), true);
+            m_DeltaCache.AddSample(displayTime, Pose::Identity(), false);
 
             DebugLog("xrLocateViews(%lld): omitting manipulation against view space (%llu)", displayTime, refSpace);
             TraceLoggingWriteStop(local,
@@ -2104,14 +2106,7 @@ namespace openxr_api_layer
             return false;
         }
 
-        const auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
-        if (!layer)
-        {
-            ErrorLog("%s (called by %s): unable to cast layer to OpenXrLayer", __FUNCTION__, caller.c_str());
-            TraceLoggingWriteStop(local, "OpenXrLayer::SyncActions", TLArg(false, "Layer_Valid"));
-            return false;
-        }
-        if (!layer->m_XrSyncCalled.load())
+        if (!m_XrSyncCalled.load())
         {
             const auto now = std::chrono::steady_clock::now();
             const std::chrono::duration<double, std::ratio<1, 1000>> sinceLast(now - m_LastActionSync);
@@ -2122,11 +2117,11 @@ namespace openxr_api_layer
                 return true;
             }
             // sync actions
-            TraceLoggingWriteTagged(local, "OpenXrLayer::SyncActions", TLXArg(layer->m_ActionSet, "xrSyncActions"));
+            TraceLoggingWriteTagged(local, "OpenXrLayer::SyncActions", TLXArg(m_ActionSet, "xrSyncActions"));
             const XrActionsSyncInfo syncInfo{XR_TYPE_ACTIONS_SYNC_INFO,
                                              nullptr,
                                              1,
-                                             new XrActiveActionSet{layer->m_ActionSet, XR_NULL_PATH}};
+                                             new XrActiveActionSet{m_ActionSet, XR_NULL_PATH}};
             const XrResult result = GetInstance()->OpenXrApi::xrSyncActions(m_Session, &syncInfo);
             delete syncInfo.activeActionSets;
             if (XR_FAILED(result))
