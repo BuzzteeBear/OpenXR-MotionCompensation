@@ -72,6 +72,11 @@ namespace tracker
         return false;
     }
 
+    XrPosef ControllerBase::GetLastPoseDelta() const
+    {
+        return m_LastPoseDelta;
+    }
+
     bool ControllerBase::ResetReferencePose(XrSession session, XrTime time)
     {
         TraceLocalActivity(local);

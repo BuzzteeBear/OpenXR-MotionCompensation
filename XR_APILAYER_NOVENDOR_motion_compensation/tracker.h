@@ -20,6 +20,7 @@ namespace tracker
         virtual ~ControllerBase() = default;
         virtual bool Init();
         virtual bool GetPoseDelta(XrPosef& poseDelta, XrSession session, XrTime time);
+        [[nodiscard]] virtual XrPosef GetLastPoseDelta() const;
         virtual bool ResetReferencePose(XrSession session, XrTime time);
 
       protected:

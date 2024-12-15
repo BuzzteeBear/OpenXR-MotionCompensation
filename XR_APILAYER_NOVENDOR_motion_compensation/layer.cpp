@@ -1059,28 +1059,15 @@ namespace openxr_api_layer
             const XrSpace refSpaceForCompensation = spaceComp ? baseSpace : space;
 
             // manipulate pose using tracker
-            XrPosef trackerDelta{Pose::Identity()}, refDelta{Pose::Identity()}, refToStage, stageToRef;
-            ;
-            bool apply = true;
-            if (m_TestRotation)
+            XrPosef deltaStage{Pose::Identity()};
+            if (XrPosef deltaRef{Pose::Identity()}; GetDelta(time,
+                                                             spaceView || baseView,
+                                                             poseToCompensate,
+                                                             refSpaceForCompensation,
+                                                             deltaStage,
+                                                             deltaRef))
             {
-                TestRotation(&trackerDelta, time, false);
-            }
-            else if (((apply = m_Tracker->GetPoseDelta(trackerDelta, m_Session, time))) &&
-                     GetRefToStage(refSpaceForCompensation, &refToStage, &stageToRef))
-            {
-                if (m_ModifierActive && (spaceView || baseView))
-                {
-                    const XrPosef poseStage = Pose::Multiply(poseToCompensate, stageToRef);
-                    m_HmdModifier->Apply(trackerDelta, poseStage);
-                }
-                refDelta = xr::Normalize(Pose::Multiply(Pose::Multiply(stageToRef, trackerDelta), refToStage));
-            }
-            if (apply)
-            {
-                m_RecoveryStart = 0;
-
-                location->pose = Pose::Multiply(location->pose, refDelta);
+                location->pose = Pose::Multiply(location->pose, deltaRef);
 
                 if (baseComp)
                 {
@@ -1092,15 +1079,11 @@ namespace openxr_api_layer
 
                 location->pose = xr::Normalize(location->pose);
             }
-            else
-            {
-                RecoveryTimeOut(time);
-            }
 
             if ((spaceView && !baseAction) || (baseView && !spaceAction))
             {
                 // save pose for use in xrEndFrame, if there isn't one from xrLocateViews already
-                m_DeltaCache.AddSample(time, trackerDelta, false);
+                m_DeltaCache.AddSample(time, deltaStage, false);
             }
             DebugLog("xrLocateSpace(%lld): compensated pose = %s", time, xr::ToString(location->pose).c_str());
             TraceLoggingWriteTagged(local,
@@ -1164,6 +1147,16 @@ namespace openxr_api_layer
             return result;
         }
 
+        if (*viewCountOutput <= 0)
+        {
+            ErrorLog("%s: no views to compensate. viewCountOutput: %u", __FUNCTION__, *viewCountOutput);
+            TraceLoggingWriteStop(local,
+                                  "OpenXrLayer::xrLocateViews",
+                                  TLArg(*viewCountOutput, "viewCountOutput"),
+                                  TLArg(xr::ToCString(result), "Result"));
+            return result;
+        }
+
         if (isViewSpace(refSpace))
         {
             DebugLog("xrLocateViews(%lld): omitting manipulation against view space (%llu)", displayTime, refSpace);
@@ -1206,7 +1199,7 @@ namespace openxr_api_layer
                                                                       viewCountOutput,
                                                                       eyeViews.data());
 
-                if (SUCCEEDED(toHmdResult) && 0 < *viewCountOutput)
+                if (SUCCEEDED(toHmdResult))
                 {
                     m_EyeToHmd = std::make_unique<XrPosef>(Pose::Invert(eyeViews[0].pose));
                     TraceLoggingWriteTagged(local,
@@ -1215,63 +1208,47 @@ namespace openxr_api_layer
                 }
                 else
                 {
-                    ErrorLog("%s: unable to determine eyeToHmd pose");
+                    ErrorLog("%s: unable to determine eyeToHmd pose: %s", __FUNCTION__, xr::ToCString(toHmdResult));
                 }
             }
 
             // manipulate pose using tracker
-            XrPosef trackerDelta{Pose::Identity()};
-            if (m_TestRotation)
+            XrPosef deltaStage{Pose::Identity()};
+            if (XrPosef deltaRef{Pose::Identity()}; GetDelta(displayTime,
+                                                             !!m_EyeToHmd,
+                                                             m_EyeToHmd ? Pose::Multiply(*m_EyeToHmd, views[0].pose) : Pose::Identity(),
+                                                             refSpace,
+                                                             deltaStage,
+                                                             deltaRef))
             {
-                TestRotation(&trackerDelta, displayTime, false);
-            }
-            else if (m_Tracker->GetPoseDelta(trackerDelta, m_Session, displayTime))
-            {
-                m_RecoveryStart = 0;
-
-                XrPosef refToStage, stageToRef;
-                if (GetRefToStage(refSpace, &refToStage, &stageToRef))
+                for (uint32_t i = 0; i < *viewCountOutput; i++)
                 {
-                    if (m_ModifierActive && m_EyeToHmd && 0 < *viewCountOutput)
-                    {
-                        // apply hmd pose modifier on delta
-                        const XrPosef hmdPoseStage =
-                            Pose::Multiply(Pose::Multiply(*m_EyeToHmd, views[0].pose), stageToRef);
-                        m_HmdModifier->Apply(trackerDelta, hmdPoseStage);
-                    }
-                    const XrPosef refDelta = Pose::Multiply(Pose::Multiply(stageToRef, trackerDelta), refToStage);
-                    for (uint32_t i = 0; i < *viewCountOutput; i++)
-                    {
-                        DebugLog("xrLocateView(%lld): eye (%u) original pose = %s",
-                                 displayTime,
-                                 i,
-                                 xr::ToString(views[i].pose).c_str());
-                        TraceLoggingWriteTagged(local,
-                                                "OpenXrLayer::xrLocateViews",
-                                                TLArg(i, "Index"),
-                                                TLArg(xr::ToString(views[i].fov).c_str(), "Fov"),
-                                                TLArg(xr::ToString(views[i].pose).c_str(), "OriginalViewPose"));
+                    DebugLog("xrLocateView(%lld): eye (%u) original pose = %s",
+                             displayTime,
+                             i,
+                             xr::ToString(views[i].pose).c_str());
+                    TraceLoggingWriteTagged(local,
+                                            "OpenXrLayer::xrLocateViews",
+                                            TLArg(i, "Index"),
+                                            TLArg(xr::ToString(views[i].fov).c_str(), "Fov"),
+                                            TLArg(xr::ToString(views[i].pose).c_str(), "OriginalViewPose"));
 
-                        // apply manipulation
-                        views[i].pose = xr::Normalize(Pose::Multiply(views[i].pose, refDelta));
+                    // apply manipulation
+                    views[i].pose = xr::Normalize(Pose::Multiply(views[i].pose, deltaRef));
 
-                        DebugLog("xrLocateView(%lld): eye (%u) compensated pose = %s",
-                                 displayTime,
-                                 i,
-                                 xr::ToString(views[i].pose).c_str());
-                        TraceLoggingWriteTagged(local,
-                                                "OpenXrLayer::xrLocateViews",
-                                                TLArg(i, "Index"),
-                                                TLArg(xr::ToString(views[i].pose).c_str(), "CompensatedViewPose"));
-                    }
+                    DebugLog("xrLocateView(%lld): eye (%u) compensated pose = %s",
+                             displayTime,
+                             i,
+                             xr::ToString(views[i].pose).c_str());
+                    TraceLoggingWriteTagged(local,
+                                            "OpenXrLayer::xrLocateViews",
+                                            TLArg(i, "Index"),
+                                            TLArg(xr::ToString(views[i].pose).c_str(), "CompensatedViewPose"));
                 }
             }
-            else
-            {
-                RecoveryTimeOut(displayTime);
-            }
+            
             // sample from xrLocateView potentially overrides previous one
-            m_DeltaCache.AddSample(displayTime, trackerDelta, true);
+            m_DeltaCache.AddSample(displayTime, deltaStage, true);
 
             TraceLoggingWriteStop(local,
                                   "OpenXrLayer::xrLocateViews",
@@ -2316,7 +2293,44 @@ namespace openxr_api_layer
         return success;
     }
 
-    void OpenXrLayer::RecoveryTimeOut(XrTime time)
+    bool OpenXrLayer::GetDelta(XrTime time,
+                               bool isHmd,
+                               const XrPosef& pose,
+                               const XrSpace refSpace,
+                               XrPosef& deltaStage,
+                               XrPosef& deltaRef)
+    {
+        deltaStage = {Pose::Identity()};
+        if (m_TestRotation)
+        {
+            TestRotation(&deltaStage, time, false);
+        }
+        else if (m_Tracker->GetPoseDelta(deltaStage, m_Session, time))
+        {
+            m_RecoveryStart = 0;
+        }
+        else
+        {
+            // use latest valid delta
+            deltaStage = m_Tracker->GetLastPoseDelta();
+            RecoveryTimeOut(time);
+        }
+
+        XrPosef refToStage, stageToRef;
+        if (!GetRefToStage(refSpace, &refToStage, &stageToRef))
+        {
+            return false;
+        }
+        if (m_ModifierActive && isHmd)
+        {
+            const XrPosef poseStage = Pose::Multiply(pose, stageToRef);
+            m_HmdModifier->Apply(deltaStage, poseStage);
+        }
+        deltaRef = xr::Normalize(Pose::Multiply(Pose::Multiply(stageToRef, deltaStage), refToStage));
+        return true;
+    }
+
+    void OpenXrLayer::RecoveryTimeOut(const XrTime time)
     {
         if (0 == m_RecoveryStart)
         {
