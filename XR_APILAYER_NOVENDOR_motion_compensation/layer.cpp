@@ -383,8 +383,7 @@ namespace openxr_api_layer
                 m_Session = *session;
                 m_LastFrameTime = 0;
                 m_UpdateRefSpaceTime = 0;
-                m_ActionSpaceCreated = false;
-                m_ActionSetAttached = false;
+                DestroyTrackerActions("xrCreateSession");
 
                 if (m_Overlay && m_Overlay->m_MarkersInitialized && m_CompositionFrameworkFactory)
                 {
@@ -478,11 +477,8 @@ namespace openxr_api_layer
         m_Tracker->InvalidateCalibration(true);
 
         // clean up open xr session resources
-        if (XR_NULL_HANDLE != m_TrackerSpace)
-        {
-            GetInstance()->xrDestroySpace(m_TrackerSpace);
-            m_TrackerSpace = XR_NULL_HANDLE;
-        }
+        DestroyTrackerActions("xrDestroySession");
+
         if (XR_NULL_HANDLE != m_StageSpace)
         {
             GetInstance()->xrDestroySpace(m_StageSpace);
@@ -679,6 +675,12 @@ namespace openxr_api_layer
                                TLArg(topLevelUserPath, "Path"),
                                TLArg(getXrPath(topLevelUserPath).c_str(), "Readable"));
 
+        // OpenComposite workaround to avoid XR_ACTION_SET_NOT_ATTACHED
+        if (!m_ActionSetAttached)
+        {
+            AttachActionSet("xrGetCurrentInteractionProfile");
+        }
+
         const XrResult result =
             OpenXrApi::xrGetCurrentInteractionProfile(session, topLevelUserPath, interactionProfile);
 
@@ -729,7 +731,7 @@ namespace openxr_api_layer
         if (m_ActionSetAttached)
         {
             // detach (and recreate) action set and tracker space
-            DestroyTrackerActions();
+            DestroyTrackerActions("xrSuggestInteractionProfileBindings");
             Log("destroyed tracker action for recreation");
         }
         CreateTrackerActions("xrSuggestInteractionProfileBindings");
@@ -2048,11 +2050,11 @@ namespace openxr_api_layer
         return success;
     }
 
-    void OpenXrLayer::DestroyTrackerActions()
+    void OpenXrLayer::DestroyTrackerActions(const std::string& caller)
     {
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "OpenXrLayer::DestroyTrackerActions");
-        DebugLog("DestroyTrackerActions");
+        TraceLoggingWriteStart(local, "OpenXrLayer::DestroyTrackerActions", TLArg(caller.c_str(), "Caller"));
+        DebugLog("DestroyTrackerActions %s", caller.c_str() );
 
         m_ActionsCreated = false;
         m_ActionSpaceCreated = false;
@@ -2089,14 +2091,13 @@ namespace openxr_api_layer
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "OpenXrLayer::SyncActions", TLArg(caller.c_str(), "Caller"));
 
-        if (!m_Enabled || !m_PhysicalEnabled || m_SuppressInteraction || !m_SessionFocused.load())
+        if (!m_Enabled || !m_PhysicalEnabled || m_SuppressInteraction)
         {
             TraceLoggingWriteStop(local,
                                   "OpenXrLayer::SyncActions",
                                   TLArg(m_Enabled, "Enabled"),
                                   TLArg(m_PhysicalEnabled, "PhysicalEnabled"),
-                                  TLArg(m_SuppressInteraction, "SuppressInteraction"),
-                                  TLArg(m_SessionFocused.load(), "SessionFocused"));
+                                  TLArg(m_SuppressInteraction, "SuppressInteraction"));
             return true;
         }
 
@@ -2106,35 +2107,44 @@ namespace openxr_api_layer
             return false;
         }
 
-        if (!m_XrSyncCalled.load())
+        if (m_XrSyncCalled.load() || !m_SessionFocused.load())
         {
-            const auto now = std::chrono::steady_clock::now();
-            const std::chrono::duration<double, std::ratio<1, 1000>> sinceLast(now - m_LastActionSync);
-            if (sinceLast < std::chrono::milliseconds(10))
-            {
-                // skip actual call to avoid spamming from input stabilizer sampling
-                TraceLoggingWriteStop(local, "OpenXrLayer::xrSyncActions", TLArg(sinceLast.count(), "Skipped"));
-                return true;
-            }
-            // sync actions
-            TraceLoggingWriteTagged(local, "OpenXrLayer::SyncActions", TLXArg(m_ActionSet, "xrSyncActions"));
-            const XrActionsSyncInfo syncInfo{XR_TYPE_ACTIONS_SYNC_INFO,
-                                             nullptr,
-                                             1,
-                                             new XrActiveActionSet{m_ActionSet, XR_NULL_PATH}};
-            const XrResult result = GetInstance()->OpenXrApi::xrSyncActions(m_Session, &syncInfo);
-            delete syncInfo.activeActionSets;
-            if (XR_FAILED(result))
-            {
-                ErrorLog("%s (called by %s): xrSyncActions failed: %s", __FUNCTION__, caller.c_str(), xr::ToCString(result));
-                TraceLoggingWriteStop(local, "OpenXrLayer::SyncActions", TLArg(false, "XrSyncActionsSuccess"));
-                return false;
-            }
-            m_LastActionSync = std::chrono::steady_clock::now();
-            if (XR_SUCCESS != result)
-            {
-                Log("SyncActions (called by %s) succeeded with: %s", caller.c_str(), xr::ToCString(result));
-            }
+            TraceLoggingWriteStop(local,
+                                  "OpenXrLayer::SyncActions",
+                                  TLArg(m_XrSyncCalled.load(), "XrSyncCalled"),
+                                  TLArg(m_SessionFocused.load(), "SessionFocused"));
+            return true;
+        }
+
+        const auto now = std::chrono::steady_clock::now();
+        const std::chrono::duration<double, std::ratio<1, 1000>> sinceLast(now - m_LastActionSync);
+        if (sinceLast < std::chrono::milliseconds(10))
+        {
+            // skip actual call to avoid spamming from input stabilizer sampling
+            TraceLoggingWriteStop(local, "OpenXrLayer::xrSyncActions", TLArg(sinceLast.count(), "Skipped"));
+            return true;
+        }
+        // sync actions
+        TraceLoggingWriteTagged(local, "OpenXrLayer::SyncActions", TLXArg(m_ActionSet, "xrSyncActions"));
+        const XrActionsSyncInfo syncInfo{XR_TYPE_ACTIONS_SYNC_INFO,
+                                         nullptr,
+                                         1,
+                                         new XrActiveActionSet{m_ActionSet, XR_NULL_PATH}};
+        const XrResult result = GetInstance()->OpenXrApi::xrSyncActions(m_Session, &syncInfo);
+        delete syncInfo.activeActionSets;
+        if (XR_FAILED(result))
+        {
+            ErrorLog("%s (called by %s): xrSyncActions failed: %s",
+                     __FUNCTION__,
+                     caller.c_str(),
+                     xr::ToCString(result));
+            TraceLoggingWriteStop(local, "OpenXrLayer::SyncActions", TLArg(false, "XrSyncActionsSuccess"));
+            return false;
+        }
+        m_LastActionSync = std::chrono::steady_clock::now();
+        if (XR_SUCCESS != result)
+        {
+            Log("SyncActions (called by %s) succeeded with: %s", caller.c_str(), xr::ToCString(result));
         }
         TraceLoggingWriteStop(local, "OpenXrLayer::SyncActions", TLArg(true, "Succces"));
         return true;
@@ -2144,24 +2154,32 @@ namespace openxr_api_layer
     {
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "OpenXrLayer::AttachActionSet", TLArg(caller.c_str(), "Caller"));
+        DebugLog("AttachActionSet %s", caller.c_str());
 
         bool success{true};
-        if (m_PhysicalEnabled && !m_SuppressInteraction && !m_ActionSetAttached)
+        if (!m_PhysicalEnabled || m_SuppressInteraction || m_ActionSetAttached)
         {
-            constexpr XrSessionActionSetsAttachInfo actionSetAttachInfo{XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO};
-            const XrResult result = xrAttachSessionActionSets(m_Session, &actionSetAttachInfo);
-            if (XR_SUCCEEDED(result))
-            {
-                Log("action set attached during %s", caller.c_str());
-            }
-            else
-            {
-                ErrorLog("%s: xrAttachSessionActionSets during %s failed", __FUNCTION__, caller.c_str());
-                success = false;
-            }
+            TraceLoggingWriteStop(local,
+                                  "OpenXrLayer::AttachActionSet",
+                                  TLArg(m_PhysicalEnabled, "PhysicalEnabled"),
+                                  TLArg(m_SuppressInteraction, "SuppressInteraction"),
+                                  TLArg(m_ActionSetAttached, "ActionSetAttached"));
+            return success;
         }
-        TraceLoggingWriteStop(local, "OpenXrLayer::AttachActionSet", TLArg(success, "Success"));
 
+        constexpr XrSessionActionSetsAttachInfo actionSetAttachInfo{XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO};
+        const XrResult result = xrAttachSessionActionSets(m_Session, &actionSetAttachInfo);
+        if (XR_SUCCEEDED(result))
+        {
+            Log("action set attached during %s", caller.c_str());
+        }
+        else
+        {
+            ErrorLog("%s: xrAttachSessionActionSets during %s failed", __FUNCTION__, caller.c_str());
+            success = false;
+        }
+
+        TraceLoggingWriteStop(local, "OpenXrLayer::AttachActionSet", TLArg(success, "Success"));
         return success;
     }
 

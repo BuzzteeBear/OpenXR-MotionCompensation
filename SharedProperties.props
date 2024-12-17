@@ -5,7 +5,7 @@
     <VersionMajor>0</VersionMajor>
     <VersionMinor>3</VersionMinor>
     <VersionPatch>8</VersionPatch>
-    <VersionRevision>2</VersionRevision>
+    <VersionRevision>3</VersionRevision>
   </PropertyGroup>
   <ItemGroup>
     <BuildMacro Include="VersionString">

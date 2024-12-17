@@ -132,7 +132,7 @@ namespace openxr_api_layer
         void AddStaticRefSpace(XrSpace space);
         std::optional<XrPosef> LocateRefSpace(XrSpace space);
         bool CreateTrackerActions(const std::string& caller);
-        void DestroyTrackerActions();
+        void DestroyTrackerActions(const std::string& caller);
         bool AttachActionSet(const std::string& caller);
         void SuggestInteractionProfiles(const std::string& caller);
         bool LazyInit(XrTime time);
@@ -140,8 +140,8 @@ namespace openxr_api_layer
                       bool isHmd,
                       const XrPosef& pose,
                       XrSpace refSpace,
-                      XrPosef& stageDelta,
-                      XrPosef& refDelta);
+                      XrPosef& deltaStage,
+                      XrPosef& deltaRef);
         void RecoveryTimeOut(XrTime time);
         void LogCurrentInteractionProfile();
         bool ToggleModifierActive();
