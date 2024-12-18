@@ -337,10 +337,10 @@ namespace openxr_api_layer
                     }
                     else
                     {
-                        m_SessionFocused.store(event->state == XR_SESSION_STATE_FOCUSED);
                         if (m_Overlay)
                         {
-                            m_Overlay->m_SessionVisible = event->state == XR_SESSION_STATE_VISIBLE || m_SessionFocused.load();
+                            m_Overlay->m_SessionVisible =
+                                event->state == XR_SESSION_STATE_VISIBLE || event->state == XR_SESSION_STATE_FOCUSED;
                         }
                     }
                 }
@@ -2107,12 +2107,11 @@ namespace openxr_api_layer
             return false;
         }
 
-        if (m_XrSyncCalled.load() || !m_SessionFocused.load())
+        if (m_XrSyncCalled.load())
         {
             TraceLoggingWriteStop(local,
                                   "OpenXrLayer::SyncActions",
-                                  TLArg(m_XrSyncCalled.load(), "XrSyncCalled"),
-                                  TLArg(m_SessionFocused.load(), "SessionFocused"));
+                                  TLArg(m_XrSyncCalled.load(), "XrSyncCalled"));
             return true;
         }
 
