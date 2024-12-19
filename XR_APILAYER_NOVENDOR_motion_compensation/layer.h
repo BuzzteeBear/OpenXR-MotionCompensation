@@ -155,6 +155,7 @@ namespace openxr_api_layer
         std::string m_RuntimeName;
         bool m_Enabled{false};
         bool m_PhysicalEnabled{false};
+        bool m_PhysicalEarlyInit{false};
         bool m_VirtualTrackerUsed{false};
         bool m_CompensateControllers{false};
         bool m_SuppressInteraction{false};
@@ -172,6 +173,8 @@ namespace openxr_api_layer
         bool m_SyncActionHint{false};
         XrTime m_LastFrameTime{0};
         XrTime m_UpdateRefSpaceTime{0};
+        XrTime m_LastSessionTransition{0};
+        XrSessionState m_SessionState{XR_SESSION_STATE_UNKNOWN};
         std::chrono::time_point<std::chrono::steady_clock> m_LastActionSync{std::chrono::steady_clock::now()};
         std::set<XrSpace> m_StaticRefSpaces{};
         std::map<XrSpace, std::pair<XrPosef, XrPosef>> m_RefToStageMap{};

@@ -148,6 +148,7 @@ namespace openxr_api_layer
             {
                 m_Initialized = false;
             }
+            GetConfig()->GetBool(Cfg::PhysicalEarly, m_PhysicalEarlyInit);
         }
 
         // enable / disable graphical overlay initialization
@@ -292,7 +293,6 @@ namespace openxr_api_layer
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "OpenXrLayer::xrPollEvent", TLXArg(instance, "Instance"));
 
-        m_VarjoPollWorkaround = false;
         const XrResult result = OpenXrApi::xrPollEvent(instance, eventData);
 
         if (m_Enabled)
@@ -330,13 +330,23 @@ namespace openxr_api_layer
                 if (const auto event = reinterpret_cast<const XrEventDataSessionStateChanged*>(eventData);
                     event && event->session == m_Session)
                 {
-                    Log("session transitioned to %s", xr::ToCString(event->state));
                     if (event->state == XR_SESSION_STATE_UNKNOWN || event->state > XR_SESSION_STATE_EXITING)
                     {
                         ErrorLog("%s: unknown state: %d", __FUNCTION__, event->state);
                     }
                     else
                     {
+                        Log("session transitioned to %s", xr::ToCString(event->state));
+                        m_SessionState = event->state;
+                        m_LastSessionTransition = m_LastFrameTime;
+                        if (XR_SESSION_STATE_FOCUSED == m_SessionState)
+                        {
+                            if (m_VarjoPollWorkaround && m_PhysicalEarlyInit)
+                            {
+                                SyncActions("xrPollEvent");
+                            }
+                            m_VarjoPollWorkaround = false;
+                        }
                         if (m_Overlay)
                         {
                             m_Overlay->m_SessionVisible =
@@ -383,6 +393,7 @@ namespace openxr_api_layer
                 m_Session = *session;
                 m_LastFrameTime = 0;
                 m_UpdateRefSpaceTime = 0;
+                m_LastSessionTransition = 0;
                 DestroyTrackerActions("xrCreateSession");
 
                 if (m_Overlay && m_Overlay->m_MarkersInitialized && m_CompositionFrameworkFactory)
@@ -391,9 +402,7 @@ namespace openxr_api_layer
                     m_Overlay->m_D3D12inUse = m_CompositionFrameworkFactory->IsUsingD3D12(*session);
                 }
 
-                if (bool earlyPhysicalInit; m_PhysicalEnabled &&
-                                            GetConfig()->GetBool(Cfg::PhysicalEarly, earlyPhysicalInit) &&
-                                            earlyPhysicalInit)
+                if (m_PhysicalEarlyInit)
                 {
                     Log("performing early initialization of physical tracker");
                     // initialize everything except tracker
@@ -1446,13 +1455,14 @@ namespace openxr_api_layer
 
         std::unique_lock lock(m_FrameLock);
 
-        if (m_VarjoPollWorkaround && m_Enabled && m_PhysicalEnabled && !m_SuppressInteraction)
+        if (m_VarjoPollWorkaround && m_Enabled && m_PhysicalEnabled && !m_SuppressInteraction &&
+            m_LastSessionTransition < m_LastFrameTime - 1000000000)
         {
             TraceLoggingWriteTagged(local, "OpenXrLayer::xrBeginFrame", TLArg(true, "PollWorkaround"));
 
             // call xrPollEvent (if the app hasn't already) to acquire focus
             XrEventDataBuffer buf{XR_TYPE_EVENT_DATA_BUFFER};
-            OpenXrApi::xrPollEvent(GetXrInstance(), &buf);
+            xrPollEvent(GetXrInstance(), &buf);
         }
 
         if (m_Overlay && m_Overlay->m_MarkersInitialized)
