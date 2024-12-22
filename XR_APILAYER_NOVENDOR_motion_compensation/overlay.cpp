@@ -512,14 +512,14 @@ namespace openxr_api_layer::graphics
             {
                 if (!std::exchange(m_NoProjectionLayer, true))
                 {
-                    ErrorLog("%s: no projection layer found", __FUNCTION__);
+                    DebugLog("warning: no projection layer found");
                 }
                 TraceLoggingWriteStop(local, "Overlay::DrawMarkers", TLArg(false, "ProjectionLayer"));
                 return;
             }
             if (std::exchange(m_NoProjectionLayer, false))
             {
-                Log("%s: projection layer found again", __FUNCTION__);
+                DebugLog("projection layer present again");
             }
 
             // transfer tracker poses into projection reference space
