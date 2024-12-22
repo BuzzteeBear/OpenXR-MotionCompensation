@@ -2,6 +2,7 @@
 
 #pragma once
 #include "resource.h"
+#include <log.h>
 
 // include definitions shared with c#
 typedef int Int32;
@@ -73,17 +74,86 @@ namespace output
                                                                   {Event::CrosshairOn, CROSSHAIR_ON_WAV},
                                                                   {Event::CrosshairOff, CROSSHAIR_OFF_WAV}};
     };
-
-    class EventMmf
+    template <typename Element>
+    class QueuedMmf
     {
       public:
-        EventMmf();
-        ~EventMmf();
+        explicit QueuedMmf(std::string name) : m_MmfName(std::move(name))
+        {
+            m_Thread = new std::thread(&QueuedMmf::UpdateMmf, this);
+        }
 
-        void Execute(Event event);
+        virtual ~QueuedMmf()
+        {
+            TraceLocalActivity(local);
+            TraceLoggingWriteStart(local, "QueuedMmf::Destroy", TLArg(m_MmfName.c_str(), "MmfName"));
+
+            StopThread();
+
+            TraceLoggingWriteStop(local, "QueuedMmf::Destroy", TLArg(m_MmfName.c_str(), "MmfName"));
+        }
+      
+        void UpdateMmf()
+        {
+            Element element;
+            utility::Mmf mmf;
+            mmf.SetWriteable(sizeof(element));
+            mmf.SetName(m_MmfName);
+
+            if (!mmf.Write(&element, sizeof(element)))
+            {
+                m_MmfError.store(true);
+                return;
+            }
+
+            while (!m_StopThread.load())
+            {
+                if (!WriteImpl(mmf))
+                {
+                    break;
+                }
+            }
+            m_StopThread.store(true);
+        }
+
+      protected:
+        void StopThread()
+        {
+            m_StopThread.store(true);
+            if (m_Thread)
+            {
+                if (m_Thread->joinable())
+                {
+                    m_Thread->join();
+                }
+                delete m_Thread;
+                m_Thread = nullptr;
+                TraceLoggingWrite(openxr_api_layer::log::g_traceProvider,
+                                  "EventMmf::StopThread",
+                                  TLArg(m_MmfName.c_str(), "MmfName"),
+                                  TLArg(true, "Stopped"));
+            }
+        }
+
+        std::string m_MmfName;
+        std::thread* m_Thread{nullptr};
+        std::atomic_bool m_StopThread{false}, m_MmfError{false};
+        int64_t m_LastError{0};
+        std::deque<Element> m_EventQueue;
+        std::mutex m_QueueMutex;
+
       private:
-        void UpdateEventMmf();
-        void StopThread();
+        virtual bool WriteImpl(utility::Mmf& mmf) = 0;
+    };
+
+    class EventMmf : public QueuedMmf < std::pair<Event, int64_t>>
+    {
+      public:
+        EventMmf() : QueuedMmf("Local\\OXRMC_Events") {};
+        void Execute(Event event);
+
+    private:
+        bool WriteImpl(utility::Mmf& mmf) override;
 
         std::set<Event> m_RelevantEvents{
             Event::Error,         Event::Critical,      Event::Initialized,     Event::Load,
@@ -93,17 +163,27 @@ namespace output
             Event::ModifierOn,    Event::ModifierOff,   Event::CalibrationLost, Event::VerboseOn,
             Event::VerboseOff,    Event::RecorderOn,    Event::RecorderOff,     Event::StabilizerOn,
             Event::StabilizerOff, Event::PassthroughOn, Event::PassthroughOff};
-        std::thread* m_Thread{nullptr};
-        std::atomic_bool m_StopThread{false}, m_MmfError{false};
         int64_t m_LastError{0};
-        std::deque <std::pair<Event, int64_t>> m_EventQueue;
-        std::mutex m_QueueMutex;
     };
 
     // Singleton accessor.
     EventMmf* GetEventMmf();    
 
-   
+    class PositionMmf : public QueuedMmf<std::pair<XrVector3f, int32_t>>
+    {
+      public:
+        PositionMmf() : QueuedMmf("Local\\OXRMC_PositionOutputs") {};
+        void Transmit(const XrVector3f& position, utility::DofValue dof);
+
+      private: 
+        bool WriteImpl(utility::Mmf& mmf) override;
+
+        int64_t m_LastError{0};
+    };
+
+    // Singleton accessor.
+    PositionMmf* GetPositionMmf();   
+
 
     class StatusMmf
     {

@@ -81,21 +81,6 @@ namespace output
         TraceLoggingWriteStop(local, "AudioOut::CountDown");
     }
 
-    EventMmf::EventMmf()
-    {
-        m_Thread = new std::thread(&EventMmf::UpdateEventMmf, this);
-    }
-
-    EventMmf::~EventMmf()
-    {
-        TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "EventMmf::Destroy");
-
-        StopThread();
-
-        TraceLoggingWriteStop(local, "EventMmf::Destroy");
-    }
-
     void EventMmf::Execute(Event event)
     {
         using namespace std::chrono;
@@ -124,7 +109,7 @@ namespace output
                 m_LastError = 0;
                 m_MmfError = false;
                 m_StopThread = false;
-                m_Thread = new std::thread(&EventMmf::UpdateEventMmf, this);
+                m_Thread = new std::thread(&QueuedMmf::UpdateMmf, this);
             }
         }
 
@@ -135,68 +120,37 @@ namespace output
         TraceLoggingWriteStop(local, "EventMmf::Execute", TLArg(static_cast<int>(event), "Event"));
     }
 
-    void EventMmf::UpdateEventMmf()
+    bool EventMmf::WriteImpl(Mmf& mmf)
     {
-        EventData info{};
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
-        Mmf mmf;
-        mmf.SetWriteable(sizeof(info));
-        mmf.SetName("Local\\OXRMC_Events");
+        EventData info;
+        if (!mmf.Read(&info, sizeof(info), 0))
+        {
+            m_MmfError.store(true);
+            return false;
+        }
+        if (info.id)
+        {
+            // waiting on processing
+            return true;
+        }
 
-        
+        std::unique_lock lock(m_QueueMutex);
+        if (m_EventQueue.empty())
+        {
+            return true;
+        }
+
+        info.id = static_cast<int>(m_EventQueue.front().first);
+        info.eventTime = m_EventQueue.front().second;
         if (!mmf.Write(&info, sizeof(info)))
         {
             m_MmfError.store(true);
-            return;
+            return false;
         }
-
-        while (!m_StopThread.load())
-        {
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
-
-            EventData info;
-            if (!mmf.Read(&info, sizeof(info), 0))
-            {
-                m_MmfError.store(true);
-                break;
-            }
-            if (info.id)
-            {
-                // waiting on processing
-                continue;
-            }
-
-            std::unique_lock lock(m_QueueMutex);
-            if (m_EventQueue.empty())
-            {
-                continue;
-            }
-
-            info.id = static_cast<int>(m_EventQueue.front().first);
-            info.eventTime = m_EventQueue.front().second;
-            if (!mmf.Write(&info, sizeof(info)))
-            {
-                m_MmfError.store(true);
-                break;
-            }
-            m_EventQueue.pop_front();
-        }
-        m_StopThread.store(true);
-    }
-
-    void EventMmf::StopThread()
-    {
-        m_StopThread.store(true);
-        if (m_Thread)
-        {
-            if (m_Thread->joinable())
-            {
-                m_Thread->join();
-            }
-            delete m_Thread;
-            m_Thread = nullptr;
-            TraceLoggingWrite(g_traceProvider, "EventMmf::StopThread", TLArg(true, "Stopped"));
-        }
+        m_EventQueue.pop_front();
+        return true;
     }
 
     std::unique_ptr<EventMmf> g_EventMmf = nullptr;
@@ -208,6 +162,86 @@ namespace output
             g_EventMmf = std::make_unique<EventMmf>();
         }
         return g_EventMmf.get();
+    }
+
+    void PositionMmf::Transmit(const XrVector3f& position, utility::DofValue dof)
+    {
+        using namespace std::chrono;
+
+
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local,
+                               "EventMmf::Execute",
+                               TLArg(xr::ToString(position).c_str(), "Dof"),
+                               TLArg(static_cast<int>(dof), "Dof"));
+
+        auto now = time_point_cast<milliseconds>(system_clock::now()).time_since_epoch().count();
+
+        // check communication thread;
+        if (m_MmfError)
+        {
+            StopThread();
+            if (!m_LastError)
+            {
+                m_LastError = now;
+            }
+            else if (now - m_LastError > 1000)
+            {
+                // retry starting thread after a second
+                m_LastError = 0;
+                m_MmfError = false;
+                m_StopThread = false;
+                m_Thread = new std::thread(&QueuedMmf::UpdateMmf, this);
+            }
+        }
+
+        // queue up event
+        std::unique_lock lock(m_QueueMutex);
+        m_EventQueue.push_back({position, dof + 1});
+
+        TraceLoggingWriteStop(local, "EventMmf::Execute");
+    }
+
+    bool PositionMmf::WriteImpl(Mmf& mmf)
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+
+        std::pair<XrVector3f, int32_t> data;
+        if (!mmf.Read(&data, sizeof(data), 0))
+        {
+            m_MmfError.store(true);
+            return false;
+        }
+        if (data.second)
+        {
+            // waiting on processing
+            return true;
+        }
+
+        std::unique_lock lock(m_QueueMutex);
+        if (m_EventQueue.empty())
+        {
+            return true;
+        }
+
+        if (!mmf.Write(&m_EventQueue.front(), sizeof(data)))
+        {
+            m_MmfError.store(true);
+            return false;
+        }
+        m_EventQueue.pop_front();
+        return true;
+    }
+
+    std::unique_ptr<PositionMmf> g_PositionMmf = nullptr;
+
+    PositionMmf* GetPositionMmf()
+    {
+        if (!g_PositionMmf)
+        {
+            g_PositionMmf = std::make_unique<PositionMmf>();
+        }
+        return g_PositionMmf.get();
     }
 
     StatusMmf::StatusMmf()
