@@ -295,69 +295,76 @@ namespace openxr_api_layer
 
         const XrResult result = OpenXrApi::xrPollEvent(instance, eventData);
 
-        if (m_Enabled)
+        if (!m_Enabled)
         {
-            TraceLoggingWriteTagged(local,
-                                    "OpenXrLayer::xrPollEvent",
-                                    TLArg(static_cast<int>(eventData->type), "EventType"));
-            if (XR_TYPE_EVENT_DATA_REFERENCE_SPACE_CHANGE_PENDING == eventData->type)
-            {
-                if (const auto event = reinterpret_cast<const XrEventDataReferenceSpaceChangePending*>(eventData);
-                    event && XR_REFERENCE_SPACE_TYPE_STAGE == event->referenceSpaceType ||
-                    XR_REFERENCE_SPACE_TYPE_LOCAL == event->referenceSpaceType)
-                {
-                    // trigger re-location of static reference spaces
-                    std::unique_lock lock(m_FrameLock);
-                    Log("change of stage/local reference space location detected", event->changeTime);
-                    m_UpdateRefSpaceTime = std::max(event->changeTime, m_LastFrameTime);
+            TraceLoggingWriteStop(local, "OpenXrLayer::xrPollEvent", TLArg(xr::ToCString(result), "Result"));
+            return result;
+        }
 
-                    // reset tracker calibration and activation state
-                    if (m_Tracker->m_Calibrated)
-                    {
-                        Log("tracker calibration lost");
-                        m_Tracker->InvalidateCalibration(false);
-
-                        if (m_Activated)
-                        {
-                            Log("motion compensation deactivated");
-                            m_Activated = false;
-                        }
-                    }
-                }
-            }
-            else if (XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED == eventData->type)
+        TraceLoggingWriteTagged(local,
+                                "OpenXrLayer::xrPollEvent",
+                                TLArg(static_cast<int>(eventData->type), "EventType"));
+        if (XR_TYPE_EVENT_DATA_REFERENCE_SPACE_CHANGE_PENDING == eventData->type)
+        {
+            if (const auto event = reinterpret_cast<const XrEventDataReferenceSpaceChangePending*>(eventData);
+                event && XR_REFERENCE_SPACE_TYPE_STAGE == event->referenceSpaceType ||
+                XR_REFERENCE_SPACE_TYPE_LOCAL == event->referenceSpaceType)
             {
-                if (const auto event = reinterpret_cast<const XrEventDataSessionStateChanged*>(eventData);
-                    event && event->session == m_Session)
+                // trigger re-location of static reference spaces
+                std::unique_lock lock(m_FrameLock);
+                Log("change of stage/local reference space location detected, t = %lld", event->changeTime);
+                m_UpdateRefSpaceTime = std::max(event->changeTime, m_LastFrameTime);
+
+                // reset tracker calibration and activation state
+                if (m_Tracker->m_Calibrated)
                 {
-                    if (event->state == XR_SESSION_STATE_UNKNOWN || event->state > XR_SESSION_STATE_EXITING)
+                    Log("tracker calibration lost");
+                    m_Tracker->InvalidateCalibration(false);
+
+                    if (m_Activated)
                     {
-                        ErrorLog("%s: unknown state: %d", __FUNCTION__, event->state);
-                    }
-                    else
-                    {
-                        Log("session transitioned to %s", xr::ToCString(event->state));
-                        m_SessionState = event->state;
-                        m_LastSessionTransition = m_LastFrameTime;
-                        if (XR_SESSION_STATE_FOCUSED == m_SessionState)
-                        {
-                            if (m_VarjoPollWorkaround && m_PhysicalEarlyInit)
-                            {
-                                SyncActions("xrPollEvent");
-                            }
-                            m_VarjoPollWorkaround = false;
-                        }
-                        if (m_Overlay)
-                        {
-                            m_Overlay->m_SessionVisible =
-                                event->state == XR_SESSION_STATE_VISIBLE || event->state == XR_SESSION_STATE_FOCUSED;
-                        }
+                        Log("motion compensation deactivated");
+                        m_Activated = false;
                     }
                 }
             }
         }
-        TraceLoggingWriteStop(local, "OpenXrLayer::xrPollEvent", TLArg(xr::ToCString(result), "Result"));
+        else if (XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED == eventData->type)
+        {
+            if (const auto event = reinterpret_cast<const XrEventDataSessionStateChanged*>(eventData);
+                event && event->session == m_Session)
+            {
+                if (event->state == XR_SESSION_STATE_UNKNOWN || event->state > XR_SESSION_STATE_EXITING)
+                {
+                    ErrorLog("%s: unknown state: %d", __FUNCTION__, event->state);
+                }
+                else
+                {
+                    Log("session transitioned to %s", xr::ToCString(event->state));
+                    m_SessionState = event->state;
+                    m_LastSessionTransition = m_LastFrameTime;
+                    if (XR_SESSION_STATE_FOCUSED == m_SessionState)
+                    {
+                        if (m_VarjoPollWorkaround && m_PhysicalEarlyInit)
+                        {
+                            SyncActions("xrPollEvent");
+                        }
+                        m_VarjoPollWorkaround = false;
+                    }
+                    if (m_Overlay)
+                    {
+                        m_Overlay->m_SessionVisible =
+                            event->state == XR_SESSION_STATE_VISIBLE || event->state == XR_SESSION_STATE_FOCUSED;
+                    }
+                }
+            }
+        }
+        else if (XR_TYPE_EVENT_DATA_INTERACTION_PROFILE_CHANGED == eventData->type && m_PhysicalEnabled && !m_SuppressInteraction)
+        {
+            LogCurrentInteractionProfileAndSource("xrPollEvent");
+        }
 
+        TraceLoggingWriteStop(local, "OpenXrLayer::xrPollEvent", TLArg(xr::ToCString(result), "Result"));
         return result;
     }
 
@@ -1905,11 +1912,12 @@ namespace openxr_api_layer
         const XrResult result = OpenXrApi::xrLocateSpace(m_StageSpace, space, m_LastFrameTime, &location);
         if (XR_FAILED(result))
         {
-            ErrorLog("%s: unable to locate local reference space (%llu) in stage reference space (%llu): %s",
+            ErrorLog("%s: unable to locate local reference space (%llu) in stage reference space (%llu): %s, t = %lld",
                      __FUNCTION__,
                      space,
                      m_StageSpace,
-                     xr::ToCString(result));
+                     xr::ToCString(result),
+                     m_LastFrameTime);
             TraceLoggingWriteStop(local,
                                   "OpenXrLayer::LocateStaticRefSpace",
                                   TLArg(xr::ToCString(result), "LocateStageSpace"));
@@ -1917,9 +1925,10 @@ namespace openxr_api_layer
         }
         if (!Pose::IsPoseValid(location.locationFlags))
         {
-            ErrorLog("%s: pose of local space in stage space not valid. locationFlags: %llu",
+            ErrorLog("%s: pose of local space in stage space not valid. locationFlags: %llu, t = %lld",
                      __FUNCTION__,
-                     location.locationFlags);
+                     location.locationFlags,
+                     m_LastFrameTime);
             TraceLoggingWriteStop(local, "OpenXrLayer::LocateStaticRefSpace", TLArg(false, "PoseValid"));
             return std::optional<XrPosef>();
         }
@@ -2363,35 +2372,129 @@ namespace openxr_api_layer
         }
         else if (m_RecoveryWait >= 0 && time - m_RecoveryStart > m_RecoveryWait)
         {
-            ErrorLog("%s, tracker connection lost", __FUNCTION__);
+            ErrorLog("%s: tracker connection lost", __FUNCTION__);
             EventSink::Execute(Event::ConnectionLost);
             m_Activated = false;
             m_RecoveryStart = -1;
         }
     }
 
-    void OpenXrLayer::LogCurrentInteractionProfile()
+    void OpenXrLayer::LogCurrentInteractionProfileAndSource(const std::string& caller)
     {
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "OpenXrLayer::logCurrentInteractionProfile");
+        TraceLoggingWriteStart(local, "OpenXrLayer::logCurrentInteractionProfile", TLArg(caller.c_str(), "Caller"));
 
         XrInteractionProfileState profileState{XR_TYPE_INTERACTION_PROFILE_STATE, nullptr, XR_NULL_PATH};
         if (const XrResult interactionResult =
                 xrGetCurrentInteractionProfile(m_Session, m_XrSubActionPath, &profileState);
             XR_SUCCEEDED(interactionResult))
         {
-            Log("current interaction profile for %s: %s",
+            Log("%s: current interaction profile for %s: %s",
+                caller.c_str(),
                 m_SubActionPath.c_str(),
                 XR_NULL_PATH != profileState.interactionProfile ? getXrPath(profileState.interactionProfile).c_str()
                                                                 : "XR_NULL_PATH");
         }
         else
         {
-            ErrorLog("%s: unable get current interaction profile for %s: %s",
+            ErrorLog("%s (%s): unable get current interaction profile for %s: %s",
                      __FUNCTION__,
+                     caller.c_str(),
                      m_SubActionPath.c_str(),
                      xr::ToCString(interactionResult));
         }
+
+        XrBoundSourcesForActionEnumerateInfo getInfo = {XR_TYPE_BOUND_SOURCES_FOR_ACTION_ENUMERATE_INFO};
+        getInfo.action = m_PoseAction;
+        uint32_t pathCount = 0;
+        if (const XrResult sourceResult = xrEnumerateBoundSourcesForAction(m_Session, &getInfo, 0, &pathCount, nullptr);
+            XR_FAILED(sourceResult))
+        {
+            ErrorLog("%s (%s): unable get number of bound profiles for action %llu (%s): %s",
+                     __FUNCTION__,
+                     caller.c_str(),
+                     m_PoseAction,
+                     m_SubActionPath.c_str(),
+                     xr::ToCString(sourceResult));
+            TraceLoggingWriteStop(local, "OpenXrLayer::logCurrentInteractionProfile");
+            return;
+        }
+
+        std::vector<XrPath> paths(pathCount);
+        if (const XrResult sourceResult =
+                xrEnumerateBoundSourcesForAction(m_Session, &getInfo, uint32_t(paths.size()), &pathCount, paths.data());
+            XR_FAILED(sourceResult))
+        {
+            ErrorLog("%s (%s): unable get bound profiles for action %llu (%s): %s",
+                     __FUNCTION__,
+                     caller.c_str(),
+                     m_PoseAction,
+                     m_SubActionPath.c_str(),
+                     xr::ToCString(sourceResult));
+            TraceLoggingWriteStop(local, "OpenXrLayer::logCurrentInteractionProfile");
+            return;
+        }
+
+        std::string sourceName;
+        for (uint32_t i = 0; i < pathCount; ++i)
+        {
+            constexpr XrInputSourceLocalizedNameFlags all = XR_INPUT_SOURCE_LOCALIZED_NAME_USER_PATH_BIT |
+                                                            XR_INPUT_SOURCE_LOCALIZED_NAME_INTERACTION_PROFILE_BIT |
+                                                            XR_INPUT_SOURCE_LOCALIZED_NAME_COMPONENT_BIT;
+
+            XrInputSourceLocalizedNameGetInfo nameInfo = {XR_TYPE_INPUT_SOURCE_LOCALIZED_NAME_GET_INFO};
+            nameInfo.sourcePath = paths[i];
+            nameInfo.whichComponents = all;
+
+            uint32_t size = 0;
+            if (const XrResult nameResult = xrGetInputSourceLocalizedName(m_Session, &nameInfo, 0, &size, nullptr);
+                XR_FAILED(nameResult))
+            {
+                ErrorLog("%s (%s): unable get number of localized name for action %llu (%s) and source path (%s) : %s",
+                         __FUNCTION__,
+                         caller.c_str(),
+                         m_PoseAction,
+                         m_SubActionPath.c_str(),
+                         getXrPath(paths[i]).c_str(),
+                         xr::ToCString(nameResult));
+                TraceLoggingWriteStop(local, "OpenXrLayer::logCurrentInteractionProfile");
+                return;
+            };
+            if (size < 1)
+            {
+                continue;
+            }
+            std::vector<char> grabSource(size);
+            if (const XrResult nameResult = xrGetInputSourceLocalizedName(m_Session,
+                                                                          &nameInfo,
+                                                                          static_cast<uint32_t>(grabSource.size()),
+                                                                          &size,
+                                                                          grabSource.data());
+                XR_FAILED(nameResult))
+            {
+                ErrorLog("%s: unable get localized name for action %llu (%s) and source path (%s) : %s",
+                         __FUNCTION__,
+                         m_PoseAction,
+                         m_SubActionPath.c_str(),
+                         getXrPath(paths[i]).c_str(),
+                         xr::ToCString(nameResult));
+                TraceLoggingWriteStop(local, "OpenXrLayer::logCurrentInteractionProfile");
+                return;
+            }
+            if (!sourceName.empty())
+            {
+                sourceName += " and ";
+            }
+            sourceName += "'";
+            sourceName += std::string(grabSource.data(), size - 1);
+            sourceName += "'";
+        }
+
+        Log("%s: action with path %s is bound to %s",
+            caller.c_str(),
+            m_SubActionPath.c_str(),
+            ((!sourceName.empty()) ? sourceName.c_str() : "nothing"));
+
         TraceLoggingWriteStop(local, "OpenXrLayer::logCurrentInteractionProfile");
     }
 

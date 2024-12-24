@@ -794,6 +794,29 @@ namespace tracker
         m_Source = std::make_unique<PhysicalSource>(this);
     }
 
+    bool OpenXrTracker::LazyInit(XrTime time)
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "OpenXrTracker::LazyInit", TLArg(time, "Time"));
+        if (m_SkipLazyInit)
+        {
+            TraceLoggingWriteStop(local, "OpenXrTracker::LazyInit", TLArg(true, "Skipped"));
+            return true;
+        }
+        if (auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance()))
+        {
+            layer->LogCurrentInteractionProfileAndSource("LazyInit");
+            m_SkipLazyInit = true;
+
+            TraceLoggingWriteStop(local, "OpenXrTracker::LazyInit", TLArg(true, "Logged"));
+            return true;
+        }
+
+        TraceLoggingWriteStop(local, "OpenXrTracker::LazyInit", TLArg(false, "Success"));
+        ErrorLog("%s: cast of layer failed", __FUNCTION__);
+        return false;
+    }
+
     bool OpenXrTracker::ResetReferencePose(XrSession session, XrTime time)
     {
         TraceLocalActivity(local);
@@ -809,6 +832,10 @@ namespace tracker
         if (!forward.has_value() ||
             !(m_LoadPoseFromFile ? LoadReferencePose() : ControllerBase::ResetReferencePose(session, time)))
         {
+            if (auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance()))
+            {
+                layer->LogCurrentInteractionProfileAndSource("ResetReferencePose");
+            }
             EventSink::Execute(Event::CalibrationLost);
             TraceLoggingWriteStop(local, "OpenXrTracker::ResetReferencePose", TLArg(false, "Success"));
             return false;

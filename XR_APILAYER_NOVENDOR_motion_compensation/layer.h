@@ -109,6 +109,7 @@ namespace openxr_api_layer
         bool GetRefToStage(XrSpace space, XrPosef* refToStage, XrPosef* stageToRef);
         std::shared_ptr<graphics::ICompositionFrameworkFactory> GetCompositionFactory();
         bool SyncActions(const std::string& caller);
+        void LogCurrentInteractionProfileAndSource(const std::string& caller);
 
         XrActionSet m_ActionSet{XR_NULL_HANDLE};
         XrAction m_PoseAction{XR_NULL_HANDLE};
@@ -142,7 +143,6 @@ namespace openxr_api_layer
                       XrPosef& deltaStage,
                       XrPosef& deltaRef);
         void RecoveryTimeOut(XrTime time);
-        void LogCurrentInteractionProfile();
         bool ToggleModifierActive();
         void ToggleRecorderActive();
 

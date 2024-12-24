@@ -38,6 +38,8 @@ requested_functions = [
     "xrApplyHapticFeedback",
     "xrEnumerateSwapchainImages",
 	"xrConvertWin32PerformanceCounterToTimeKHR",
+    "xrEnumerateBoundSourcesForAction",
+    "xrGetInputSourceLocalizedName",
     "xrDestroyAction",
     "xrDestroyActionSet",
     "xrDestroySpace"

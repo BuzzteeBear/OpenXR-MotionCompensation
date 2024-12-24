@@ -5,9 +5,10 @@ Version 0.3.9.0
 	General:
 	- enabled locking and unlocking reference pose/cor position in VR playspace via keyboard shortcut
 	- continue using last known reference tracker pose until connection timeout
+	- signed binaries to avoid issues with anti-cheat software
 	
 	Vive Tracker
-	- added dedicated config key for role (requires edit of config file on update)
+	- added dedicated config key for role (potentially requires edit of config file on update!)
 
 	Virtual Tracker:
 	- enabled COR calibration outside of neutral rig position
@@ -19,7 +20,7 @@ Version 0.3.9.0
 	- display current tracker pose while mc is off
 	
 	Bugfixes:
-	- corrected translations in recordings to match local rig reference coordinate system
+	- corrected translation values in recordings to match local rig reference coordinate system
 
 Version 0.3.8.0
 	

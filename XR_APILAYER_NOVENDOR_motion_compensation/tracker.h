@@ -106,6 +106,7 @@ namespace tracker
     {
       public:
         OpenXrTracker();
+        bool LazyInit(XrTime time) override;
         bool ResetReferencePose(XrSession session, XrTime time) override;
         void SaveReferencePose() const override;
 

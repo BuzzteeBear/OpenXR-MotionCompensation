@@ -206,7 +206,7 @@ namespace input
         }
         if (m_Input.GetKeyState(Cfg::KeyLogProfile, isRepeat) && !isRepeat)
         {
-            m_Layer->LogCurrentInteractionProfile();
+            m_Layer->LogCurrentInteractionProfileAndSource("HandleKeyboardInput");
         }
         if (m_Input.GetKeyState(Cfg::KeyLogTracker, isRepeat) && !isRepeat)
         {
@@ -289,7 +289,7 @@ namespace input
         const bool oldState = m_Layer->m_Activated;
         if (m_Layer->m_Initialized && lazySuccess)
         {
-            // if tracker is not initialized, activate only after successful init
+            // if tracker is not calibrated, activate only after successful calibration
             m_Layer->m_Activated = m_Layer->m_Tracker->m_Calibrated
                                        ? !m_Layer->m_Activated
                                        : m_Layer->m_Tracker->ResetReferencePose(m_Layer->m_Session, time);
