@@ -172,18 +172,15 @@ namespace output
     class PositionMmf : public QueuedMmf<std::pair<XrVector3f, int32_t>>
     {
       public:
-        PositionMmf() : QueuedMmf("Local\\OXRMC_PositionOutputs") {};
+        PositionMmf() : QueuedMmf("Local\\OXRMC_PositionOutput") {};
         void Transmit(const XrVector3f& position, utility::DofValue dof);
+        void Reset();
 
       private: 
         bool WriteImpl(utility::Mmf& mmf) override;
 
         int64_t m_LastError{0};
-    };
-
-    // Singleton accessor.
-    PositionMmf* GetPositionMmf();   
-
+    };  
 
     class StatusMmf
     {
@@ -211,9 +208,6 @@ namespace output
 
     // Singleton accessor.
     StatusMmf* GetStatusMmf();
-
-
-
 
     constexpr uint32_t m_RecorderMax{36000}; // max 10 min @ 100 frames/s
 

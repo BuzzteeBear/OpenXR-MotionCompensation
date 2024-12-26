@@ -196,15 +196,24 @@ namespace output
         }
 
         // queue up event
-        std::unique_lock lock(m_QueueMutex);
-        m_EventQueue.push_back({position, dof + 1});
+        if (dof > 0)
+        {
+            std::unique_lock lock(m_QueueMutex);
+            m_EventQueue.push_back({position, dof});
+        }
 
         TraceLoggingWriteStop(local, "EventMmf::Execute");
     }
 
+    void PositionMmf::Reset()
+    {
+        std::unique_lock lock(m_QueueMutex);
+        m_EventQueue.clear();
+    }
+
     bool PositionMmf::WriteImpl(Mmf& mmf)
     {
-        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        std::this_thread::sleep_for(std::chrono::milliseconds(3));
 
         std::pair<XrVector3f, int32_t> data;
         if (!mmf.Read(&data, sizeof(data), 0))
@@ -233,22 +242,10 @@ namespace output
         return true;
     }
 
-    std::unique_ptr<PositionMmf> g_PositionMmf = nullptr;
-
-    PositionMmf* GetPositionMmf()
-    {
-        if (!g_PositionMmf)
-        {
-            g_PositionMmf = std::make_unique<PositionMmf>();
-        }
-        return g_PositionMmf.get();
-    }
-
     StatusMmf::StatusMmf()
     {
         m_Mmf.SetWriteable(sizeof(int));
         m_Mmf.SetName("Local\\OXRMC_Status");
-
     }
 
     void StatusMmf::Execute(Event event)
@@ -378,6 +375,7 @@ namespace output
         }
         return g_StatusMmf.get();
     }
+
     bool NoRecorder::Toggle(bool isCalibrated)
     {
         ErrorLog("%s: unable to toggle recording", __FUNCTION__);

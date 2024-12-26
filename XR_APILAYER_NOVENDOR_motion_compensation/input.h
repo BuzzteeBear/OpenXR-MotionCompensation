@@ -3,6 +3,7 @@
 #pragma once
 
 #include "config.h"
+#include "utility.h"
 
 namespace openxr_api_layer
 {
@@ -11,6 +12,25 @@ namespace openxr_api_layer
 
 namespace input
 {
+    class CorEstimatorCmd
+    {
+      public:
+        bool Init();
+        bool Read();
+        void ConfirmStart();
+        void ConfirmStop();
+        void ConfirmReset();
+        void Failure();
+
+        bool m_Controller{false}, m_Start{false}, m_Stop{false}, m_Error{false}, m_Reset{false};
+        utility::DofValue m_CurrentDof{};
+
+      private:
+        void WriteFlag(const int flag, bool active);
+
+        utility::Mmf m_Mmf{};
+    };
+
     class KeyboardInput
     {
       public:

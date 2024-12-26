@@ -3,7 +3,22 @@
 #pragma once
 
 #include <log.h>
-#include "input.h"
+
+namespace openxr_api_layer
+{
+    class OpenXrLayer;
+}
+
+namespace input
+{
+    class InputHandler;
+    class CorEstimatorCmd;
+}
+
+namespace output
+{
+    class PositionMmf;
+}
 
 namespace utility
 {
@@ -26,6 +41,7 @@ namespace utility
     };
 
     XrVector3f ToEulerAngles(XrQuaternionf q);
+
 
     class AutoActivator
     {
@@ -271,6 +287,20 @@ namespace utility
         bool m_WriteAccess{false};
         bool m_ConnectionLost{false};
         std::mutex m_MmfLock;
+    };
+
+    class CorEstimatorOutput
+    {
+      public:
+        explicit CorEstimatorOutput(openxr_api_layer::OpenXrLayer* layer);
+        bool Init();
+        void Execute(XrTime time);
+
+      private:
+        bool m_Enabled{false}, m_Active{false}, m_UseTracker{false};
+        std::shared_ptr<input::CorEstimatorCmd> m_InMmf{};
+        std::shared_ptr<output::PositionMmf> m_OutMmf{};
+        openxr_api_layer::OpenXrLayer* m_Layer = nullptr;
     };
 
     static inline bool endsWith(const std::string& str, const std::string& substr)

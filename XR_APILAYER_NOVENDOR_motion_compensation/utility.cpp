@@ -8,6 +8,7 @@
 #include "layer.h"
 #include "config.h"
 #include "output.h"
+#include "input.h"
 
 using namespace openxr_api_layer;
 using namespace log;
@@ -245,6 +246,73 @@ namespace utility
         m_FileHandle = nullptr;
 
         TraceLoggingWriteStop(local, "Mmf::Close");
+    }
+
+    CorEstimatorOutput::CorEstimatorOutput(openxr_api_layer::OpenXrLayer* layer)
+        : m_InMmf(std::make_shared<input::CorEstimatorCmd>()), m_OutMmf(std::make_shared<output::PositionMmf>()),
+          m_Layer(layer)
+    {}
+
+    bool CorEstimatorOutput::Init()
+    {
+        bool enabled;
+        if (GetConfig()->IsVirtualTracker() && GetConfig()->GetBool(Cfg::CorEstimatorEnabled, enabled) && enabled)
+        {
+            m_Enabled = m_InMmf->Init();
+            return m_Enabled;
+        }
+        Log("CorEstimator feature deactivated");
+        return true;
+    }
+
+    void CorEstimatorOutput::Execute(XrTime time)
+    {
+        if (!m_Enabled)
+        {
+            return;
+        }
+
+        m_InMmf->Read();
+        if (m_InMmf->m_Reset)
+        {
+            Log("cor estimation %s", m_Active ? "canceled" : "reset");
+            m_Active = false;
+            m_OutMmf->Reset();
+            m_InMmf->ConfirmReset();
+            return;
+        }
+        if (!m_Active)
+        {
+            if (!m_InMmf->m_Start)
+            {
+                return;
+            }
+            if (!GetConfig()->IsVirtualTracker())
+            {
+                m_InMmf->Failure();
+                ErrorLog("%s: cannot use cor estimation feature on non-virtual tracker", __FUNCTION__);
+                output::EventSink::Execute(output::Event::Error);
+                return;
+            }
+            m_InMmf->ConfirmStart();
+            m_Active = true;
+            Log("cor estimation started");
+        }
+        if (m_InMmf->m_Stop)
+        {
+            m_InMmf->ConfirmStop();
+            m_Active = false;
+            Log("cor estimation stopped");
+            return;
+        }
+
+        auto pos = m_Layer->GetCurrentPosition(time, m_InMmf->m_Controller);
+        if (!pos.has_value())
+        {
+            m_InMmf->Failure();
+            return;
+        }
+        m_OutMmf->Transmit(pos.value(), m_InMmf->m_CurrentDof);
     }
 
     std::string LastErrorMsg()

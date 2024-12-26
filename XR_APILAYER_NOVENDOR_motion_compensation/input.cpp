@@ -14,6 +14,85 @@ using namespace output;
 
 namespace input
 {
+    bool CorEstimatorCmd::Init()
+    {
+        m_Mmf.SetWriteable(sizeof(int));
+        m_Mmf.SetName("Local\\OXRMC_CorEstimatorCmd");
+        int zero = 0;
+        return m_Mmf.Write(&zero, sizeof(int));
+    }
+
+    bool CorEstimatorCmd::Read()
+    {
+        int cmd;
+        if (!m_Mmf.Read(&cmd,sizeof(int),0))
+        {
+            if (!m_Error)
+            {
+                ErrorLog("%s: unable to read from mmf: Local\\OXRMC_CorEstimatorCmd", __FUNCTION__);
+                m_Error = true;
+            }
+            return false;
+        }
+        m_Error = false;
+        m_CurrentDof = static_cast<utility::DofValue>(cmd & 7);
+        m_Controller = cmd & static_cast<int>(output::CorEstimatorFlags::controller);
+        m_Start = cmd & static_cast<int>(output::CorEstimatorFlags::start);
+        m_Stop = cmd & static_cast<int>(output::CorEstimatorFlags::stop);
+        m_Reset = cmd & static_cast<int>(output::CorEstimatorFlags::reset);
+        return true;
+    }
+
+    void CorEstimatorCmd::ConfirmStart()
+    {
+        WriteFlag(static_cast<int>(output::CorEstimatorFlags::confirm), true);
+        WriteFlag(static_cast<int>(output::CorEstimatorFlags::start), false);
+    }
+
+    void CorEstimatorCmd::ConfirmStop()
+    {
+        WriteFlag(static_cast<int>(output::CorEstimatorFlags::stop), false);
+    }
+
+    void CorEstimatorCmd::ConfirmReset()
+    {
+        WriteFlag(static_cast<int>(output::CorEstimatorFlags::reset), false);
+    }
+
+    void CorEstimatorCmd::Failure()
+    {
+        WriteFlag(static_cast<int>(output::CorEstimatorFlags::failure), true);
+        WriteFlag(static_cast<int>(output::CorEstimatorFlags::start), false);
+    }
+
+
+    void CorEstimatorCmd::WriteFlag(const int flag, bool active)
+    {
+        int cmd;
+        if (!m_Mmf.Read(&cmd, sizeof(int), 0))
+        {
+            if (!m_Error)
+            {
+                ErrorLog("%s (%d / %d): unable to read from mmf: Local\\OXRMC_CorEstimator", __FUNCTION__, flag, active);
+            }
+            m_Error = true;
+            return;
+        }
+        cmd = active ? cmd | flag : cmd & ~flag;
+        if (!m_Mmf.Write(&cmd, sizeof(int)))
+        {
+            if (!m_Error)
+            {
+                ErrorLog("%s (%d / %d): unable to write to mmf: Local\\OXRMC_CorEstimator", __FUNCTION__, flag, active);
+            }
+            m_Error = true;
+            return; 
+        }
+        m_Error = false;
+    }
+
+    
+
     bool KeyboardInput::Init()
     {
         TraceLocalActivity(local);

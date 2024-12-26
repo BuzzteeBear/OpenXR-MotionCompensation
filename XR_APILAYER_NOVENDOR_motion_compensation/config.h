@@ -32,6 +32,7 @@ enum class Cfg
     CorC,
     CorD,
     LoadRefPoseFromFile,
+    CorEstimatorEnabled,
     MarkerSize,
     CrosshairDistance,
     CrosshairScale,
@@ -165,6 +166,7 @@ class ConfigManager
         {Cfg::CorC, {"tracker", "cor_c"}},
         {Cfg::CorD, {"tracker", "cor_d"}},
         {Cfg::LoadRefPoseFromFile, {"tracker", "load_ref_pose_from_file"}},
+        {Cfg::CorEstimatorEnabled, {"tracker", "cor_estimator_enabled"}},
 
         {Cfg::MarkerSize, {"overlay", "marker_size"}},
         {Cfg::CrosshairDistance, {"overlay", "crosshair_distance"}},

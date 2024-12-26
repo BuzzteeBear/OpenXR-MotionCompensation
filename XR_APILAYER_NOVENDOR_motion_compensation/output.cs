@@ -78,4 +78,14 @@ namespace output
 		connection = 0x20,
 		modified = 0x40
 	};
+
+	enum CorEstimatorFlags
+	{
+		controller = 0x8,
+		start = 0x10,
+		confirm = 0x20,
+		stop = 0x40,
+		failure = 0x80,
+		reset = 0x100
+	};
 }
