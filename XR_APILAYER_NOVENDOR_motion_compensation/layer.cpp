@@ -1440,7 +1440,7 @@ namespace openxr_api_layer
         TraceLoggingWriteStop(local,
                               "OpenXrLayer::xrWaitFrame",
                               TLArg(frameState->predictedDisplayTime, "PredictedTime"),
-                              TLArg(frameState->predictedDisplayPeriod, "PredictedPPeriod"),
+                              TLArg(frameState->predictedDisplayPeriod, "PredictedPeriod"),
                               TLArg(frameState->shouldRender, "ShouldRender"),
                               TLArg(xr::ToCString(result), "Result"));
         return result;
@@ -1513,7 +1513,7 @@ namespace openxr_api_layer
             {
                 LocateRefSpace(space);
             }
-        }
+        } 
 
         XrFrameEndInfo chainFrameEndInfo = *frameEndInfo;
 
@@ -2164,7 +2164,7 @@ namespace openxr_api_layer
         return true;
     }
 
-    std::optional<XrVector3f> OpenXrLayer::GetCurrentPosition(XrTime time, bool tracker)
+    std::optional<XrPosef> OpenXrLayer::GetCurrentPosition(XrTime time, bool tracker)
     {
         if (tracker)
         {
@@ -2175,7 +2175,7 @@ namespace openxr_api_layer
                 ErrorLog("%s: unable to locate physical tracker", __FUNCTION__);
                 return {};
             }
-            return pose.position;
+            return pose;
         }
 
         // locate hmd position
@@ -2199,7 +2199,17 @@ namespace openxr_api_layer
                      location.locationFlags);
             return {};
         }
-        return location.pose.position;
+        return location.pose;
+    }
+
+    std::optional<XrPosef> OpenXrLayer::GetCalibratedHmdPose() const
+    {
+        return m_CalibratedHmdPose;
+    }
+
+    void OpenXrLayer::ResetCalibratedHmdPose()
+    {
+        m_CalibratedHmdPose = {};
     }
 
     bool OpenXrLayer::AttachActionSet(const std::string& caller)
@@ -2359,6 +2369,17 @@ namespace openxr_api_layer
 
         return success;
     }
+
+    void OpenXrLayer::SetCalibratedHmdPose(XrTime time)
+    {
+        if (auto pose = GetCurrentPosition(time, false); pose.has_value())
+        {
+            m_CalibratedHmdPose = pose.value();
+            return;
+        }
+        m_CalibratedHmdPose = {};
+    }
+
 
     bool OpenXrLayer::GetDelta(XrTime time,
                                bool isHmd,

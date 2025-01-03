@@ -42,7 +42,6 @@ namespace utility
 
     XrVector3f ToEulerAngles(XrQuaternionf q);
 
-
     class AutoActivator
     {
       public:
@@ -295,6 +294,7 @@ namespace utility
         explicit CorEstimatorOutput(openxr_api_layer::OpenXrLayer* layer);
         bool Init();
         void Execute(XrTime time);
+        bool TransmitHmd() const;
 
       private:
         bool m_Enabled{false}, m_Active{false}, m_UseTracker{false};

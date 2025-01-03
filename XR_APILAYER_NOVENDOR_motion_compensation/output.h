@@ -169,12 +169,13 @@ namespace output
     // Singleton accessor.
     EventMmf* GetEventMmf();    
 
-    class PositionMmf : public QueuedMmf<std::pair<XrVector3f, int32_t>>
+    class PositionMmf : public QueuedMmf<std::pair<XrPosef, int32_t>>
     {
       public:
         PositionMmf() : QueuedMmf("Local\\OXRMC_PositionOutput") {};
-        void Transmit(const XrVector3f& position, utility::DofValue dof);
+        void Transmit(const XrPosef& position, int sampleType);
         void Reset();
+        bool TransmitHmd() const;
 
       private: 
         bool WriteImpl(utility::Mmf& mmf) override;
@@ -194,14 +195,14 @@ namespace output
         static int StatusToInt(const Status& status);
 
         std::set<Event> m_RelevantEvents{
-            Event::Error,     Event::Critical,       Event::Initialized,  Event::Load,
-            Event::Save,      Event::Activated,      Event::Deactivated,  Event::Calibrated,
-            Event::Restored,  Event::ConnectionLost, Event::ModifierOff,  Event::CalibrationLost,
-            Event::Plus,      Event::Minus,          Event::Max,          Event::Min,
-            Event::Up,        Event::Down,           Event::Forward,      Event::Back,
-            Event::Left,      Event::Right,          Event::RotLeft,      Event::RotRight,
-            Event::EyeCached, Event::EyeCalculated,  Event::ModifierOn,   Event::ModifierOff,
-            Event::VerboseOn, Event::VerboseOff,     Event::StabilizerOn, Event::StabilizerOff};
+            Event::Error,      Event::Critical,       Event::Initialized,  Event::Load,
+            Event::Save,       Event::Activated,      Event::Deactivated,  Event::Calibrated,
+            Event::Restored,   Event::ConnectionLost, Event::ModifierOff,  Event::CalibrationLost,
+            Event::Plus,       Event::Minus,          Event::Max,          Event::Min,
+            Event::Up,         Event::Down,           Event::Forward,      Event::Back,
+            Event::Left,       Event::Right,          Event::RotLeft,      Event::RotRight,
+            Event::EyeCached,  Event::EyeCalculated,  Event::ModifierOn,   Event::ModifierOff,
+            Event::VerboseOn,  Event::VerboseOff,     Event::StabilizerOn, Event::StabilizerOff};
         utility::Mmf m_Mmf{};
         Status m_Status{};
     };

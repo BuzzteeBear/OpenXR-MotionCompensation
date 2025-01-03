@@ -109,7 +109,9 @@ namespace openxr_api_layer
         bool GetRefToStage(XrSpace space, XrPosef* refToStage, XrPosef* stageToRef);
         std::shared_ptr<graphics::ICompositionFrameworkFactory> GetCompositionFactory();
         bool SyncActions(const std::string& caller);
-        std::optional<XrVector3f> GetCurrentPosition(XrTime time, bool tracker);
+        std::optional<XrPosef> GetCurrentPosition(XrTime time, bool tracker);
+        std::optional<XrPosef> GetCalibratedHmdPose() const;
+        void ResetCalibratedHmdPose();
 
         XrActionSet m_ActionSet{XR_NULL_HANDLE};
         XrAction m_PoseAction{XR_NULL_HANDLE};
@@ -136,6 +138,7 @@ namespace openxr_api_layer
         bool AttachActionSet(const std::string& caller);
         void SuggestInteractionProfiles(const std::string& caller);
         bool LazyInit(XrTime time);
+        void SetCalibratedHmdPose(XrTime time);
         bool GetDelta(XrTime time,
                       bool isHmd,
                       const XrPosef& pose,
@@ -180,6 +183,7 @@ namespace openxr_api_layer
         std::set<XrSpace> m_StaticRefSpaces{};
         std::map<XrSpace, std::pair<XrPosef, XrPosef>> m_RefToStageMap{};
         std::unique_ptr<XrPosef> m_EyeToHmd{};
+        std::optional<XrPosef> m_CalibratedHmdPose{};
         std::string m_Application;
         std::string m_SubActionPath;
         XrPath m_XrSubActionPath{XR_NULL_PATH};

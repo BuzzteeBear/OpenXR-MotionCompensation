@@ -164,7 +164,7 @@ namespace output
         return g_EventMmf.get();
     }
 
-    void PositionMmf::Transmit(const XrVector3f& position, utility::DofValue dof)
+    void PositionMmf::Transmit(const XrPosef& position, int sampleType)
     {
         using namespace std::chrono;
 
@@ -173,7 +173,7 @@ namespace output
         TraceLoggingWriteStart(local,
                                "EventMmf::Execute",
                                TLArg(xr::ToString(position).c_str(), "Dof"),
-                               TLArg(static_cast<int>(dof), "Dof"));
+                               TLArg(static_cast<int>(sampleType), "SampleType"));
 
         auto now = time_point_cast<milliseconds>(system_clock::now()).time_since_epoch().count();
 
@@ -196,10 +196,10 @@ namespace output
         }
 
         // queue up event
-        if (dof > 0)
+        if (sampleType > 0)
         {
             std::unique_lock lock(m_QueueMutex);
-            m_EventQueue.push_back({position, dof});
+            m_EventQueue.push_back({position, sampleType});
         }
 
         TraceLoggingWriteStop(local, "EventMmf::Execute");

@@ -412,6 +412,7 @@ namespace input
         if (m_Layer->m_Activated || m_Layer->LazyInit(time))
         {
             success = m_Layer->m_Tracker->ResetReferencePose(m_Layer->m_Session, time);
+            m_Layer->SetCalibratedHmdPose(time);
         }
         if (!success)
         {

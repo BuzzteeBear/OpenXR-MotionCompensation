@@ -42,10 +42,10 @@ namespace tracker
             m_Recorder->AddFrameTime(time);
             m_Recorder->AddPose(m_ReferencePose, Reference);
             m_Recorder->AddPose(curPose, Unfiltered);
-            
+
             ApplyFilters(curPose);
             m_Recorder->AddPose(curPose, Filtered);
-            
+
             ApplyModifier(curPose);
             m_Recorder->AddPose(curPose, Modified);
 
@@ -124,7 +124,6 @@ namespace tracker
             TraceLoggingWriteStop(local, "ControllerBase::GetControllerPose", TLArg(false, "Success"));
             return false;
         }
-        
 
         if (auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance()))
         {
@@ -166,7 +165,11 @@ namespace tracker
                                     "ControllerBase::GetControllerPose",
                                     TLXArg(layer->m_ActionSet, "xrLocateSpace"));
             XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
-            if (const XrResult result = GetInstance()->OpenXrApi::xrLocateSpace(layer->m_TrackerSpace, layer->m_StageSpace, time, &location);XR_FAILED(result))
+            if (const XrResult result = GetInstance()->OpenXrApi::xrLocateSpace(layer->m_TrackerSpace,
+                                                                                layer->m_StageSpace,
+                                                                                time,
+                                                                                &location);
+                XR_FAILED(result))
             {
                 ErrorLog("%s: xrLocateSpace failed: %s", __FUNCTION__, xr::ToCString(result));
                 if (XR_ERROR_TIME_INVALID == result && m_LastPoseTime != 0)
@@ -224,8 +227,7 @@ namespace tracker
                                TLArg(xr::ToString(quaternion).c_str(), "Quaternion"));
         XrVector3f forward;
         StoreXrVector3(&forward,
-                       DirectX::XMVector3Rotate(LoadXrVector3(XrVector3f{0, 0, 1}),
-                                                LoadXrQuaternion(quaternion)));
+                       DirectX::XMVector3Rotate(LoadXrVector3(XrVector3f{0, 0, 1}), LoadXrQuaternion(quaternion)));
         forward.y = 0;
         forward = Normalize(forward);
         TraceLoggingWriteStop(local,
@@ -243,10 +245,9 @@ namespace tracker
                                TLArg(yawAdjustment, "YawAdjustment"));
 
         XrQuaternionf rotation{};
-        StoreXrQuaternion(
-            &rotation,
-            DirectX::XMQuaternionNormalize(
-                DirectX::XMQuaternionRotationRollPitchYaw(0, GetYawAngle(forward) + yawAdjustment, 0)));
+        StoreXrQuaternion(&rotation,
+                          DirectX::XMQuaternionNormalize(
+                              DirectX::XMQuaternionRotationRollPitchYaw(0, GetYawAngle(forward) + yawAdjustment, 0)));
 
         TraceLoggingWriteStop(local,
                               "ControllerBase::GetLeveledRotation",
@@ -616,6 +617,14 @@ namespace tracker
         {
             m_Sampler->StopSampling();
         }
+        auto* layer = reinterpret_cast<OpenXrLayer*>(GetInstance());
+        if (!layer)
+        {
+        
+            ErrorLog("%s: cast of layer failed", __FUNCTION__);
+            return;
+        }
+        layer->ResetCalibratedHmdPose();
     }
 
     void TrackerBase::SaveReferencePose() const
