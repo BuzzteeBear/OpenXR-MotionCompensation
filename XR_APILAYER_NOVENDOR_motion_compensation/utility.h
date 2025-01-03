@@ -40,6 +40,9 @@ namespace utility
         pitch
     };
 
+    XrVector3f GetForwardVector(const XrQuaternionf& quaternion);
+    XrQuaternionf GetLeveledRotation(const XrVector3f& forward, float yawAdjustment);
+    float GetYawAngle(const XrVector3f& forward);
     XrVector3f ToEulerAngles(XrQuaternionf q);
 
 
@@ -295,6 +298,7 @@ namespace utility
         explicit CorEstimatorOutput(openxr_api_layer::OpenXrLayer* layer);
         bool Init();
         void Execute(XrTime time);
+        bool TransmitHmd() const;
 
       private:
         bool m_Enabled{false}, m_Active{false}, m_UseTracker{false};

@@ -68,7 +68,7 @@ namespace output
 		public bool modified;
 	};
 
-	enum StatusFlags
+	public enum StatusFlags
 	{
 		initialized = 0x1,
 		calibrated = 0x2,
@@ -79,7 +79,19 @@ namespace output
 		modified = 0x40
 	};
 
-	enum CorEstimatorFlags
+	public enum SampleType
+	{
+		None = 0,
+		Sway,
+		Surge,
+		Heave,
+		Yaw,
+		Roll,
+		Pitch,
+		Hmd
+	};
+
+	public enum CorEstimatorFlags
 	{
 		controller = 0x8,
 		start = 0x10,

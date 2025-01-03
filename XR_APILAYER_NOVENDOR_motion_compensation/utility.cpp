@@ -12,16 +12,65 @@
 
 using namespace openxr_api_layer;
 using namespace log;
+using namespace output;
 using namespace xr::math;
 using namespace Pose;
 using namespace DirectX;
 
 namespace utility
 {
+    XrVector3f GetForwardVector(const XrQuaternionf& quaternion)
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local,
+                               "GetForwardVector",
+                               TLArg(xr::ToString(quaternion).c_str(), "Quaternion"));
+        XrVector3f forward;
+        StoreXrVector3(&forward,
+                       DirectX::XMVector3Rotate(LoadXrVector3(XrVector3f{0, 0, 1}), LoadXrQuaternion(quaternion)));
+        forward.y = 0;
+        forward = Normalize(forward);
+        TraceLoggingWriteStop(local,
+                              "GetForwardVector",
+                              TLArg(xr::ToString(forward).c_str(), "Forward"));
+        return forward;
+    }
+
+    XrQuaternionf GetLeveledRotation(const XrVector3f& forward, float yawAdjustment)
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local,
+                               "GetLeveledRotation",
+                               TLArg(xr::ToString(forward).c_str(), "Forward"),
+                               TLArg(yawAdjustment, "YawAdjustment"));
+
+        XrQuaternionf rotation{};
+        StoreXrQuaternion(&rotation,
+                          DirectX::XMQuaternionNormalize(
+                              DirectX::XMQuaternionRotationRollPitchYaw(0, GetYawAngle(forward) + yawAdjustment, 0)));
+
+        TraceLoggingWriteStop(local,
+                              "GetLeveledRotation",
+                              TLArg(xr::ToString(rotation).c_str(), "Rotation"));
+        return rotation;
+    }
+
+    float GetYawAngle(const XrVector3f& forward)
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "GetYawAngle", TLArg(xr::ToString(forward).c_str(), "Forward"));
+
+        const float angle = atan2f(forward.x, forward.z);
+
+        TraceLoggingWriteStop(local, "GetYawAngle", TLArg(angle, "Angle"));
+
+        return angle;
+    }
+
     XrVector3f ToEulerAngles(XrQuaternionf q)
     {
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "ModifierBase::ToEulerAngles", TLArg(xr::ToString(q).c_str(), "Quaternion"));
+        TraceLoggingWriteStart(local, "ToEulerAngles", TLArg(xr::ToString(q).c_str(), "Quaternion"));
 
         XrVector3f angles;
 
@@ -40,7 +89,7 @@ namespace utility
         const double cosRCosP = 1 - 2.0 * (q.z * q.z + q.x * q.x);
         angles.z = static_cast<float>(std::atan2(sinRCosP, cosRCosP));
 
-        TraceLoggingWriteStop(local, "ModifierBase::ToEulerAngles", TLArg(xr::ToString(angles).c_str(), "Angles"));
+        TraceLoggingWriteStop(local, "ToEulerAngles", TLArg(xr::ToString(angles).c_str(), "Angles"));
 
         return angles;
     }
@@ -81,7 +130,7 @@ namespace utility
 
             if (m_Countdown && currentlyLeft < m_SecondsLeft)
             {
-                output::AudioOut::CountDown(currentlyLeft);
+                AudioOut::CountDown(currentlyLeft);
             }
             m_SecondsLeft = currentlyLeft;
 
@@ -249,7 +298,7 @@ namespace utility
     }
 
     CorEstimatorOutput::CorEstimatorOutput(openxr_api_layer::OpenXrLayer* layer)
-        : m_InMmf(std::make_shared<input::CorEstimatorCmd>()), m_OutMmf(std::make_shared<output::PositionMmf>()),
+        : m_InMmf(std::make_shared<input::CorEstimatorCmd>()), m_OutMmf(std::make_shared<PositionMmf>()),
           m_Layer(layer)
     {}
 
@@ -291,10 +340,16 @@ namespace utility
             {
                 m_InMmf->Failure();
                 ErrorLog("%s: cannot use cor estimation feature on non-virtual tracker", __FUNCTION__);
-                output::EventSink::Execute(output::Event::Error);
+                EventSink::Execute(Event::Error);
                 return;
             }
+            if (!TransmitHmd())
+            {
+                return;
+            }
+
             m_InMmf->ConfirmStart();
+            
             m_Active = true;
             Log("cor estimation started");
         }
@@ -312,7 +367,23 @@ namespace utility
             m_InMmf->Failure();
             return;
         }
-        m_OutMmf->Transmit(pos.value(), m_InMmf->m_CurrentDof);
+        m_OutMmf->Transmit(pos.value().position, m_InMmf->m_CurrentDof);
+    }
+
+    bool CorEstimatorOutput::TransmitHmd() const
+    {
+        auto calibratedHmd = m_Layer->GetCalibratedHmdPose();
+        if (!calibratedHmd.has_value())
+        {
+            m_InMmf->Failure();
+            ErrorLog("%s: unable to obtain calibrated hmd pose", __FUNCTION__);
+            EventSink::Execute(Event::Error);
+            return false;
+        }
+
+        m_OutMmf->Transmit(calibratedHmd.value().first.position, static_cast<int>(SampleType::Hmd));
+        m_OutMmf->Transmit(XrVector3f{calibratedHmd.value().second, 0 , 0}, static_cast<int>(SampleType::Hmd));
+        return true;
     }
 
     std::string LastErrorMsg()

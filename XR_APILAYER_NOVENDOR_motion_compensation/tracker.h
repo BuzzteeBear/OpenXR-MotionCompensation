@@ -27,9 +27,6 @@ namespace tracker
       protected:
         virtual void SetReferencePose(const XrPosef& pose, bool silent);
         virtual bool GetPose(XrPosef& trackerPose, XrSession session, XrTime time) = 0;
-        static XrVector3f GetForwardVector(const XrQuaternionf& quaternion);
-        static XrQuaternionf GetLeveledRotation(const XrVector3f& forward, float yawAdjustment);
-        static float GetYawAngle(const XrVector3f& forward);
 
         XrPosef m_ReferencePose{xr::math::Pose::Identity()};
         XrPosef m_LastPose{xr::math::Pose::Identity()};

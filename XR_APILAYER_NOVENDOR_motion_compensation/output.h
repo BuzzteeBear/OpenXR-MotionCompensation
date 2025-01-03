@@ -173,8 +173,9 @@ namespace output
     {
       public:
         PositionMmf() : QueuedMmf("Local\\OXRMC_PositionOutput") {};
-        void Transmit(const XrVector3f& position, utility::DofValue dof);
+        void Transmit(const XrVector3f& position, int sampleType);
         void Reset();
+        bool TransmitHmd();
 
       private: 
         bool WriteImpl(utility::Mmf& mmf) override;
