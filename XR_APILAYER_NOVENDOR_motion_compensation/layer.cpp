@@ -1158,7 +1158,7 @@ namespace openxr_api_layer
                                 "OpenXrLayer::xrLocateViews",
                                 TLArg(viewState->viewStateFlags, "ViewStateFlags"));
 
-        if (!m_Activated)
+        if (!m_Activated || 0 == viewCapacityInput)
         {
             TraceLoggingWriteStop(local,
                                   "OpenXrLayer::xrLocateViews",
@@ -1167,7 +1167,7 @@ namespace openxr_api_layer
             return result;
         }
 
-        if (*viewCountOutput <= 0)
+        if (viewCountOutput && *viewCountOutput <= 0)
         {
             ErrorLog("%s: no views to compensate. viewCountOutput: %u", __FUNCTION__, *viewCountOutput);
             TraceLoggingWriteStop(local,
