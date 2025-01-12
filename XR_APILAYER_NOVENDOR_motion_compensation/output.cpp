@@ -129,7 +129,7 @@ namespace output
         }
 
         // queue up event
-        std::unique_lock lock(m_QueueMutex);
+        std::lock_guard lock(m_QueueMutex);
         m_EventQueue.push_back({event, now});
 
         TraceLoggingWriteStop(local, "EventMmf::Execute", TLArg(static_cast<int>(event), "Event"));
@@ -166,7 +166,7 @@ namespace output
                 continue;
             }
 
-            std::unique_lock lock(m_QueueMutex);
+            std::lock_guard lock(m_QueueMutex);
             if (m_EventQueue.empty())
             {
                 continue;
@@ -424,7 +424,7 @@ namespace output
                                TLArg(static_cast<uint32_t>(type), "Type"),
                                TLArg(xr::ToString(pose).c_str(), "Pose"));
 
-        std::unique_lock lock{m_RecorderMutex};
+        std::lock_guard lock{m_RecorderMutex};
         if (Reference == type)
         {
             m_Ref = pose;
@@ -468,11 +468,6 @@ namespace output
         {
             Start();
         }
-        std::unique_ptr<std::unique_lock<std::mutex>> lock{};
-        if (newLine)
-        {
-            lock = std::make_unique<std::unique_lock<std::mutex>>(std::unique_lock{m_RecorderMutex});
-        }
         if (m_FileStream.is_open())
         {
             const XrVector3f& iP = m_Poses[Unfiltered].first;            
@@ -509,7 +504,7 @@ namespace output
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "PoseRecorder::Start");
 
-        std::unique_lock lock{m_RecorderMutex};
+        std::lock_guard lock{m_RecorderMutex};
         if (m_FileStream.is_open())
         {
             TraceLoggingWriteTagged(local, "PoseRecorder::Start", TLArg(true, "Previous_Stream_Closed"));
@@ -558,7 +553,7 @@ namespace output
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "PoseRecorder::Stop");
 
-        std::unique_ptr<std::unique_lock<std::mutex>> lock{};
+        std::unique_ptr<std::lock_guard<std::mutex>> lock{};
         m_Started.store(false);
         m_StartTime = 0;
         m_PoseRecorded.store(false);
@@ -583,7 +578,7 @@ namespace output
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "PoseAndDofRecorder::AddDofValues", TLArg(static_cast<uint32_t>(type), "Type"));
 
-        std::unique_lock lock{m_RecorderMutex};
+        std::lock_guard lock{m_RecorderMutex};
         switch (type)
         {
         case Sampled:
@@ -611,7 +606,7 @@ namespace output
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "PoseAndDofRecorder::Write", TLArg(newLine, "NewLine"));
 
-        std::unique_lock lock{m_RecorderMutex};
+        std::lock_guard lock{m_RecorderMutex};
         if (m_FileStream.is_open())
         {
             PoseRecorder::Write(sampled, false);

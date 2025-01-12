@@ -22,11 +22,11 @@ namespace tracker
         virtual bool GetPoseDelta(XrPosef& poseDelta, XrSession session, XrTime time);
         [[nodiscard]] virtual XrPosef GetLastPoseDelta() const;
         virtual bool ResetReferencePose(XrSession session, XrTime time);
+        bool GetControllerPose(XrPosef& trackerPose, XrSession session, XrTime time);
 
       protected:
         virtual void SetReferencePose(const XrPosef& pose, bool silent);
         virtual bool GetPose(XrPosef& trackerPose, XrSession session, XrTime time) = 0;
-        virtual bool GetControllerPose(XrPosef& trackerPose, XrSession session, XrTime time);
         static XrVector3f GetForwardVector(const XrQuaternionf& quaternion);
         static XrQuaternionf GetLeveledRotation(const XrVector3f& forward, float yawAdjustment);
         static float GetYawAngle(const XrVector3f& forward);

@@ -825,7 +825,7 @@ namespace tracker
                                TLXArg(session, "Session"),
                                TLArg(time, "Time"));
 
-        std::unique_lock lock(m_SampleMutex); 
+        std::lock_guard lock(m_SampleMutex); 
         m_Session = session;
         m_Calibrated = false;
         auto forward = GetForwardView(session, time);
@@ -873,7 +873,7 @@ namespace tracker
                                "OpenXrTracker::ReadSource",
                                TLArg(time, "Time"));
 
-        std::unique_lock lock(m_SampleMutex); 
+        std::lock_guard lock(m_SampleMutex); 
         LARGE_INTEGER now;
         QueryPerformanceCounter(&now);
         TraceLoggingWriteTagged(local, "OpenXrTracker::ReadSource", TLArg(now.QuadPart, "QuadPart"));

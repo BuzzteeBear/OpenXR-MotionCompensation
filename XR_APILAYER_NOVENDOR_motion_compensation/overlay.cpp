@@ -40,7 +40,7 @@ namespace openxr_api_layer::graphics
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "Overlay::DestroySession", TLXArg(session, "Session"));
 
-        std::unique_lock lock(m_DrawMutex);
+        std::lock_guard lock(m_DrawMutex);
         m_Textures.clear();
         m_Swapchains.clear();
         m_MeshRGB.reset();
@@ -203,7 +203,7 @@ namespace openxr_api_layer::graphics
                                             const XrSwapchainImageAcquireInfo* acquireInfo,
                                             uint32_t* index)
     {
-        std::unique_lock lock(m_DrawMutex);
+        std::lock_guard lock(m_DrawMutex);
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "Overlay::AcquireSwapchainImage", TLXArg(swapchain, "Swapchain"));
         const auto swapchainIt = m_Swapchains.find(swapchain);
@@ -254,7 +254,7 @@ namespace openxr_api_layer::graphics
 
     XrResult Overlay::ReleaseSwapchainImage(XrSwapchain swapchain, const XrSwapchainImageReleaseInfo* releaseInfo)
     {
-        std::unique_lock lock(m_DrawMutex);
+        std::lock_guard lock(m_DrawMutex);
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "Overlay::ReleaseSwapchainImage", TLXArg(swapchain, "Swapchain"));
 
@@ -275,7 +275,7 @@ namespace openxr_api_layer::graphics
 
     void Overlay::ReleaseAllSwapChainImages()
     {
-        std::unique_lock lock(m_DrawMutex);
+        std::lock_guard lock(m_DrawMutex);
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "Overlay::ReleaseAllSwapChainImages");
 
@@ -473,7 +473,7 @@ namespace openxr_api_layer::graphics
                 return;
             }
 
-            std::unique_lock lock(m_DrawMutex);
+            std::lock_guard lock(m_DrawMutex);
 
             if (!m_InitializedSessions.contains(session))
             {

@@ -307,11 +307,11 @@ namespace openxr_api_layer
         if (XR_TYPE_EVENT_DATA_REFERENCE_SPACE_CHANGE_PENDING == eventData->type)
         {
             if (const auto event = reinterpret_cast<const XrEventDataReferenceSpaceChangePending*>(eventData);
-                event && XR_REFERENCE_SPACE_TYPE_STAGE == event->referenceSpaceType ||
-                XR_REFERENCE_SPACE_TYPE_LOCAL == event->referenceSpaceType)
+                event && (XR_REFERENCE_SPACE_TYPE_STAGE == event->referenceSpaceType ||
+                XR_REFERENCE_SPACE_TYPE_LOCAL == event->referenceSpaceType))
             {
                 // trigger re-location of static reference spaces
-                std::unique_lock lock(m_FrameLock);
+                std::lock_guard lock(m_FrameLock);
                 Log("change of stage/local reference space location detected, t = %lld", event->changeTime);
                 m_UpdateRefSpaceTime = std::max(event->changeTime, m_LastFrameTime);
 
@@ -1047,7 +1047,7 @@ namespace openxr_api_layer
             return result;
         }
 
-        std::unique_lock lock(m_FrameLock);
+        std::lock_guard lock(m_FrameLock);
 
         const bool spaceView = isViewSpace(space);
         const bool baseView = isViewSpace(baseSpace);
@@ -1176,148 +1176,148 @@ namespace openxr_api_layer
                                   TLArg(xr::ToCString(result), "Result"));
             return result;
         }
-
-        std::unique_lock lock(m_FrameLock);
-
-        // store eye poses to avoid recalculation in xrEndFrame
-        std::vector<XrPosef> originalEyePoses{};
-        for (uint32_t i = 0; i < *viewCountOutput; i++)
         {
-            originalEyePoses.push_back(views[i].pose);
-        }
-        // assumption: the first xrLocateView call within a frame is the one used for rendering
-        m_EyeCache.AddSample(displayTime, originalEyePoses, false);
+            std::lock_guard lock(m_FrameLock);
 
-        if (isViewSpace(refSpace))
-        {
-            m_DeltaCache.AddSample(displayTime, Pose::Identity(), false);
+            // store eye poses to avoid recalculation in xrEndFrame
+            std::vector<XrPosef> originalEyePoses{};
+            for (uint32_t i = 0; i < *viewCountOutput; i++)
+            {
+                originalEyePoses.push_back(views[i].pose);
+            }
+            // assumption: the first xrLocateView call within a frame is the one used for rendering
+            m_EyeCache.AddSample(displayTime, originalEyePoses, false);
 
-            DebugLog("xrLocateViews(%lld): omitting manipulation against view space (%llu)", displayTime, refSpace);
-            TraceLoggingWriteStop(local,
-                                  "OpenXrLayer::xrLocateViews",
-                                  TLArg(true, "RefSpaceIsView"),
-                                  TLArg(xr::ToCString(result), "Result"));
-            return result;
-        }
+            if (isViewSpace(refSpace))
+            {
+                m_DeltaCache.AddSample(displayTime, Pose::Identity(), false);
 
-        if (!m_LegacyMode)
-        {
-            if (!m_EyeToHmd)
+                DebugLog("xrLocateViews(%lld): omitting manipulation against view space (%llu)", displayTime, refSpace);
+                TraceLoggingWriteStop(local,
+                                      "OpenXrLayer::xrLocateViews",
+                                      TLArg(true, "RefSpaceIsView"),
+                                      TLArg(xr::ToCString(result), "Result"));
+                return result;
+            }
+
+            if (!m_LegacyMode)
+            {
+                if (!m_EyeToHmd)
+                {
+                    // determine eye poses
+                    std::vector<XrView> eyeViews;
+                    eyeViews.resize(*viewCountOutput, {XR_TYPE_VIEW});
+
+                    const XrViewLocateInfo offsetViewLocateInfo{viewLocateInfo->type,
+                                                                nullptr,
+                                                                viewLocateInfo->viewConfigurationType,
+                                                                displayTime,
+                                                                m_ViewSpace};
+
+                    const XrResult toHmdResult = OpenXrApi::xrLocateViews(session,
+                                                                          &offsetViewLocateInfo,
+                                                                          viewState,
+                                                                          viewCapacityInput,
+                                                                          viewCountOutput,
+                                                                          eyeViews.data());
+
+                    if (SUCCEEDED(toHmdResult))
+                    {
+                        m_EyeToHmd = std::make_unique<XrPosef>(Pose::Invert(eyeViews[0].pose));
+                        TraceLoggingWriteTagged(local,
+                                                "OpenXrLayer::xrLocateViews",
+                                                TLArg(xr::ToString(*m_EyeToHmd).c_str(), "EyeToHmd"));
+                    }
+                    else
+                    {
+                        ErrorLog("%s: unable to determine eyeToHmd pose: %s", __FUNCTION__, xr::ToCString(toHmdResult));
+                    }
+                }
+
+                // manipulate pose using tracker
+                XrPosef deltaStage{Pose::Identity()};
+                if (XrPosef deltaRef{Pose::Identity()};
+                    GetDelta(displayTime,
+                             !!m_EyeToHmd,
+                             m_EyeToHmd ? Pose::Multiply(*m_EyeToHmd, views[0].pose) : Pose::Identity(),
+                             refSpace,
+                             deltaStage,
+                             deltaRef))
+                {
+                    for (uint32_t i = 0; i < *viewCountOutput; i++)
+                    {
+                        DebugLog("xrLocateView(%lld): eye (%u) original pose = %s",
+                                 displayTime,
+                                 i,
+                                 xr::ToString(views[i].pose).c_str());
+                        TraceLoggingWriteTagged(local,
+                                                "OpenXrLayer::xrLocateViews",
+                                                TLArg(i, "Index"),
+                                                TLArg(xr::ToString(views[i].fov).c_str(), "Fov"),
+                                                TLArg(xr::ToString(views[i].pose).c_str(), "OriginalViewPose"));
+
+                        // apply manipulation
+                        views[i].pose = xr::Normalize(Pose::Multiply(views[i].pose, deltaRef));
+
+                        DebugLog("xrLocateView(%lld): eye (%u) compensated pose = %s",
+                                 displayTime,
+                                 i,
+                                 xr::ToString(views[i].pose).c_str());
+                        TraceLoggingWriteTagged(local,
+                                                "OpenXrLayer::xrLocateViews",
+                                                TLArg(i, "Index"),
+                                                TLArg(xr::ToString(views[i].pose).c_str(), "CompensatedViewPose"));
+                    }
+                }
+
+                // sample from xrLocateView potentially overrides previous one
+                m_DeltaCache.AddSample(displayTime, deltaStage, true);
+
+                TraceLoggingWriteStop(local,
+                                      "OpenXrLayer::xrLocateViews",
+                                      TLArg(true, "Activated"),
+                                      TLArg(false, "LegacyMode"),
+                                      TLArg(xr::ToCString(result), "Result"));
+                return result;
+            }
+
+            // legacy mode using xrLocateSpace
+            if (m_EyeOffsets.empty())
             {
                 // determine eye poses
-                std::vector<XrView> eyeViews;
-                eyeViews.resize(*viewCountOutput, {XR_TYPE_VIEW});
-
                 const XrViewLocateInfo offsetViewLocateInfo{viewLocateInfo->type,
                                                             nullptr,
                                                             viewLocateInfo->viewConfigurationType,
                                                             displayTime,
                                                             m_ViewSpace};
 
-                const XrResult toHmdResult = OpenXrApi::xrLocateViews(session,
-                                                                      &offsetViewLocateInfo,
-                                                                      viewState,
-                                                                      viewCapacityInput,
-                                                                      viewCountOutput,
-                                                                      eyeViews.data());
-
-                if (SUCCEEDED(toHmdResult))
+                if (XR_SUCCEEDED(OpenXrApi::xrLocateViews(session,
+                                                          &offsetViewLocateInfo,
+                                                          viewState,
+                                                          viewCapacityInput,
+                                                          viewCountOutput,
+                                                          views)))
                 {
-                    m_EyeToHmd = std::make_unique<XrPosef>(Pose::Invert(eyeViews[0].pose));
-                    TraceLoggingWriteTagged(local,
-                                            "OpenXrLayer::xrLocateViews",
-                                            TLArg(xr::ToString(*m_EyeToHmd).c_str(), "EyeToHmd"));
-                }
-                else
-                {
-                    ErrorLog("%s: unable to determine eyeToHmd pose: %s", __FUNCTION__, xr::ToCString(toHmdResult));
-                }
-            }
+                    for (uint32_t i = 0; i < *viewCountOutput; i++)
+                    {
+                        m_EyeOffsets.push_back(views[i]);
 
-            // manipulate pose using tracker
-            XrPosef deltaStage{Pose::Identity()};
-            if (XrPosef deltaRef{Pose::Identity()}; GetDelta(displayTime,
-                                                             !!m_EyeToHmd,
-                                                             m_EyeToHmd ? Pose::Multiply(*m_EyeToHmd, views[0].pose) : Pose::Identity(),
-                                                             refSpace,
-                                                             deltaStage,
-                                                             deltaRef))
-            {
-                for (uint32_t i = 0; i < *viewCountOutput; i++)
-                {
-                    DebugLog("xrLocateView(%lld): eye (%u) original pose = %s",
-                             displayTime,
-                             i,
-                             xr::ToString(views[i].pose).c_str());
-                    TraceLoggingWriteTagged(local,
-                                            "OpenXrLayer::xrLocateViews",
-                                            TLArg(i, "Index"),
-                                            TLArg(xr::ToString(views[i].fov).c_str(), "Fov"),
-                                            TLArg(xr::ToString(views[i].pose).c_str(), "OriginalViewPose"));
-
-                    // apply manipulation
-                    views[i].pose = xr::Normalize(Pose::Multiply(views[i].pose, deltaRef));
-
-                    DebugLog("xrLocateView(%lld): eye (%u) compensated pose = %s",
-                             displayTime,
-                             i,
-                             xr::ToString(views[i].pose).c_str());
-                    TraceLoggingWriteTagged(local,
-                                            "OpenXrLayer::xrLocateViews",
-                                            TLArg(i, "Index"),
-                                            TLArg(xr::ToString(views[i].pose).c_str(), "CompensatedViewPose"));
+                        TraceLoggingWriteTagged(local,
+                                                "OpenXrLayer::xrLocateViews",
+                                                TLArg(i, "Index"),
+                                                TLArg(i, "Index"),
+                                                TLArg(xr::ToString(views[i].fov).c_str(), "Offset_Fov"),
+                                                TLArg(xr::ToString(views[i].pose).c_str(), "Offset_ViewPose"));
+                    }
                 }
             }
-            
-            // sample from xrLocateView potentially overrides previous one
-            m_DeltaCache.AddSample(displayTime, deltaStage, true);
-
-            TraceLoggingWriteStop(local,
-                                  "OpenXrLayer::xrLocateViews",
-                                  TLArg(true, "Activated"),
-                                  TLArg(false, "LegacyMode"),
-                                  TLArg(xr::ToCString(result), "Result"));
-            return result;
-        }
-
-        // legacy mode using xrLocateSpace
-        if (m_EyeOffsets.empty())
-        {
-            // determine eye poses
-            const XrViewLocateInfo offsetViewLocateInfo{viewLocateInfo->type,
-                                                        nullptr,
-                                                        viewLocateInfo->viewConfigurationType,
-                                                        displayTime,
-                                                        m_ViewSpace};
-
-            if (XR_SUCCEEDED(OpenXrApi::xrLocateViews(session,
-                                                      &offsetViewLocateInfo,
-                                                      viewState,
-                                                      viewCapacityInput,
-                                                      viewCountOutput,
-                                                      views)))
-            {
-                for (uint32_t i = 0; i < *viewCountOutput; i++)
-                {
-                    m_EyeOffsets.push_back(views[i]);
-
-                    TraceLoggingWriteTagged(local,
-                                            "OpenXrLayer::xrLocateViews",
-                                            TLArg(i, "Index"),
-                                            TLArg(i, "Index"),
-                                            TLArg(xr::ToString(views[i].fov).c_str(), "Offset_Fov"),
-                                            TLArg(xr::ToString(views[i].pose).c_str(), "Offset_ViewPose"));
-                }
-            }
-        }
-
-        // unlock for xrLocateSpace
-        lock.unlock();
+        } // unlock for xrLocateSpace
 
         // manipulate reference space location
         XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
         if (XR_SUCCEEDED(xrLocateSpace(m_ViewSpace, refSpace, displayTime, &location)))
         {
+            std::lock_guard lock(m_FrameLock);
             for (uint32_t i = 0; i < *viewCountOutput; i++)
             {
                 DebugLog("xrLocateView(%lld): eye (%u) original pose = %s",
@@ -1460,7 +1460,7 @@ namespace openxr_api_layer
         TraceLoggingWriteStart(local, "OpenXrLayer::xrBeginFrame", TLXArg(session, "Session"));
         DebugLog("xrBeginFrame");
 
-        std::unique_lock lock(m_FrameLock);
+        std::lock_guard lock(m_FrameLock);
 
         if (m_VarjoPollWorkaround && m_Enabled && m_PhysicalEnabled && !m_SuppressInteraction &&
             m_LastSessionTransition < m_LastFrameTime - 1000000000)
@@ -1507,7 +1507,7 @@ namespace openxr_api_layer
                                 TLArg(time, "DisplayTime"),
                                 TLArg(xr::ToCString(frameEndInfo->environmentBlendMode), "EnvironmentBlendMode"));
 
-        std::unique_lock lock(m_FrameLock);
+        std::lock_guard lock(m_FrameLock);
 
         // update last frame time
         if (m_UpdateRefSpaceTime >= std::exchange(m_LastFrameTime, time) && m_UpdateRefSpaceTime < time)

@@ -489,7 +489,7 @@ namespace {
         }
 
         D3D12ReusableCommandList getCommandList() {
-            std::unique_lock lock(m_commandListPoolMutex);
+            std::lock_guard lock(m_commandListPoolMutex);
 
             if (m_availableCommandList.empty()) {
                 // Recycle completed command lists.
@@ -522,7 +522,7 @@ namespace {
         }
 
         void submitCommandList(D3D12ReusableCommandList commandList) {
-            std::unique_lock lock(m_commandListPoolMutex);
+            std::lock_guard lock(m_commandListPoolMutex);
 
             CHECK_HRCMD(commandList.commandList->Close());
             m_commandQueue->ExecuteCommandLists(
