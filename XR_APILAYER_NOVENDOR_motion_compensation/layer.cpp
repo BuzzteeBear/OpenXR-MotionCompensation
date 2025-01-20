@@ -195,7 +195,7 @@ namespace openxr_api_layer
             }
         }
 
-        m_CorEstimator = std::make_unique<utility::CorEstimatorOutput>(this);
+        m_CorEstimator = std::make_unique<utility::CorEstimator>(this);
         m_CorEstimator->Init();
 
         // initialize tracker
@@ -2210,6 +2210,11 @@ namespace openxr_api_layer
     void OpenXrLayer::ResetCalibratedHmdPose()
     {
         m_CalibratedHmdPose = {};
+    }
+
+    void OpenXrLayer::SetCor(const XrPosef& pose) const
+    {
+        m_Tracker->SetCorPose(pose);
     }
 
     bool OpenXrLayer::AttachActionSet(const std::string& caller)

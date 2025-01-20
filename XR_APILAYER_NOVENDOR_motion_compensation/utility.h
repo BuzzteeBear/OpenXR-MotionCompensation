@@ -17,7 +17,7 @@ namespace input
 
 namespace output
 {
-    class PositionMmf;
+    class PoseMmf;
 }
 
 namespace utility
@@ -288,18 +288,18 @@ namespace utility
         std::mutex m_MmfLock;
     };
 
-    class CorEstimatorOutput
+    class CorEstimator
     {
       public:
-        explicit CorEstimatorOutput(openxr_api_layer::OpenXrLayer* layer);
+        explicit CorEstimator(openxr_api_layer::OpenXrLayer* layer);
         bool Init();
         void Execute(XrTime time);
         bool TransmitHmd() const;
 
       private:
         bool m_Enabled{false}, m_Active{false}, m_UseTracker{false};
-        std::shared_ptr<input::CorEstimatorCmd> m_InMmf{};
-        std::shared_ptr<output::PositionMmf> m_OutMmf{};
+        std::shared_ptr<input::CorEstimatorCmd> m_CmdMmf{};
+        std::shared_ptr<output::PoseMmf> m_PosMmf{};
         openxr_api_layer::OpenXrLayer* m_Layer = nullptr;
     };
 

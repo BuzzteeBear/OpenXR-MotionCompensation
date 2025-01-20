@@ -1040,10 +1040,11 @@ namespace tracker
             success = false;
         }
 
+        m_Manipulator = std::make_unique<CorManipulator>(CorManipulator(this));
+
         bool physicalEnabled{false};
         if (GetConfig()->GetBool(Cfg::PhysicalEnabled, physicalEnabled) && physicalEnabled)
         {
-            m_Manipulator = std::make_unique<CorManipulator>(CorManipulator(this));
             m_Manipulator->Init();
         }
  
@@ -1120,6 +1121,11 @@ namespace tracker
         return success;
     }
 
+    void VirtualTracker::SetCorPose(const XrPosef& pose)
+    {
+        m_Manipulator->SetCorPose(pose);
+    }
+
     void VirtualTracker::ApplyCorManipulation(XrSession session, XrTime time)
     {
         TraceLocalActivity(local);
@@ -1127,10 +1133,8 @@ namespace tracker
                                "VirtualTracker::ApplyCorManipulation",
                                TLXArg(session, "Session"),
                                TLArg(time, "Time"));
-        if (m_Manipulator)
-        {
-            m_Manipulator->ApplyManipulation(session, time);
-        }
+        
+        m_Manipulator->ApplyManipulation(session, time);
 
         TraceLoggingWriteStop(local, "VirtualTracker::ApplyCorManipulation");
     }
@@ -1649,6 +1653,17 @@ namespace tracker
                               "CorManipulator::ApplyManipulation",
                               TLArg(m_PositionActive, "PositionActive"),
                               TLArg(m_MoveActive, "MoveActive"));
+    }
+
+    void CorManipulator::SetCorPose(const XrPosef& pose)
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local,
+                               "CorManipulator::SetCorPose", TLArg(xr::ToString(pose).c_str(), "pose"));
+        m_LastPose = pose;
+        ApplyPosition();
+
+        TraceLoggingWriteStop(local, "CorManipulator::SetCorPose");
     }
 
     bool CorManipulator::GetPose(XrPosef& trackerPose, XrSession session, XrTime time)

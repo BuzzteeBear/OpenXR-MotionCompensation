@@ -169,13 +169,13 @@ namespace output
     // Singleton accessor.
     EventMmf* GetEventMmf();    
 
-    class PositionMmf : public QueuedMmf<std::pair<XrPosef, int32_t>>
+    class PoseMmf : public QueuedMmf<std::pair<XrPosef, int32_t>>
     {
       public:
-        PositionMmf() : QueuedMmf("Local\\OXRMC_PositionOutput") {};
-        void Transmit(const XrPosef& position, int sampleType);
+        PoseMmf() : QueuedMmf("Local\\OXRMC_PositionOutput") {};
+        void Transmit(const XrPosef& position, int poseType);
+        std::optional<XrPosef> ReadCorPose() const;
         void Reset();
-        bool TransmitHmd() const;
 
       private: 
         bool WriteImpl(utility::Mmf& mmf) override;

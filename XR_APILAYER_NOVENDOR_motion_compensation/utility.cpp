@@ -249,49 +249,62 @@ namespace utility
         TraceLoggingWriteStop(local, "Mmf::Close");
     }
 
-    CorEstimatorOutput::CorEstimatorOutput(openxr_api_layer::OpenXrLayer* layer)
-        : m_InMmf(std::make_shared<input::CorEstimatorCmd>()), m_OutMmf(std::make_shared<PositionMmf>()),
+    CorEstimator::CorEstimator(openxr_api_layer::OpenXrLayer* layer)
+        : m_CmdMmf(std::make_shared<input::CorEstimatorCmd>()), m_PosMmf(std::make_shared<PoseMmf>()),
           m_Layer(layer)
     {}
 
-    bool CorEstimatorOutput::Init()
+    bool CorEstimator::Init()
     {
         bool enabled;
         if (GetConfig()->IsVirtualTracker() && GetConfig()->GetBool(Cfg::CorEstimatorEnabled, enabled) && enabled)
         {
-            m_Enabled = m_InMmf->Init();
+            m_Enabled = m_CmdMmf->Init();
             return m_Enabled;
         }
         Log("CorEstimator feature deactivated");
         return true;
     }
 
-    void CorEstimatorOutput::Execute(XrTime time)
+    void CorEstimator::Execute(XrTime time)
     {
         if (!m_Enabled)
         {
             return;
         }
 
-        m_InMmf->Read();
-        if (m_InMmf->m_Reset)
+        m_CmdMmf->Read();
+        if (m_CmdMmf->m_Reset)
         {
             Log("cor estimation %s", m_Active ? "canceled" : "reset");
             m_Active = false;
-            m_OutMmf->Reset();
-            m_InMmf->ConfirmReset();
+            m_PosMmf->Reset();
+            m_CmdMmf->ConfirmReset();
+            return;
+        }
+        if (m_CmdMmf->m_SetCor)
+        {
+            m_CmdMmf->ConfirmSetCor();
+            auto corPose = m_PosMmf->ReadCorPose();
+            if (!corPose.has_value())
+            {
+                m_CmdMmf->Failure();
+                ErrorLog("%s: cor not set in mmf", __FUNCTION__);
+                return;
+            }
+            m_Layer->SetCor(corPose.value());
             return;
         }
         if (!m_Active)
         {
-            if (!m_InMmf->m_Start)
+            if (!m_CmdMmf->m_Start)
             {
                 return;
             }
             if (!GetConfig()->IsVirtualTracker())
             {
-                m_InMmf->Failure();
-                ErrorLog("%s: cannot use cor estimation feature on non-virtual tracker", __FUNCTION__);
+                m_CmdMmf->Failure();
+                ErrorLog("%s: cannot use cor estimation feature with physical tracker", __FUNCTION__);
                 EventSink::Execute(Event::Error);
                 return;
             }
@@ -300,40 +313,40 @@ namespace utility
                 return;
             }
 
-            m_InMmf->ConfirmStart();
+            m_CmdMmf->ConfirmStart();
             
             m_Active = true;
             Log("cor estimation started");
         }
-        if (m_InMmf->m_Stop)
+        if (m_CmdMmf->m_Stop)
         {
-            m_InMmf->ConfirmStop();
+            m_CmdMmf->ConfirmStop();
             m_Active = false;
             Log("cor estimation stopped");
             return;
         }
 
-        auto pos = m_Layer->GetCurrentPosition(time, m_InMmf->m_Controller);
+        auto pos = m_Layer->GetCurrentPosition(time, m_CmdMmf->m_Controller);
         if (!pos.has_value())
         {
-            m_InMmf->Failure();
+            m_CmdMmf->Failure();
             return;
         }
-        m_OutMmf->Transmit(pos.value(), m_InMmf->m_CurrentDof);
+        m_PosMmf->Transmit(pos.value(), m_CmdMmf->m_CurrentDof);
     }
 
-    bool CorEstimatorOutput::TransmitHmd() const
+    bool CorEstimator::TransmitHmd() const
     {
         auto calibratedHmd = m_Layer->GetCalibratedHmdPose();
         if (!calibratedHmd.has_value())
         {
-            m_InMmf->Failure();
+            m_CmdMmf->Failure();
             ErrorLog("%s: unable to obtain calibrated hmd pose", __FUNCTION__);
             EventSink::Execute(Event::Error);
             return false;
         }
 
-        m_OutMmf->Transmit(calibratedHmd.value(), static_cast<int>(SampleType::Hmd));
+        m_PosMmf->Transmit(calibratedHmd.value(), static_cast<int>(PoseType::Hmd));
         return true;
     }
 

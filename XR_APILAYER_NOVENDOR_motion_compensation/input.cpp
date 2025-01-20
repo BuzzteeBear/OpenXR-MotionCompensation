@@ -36,33 +36,39 @@ namespace input
         }
         m_Error = false;
         m_CurrentDof = static_cast<utility::DofValue>(cmd & 7);
-        m_Controller = cmd & static_cast<int>(output::CorEstimatorFlags::controller);
-        m_Start = cmd & static_cast<int>(output::CorEstimatorFlags::start);
-        m_Stop = cmd & static_cast<int>(output::CorEstimatorFlags::stop);
-        m_Reset = cmd & static_cast<int>(output::CorEstimatorFlags::reset);
+        m_Controller = cmd & static_cast<int>(CorEstimatorFlags::controller);
+        m_Start = cmd & static_cast<int>(CorEstimatorFlags::start);
+        m_Stop = cmd & static_cast<int>(CorEstimatorFlags::stop);
+        m_Reset = cmd & static_cast<int>(CorEstimatorFlags::reset);
+        m_SetCor = cmd & static_cast<int>(CorEstimatorFlags::setcor);
         return true;
     }
 
     void CorEstimatorCmd::ConfirmStart()
     {
-        WriteFlag(static_cast<int>(output::CorEstimatorFlags::confirm), true);
-        WriteFlag(static_cast<int>(output::CorEstimatorFlags::start), false);
+        WriteFlag(static_cast<int>(CorEstimatorFlags::confirm), true);
+        WriteFlag(static_cast<int>(CorEstimatorFlags::start), false);
     }
 
     void CorEstimatorCmd::ConfirmStop()
     {
-        WriteFlag(static_cast<int>(output::CorEstimatorFlags::stop), false);
+        WriteFlag(static_cast<int>(CorEstimatorFlags::stop), false);
+    }
+
+    void CorEstimatorCmd::ConfirmSetCor()
+    {
+        WriteFlag(static_cast<int>(CorEstimatorFlags::setcor), false);
     }
 
     void CorEstimatorCmd::ConfirmReset()
     {
-        WriteFlag(static_cast<int>(output::CorEstimatorFlags::reset), false);
+        WriteFlag(static_cast<int>(CorEstimatorFlags::reset), false);
     }
 
     void CorEstimatorCmd::Failure()
     {
-        WriteFlag(static_cast<int>(output::CorEstimatorFlags::failure), true);
-        WriteFlag(static_cast<int>(output::CorEstimatorFlags::start), false);
+        WriteFlag(static_cast<int>(CorEstimatorFlags::failure), true);
+        WriteFlag(static_cast<int>(CorEstimatorFlags::start), false);
     }
 
 

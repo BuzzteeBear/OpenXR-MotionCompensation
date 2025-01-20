@@ -164,16 +164,15 @@ namespace output
         return g_EventMmf.get();
     }
 
-    void PositionMmf::Transmit(const XrPosef& position, int sampleType)
+    void PoseMmf::Transmit(const XrPosef& position, int poseType)
     {
         using namespace std::chrono;
-
 
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local,
                                "EventMmf::Execute",
                                TLArg(xr::ToString(position).c_str(), "Dof"),
-                               TLArg(static_cast<int>(sampleType), "SampleType"));
+                               TLArg(poseType, "PoseType"));
 
         auto now = time_point_cast<milliseconds>(system_clock::now()).time_since_epoch().count();
 
@@ -196,32 +195,50 @@ namespace output
         }
 
         // queue up event
-        if (sampleType > 0)
+        if (poseType > 0)
         {
             std::unique_lock lock(m_QueueMutex);
-            m_EventQueue.push_back({position, sampleType});
+            m_EventQueue.push_back({position, poseType});
         }
 
         TraceLoggingWriteStop(local, "EventMmf::Execute");
     }
 
-    void PositionMmf::Reset()
+    std::optional<XrPosef> PoseMmf::ReadCorPose() const
+    {
+        utility::Mmf mmf;
+        mmf.SetName(m_MmfName);
+        std::pair<XrPosef, int32_t> data;
+        if (!mmf.Read(&data, sizeof(data), 0))
+        {
+            return {};
+        }
+        if (data.second != -1)
+        {
+            ErrorLog("%s: wrong sample type: %d", __FUNCTION__, data.second);
+            return {};
+        }
+        return data.first;
+    }
+
+    void PoseMmf::Reset()
     {
         std::unique_lock lock(m_QueueMutex);
         m_EventQueue.clear();
+        m_EventQueue.push_back({{}, 0});
     }
 
-    bool PositionMmf::WriteImpl(Mmf& mmf)
+    bool PoseMmf::WriteImpl(Mmf& mmf)
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(3));
 
-        std::pair<XrVector3f, int32_t> data;
+        std::pair<XrPosef, int32_t> data;
         if (!mmf.Read(&data, sizeof(data), 0))
         {
             m_MmfError.store(true);
             return false;
         }
-        if (data.second)
+        if (data.second > 0)
         {
             // waiting on processing
             return true;

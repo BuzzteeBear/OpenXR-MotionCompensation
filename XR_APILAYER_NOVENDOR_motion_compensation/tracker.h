@@ -23,6 +23,7 @@ namespace tracker
         [[nodiscard]] virtual XrPosef GetLastPoseDelta() const;
         virtual bool ResetReferencePose(XrSession session, XrTime time);
         bool GetControllerPose(XrPosef& trackerPose, XrSession session, XrTime time);
+        virtual void SetCorPose(const XrPosef& pose) {};
 
       protected:
         virtual void SetReferencePose(const XrPosef& pose, bool silent);
@@ -148,6 +149,7 @@ namespace tracker
         bool LazyInit(XrTime time) override;
 
         bool ResetReferencePose(XrSession session, XrTime time) override;
+        void SetCorPose(const XrPosef& pose) override;
 
         void ApplyCorManipulation(XrSession session, XrTime time) override;
         bool ChangeOffset(XrVector3f modification) override;
@@ -249,6 +251,7 @@ namespace tracker
       public:
         explicit CorManipulator(VirtualTracker* tracker) : m_Tracker(tracker){};
         void ApplyManipulation(XrSession session, XrTime time);
+        void SetCorPose(const XrPosef& pose) override;
 
       protected:
         bool GetPose(XrPosef& trackerPose, XrSession session, XrTime time) override;

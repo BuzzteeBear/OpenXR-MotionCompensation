@@ -79,9 +79,10 @@ namespace output
 		modified = 0x40,
 	};
 
-	public enum SampleType
+	public enum PoseType
 	{
-		None = 0,
+		Cor = -1,
+		None,
 		Sway,
 		Surge,
 		Heave,
@@ -98,6 +99,7 @@ namespace output
 		confirm = 0x20,
 		stop = 0x40,
 		failure = 0x80,
-		reset = 0x100
+		reset = 0x100,
+		setcor = 0x200
 	};
 }

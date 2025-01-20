@@ -19,10 +19,11 @@ namespace input
         bool Read();
         void ConfirmStart();
         void ConfirmStop();
+        void ConfirmSetCor();
         void ConfirmReset();
         void Failure();
 
-        bool m_Controller{false}, m_Start{false}, m_Stop{false}, m_Error{false}, m_Reset{false};
+        bool m_Controller{false}, m_Start{false}, m_Stop{false}, m_Error{false}, m_Reset{false}, m_SetCor{false};
         utility::DofValue m_CurrentDof{};
 
       private:
