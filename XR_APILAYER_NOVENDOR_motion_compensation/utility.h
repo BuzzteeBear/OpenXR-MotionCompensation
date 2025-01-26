@@ -13,6 +13,7 @@ namespace input
 {
     class InputHandler;
     class CorEstimatorCmd;
+    class CorEstimatorResult;
 }
 
 namespace output
@@ -295,12 +296,17 @@ namespace utility
         bool Init();
         void Execute(XrTime time);
         bool TransmitHmd() const;
+        std::vector<std::tuple<int, XrPosef, float>> GetAxes();
+        std::vector<std::pair<XrPosef, int>> GetSamples();
 
       private:
         bool m_Enabled{false}, m_Active{false}, m_UseTracker{false};
-        std::shared_ptr<input::CorEstimatorCmd> m_CmdMmf{};
-        std::shared_ptr<output::PoseMmf> m_PosMmf{};
+        std::unique_ptr<input::CorEstimatorCmd> m_CmdMmf{};
+        std::unique_ptr<input::CorEstimatorResult> m_ResultMmf{};
+        std::unique_ptr<output::PoseMmf> m_PosMmf{};
         openxr_api_layer::OpenXrLayer* m_Layer = nullptr;
+        std::vector<std::pair<XrPosef, int>> m_Samples{};
+        std::vector<std::tuple<int, XrPosef, float>> m_Axes{};
     };
 
     static inline bool endsWith(const std::string& str, const std::string& substr)

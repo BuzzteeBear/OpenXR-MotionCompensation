@@ -75,7 +75,7 @@ namespace openxr_api_layer::graphics
         void DrawMarkers(const XrPosef& referencePose,
                          const XrPosef& delta,
                          bool calibrated,
-                         bool drawTracker,
+                         bool compensated,
                          XrSession session,
                          XrFrameEndInfo* chainFrameEndInfo,
                          OpenXrLayer* openXrLayer);
@@ -91,7 +91,10 @@ namespace openxr_api_layer::graphics
                            uint32_t eye,
                            const XrPosef& refPose,
                            const XrPosef& trackerPose,
-                           bool drawTracker,
+                           bool compensated,
+                           bool calibrated,
+                           std::vector<std::pair<XrPosef, int>> estimatorSamples,
+                           std::vector<std::tuple<int, XrPosef, float>> estimatorAxes,
                            ICompositionFramework* composition);
         static std::vector<SimpleMeshVertex> CreateMarker(bool reference, bool avoidMagenta);
         static std::vector<SimpleMeshVertex> CreateMarkerMesh(const XrVector3f& top,
@@ -102,9 +105,17 @@ namespace openxr_api_layer::graphics
                                                               const XrVector3f& pureColor,
                                                               const XrVector3f& lightColor);
 
+        static std::vector<SimpleMeshVertex> CreateDodecahedron(const XrVector3f& color);
+        static std::vector<SimpleMeshVertex> CreateRing(const XrVector3f& color);
+        static std::vector<SimpleMeshVertex> CreateAxis(const XrVector3f& darkColor,
+                                                        const XrVector3f& pureColor,
+                                                        const XrVector3f& lightColor);  
+
         bool m_PassthroughActive{false}, m_NoProjectionLayer{false}, m_CrosshairLockToHorizon{false};
         XrVector3f m_MarkerSize{0.1f, 0.1f, 0.1f};
-        std::shared_ptr<ISimpleMesh> m_MeshRGB{}, m_MeshCMY{}, m_MeshCGY{};
+        std::shared_ptr<ISimpleMesh> m_MeshRGB{}, m_MeshCMY{}, m_MeshCGY{}, m_MeshPoint{}, m_MeshPointR{},
+            m_MeshPointG{}, m_MeshPointB{}, m_MeshPointC{}, m_MeshPointY{}, m_MeshPointM{}, m_MeshRingR{},
+            m_MeshRingG{}, m_MeshRingB{}, m_MeshAxisR{}, m_MeshAxisG{}, m_MeshAxisB{};
         std::map<XrSwapchain, SwapchainState> m_Swapchains{};
         std::vector<std::pair<std::shared_ptr<IGraphicsTexture>, std::shared_ptr<IGraphicsTexture>>> m_Textures{};
         float m_CrosshairDistance{-1};

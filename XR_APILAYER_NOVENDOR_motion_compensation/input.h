@@ -19,16 +19,31 @@ namespace input
         bool Read();
         void ConfirmStart();
         void ConfirmStop();
-        void ConfirmSetCor();
         void ConfirmReset();
         void Failure();
 
-        bool m_Controller{false}, m_Start{false}, m_Stop{false}, m_Error{false}, m_Reset{false}, m_SetCor{false};
-        utility::DofValue m_CurrentDof{};
+        bool m_Controller{false}, m_Start{false}, m_Stop{false}, m_Error{false}, m_Reset{false};
+        int m_PoseType{};
 
       private:
         void WriteFlag(const int flag, bool active);
 
+        utility::Mmf m_Mmf{};
+    };
+
+    struct CorResult
+    {
+        int resultType;
+        XrPosef pose;
+        float radius;
+    };
+
+    class CorEstimatorResult
+    {
+      public:
+        bool Init();
+        std::optional<CorResult> ReadResult();
+      private:
         utility::Mmf m_Mmf{};
     };
 

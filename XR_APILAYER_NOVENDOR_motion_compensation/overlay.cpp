@@ -29,6 +29,8 @@
 #include "graphics.h"
 #include <util.h>
 #include <log.h>
+#include <numeric>
+#include <ranges>
 
 using namespace openxr_api_layer;
 using namespace openxr_api_layer::log;
@@ -429,7 +431,7 @@ namespace openxr_api_layer::graphics
     void Overlay::DrawMarkers(const XrPosef& referencePose,
                               const XrPosef& delta,
                               bool calibrated,
-                              bool drawTracker,
+                              bool compensated,
                               XrSession session,
                               XrFrameEndInfo* chainFrameEndInfo,
                               OpenXrLayer* openXrLayer)
@@ -440,7 +442,7 @@ namespace openxr_api_layer::graphics
                                TLArg(chainFrameEndInfo->displayTime, "Time"),
                                TLArg(xr::ToString(referencePose).c_str(), "ReferencePose"),
                                TLArg(xr::ToString(delta).c_str(), "Delta"),
-                               TLArg(drawTracker, "DrawTracker"));
+                               TLArg(compensated, "Compensated"));
         if (!(m_MarkersInitialized && m_MarkersActive && m_SessionVisible))
         {
             TraceLoggingWriteStop(local,
@@ -479,20 +481,62 @@ namespace openxr_api_layer::graphics
             {
                 std::vector<SimpleMeshVertex> vertices = CreateMarker(true, false);
                 std::vector<uint16_t> indices;
-                for (uint16_t i = 0; i < static_cast<uint16_t>(vertices.size()); i++)
-                {
-                    indices.push_back(i);
-                }
+                auto SetIndizes = [&indices, vertices]() {
+                    indices.resize(vertices.size());
+                    std::iota(indices.begin(), indices.end(), 0);
+                };
+                SetIndizes();
+
                 m_MeshRGB = composition->getCompositionDevice()->createSimpleMesh(vertices, indices, "RGB Mesh");
                 vertices = CreateMarker(false, false);
                 m_MeshCMY = composition->getCompositionDevice()->createSimpleMesh(vertices, indices, "CMY Mesh");
                 vertices = CreateMarker(false, true);
                 m_MeshCGY = composition->getCompositionDevice()->createSimpleMesh(vertices, indices, "CGY Mesh");
+
+                vertices = CreateDodecahedron({1,1,1});
+                SetIndizes();
+                m_MeshPoint = composition->getCompositionDevice()->createSimpleMesh(vertices, indices, "Point BW Mesh");
+                vertices = CreateDodecahedron(Red);
+                m_MeshPointR = composition->getCompositionDevice()->createSimpleMesh(vertices, indices, "Point R Mesh");
+                vertices = CreateDodecahedron(Green);
+                m_MeshPointG = composition->getCompositionDevice()->createSimpleMesh(vertices, indices, "Point G Mesh");
+                vertices = CreateDodecahedron(Blue);
+                m_MeshPointB = composition->getCompositionDevice()->createSimpleMesh(vertices, indices, "Point B Mesh");
+                vertices = CreateDodecahedron(Cyan);
+                m_MeshPointC = composition->getCompositionDevice()->createSimpleMesh(vertices, indices, "Point C Mesh");
+                vertices = CreateDodecahedron(Yellow);
+                m_MeshPointY = composition->getCompositionDevice()->createSimpleMesh(vertices, indices, "Point Y Mesh");
+                vertices = CreateDodecahedron(Magenta);
+                m_MeshPointM = composition->getCompositionDevice()->createSimpleMesh(vertices, indices, "Point M Mesh");
+
+                vertices = CreateRing(LightRed);
+                SetIndizes();
+                m_MeshRingR = composition->getCompositionDevice()->createSimpleMesh(vertices, indices, "Ring R Mesh");
+                vertices = CreateRing(LightGreen);
+                m_MeshRingG = composition->getCompositionDevice()->createSimpleMesh(vertices, indices, "Ring G Mesh");
+                vertices = CreateRing(LightBlue);
+                m_MeshRingB = composition->getCompositionDevice()->createSimpleMesh(vertices, indices, "Ring B Mesh");
+
+                vertices = CreateAxis(DarkRed, Red, LightRed);
+                SetIndizes();
+                m_MeshAxisR = composition->getCompositionDevice()->createSimpleMesh(vertices, indices, "Axis R Mesh");
+                vertices = CreateAxis(DarkGreen, Green, LightGreen);
+                m_MeshAxisG = composition->getCompositionDevice()->createSimpleMesh(vertices, indices, "Axis G Mesh");
+                vertices = CreateAxis(DarkBlue, Blue, LightBlue);
+                m_MeshAxisB = composition->getCompositionDevice()->createSimpleMesh(vertices, indices, "Axis B Mesh");
+
                 TraceLoggingWriteTagged(local,
                                         "Overlay::DrawMarkers",
                                         TLPArg(m_MeshRGB.get(), "MeshRGB"),
                                         TLPArg(m_MeshCMY.get(), "MeshCMY"),
-                                        TLPArg(m_MeshCGY.get(), "MeshCGY"));
+                                        TLPArg(m_MeshCGY.get(), "MeshCGY"),
+                                        TLPArg(m_MeshPoint.get(), "MeshPoint"),
+                                        TLPArg(m_MeshPointR.get(), "MeshPointR"),
+                                        TLPArg(m_MeshPointG.get(), "MeshPointG"),
+                                        TLPArg(m_MeshPointB.get(), "MeshPointB"),
+                                        TLPArg(m_MeshPointC.get(), "MeshPointC"),
+                                        TLPArg(m_MeshPointY.get(), "MeshPointY"),
+                                        TLPArg(m_MeshPointM.get(), "MeshPointM"));
                 ResetMarker();
 
                 m_InitializedSessions.insert(session);
@@ -540,17 +584,37 @@ namespace openxr_api_layer::graphics
 
             // calculate tracker pose
             const XrPosef trackerPose = xr::Normalize(xr::math::Pose::Multiply(
-                (drawTracker || !calibrated) ? referencePose
+                (compensated || !calibrated) ? referencePose
                                              : xr::math::Pose::Multiply(referencePose, xr::math::Pose::Invert(delta)),
                 refToStage));
 
             // calculate reference pose
             const XrPosef refPose = xr::Normalize(
-                xr::math::Pose::Multiply(!drawTracker ? referencePose : xr::math::Pose::Multiply(referencePose, delta),
+                xr::math::Pose::Multiply(!compensated ? referencePose : xr::math::Pose::Multiply(referencePose, delta),
                                          refToStage));
 
+            // calculate estimator samples poses
+            auto estimatorSamples = openXrLayer->GetEstimatorSamples();
+
+            for (auto& pose : estimatorSamples | std::views::keys)
+            {
+                pose = xr::Normalize(xr::math::Pose::Multiply(
+                    !compensated ? pose : xr::math::Pose::Multiply(pose, delta),
+                    refToStage));
+            }
+
+            // calculate estimator axis poses
+            auto estimatorAxes = openXrLayer->GetEstimatorAxes();
+
+            for (auto& axis : estimatorAxes)
+            {
+                std::get<1>(axis) = xr::Normalize(xr::math::Pose::Multiply(
+                    !compensated ? std::get<1>(axis) : xr::math::Pose::Multiply(std::get<1>(axis), delta),
+                    refToStage));
+            }
+
             DebugLog("overlay reference pose: %s", xr::ToString(refPose).c_str());
-            if (drawTracker)
+            if (compensated)
             {
                 DebugLog("overlay tracker pose: %s", xr::ToString(trackerPose).c_str());
             }
@@ -597,7 +661,15 @@ namespace openxr_api_layer::graphics
                 composition->serializePreComposition();
 
                 // draw marker on copied texture
-                RenderMarkers(view, eye, refPose, trackerPose, drawTracker || calibrated, composition);
+                RenderMarkers(view,
+                              eye,
+                              refPose,
+                              trackerPose,
+                              compensated,
+                              calibrated,
+                              estimatorSamples,
+                              estimatorAxes,
+                              composition);
 
                 composition->serializePostComposition();
 
@@ -856,7 +928,10 @@ namespace openxr_api_layer::graphics
                                 uint32_t eye,
                                 const XrPosef& refPose,
                                 const XrPosef& trackerPose,
-                                bool drawTracker,
+                                bool compensated,
+                                bool calibrated,
+                                std::vector<std::pair<XrPosef, int>> estimatorSamples,
+                                std::vector<std::tuple<int, XrPosef, float>> estimatorAxes,
                                 ICompositionFramework* composition)
     {
         // perform actual rendering
@@ -931,18 +1006,44 @@ namespace openxr_api_layer::graphics
         graphicsDevice->draw(m_MeshRGB, refPose, m_MarkerSize);
 
         // draw tracker marker
-        if (drawTracker)
+        if (compensated || calibrated)
         {
-            graphicsDevice->draw(m_PassthroughActive? m_MeshCGY : m_MeshCMY, trackerPose, m_MarkerSize);
+            graphicsDevice->draw(m_PassthroughActive ? m_MeshCGY : m_MeshCMY, trackerPose, m_MarkerSize);
         }
 
+        for (const auto& [pose, type] : estimatorSamples)
+        {
+            graphicsDevice->draw(static_cast<int>(output::PoseType::Yaw) == type     ? m_MeshPointB
+                                 : static_cast<int>(output::PoseType::Pitch) == type ? m_MeshPointR
+                                 : static_cast<int>(output::PoseType::Roll) == type  ? m_MeshPointG
+                                 : static_cast<int>(output::PoseType::Surge) == type ? m_MeshPointY
+                                 : static_cast<int>(output::PoseType::Sway) == type  ? m_MeshPointM
+                                 : static_cast<int>(output::PoseType::Heave) == type ? m_MeshPointC
+                                                                                     : m_MeshPoint,
+                                 pose,
+                                 {0.001f, 0.001f, 0.001f});
+        }
+
+        for (const auto& [type, pose, radius] : estimatorAxes)
+        {
+            graphicsDevice->draw(static_cast<int>(output::PoseType::Yaw) == type     ? m_MeshAxisB
+                                 : static_cast<int>(output::PoseType::Pitch) == type ? m_MeshAxisR
+                                                                                     : m_MeshAxisG,
+                                 pose,
+                                 {1, 1, 1});
+            graphicsDevice->draw(static_cast<int>(output::PoseType::Yaw) == type     ? m_MeshRingB
+                                   : static_cast<int>(output::PoseType::Pitch) == type ? m_MeshRingR
+                                                                                       : m_MeshRingG,
+                                   pose,
+                                   {radius, radius, radius});
+        }
         context->Flush();
     }
 
     std::vector<SimpleMeshVertex> Overlay::CreateMarker(bool reference, bool avoidMagenta)
     {
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "Overlay::CreateMarker", TLArg(reference, "Refernace"));
+        TraceLoggingWriteStart(local, "Overlay::CreateMarker", TLArg(reference, "Reference"));
 
         float tip{1.f}, point65{0.65f}, point6{0.6f}, point1{0.1f}, point05{0.05f}, bottom{0.f};
         if (reference)
@@ -1005,7 +1106,7 @@ namespace openxr_api_layer::graphics
         std::vector<SimpleMeshVertex> vertices;
         const DirectX::XMVECTOR dxTop = xr::math::LoadXrVector3(top);
 
-        constexpr float angleIncrement = DirectX::XM_2PI / 32.f;
+        constexpr float angleIncrement = DirectX::XM_2PI / 128.f;
         const DirectX::XMVECTOR rotation = DirectX::XMQuaternionRotationAxis(dxTop, angleIncrement);
         DirectX::XMVECTOR sideInner1 = xr::math::LoadXrVector3(innerMiddle);
         DirectX::XMVECTOR sideOuter1 = xr::math::LoadXrVector3(outerMiddle);
@@ -1044,4 +1145,142 @@ namespace openxr_api_layer::graphics
         }
         return vertices;
     }
-} // namespace openxr_api_layer::graphics
+
+    std::vector<SimpleMeshVertex> Overlay::CreateDodecahedron(const XrVector3f& color)
+    {
+        std::vector<SimpleMeshVertex> edgeSequence;
+
+        auto VertexToColor = [color](const XrVector3f& vertex) {
+            using namespace DirectX;
+            const float factor = (vertex.x + vertex.y + vertex.z) / 12.f; // scale to +-0.25
+            XrVector3f scaledColor;
+
+            if (factor > 0.f)
+            {
+                xr::math::StoreXrVector3(&scaledColor,
+                                         {std::min(1.f, factor + color.x),
+                                          std::min(1.f, factor + color.y),
+                                          std::min(1.f, factor + color.z)});
+                return scaledColor;
+            }   
+            xr::math::StoreXrVector3(
+                &scaledColor, XMVectorScale(xr::math::LoadXrVector3(color), 1 + 3 * factor));
+            return scaledColor;
+        };
+
+        auto AddTriangle = [&edgeSequence, VertexToColor](XrVector3f v0, XrVector3f v1, XrVector3f v2) {
+            edgeSequence.push_back({v0, VertexToColor(v0)});
+            edgeSequence.push_back({v1, VertexToColor(v1)});
+            edgeSequence.push_back({v2, VertexToColor(v2)});
+        };
+
+        // RIGHT
+        AddTriangle({2.f, 0.f, 0.f}, {1.f, 1.f, 1.f}, {1.f, 1.f, -1.f});
+        AddTriangle({2.f, 0.f, 0.f}, {1.f, 1.f, -1.f}, {1.f, -1.f, -1.f});
+        AddTriangle({2.f, 0.f, 0.f}, {1.f, -1.f, -1.f}, {1.f, -1.f, 1.f});
+        AddTriangle({2.f, 0.f, 0.f}, {1.f, -1.f, 1.f}, {1.f, 1.f, 1.f});
+
+        // TOP
+        AddTriangle({0.f, 2.f, 0.f}, {1.f, 1.f, 1.f}, {-1.f, 1.f, 1.f});
+        AddTriangle({0.f, 2.f, 0.f}, {-1.f, 1.f, 1.f}, {-1.f, 1.f, -1.f});
+        AddTriangle({0.f, 2.f, 0.f}, {-1.f, 1.f, -1.f}, {1.f, 1.f, -1.f});
+        AddTriangle({0.f, 2.f, 0.f}, {1.f, 1.f, -1.f}, {1.f, 1.f, 1.f});
+
+        // FRONT
+        AddTriangle({0.f, 0.f, 2.f}, {1.f, 1.f, 1.f}, {1.f, -1.f, 1.f});
+        AddTriangle({0.f, 0.f, 2.f}, {1.f, -1.f, 1.f}, {-1.f, -1.f, 1.f});
+        AddTriangle({0.f, 0.f, 2.f}, {-1.f, -1.f, 1.f}, {-1.f, 1.f, 1.f});
+        AddTriangle({0.f, 0.f, 2.f}, {-1.f, 1.f, 1.f}, {1.f, 1.f, 1.f});
+
+        // LEFT
+        AddTriangle({-2.f, 0.f, 0.f}, {-1.f, 1.f, 1.f}, {-1.f, -1.f, 1.f});
+        AddTriangle({-2.f, 0.f, 0.f}, {-1.f, -1.f, 1.f}, {-1.f, -1.f, -1.f});
+        AddTriangle({-2.f, 0.f, 0.f}, {-1.f, -1.f, -1.f}, {-1.f, 1.f, -1.f});
+        AddTriangle({-2.f, 0.f, 0.f}, {-1.f, 1.f, -1.f}, {-1.f, 1.f, 1.f});
+
+        // BOTTOM
+        AddTriangle({0.f, -2.f, 0.f}, {1.f, -1.f, 1.f}, {1.f, -1.f, -1.f});
+        AddTriangle({0.f, -2.f, 0.f}, {1.f, -1.f, -1.f}, {-1.f, -1.f, -1.f});
+        AddTriangle({0.f, -2.f, 0.f}, {-1.f, -1.f, -1.f}, {-1.f, -1.f, 1.f});
+        AddTriangle({0.f, -2.f, 0.f}, {-1.f, -1.f, 1.f}, {1.f, -1.f, 1.f});
+
+        // BACK
+        AddTriangle({0.f, 0.f, -2.f}, {1.f, 1.f, -1.f}, {-1.f, 1.f, -1.f});
+        AddTriangle({0.f, 0.f, -2.f}, {-1.f, 1.f, -1.f}, {-1.f, -1.f, -1.f});
+        AddTriangle({0.f, 0.f, -2.f}, {-1.f, -1.f, -1.f}, {1.f, -1.f, -1.f});
+        AddTriangle({0.f, 0.f, -2.f}, {1.f, -1.f, -1.f}, {1.f, 1.f, -1.f});
+
+        return edgeSequence;
+    }
+
+    std::vector<SimpleMeshVertex> Overlay::CreateRing(const XrVector3f& color)
+    {
+        std::vector<SimpleMeshVertex> vertices;
+
+        constexpr float angleIncrement = DirectX::XM_2PI / 128.f;
+        float angle = 0.f;
+        DirectX::XMVECTOR v0 = {std::cos(angle), std::sin(angle), 0.f};
+        for (int i = 0; i < 128; i++)
+        {
+            angle += angleIncrement;
+            const DirectX::XMVECTOR v1 = {std::cos(angle), std::sin(angle), 0.f};
+            
+            XrVector3f inner0, inner1, outer0, outer1;
+            xr::math::StoreXrVector3(&inner0, DirectX::XMVectorScale(v0, 0.995f));
+            xr::math::StoreXrVector3(&inner1, DirectX::XMVectorScale(v1, 0.995f));
+            xr::math::StoreXrVector3(&outer0, DirectX::XMVectorScale(v0, 1.005f));
+            xr::math::StoreXrVector3(&outer1, DirectX::XMVectorScale(v1, 1.005f));
+
+            // two triangles per section
+            vertices.push_back({inner0, color});
+            vertices.push_back({inner1, color});
+            vertices.push_back({outer0, color});
+
+            vertices.push_back({outer0, color});
+            vertices.push_back({inner1, color});
+            vertices.push_back({outer1, color});
+
+            // opposite side
+            vertices.push_back({inner0, color});
+            vertices.push_back({outer0, color});
+            vertices.push_back({inner1, color});
+
+            vertices.push_back({outer0, color});
+            vertices.push_back({outer1, color});
+            vertices.push_back({inner1, color});
+
+            v0 = v1;
+        }
+        return vertices;
+    }
+    std::vector<SimpleMeshVertex> Overlay::CreateAxis(const XrVector3f& darkColor,
+                                                      const XrVector3f& pureColor,
+                                                      const XrVector3f& lightColor)
+    {
+        std::vector<SimpleMeshVertex> vertices;
+        XrVector3f front{0, 0, -2};
+        XrVector3f back{0, 0, 2};
+
+        constexpr float angleIncrement = DirectX::XM_2PI / 128.f;
+        float angle = 0.f;
+        XrVector3f v0 = {0.001f * std::cos(angle), 0.001f * std::sin(angle), 0.f};
+        for (int i = 0; i < 128; i++)
+        {
+            angle += angleIncrement;
+            const XrVector3f v1 = {0.001f * std::cos(angle), 0.001f * std::sin(angle), 0.f};
+
+            // front
+            vertices.push_back({front, pureColor});
+            vertices.push_back({v0, lightColor});
+            vertices.push_back({v1, lightColor});
+
+            // back
+            vertices.push_back({v1, darkColor});
+            vertices.push_back({v0, darkColor});
+            vertices.push_back({back, pureColor});
+
+            v0 = v1;
+        }
+        return vertices;
+    }
+}// namespace openxr_api_layer::graphics

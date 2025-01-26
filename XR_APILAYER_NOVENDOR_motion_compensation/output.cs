@@ -100,6 +100,5 @@ namespace output
 		stop = 0x40,
 		failure = 0x80,
 		reset = 0x100,
-		setcor = 0x200
 	};
 }

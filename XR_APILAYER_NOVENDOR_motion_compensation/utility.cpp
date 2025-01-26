@@ -250,7 +250,8 @@ namespace utility
     }
 
     CorEstimator::CorEstimator(openxr_api_layer::OpenXrLayer* layer)
-        : m_CmdMmf(std::make_shared<input::CorEstimatorCmd>()), m_PosMmf(std::make_shared<PoseMmf>()),
+        : m_CmdMmf(std::make_unique<input::CorEstimatorCmd>()),
+          m_ResultMmf(std::make_unique<input::CorEstimatorResult>()), m_PosMmf(std::make_unique<PoseMmf>()),
           m_Layer(layer)
     {}
 
@@ -259,7 +260,7 @@ namespace utility
         bool enabled;
         if (GetConfig()->IsVirtualTracker() && GetConfig()->GetBool(Cfg::CorEstimatorEnabled, enabled) && enabled)
         {
-            m_Enabled = m_CmdMmf->Init();
+            m_Enabled = m_CmdMmf->Init() && m_ResultMmf->Init();
             return m_Enabled;
         }
         Log("CorEstimator feature deactivated");
@@ -278,23 +279,30 @@ namespace utility
         {
             Log("cor estimation %s", m_Active ? "canceled" : "reset");
             m_Active = false;
+            m_Samples.clear();
+            m_Axes.clear();
             m_PosMmf->Reset();
             m_CmdMmf->ConfirmReset();
             return;
         }
-        if (m_CmdMmf->m_SetCor)
+
+        auto result = m_ResultMmf->ReadResult();
+        if (result.has_value())
         {
-            m_CmdMmf->ConfirmSetCor();
-            auto corPose = m_PosMmf->ReadCorPose();
-            if (!corPose.has_value())
+            Log("result: posetype = %d, pose = %s, radius = %04f",
+                result.value().resultType,
+                xr::ToString(result.value().pose).c_str(),
+                result.value().radius);
+            if (static_cast<int>(PoseType::Cor) == result.value().resultType)
             {
-                m_CmdMmf->Failure();
-                ErrorLog("%s: cor not set in mmf", __FUNCTION__);
-                return;
+                m_Layer->SetCor(result.value().pose);
             }
-            m_Layer->SetCor(corPose.value());
-            return;
+            else
+            {
+                m_Axes.push_back({result.value().resultType, result.value().pose, result.value().radius});
+            }
         }
+
         if (!m_Active)
         {
             if (!m_CmdMmf->m_Start)
@@ -318,6 +326,7 @@ namespace utility
             m_Active = true;
             Log("cor estimation started");
         }
+
         if (m_CmdMmf->m_Stop)
         {
             m_CmdMmf->ConfirmStop();
@@ -332,7 +341,8 @@ namespace utility
             m_CmdMmf->Failure();
             return;
         }
-        m_PosMmf->Transmit(pos.value(), m_CmdMmf->m_CurrentDof);
+        m_PosMmf->Transmit(pos.value(), m_CmdMmf->m_PoseType);
+        m_Samples.push_back({pos.value(), m_CmdMmf->m_PoseType});
     }
 
     bool CorEstimator::TransmitHmd() const
@@ -345,9 +355,18 @@ namespace utility
             EventSink::Execute(Event::Error);
             return false;
         }
-
         m_PosMmf->Transmit(calibratedHmd.value(), static_cast<int>(PoseType::Hmd));
         return true;
+    }
+
+    std::vector<std::tuple<int, XrPosef, float>> CorEstimator::GetAxes()
+    {
+        return m_Axes;
+    }
+
+    std::vector<std::pair<XrPosef, int>> CorEstimator::GetSamples()
+    {
+        return m_Samples;
     }
 
     std::string LastErrorMsg()

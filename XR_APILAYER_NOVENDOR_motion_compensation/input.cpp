@@ -35,12 +35,11 @@ namespace input
             return false;
         }
         m_Error = false;
-        m_CurrentDof = static_cast<utility::DofValue>(cmd & 7);
+        m_PoseType = cmd & 7;
         m_Controller = cmd & static_cast<int>(CorEstimatorFlags::controller);
         m_Start = cmd & static_cast<int>(CorEstimatorFlags::start);
         m_Stop = cmd & static_cast<int>(CorEstimatorFlags::stop);
         m_Reset = cmd & static_cast<int>(CorEstimatorFlags::reset);
-        m_SetCor = cmd & static_cast<int>(CorEstimatorFlags::setcor);
         return true;
     }
 
@@ -53,11 +52,6 @@ namespace input
     void CorEstimatorCmd::ConfirmStop()
     {
         WriteFlag(static_cast<int>(CorEstimatorFlags::stop), false);
-    }
-
-    void CorEstimatorCmd::ConfirmSetCor()
-    {
-        WriteFlag(static_cast<int>(CorEstimatorFlags::setcor), false);
     }
 
     void CorEstimatorCmd::ConfirmReset()
@@ -79,7 +73,7 @@ namespace input
         {
             if (!m_Error)
             {
-                ErrorLog("%s (%d / %d): unable to read from mmf: Local\\OXRMC_CorEstimator", __FUNCTION__, flag, active);
+                ErrorLog("%s (%d / %d): unable to read from mmf: Local\\OXRMC_CorEstimatorCmd", __FUNCTION__, flag, active);
             }
             m_Error = true;
             return;
@@ -89,7 +83,7 @@ namespace input
         {
             if (!m_Error)
             {
-                ErrorLog("%s (%d / %d): unable to write to mmf: Local\\OXRMC_CorEstimator", __FUNCTION__, flag, active);
+                ErrorLog("%s (%d / %d): unable to write to mmf: Local\\OXRMC_CorEstimatorCmd", __FUNCTION__, flag, active);
             }
             m_Error = true;
             return; 
@@ -97,7 +91,26 @@ namespace input
         m_Error = false;
     }
 
-    
+    bool CorEstimatorResult::Init()
+    {
+        std::tuple<int32_t, XrPosef, float> nullData{};
+        m_Mmf.SetWriteable(sizeof(nullData));
+        m_Mmf.SetName("Local\\OXRMC_CorEstimatorResult");
+        return m_Mmf.Write(&nullData, sizeof(nullData));
+    }
+
+    std::optional<CorResult> CorEstimatorResult::ReadResult()
+    {
+        CorResult data;
+        if (!m_Mmf.Read(&data, sizeof(data), 0) || !data.resultType)
+        {
+            return {};
+        }
+        CorResult nullData{};
+        m_Mmf.Write(&nullData, sizeof(nullData));
+        return data;
+    }
+
 
     bool KeyboardInput::Init()
     {

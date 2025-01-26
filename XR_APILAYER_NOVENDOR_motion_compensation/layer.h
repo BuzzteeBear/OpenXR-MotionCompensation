@@ -113,6 +113,8 @@ namespace openxr_api_layer
         std::optional<XrPosef> GetCalibratedHmdPose() const;
         void ResetCalibratedHmdPose();
         void SetCor(const XrPosef& pose) const;
+        std::vector<std::pair<XrPosef, int>> GetEstimatorSamples() const;
+        std::vector<std::tuple<int, XrPosef, float>> GetEstimatorAxes() const;
 
         XrActionSet m_ActionSet{XR_NULL_HANDLE};
         XrAction m_PoseAction{XR_NULL_HANDLE};

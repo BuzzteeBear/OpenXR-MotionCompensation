@@ -2217,6 +2217,16 @@ namespace openxr_api_layer
         m_Tracker->SetCorPose(pose);
     }
 
+    std::vector<std::pair<XrPosef, int>> OpenXrLayer::GetEstimatorSamples() const
+    {
+        return m_CorEstimator->GetSamples();
+    }
+
+    std::vector<std::tuple<int, XrPosef, float>> OpenXrLayer::GetEstimatorAxes() const
+    {
+        return m_CorEstimator->GetAxes();
+    }
+
     bool OpenXrLayer::AttachActionSet(const std::string& caller)
     {
         TraceLocalActivity(local);

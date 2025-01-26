@@ -174,7 +174,6 @@ namespace output
       public:
         PoseMmf() : QueuedMmf("Local\\OXRMC_PositionOutput") {};
         void Transmit(const XrPosef& position, int poseType);
-        std::optional<XrPosef> ReadCorPose() const;
         void Reset();
 
       private: 

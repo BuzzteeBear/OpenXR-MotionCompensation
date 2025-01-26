@@ -204,23 +204,6 @@ namespace output
         TraceLoggingWriteStop(local, "EventMmf::Execute");
     }
 
-    std::optional<XrPosef> PoseMmf::ReadCorPose() const
-    {
-        utility::Mmf mmf;
-        mmf.SetName(m_MmfName);
-        std::pair<XrPosef, int32_t> data;
-        if (!mmf.Read(&data, sizeof(data), 0))
-        {
-            return {};
-        }
-        if (data.second != -1)
-        {
-            ErrorLog("%s: wrong sample type: %d", __FUNCTION__, data.second);
-            return {};
-        }
-        return data.first;
-    }
-
     void PoseMmf::Reset()
     {
         std::unique_lock lock(m_QueueMutex);
