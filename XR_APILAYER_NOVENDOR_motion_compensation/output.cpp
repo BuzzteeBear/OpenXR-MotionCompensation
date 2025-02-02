@@ -170,7 +170,7 @@ namespace output
 
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local,
-                               "EventMmf::Execute",
+                               "PoseMmf::Transmit",
                                TLArg(xr::ToString(position).c_str(), "Dof"),
                                TLArg(poseType, "PoseType"));
 
@@ -186,7 +186,7 @@ namespace output
             }
             else if (now - m_LastError > 1000)
             {
-                // retry starting thread after a second
+                DebugLog("PoseMmf::Transmit: retry starting thread");
                 m_LastError = 0;
                 m_MmfError = false;
                 m_StopThread = false;
@@ -199,16 +199,22 @@ namespace output
         {
             std::unique_lock lock(m_QueueMutex);
             m_EventQueue.push_back({position, poseType});
+            DebugLog("PoseMmf::Transmit: pushed pose: %d / %s, queue size = %u", poseType, xr::ToString(position).c_str(), m_EventQueue.size());
         }
 
-        TraceLoggingWriteStop(local, "EventMmf::Execute");
+        TraceLoggingWriteStop(local, "PoseMmf::Transmit");
     }
 
     void PoseMmf::Reset()
     {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "PoseMmf::Reset");
+
         std::unique_lock lock(m_QueueMutex);
         m_EventQueue.clear();
         m_EventQueue.push_back({{}, 0});
+
+        TraceLoggingWriteStop(local, "PoseMmf::Reset");
     }
 
     bool PoseMmf::WriteImpl(Mmf& mmf)
@@ -233,6 +239,9 @@ namespace output
             return true;
         }
 
+        DebugLog("PoseMmf::WriteImpl: writing pose: %d / %s",
+                 m_EventQueue.front().second,
+                 xr::ToString(m_EventQueue.front().first).c_str());   
         if (!mmf.Write(&m_EventQueue.front(), sizeof(data)))
         {
             m_MmfError.store(true);
@@ -268,6 +277,7 @@ namespace output
         {
         case Event::Initialized:
             status.initialized = true;
+            [[fallthrough]];
         case Event::Load:
             status.activated = false;
             status.calibrated = false;
@@ -279,8 +289,10 @@ namespace output
 
         case Event::Activated:
             status.activated = true;
+            [[fallthrough]];
         case Event::Calibrated:
             status.connectionLost = false;
+            [[fallthrough]];
         case Event::Restored:
             status.calibrated = true;
             status.critical = false;
@@ -288,6 +300,7 @@ namespace output
 
         case Event::CalibrationLost:
             status.calibrated = false;
+            [[fallthrough]];
         case Event::Deactivated:
             status.activated = false;
             break;

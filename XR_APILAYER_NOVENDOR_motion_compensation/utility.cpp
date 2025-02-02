@@ -251,19 +251,27 @@ namespace utility
 
     CorEstimator::CorEstimator(openxr_api_layer::OpenXrLayer* layer)
         : m_CmdMmf(std::make_unique<input::CorEstimatorCmd>()),
-          m_ResultMmf(std::make_unique<input::CorEstimatorResult>()), m_PosMmf(std::make_unique<PoseMmf>()),
+          m_ResultMmf(std::make_unique<input::CorEstimatorResult>()), m_PoseMmf(std::make_unique<PoseMmf>()),
           m_Layer(layer)
     {}
 
     bool CorEstimator::Init()
     {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "CorEstimator::Init");
+
         bool enabled;
         if (GetConfig()->IsVirtualTracker() && GetConfig()->GetBool(Cfg::CorEstimatorEnabled, enabled) && enabled)
         {
             m_Enabled = m_CmdMmf->Init() && m_ResultMmf->Init();
+            TraceLoggingWriteStop(local, "CorEstimator::Init", TLArg(m_Enabled, "Success"));
             return m_Enabled;
         }
         Log("CorEstimator feature deactivated");
+        TraceLoggingWriteStop(local,
+                              "CorEstimator::Init",
+                              TLArg(GetConfig()->IsVirtualTracker(), "VirtualTracker"),
+                              TLArg(false, "Enabled"));
         return true;
     }
 
@@ -274,6 +282,9 @@ namespace utility
             return;
         }
 
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "CorEstimator::Execute");
+
         m_CmdMmf->Read();
         if (m_CmdMmf->m_Reset)
         {
@@ -281,15 +292,17 @@ namespace utility
             m_Active = false;
             m_Samples.clear();
             m_Axes.clear();
-            m_PosMmf->Reset();
+            m_PoseMmf->Reset();
             m_CmdMmf->ConfirmReset();
+
+            TraceLoggingWriteStop(local, "CorEstimator::Execute", TLArg(true, "Reset"));
             return;
         }
 
         auto result = m_ResultMmf->ReadResult();
         if (result.has_value())
         {
-            Log("result: posetype = %d, pose = %s, radius = %04f",
+            Log("COR estimation result received: type = %d, pose = %s, radius = %03f",
                 result.value().resultType,
                 xr::ToString(result.value().pose).c_str(),
                 result.value().radius);
@@ -307,6 +320,7 @@ namespace utility
         {
             if (!m_CmdMmf->m_Start)
             {
+                TraceLoggingWriteStop(local, "CorEstimator::Execute", TLArg(false, "Started"));
                 return;
             }
             if (!GetConfig()->IsVirtualTracker())
@@ -314,10 +328,13 @@ namespace utility
                 m_CmdMmf->Failure();
                 ErrorLog("%s: cannot use cor estimation feature with physical tracker", __FUNCTION__);
                 EventSink::Execute(Event::Error);
+
+                TraceLoggingWriteStop(local, "CorEstimator::Execute", TLArg(false, "VirtualTracker"));
                 return;
             }
             if (!TransmitHmd())
             {
+                TraceLoggingWriteStop(local, "CorEstimator::Execute", TLArg(false, "TransmitHmd"));
                 return;
             }
 
@@ -332,6 +349,8 @@ namespace utility
             m_CmdMmf->ConfirmStop();
             m_Active = false;
             Log("cor estimation stopped");
+
+            TraceLoggingWriteStop(local, "CorEstimator::Execute", TLArg(true, "Stopped"));
             return;
         }
 
@@ -341,8 +360,13 @@ namespace utility
             m_CmdMmf->Failure();
             return;
         }
-        m_PosMmf->Transmit(pos.value(), m_CmdMmf->m_PoseType);
+        m_PoseMmf->Transmit(pos.value(), m_CmdMmf->m_PoseType);
         m_Samples.push_back({pos.value(), m_CmdMmf->m_PoseType});
+        TraceLoggingWriteStop(local,
+                              "CorEstimator::Execute",
+                              TLArg(m_CmdMmf->m_PoseType, "Type"),
+                              TLArg(xr::ToString(pos.value()).c_str(), "Pose"));
+
     }
 
     bool CorEstimator::TransmitHmd() const
@@ -355,7 +379,8 @@ namespace utility
             EventSink::Execute(Event::Error);
             return false;
         }
-        m_PosMmf->Transmit(calibratedHmd.value(), static_cast<int>(PoseType::Hmd));
+        m_PoseMmf->Transmit(calibratedHmd.value(), static_cast<int>(PoseType::Hmd));
+        Log("transmitted hmd pose: %s", xr::ToString(calibratedHmd.value()).c_str());
         return true;
     }
 

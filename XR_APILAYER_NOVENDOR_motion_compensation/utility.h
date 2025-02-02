@@ -303,7 +303,7 @@ namespace utility
         bool m_Enabled{false}, m_Active{false}, m_UseTracker{false};
         std::unique_ptr<input::CorEstimatorCmd> m_CmdMmf{};
         std::unique_ptr<input::CorEstimatorResult> m_ResultMmf{};
-        std::unique_ptr<output::PoseMmf> m_PosMmf{};
+        std::unique_ptr<output::PoseMmf> m_PoseMmf{};
         openxr_api_layer::OpenXrLayer* m_Layer = nullptr;
         std::vector<std::pair<XrPosef, int>> m_Samples{};
         std::vector<std::tuple<int, XrPosef, float>> m_Axes{};

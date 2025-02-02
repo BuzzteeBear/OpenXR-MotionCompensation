@@ -6,6 +6,7 @@
 #include "layer.h"
 #include "output.h"
 #include <log.h>
+#include <util.h>
 #include <ranges>
 
 using namespace openxr_api_layer;
@@ -16,10 +17,16 @@ namespace input
 {
     bool CorEstimatorCmd::Init()
     {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "CorEstimatorCmd::Init");
+
         m_Mmf.SetWriteable(sizeof(int));
         m_Mmf.SetName("Local\\OXRMC_CorEstimatorCmd");
         int zero = 0;
-        return m_Mmf.Write(&zero, sizeof(int));
+        bool success = m_Mmf.Write(&zero, sizeof(int));
+
+        TraceLoggingWriteStop(local, "CorEstimatorCmd::Init", TLArg(success, "Success"));
+        return success; 
     }
 
     bool CorEstimatorCmd::Read()
@@ -93,21 +100,35 @@ namespace input
 
     bool CorEstimatorResult::Init()
     {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "CorEstimatorResult::Init");
+
         std::tuple<int32_t, XrPosef, float> nullData{};
         m_Mmf.SetWriteable(sizeof(nullData));
         m_Mmf.SetName("Local\\OXRMC_CorEstimatorResult");
-        return m_Mmf.Write(&nullData, sizeof(nullData));
+        bool success = m_Mmf.Write(&nullData, sizeof(nullData));
+
+        TraceLoggingWriteStop(local, "CorEstimatorResult::Init", TLArg(success, "Success"));
+        return success; 
     }
 
     std::optional<CorResult> CorEstimatorResult::ReadResult()
     {
-        CorResult data;
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "CorEstimatorResult::ReadResult");
+
+        CorResult data{};
         if (!m_Mmf.Read(&data, sizeof(data), 0) || !data.resultType)
         {
+            TraceLoggingWriteStop(local, "CorEstimatorResult::ReadResult", TLArg(data.resultType, "ResultType"));
             return {};
         }
         CorResult nullData{};
         m_Mmf.Write(&nullData, sizeof(nullData));
+        DebugLog("CorEstimatorResult::ReadResult: %d / %s / %f",
+                 data.resultType,
+                 xr::ToString(XrPosef()).c_str(),
+                 data.radius);      
         return data;
     }
 
