@@ -174,7 +174,7 @@ Upon starting an OpenXR application with the API layer active for the first time
 </li>
 <li><code>srs</code>: use the virtual tracker data provided by SRS motion software when using a Witmotion (or similar?) sensor on the motion rig.</li>
 <li><code>flypt</code> use the virtual tracker data provided by FlyPT Mover.</li>
-<li><code>yaw</code>: use the virtual tracker data provided by Yaw VR and Yaw 2. Either while using SRS or Game Engine.</li>
+<li><code>yaw</code>: use the virtual tracker data provided by Yaw VR and Yaw 2. Either while using SRS or Game Link/Engine.</li>
 </ul>
 </li>
 <li>the keys <code>offset_...</code>, <code>load_ref_pose_from_file</code> and <code>cor_...</code> are used to handle the configuration of the center of rotation (cor) for all available virtual trackers.
@@ -259,7 +259,7 @@ The key <code>vertical_factor</code> is applied to translational filter strength
 <h2 id="using-a-virtual-tracker">Using a virtual tracker</h2>
 <p>To use a virtual tracker (as opposed to a physical device) set parameter <code>tracker_type</code> according to the motion software that is providing the data for motion compensation on your system:</p>
 <ul>
-<li><code>yaw</code>: Yaw Game Engine (or Sim Racing Studio when using rotational data provided by Yaw VR or Yaw 2)</li>
+<li><code>yaw</code>: Yaw Game Link/Engine (or Sim Racing Studio when using rotational data provided by Yaw VR or Yaw 2)</li>
 <li><code>srs</code>: Sim Racing Studio, using a Witmotion sensor</li>
 <li><code>flypt</code>: FlyPT Mover</li>
 </ul>
@@ -279,7 +279,6 @@ The key <code>vertical_factor</code> is applied to translational filter strength
 <li>You can use the tracker marker of the graphical overlay and keyboard shortcuts (or the left motion controller, see further below) to adjust the cor position in-game. Make sure to calibrate the tracker first, because the marker tracker just rests at vr play-space origin beforehand. For in-game changes to survive application restart, you have to manually save the configuration.</li>
 <li>If you're unable to locate the cor of your rig, try out the method described in the <a href="#virtual-tracker">according troubleshooting section</a></li>
 <li>You may have to invert some of the rotations/translations on output side to get them compensated properly. <strong>For new users it's strongly recommended to use some artificial telemetry (joystick input, sine wave generator, etc.) and testing one degree of freedom at at time</strong></li>
-<li>If you're using YawVR Game Engine you can also use the parameters <code>Head Distance</code> and <code>Height</code> in its Motion Compensation tab to specify the offset of the cor. Head distance is basically equal to <code>offset_forward</code> in the configration file. But note that the height parameter is measured upwards from the bottom of your play-space, so you'll need to have that setup correctly in order to use that feature.</li>
 </ul>
 <h3 id="adjusting-cor-location-using-a-motion-controller">Adjusting cor location using a motion controller</h3>
 <p>You can use the (left or right, according to <code>side</code> parameter) motion controller to move the cor position in virtual space. The virtual tracker has to be calibrated first. It is recommended to activate the graphical overlay (<strong>CTRL</strong> + <strong>D</strong> by default) to see the cor marker in game.
@@ -480,7 +479,7 @@ Use the <a href="#mmf-reader">MmfReader App</a> to make sure oxrmc is actually r
 If don't have a clue where the cor of your motion rig is supposed to be, you can try this procedure, that should work for most motion rig setups (you can watch a <a href="https://youtu.be/mIIlIlV-B_4">video of a similar procedure at YouTube</a>):</li>
 </ul>
 <ol>
-<li>Find a way to feed your motion software with artificial rotational telemetry (e.g. Joystick mode in the Setup section of SRS, a sine wave generator for FlyPT Mover or Gamepad / DirectInput plugin for YawVR Game Engine.</li>
+<li>Find a way to feed your motion software with artificial rotational telemetry (e.g. Joystick mode in the Setup section of SRS, a sine wave generator for FlyPT Mover or Gamepad / DirectInput plugin for YawVR Game Link/Engine.</li>
 <li>Calibrate your cor (ctrl + del by default) as described in <a href="#calibrate-virtual-tracker">here</a> and activate motion compensation</li>
 <li>Find the right height
 <ol>
