@@ -15,6 +15,17 @@ using namespace output;
 
 namespace input
 {
+    static std::string ToString(const ActivityBit& bit)
+    {
+        uint64_t input = static_cast<uint64_t>(bit);
+        int significance = 0;
+        while (input >>= 1)
+        {
+            ++significance;
+        }
+        return std::format("{}", significance);
+    }
+
     bool CorEstimatorCmd::Init()
     {
         TraceLocalActivity(local);
@@ -132,6 +143,107 @@ namespace input
         return data;
     }
 
+    bool MmfInput::Init()
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "MmfInput::Init");
+
+        ActivityFlags nullData{};
+        m_Mmf.SetWriteable(sizeof(nullData));
+        m_Mmf.SetName("Local\\OXRMC_ActivityInput");
+        bool success = m_Mmf.Write(&nullData, sizeof(nullData));
+        if (!success)
+        {
+            ErrorLog("%s: unable to create activity mmf", __FUNCTION__);
+        }
+
+        TraceLoggingWriteStop(local, "MmfInput::Init", TLArg(success, "Success"));
+        return success;
+    }
+
+    bool MmfInput::ReadMmf()
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "MmfInput::ReadMmf");
+
+        bool success{false};
+        ActivityFlags data{};
+        if (m_Mmf.Read(&data, sizeof(data), 0))
+        {
+            m_Flags = data;
+            success = true;
+        }
+        else
+        {
+            m_Flags = {};
+        }
+        TraceLoggingWriteStop(local,
+                              "MmfInput::ReadMmf",
+                              TLArg(true, "Success"),
+                              TLArg(data.trigger, "Trigger"),
+                              TLArg(data.confirm, "Confirm"));
+        return success;
+    }
+
+    bool MmfInput::GetTrigger(ActivityBit bit)
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "MmfInput::GetTrigger", TLArg(ToString(bit).c_str(), "Bit"));
+        if (!m_Flags.has_value())
+        {
+            TraceLoggingWriteStop(local, "MmfInput::GetTrigger", TLArg(false, "Success"));
+            return false;
+        }
+        bool confirmed = m_Flags.value().confirm & static_cast<uint64_t>(bit);
+        bool triggered = m_Flags.value().trigger & static_cast<uint64_t>(bit);
+
+        if (triggered)
+        {
+            if (confirmed)
+            {
+                // already triggered
+                triggered = false;
+            }
+            else
+            {
+                // set confirm bit
+                m_Flags.value().confirm |= static_cast<int64_t>(bit);
+                DebugLog("Trigger bit was set: %s", ToString(bit).c_str());
+            }
+        }
+        else if (confirmed)
+        {
+            // clear confirm bit
+            m_Flags.value().confirm &= ~static_cast<int64_t>(bit);
+            DebugLog("Confirm bit cleared: %s", ToString(bit).c_str());
+        }
+        TraceLoggingWriteStop(local,
+                              "MmfInput::GetTrigger",
+                              TLArg(triggered, "Triggered"),
+                              TLArg(confirmed, "Confirmed"));
+        return triggered;
+    }
+
+    bool MmfInput::WriteConfirm()
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "MmfInput::WriteConfirm");
+        if (!m_Flags.has_value())
+        {
+            TraceLoggingWriteStop(local,
+                                  "MmfInput::WriteConfirm",
+                                  TLArg(false, "Success"));
+            return false;
+        }
+        bool success = m_Mmf.Write(&m_Flags.value().confirm, sizeof(uint64_t), sizeof(uint64_t));
+        TraceLoggingWriteStop(local,
+                              "MmfInput::WriteConfirm",
+                              TLArg(success, "Success"),
+                              TLArg(m_Flags.value_or(ActivityFlags{}).trigger, "Trigger"),
+                              TLArg(m_Flags.value_or(ActivityFlags{}).confirm, "Confirm"));
+        return success;
+    }
+
 
     bool KeyboardInput::Init()
     {
@@ -197,141 +309,146 @@ namespace input
         return success;
     }
 
-    void InputHandler::HandleKeyboardInput(const XrTime time)
+    void InputHandler::HandleInput(const XrTime time)
     {
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "InputHandler::HandleKeyboardInput", TLArg(time, "Time"));
+        TraceLoggingWriteStart(local, "InputHandler::HandleInput", TLArg(time, "Time"));
 
         bool isRepeat{false};
-        const bool fast = m_Input.GetKeyState(Cfg::KeyFastModifier, isRepeat);
+        const bool fast = m_Keyboard.GetKeyState(Cfg::KeyFastModifier, isRepeat);
 
-        TraceLoggingWriteTagged(local, "KeyboardInput::HandleKeyboardInput", TLArg(fast, "Fast"));
+        m_Mmf->ReadMmf();
 
-        if (m_Input.GetKeyState(Cfg::KeyActivate, isRepeat) && !isRepeat)
+        TraceLoggingWriteTagged(local, "KeyboardInput::HandleInput", TLArg(fast, "Fast"));
+
+        if ((m_Keyboard.GetKeyState(Cfg::KeyActivate, isRepeat) && !isRepeat) || m_Mmf->GetTrigger(ActivityBit::Activate))
         {
             ToggleActive(time);
         }
-        if (m_Input.GetKeyState(Cfg::KeyCalibrate, isRepeat) && !isRepeat)
+        if ((m_Keyboard.GetKeyState(Cfg::KeyCalibrate, isRepeat) && !isRepeat) || m_Mmf->GetTrigger(ActivityBit::Calibrate))
         {
             Recalibrate(time);
         }
-        if (m_Input.GetKeyState(Cfg::KeyLockRefPose, isRepeat) && !isRepeat)
+        if ((m_Keyboard.GetKeyState(Cfg::KeyLockRefPose, isRepeat) && !isRepeat) || m_Mmf->GetTrigger(ActivityBit::LockRefPose))
         {
             LockRefPose();
         }
-        if (m_Input.GetKeyState(Cfg::KeyReleaseRefPose, isRepeat) && !isRepeat)
+        if ((m_Keyboard.GetKeyState(Cfg::KeyReleaseRefPose, isRepeat) && !isRepeat) || m_Mmf->GetTrigger(ActivityBit::ReleaseRefPose))
         {
             ReleaseRefPose();
         }
-        if (m_Input.GetKeyState(Cfg::KeyTransInc, isRepeat))
+        if ((m_Keyboard.GetKeyState(Cfg::KeyTransInc, isRepeat)) || m_Mmf->GetTrigger(ActivityBit::FilterTranslationIncrease))
         {
             m_Layer->m_Tracker->ModifyFilterStrength(true, true, fast);
         }
-        if (m_Input.GetKeyState(Cfg::KeyTransDec, isRepeat))
+        if ((m_Keyboard.GetKeyState(Cfg::KeyTransDec, isRepeat)) || m_Mmf->GetTrigger(ActivityBit::FilterTranslationDecrease))
         {
             m_Layer->m_Tracker->ModifyFilterStrength(true, false, fast);
         }
-        if (m_Input.GetKeyState(Cfg::KeyRotInc, isRepeat))
+        if ((m_Keyboard.GetKeyState(Cfg::KeyRotInc, isRepeat)) || m_Mmf->GetTrigger(ActivityBit::FilterRotationIncrease))
         {
             m_Layer->m_Tracker->ModifyFilterStrength(false, true, fast);
         }
-        if (m_Input.GetKeyState(Cfg::KeyRotDec, isRepeat))
+        if ((m_Keyboard.GetKeyState(Cfg::KeyRotDec, isRepeat)) || m_Mmf->GetTrigger(ActivityBit::FilterRotationDecrease))
         {
             m_Layer->m_Tracker->ModifyFilterStrength(false, false, fast);
         }
-        if (m_Input.GetKeyState(Cfg::KeyStabilizer, isRepeat) && !isRepeat)
+        if ((m_Keyboard.GetKeyState(Cfg::KeyStabilizer, isRepeat) && !isRepeat) || m_Mmf->GetTrigger(ActivityBit::StabilizerToggle))
         {
             m_Layer->m_Tracker->ToggleStabilizer();
         }
-        if (m_Input.GetKeyState(Cfg::KeyStabInc, isRepeat))
+        if ((m_Keyboard.GetKeyState(Cfg::KeyStabInc, isRepeat)) || m_Mmf->GetTrigger(ActivityBit::StabilizerIncrease))
         {
             m_Layer->m_Tracker->ModifyStabilizer(true, fast);
         }
-        if (m_Input.GetKeyState(Cfg::KeyStabDec, isRepeat))
+        if ((m_Keyboard.GetKeyState(Cfg::KeyStabDec, isRepeat)) || m_Mmf->GetTrigger(ActivityBit::StabilizerDecrease))
         {
             m_Layer->m_Tracker->ModifyStabilizer(false, fast);
         }
-        if (m_Input.GetKeyState(Cfg::KeyOffForward, isRepeat))
+        if ((m_Keyboard.GetKeyState(Cfg::KeyOffForward, isRepeat)) || m_Mmf->GetTrigger(ActivityBit::OffsetForward))
         {
             ChangeOffset(Direction::Fwd, fast);
         }
-        if (m_Input.GetKeyState(Cfg::KeyOffBack, isRepeat))
+        if ((m_Keyboard.GetKeyState(Cfg::KeyOffBack, isRepeat)) || m_Mmf->GetTrigger(ActivityBit::OffsetBack))
         {
             ChangeOffset(Direction::Back, fast);
         }
-        if (m_Input.GetKeyState(Cfg::KeyOffUp, isRepeat))
+        if ((m_Keyboard.GetKeyState(Cfg::KeyOffUp, isRepeat)) || m_Mmf->GetTrigger(ActivityBit::OffsetUp))
         {
             ChangeOffset(Direction::Up, fast);
         }
-        if (m_Input.GetKeyState(Cfg::KeyOffDown, isRepeat))
+        if ((m_Keyboard.GetKeyState(Cfg::KeyOffDown, isRepeat)) || m_Mmf->GetTrigger(ActivityBit::OffsetDown))
         {
             ChangeOffset(Direction::Down, fast);
         }
-        if (m_Input.GetKeyState(Cfg::KeyOffRight, isRepeat))
+        if ((m_Keyboard.GetKeyState(Cfg::KeyOffRight, isRepeat)) || m_Mmf->GetTrigger(ActivityBit::OffsetRight))
         {
             ChangeOffset(Direction::Right, fast);
         }
-        if (m_Input.GetKeyState(Cfg::KeyOffLeft, isRepeat))
+        if ((m_Keyboard.GetKeyState(Cfg::KeyOffLeft, isRepeat)) || m_Mmf->GetTrigger(ActivityBit::OffsetLeft))
         {
             ChangeOffset(Direction::Left, fast);
         }
-        if (m_Input.GetKeyState(Cfg::KeyRotRight, isRepeat))
+        if ((m_Keyboard.GetKeyState(Cfg::KeyRotRight, isRepeat)) || m_Mmf->GetTrigger(ActivityBit::OffsetRotateRight))
         {
             ChangeOffset(Direction::RotRight, fast);
         }
-        if (m_Input.GetKeyState(Cfg::KeyRotLeft, isRepeat))
+        if ((m_Keyboard.GetKeyState(Cfg::KeyRotLeft, isRepeat)) || m_Mmf->GetTrigger(ActivityBit::OffsetRotateLeft))
         {
             ChangeOffset(Direction::RotLeft, fast);
         }
-        if (m_Input.GetKeyState(Cfg::KeyOverlay, isRepeat) && !isRepeat)
+        if ((m_Keyboard.GetKeyState(Cfg::KeyOverlay, isRepeat) && !isRepeat) || m_Mmf->GetTrigger(ActivityBit::OverlayToggle))
         {
             ToggleOverlay();
         }
-        if (m_Input.GetKeyState(Cfg::KeyPassthrough, isRepeat) && !isRepeat)
+        if ((m_Keyboard.GetKeyState(Cfg::KeyPassthrough, isRepeat) && !isRepeat) || m_Mmf->GetTrigger(ActivityBit::PassthroughToggle))
         {
             TogglePassthrough();
         }
-        if (m_Input.GetKeyState(Cfg::KeyCrosshair, isRepeat) && !isRepeat)
+        if ((m_Keyboard.GetKeyState(Cfg::KeyCrosshair, isRepeat) && !isRepeat) || m_Mmf->GetTrigger(ActivityBit::CrosshairToggle))
         {
             ToggleCrosshair();
         }
-        if (m_Input.GetKeyState(Cfg::KeyCache, isRepeat) && !isRepeat)
+        if ((m_Keyboard.GetKeyState(Cfg::KeyCache, isRepeat) && !isRepeat) || m_Mmf->GetTrigger(ActivityBit::EyeCacheToggle))
         {
             ToggleCache();
         }
-        if (m_Input.GetKeyState(Cfg::KeyModifier, isRepeat) && !isRepeat)
+        if ((m_Keyboard.GetKeyState(Cfg::KeyModifier, isRepeat) && !isRepeat) || m_Mmf->GetTrigger(ActivityBit::ModifierToggle))
         {
             ToggleModifier();
         }
-        if (m_Input.GetKeyState(Cfg::KeySaveConfig, isRepeat) && !isRepeat)
+        if ((m_Keyboard.GetKeyState(Cfg::KeySaveConfig, isRepeat) && !isRepeat) || m_Mmf->GetTrigger(ActivityBit::SaveConfig))
         {
             SaveConfig(time, false);
         }
-        if (m_Input.GetKeyState(Cfg::KeySaveConfigApp, isRepeat) && !isRepeat)
+        if ((m_Keyboard.GetKeyState(Cfg::KeySaveConfigApp, isRepeat) && !isRepeat) || m_Mmf->GetTrigger(ActivityBit::SaveConfigPerApp))
         {
             SaveConfig(time, true);
         }
-        if (m_Input.GetKeyState(Cfg::KeyReloadConfig, isRepeat) && !isRepeat)
+        if ((m_Keyboard.GetKeyState(Cfg::KeyReloadConfig, isRepeat) && !isRepeat) || m_Mmf->GetTrigger(ActivityBit::ReloadConfig))
         {
             ReloadConfig();
         }
-        if (m_Input.GetKeyState(Cfg::KeyVerbose, isRepeat) && !isRepeat)
+        if ((m_Keyboard.GetKeyState(Cfg::KeyVerbose, isRepeat) && !isRepeat) || m_Mmf->GetTrigger(ActivityBit::VerboseLoggingToggle))
         {
             ToggleVerbose();
         }
-        if (m_Input.GetKeyState(Cfg::KeyRecorder, isRepeat) && !isRepeat)
+        if ((m_Keyboard.GetKeyState(Cfg::KeyRecorder, isRepeat) && !isRepeat) || m_Mmf->GetTrigger(ActivityBit::RecorderToggle))
         {
             m_Layer->ToggleRecorderActive();
         }
-        if (m_Input.GetKeyState(Cfg::KeyLogProfile, isRepeat) && !isRepeat)
+        if ((m_Keyboard.GetKeyState(Cfg::KeyLogProfile, isRepeat) && !isRepeat) || m_Mmf->GetTrigger(ActivityBit::LogProfile))
         {
             m_Layer->LogCurrentInteractionProfile();
         }
-        if (m_Input.GetKeyState(Cfg::KeyLogTracker, isRepeat) && !isRepeat)
+        if ((m_Keyboard.GetKeyState(Cfg::KeyLogTracker, isRepeat) && !isRepeat) || m_Mmf->GetTrigger(ActivityBit::LogTracker))
         {
             m_Layer->m_Tracker->LogCurrentTrackerPoses(m_Layer->m_Session, time, m_Layer->m_Activated);
         }
-        TraceLoggingWriteStop(local, "InputHandler::HandleKeyboardInput");
+
+        m_Mmf->WriteConfirm();
+
+        TraceLoggingWriteStop(local, "InputHandler::HandleInput");
     }
 
     bool KeyboardInput::GetKeyState(const Cfg key, bool& isRepeat)
@@ -376,14 +493,11 @@ namespace input
         return isPressed && (!prevState.first || isRepeat || isModifier);
     }
 
-    InputHandler::InputHandler(OpenXrLayer* layer)
-    {
-        m_Layer = layer;
-    }
+    InputHandler::InputHandler(OpenXrLayer* layer) : m_Layer(layer), m_Mmf(std::make_unique<MmfInput>()) {}
 
     bool InputHandler::Init()
     {
-        return m_Input.Init();
+        return m_Keyboard.Init() && m_Mmf->Init();
     }
 
     void InputHandler::ToggleActive(XrTime time) const

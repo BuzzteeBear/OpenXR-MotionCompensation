@@ -1554,7 +1554,7 @@ namespace openxr_api_layer
 
         if (!m_Activated)
         {
-            m_Input->HandleKeyboardInput(time);
+            m_Input->HandleInput(time);
             if (m_AutoActivator)
             {
                 m_AutoActivator->ActivateIfNecessary(time);
@@ -1708,7 +1708,7 @@ namespace openxr_api_layer
                 resetLayers.push_back(chainFrameEndInfo.layers[i]);
             }
         }
-        m_Input->HandleKeyboardInput(time);
+        m_Input->HandleInput(time);
 
         XrFrameEndInfo resetFrameEndInfo{chainFrameEndInfo.type,
                                          chainFrameEndInfo.next,

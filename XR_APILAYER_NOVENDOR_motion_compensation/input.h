@@ -5,6 +5,16 @@
 #include "config.h"
 #include "utility.h"
 
+// include definitions shared with c#
+typedef uint64_t UInt64;
+#define public
+#define record
+#define enum enum class
+#include "input.cs"
+#undef public
+#undef enum
+#undef record  
+
 namespace openxr_api_layer
 {
     class OpenXrLayer;
@@ -45,6 +55,19 @@ namespace input
         std::optional<CorResult> ReadResult();
       private:
         utility::Mmf m_Mmf{};
+    };
+
+    class MmfInput
+    {
+      public:
+        bool Init();
+        bool ReadMmf();
+        bool GetTrigger(ActivityBit bit);
+        bool WriteConfirm();
+
+      private:
+        utility::Mmf m_Mmf{};
+        std::optional<ActivityFlags> m_Flags{};
     };
 
     class KeyboardInput
@@ -96,7 +119,7 @@ namespace input
       public:
         explicit InputHandler(openxr_api_layer::OpenXrLayer* layer);
         bool Init();
-        void HandleKeyboardInput(XrTime time);
+        void HandleInput(XrTime time);
         void ToggleActive(XrTime time) const;
         void Recalibrate(XrTime time) const;
         void LockRefPose() const;
@@ -106,14 +129,15 @@ namespace input
         void ToggleCrosshair() const;
         void ToggleCache() const;
         void ToggleModifier() const;
-        void ChangeOffset(::input::InputHandler::Direction dir, bool fast) const;
+        void ChangeOffset(Direction dir, bool fast) const;
         void ReloadConfig() const;
         void SaveConfig(XrTime time, bool forApp) const;
         static void ToggleVerbose();
 
       private:
         openxr_api_layer::OpenXrLayer* m_Layer;
-        KeyboardInput m_Input;
+        KeyboardInput m_Keyboard;
+        std::shared_ptr< MmfInput> m_Mmf{};
     };
 
     

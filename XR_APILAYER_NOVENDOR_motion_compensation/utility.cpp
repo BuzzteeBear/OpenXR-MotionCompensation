@@ -177,17 +177,17 @@ namespace utility
         return ReadWrite(buffer, size, false, time);
     }
 
-    bool Mmf::Write(void* buffer, size_t size)
+    bool Mmf::Write(void* buffer, size_t size, size_t offset)
     {
         if (!m_WriteAccess)
         {
             ErrorLog("%s: unable to write to mmf %s: write access not set", __FUNCTION__, m_Name.c_str());
             return false;
         }
-        return ReadWrite(buffer, size, true);
+        return ReadWrite(buffer, size, true, 0, offset);
     }
 
-    bool Mmf::ReadWrite(void* buffer, const size_t size, bool write, const int64_t time)
+    bool Mmf::ReadWrite(void* buffer, const size_t size, bool write, const int64_t time, size_t offset)
     {
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "Mmf::ReadWrite", TLArg(time, "Time"), TLArg(write, "Write"));
@@ -207,7 +207,8 @@ namespace utility
             {
                 if (write)
                 {
-                    memcpy(m_View, buffer, size);
+                    void* view = static_cast<char*>(m_View) + offset;
+                    memcpy(view, buffer, size);
                 }
                 else
                 {

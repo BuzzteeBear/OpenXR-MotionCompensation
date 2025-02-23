@@ -273,11 +273,11 @@ namespace utility
         void SetName(const std::string& name);
         bool Open(int64_t time) override;
         bool Read(void* buffer, size_t size, int64_t time);
-        bool Write(void* buffer, size_t size);
+        bool Write(void* buffer, size_t size, size_t offset = 0);
         void Close();
 
       private:
-        bool ReadWrite(void* buffer, size_t size, bool write, int64_t time = 0);
+        bool ReadWrite(void* buffer, size_t size, bool write, int64_t time, size_t offset = 0);
         XrTime m_Check{1000000000}; // reopen mmf once a second by default
         XrTime m_LastRefresh{0};
         std::string m_Name;
