@@ -766,6 +766,7 @@ namespace input
                 m_Layer->m_Overlay->ResetMarker();
                 m_Layer->m_Overlay->ResetCrosshair();
             }
+            m_Layer->m_CorEstimator->Init();
         }
         EventSink::Execute(!success ? Event::Critical : Event::Load);
 
