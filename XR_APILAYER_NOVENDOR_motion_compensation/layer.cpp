@@ -1167,12 +1167,13 @@ namespace openxr_api_layer
             return result;
         }
 
-        if (viewCountOutput && *viewCountOutput <= 0)
+        if (!viewCountOutput || *viewCountOutput <= 0)
         {
-            ErrorLog("%s: no views to compensate. viewCountOutput: %u", __FUNCTION__, *viewCountOutput);
+            uint32_t views = viewCountOutput ? *viewCountOutput : -1;
+            ErrorLog("%s: no views to compensate. viewCountOutput: %u", __FUNCTION__, views);
             TraceLoggingWriteStop(local,
                                   "OpenXrLayer::xrLocateViews",
-                                  TLArg(*viewCountOutput, "viewCountOutput"),
+                                  TLArg(views, "viewCountOutput"),
                                   TLArg(xr::ToCString(result), "Result"));
             return result;
         }
