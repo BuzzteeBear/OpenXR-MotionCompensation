@@ -115,6 +115,7 @@ namespace openxr_api_layer
         void SetCor(const XrPosef& pose) const;
         std::vector<std::pair<XrPosef, int>> GetEstimatorSamples() const;
         std::vector<std::tuple<int, XrPosef, float>> GetEstimatorAxes() const;
+        void LogCurrentInteractionProfileAndSource(const std::string& caller);
 
         XrActionSet m_ActionSet{XR_NULL_HANDLE};
         XrAction m_PoseAction{XR_NULL_HANDLE};
@@ -149,7 +150,6 @@ namespace openxr_api_layer
                       XrPosef& deltaStage,
                       XrPosef& deltaRef);
         void RecoveryTimeOut(XrTime time);
-        void LogCurrentInteractionProfile();
         bool ToggleModifierActive();
         void ToggleRecorderActive();
 

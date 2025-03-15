@@ -225,7 +225,7 @@ namespace filter
 
     void PassThroughStabilizer::Insert(utility::Dof& dof, int64_t now)
     {
-        std::unique_lock lock(m_SampleMutex);
+        std::lock_guard lock(m_SampleMutex);
         m_CurrentSample = dof;
     }
 
@@ -234,7 +234,7 @@ namespace filter
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "PassThroughStabilizer::Read", TLArg(xr::ToString(dof).c_str(), "DofIn"));
 
-        std::unique_lock lock(m_SampleMutex);
+        std::lock_guard lock(m_SampleMutex);
         for (const DofValue value : m_Relevant)
         {
             dof.data[value] = m_CurrentSample.data[value];
@@ -318,7 +318,7 @@ namespace filter
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "EmaStabilizer::SetStrength", TLArg(strength, "Strength"));
 
-        std::unique_lock lock(m_SampleMutex);
+        std::lock_guard lock(m_SampleMutex);
         SetFrequencies(strength);
 
         TraceLoggingWriteStop(local, "EmaStabilizer::SetStrength");
@@ -329,7 +329,7 @@ namespace filter
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "EmaStabilizer::SetStartTime", TLArg(now, "Now"));
 
-        std::unique_lock lock(m_SampleMutex);
+        std::lock_guard lock(m_SampleMutex);
         m_LastSampleTime = now;
         m_Initialized = false;
 
@@ -344,7 +344,7 @@ namespace filter
                                TLArg(xr::ToString(dof).c_str(), "Sample"),
                                TLArg(now, "Now"));
 
-        std::unique_lock lock(m_SampleMutex);
+        std::lock_guard lock(m_SampleMutex);
         if (Disabled(dof))
         {
             TraceLoggingWriteStop(local, "EmaStabilizer::Insert", TLArg(true, "Disabled"));
@@ -391,7 +391,7 @@ namespace filter
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "BiQuadStabilizer::SetStrength", TLArg(strength, "Strength"));
 
-        std::unique_lock lock(m_SampleMutex);
+        std::lock_guard lock(m_SampleMutex);
         SetFrequencies(strength);
         ResetFilters();
 
@@ -403,7 +403,7 @@ namespace filter
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "BiQuadStabilizer::SetStartTime", TLArg(now, "Now"));
 
-        std::unique_lock lock(m_SampleMutex);
+        std::lock_guard lock(m_SampleMutex);
         ResetFilters();
 
         TraceLoggingWriteStop(local, "BiQuadStabilizer::SetStartTime");
@@ -417,7 +417,7 @@ namespace filter
                                TLArg(xr::ToString(dof).c_str(), "Sample"),
                                TLArg(now, "Now"));
 
-        std::unique_lock lock(m_SampleMutex);
+        std::lock_guard lock(m_SampleMutex);
         if (Disabled(dof))
         {
             TraceLoggingWriteStop(local, "BiQuadStabilizer::Insert", TLArg(true, "Disabled"));

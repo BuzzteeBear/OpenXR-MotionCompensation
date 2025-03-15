@@ -80,7 +80,7 @@ namespace utility
             TraceLocalActivity(local);
             TraceLoggingWriteStart(local, "Cache::AddSample", TLArg(m_SampleType.c_str(), "Type"), TLArg(time, "Time"));
 
-            std::unique_lock lock(m_CacheLock);
+            std::lock_guard lock(m_CacheLock);
             if (m_Cache.contains(time))
             {
                 if (!override)
@@ -106,7 +106,7 @@ namespace utility
             TraceLocalActivity(local);
             TraceLoggingWriteStart(local, "Cache::GetSample", TLArg(m_SampleType.c_str(), "Type"), TLArg(time, "Time"));
 
-            std::unique_lock lock(m_CacheLock);
+            std::lock_guard lock(m_CacheLock);
 
             auto it = m_Cache.lower_bound(time);
             const bool itIsEnd = m_Cache.end() == it;
@@ -232,7 +232,7 @@ namespace utility
             TraceLocalActivity(local);
             TraceLoggingWriteStart(local, "Cache::CleanUp", TLArg(m_SampleType.c_str(), "Type"), TLArg(time, "Time"));
 
-            std::unique_lock lock(m_CacheLock);
+            std::lock_guard lock(m_CacheLock);
 
             auto it = m_Cache.lower_bound(time - m_Tolerance);
             if (m_Cache.begin() != it)

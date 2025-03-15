@@ -127,7 +127,7 @@ namespace utility
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "Mmf::Open", TLArg(time, "Time"), TLArg(m_WriteAccess, "WriteAccess"));
 
-        std::unique_lock lock(m_MmfLock);
+        std::lock_guard lock(m_MmfLock);
         DWORD access = m_WriteAccess ? FILE_MAP_READ | FILE_MAP_WRITE : FILE_MAP_READ;
 
         m_FileHandle = OpenFileMapping(access, FALSE, m_Name.c_str());
@@ -152,8 +152,8 @@ namespace utility
                          __FUNCTION__,
                          m_Name.c_str(),
                          LastErrorMsg().c_str());
-                lock.unlock();
-                Close();
+                CloseHandle(m_FileHandle);
+                m_FileHandle = nullptr;
                 TraceLoggingWriteStop(local, "Mmf::Open", TLArg(false, "Success"));
                 return false;
             }
@@ -200,7 +200,7 @@ namespace utility
         {
             Open(time);
         }
-        std::unique_lock lock(m_MmfLock);
+        std::lock_guard lock(m_MmfLock);
         if (m_View)
         {
             try
@@ -235,7 +235,7 @@ namespace utility
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "Mmf::Close");
 
-        std::unique_lock lock(m_MmfLock);
+        std::lock_guard lock(m_MmfLock);
         if (m_View)
         {
             UnmapViewOfFile(m_View);

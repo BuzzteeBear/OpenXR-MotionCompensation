@@ -439,7 +439,7 @@ namespace input
         }
         if ((m_Keyboard.GetKeyState(Cfg::KeyLogProfile, isRepeat) && !isRepeat) || m_Mmf->GetTrigger(ActivityBit::LogProfile))
         {
-            m_Layer->LogCurrentInteractionProfile();
+            m_Layer->LogCurrentInteractionProfileAndSource("HandleKeyboardInput");
         }
         if ((m_Keyboard.GetKeyState(Cfg::KeyLogTracker, isRepeat) && !isRepeat) || m_Mmf->GetTrigger(ActivityBit::LogTracker))
         {
@@ -522,7 +522,7 @@ namespace input
         const bool oldState = m_Layer->m_Activated;
         if (m_Layer->m_Initialized && lazySuccess)
         {
-            // if tracker is not initialized, activate only after successful init
+            // if tracker is not calibrated, activate only after successful calibration
             m_Layer->m_Activated = m_Layer->m_Tracker->m_Calibrated
                                        ? !m_Layer->m_Activated
                                        : m_Layer->m_Tracker->ResetReferencePose(m_Layer->m_Session, time);

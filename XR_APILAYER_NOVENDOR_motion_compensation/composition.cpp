@@ -255,7 +255,7 @@ namespace
             TraceLocalActivity(local);
             TraceLoggingWriteStart(local, "Swapchain_AcquireImage", TLPArg(this, "Swapchain"));
 
-            std::unique_lock lock(m_mutex);
+            std::lock_guard lock(m_mutex);
 
             uint32_t index;
             CHECK_XRCMD(xrAcquireSwapchainImage(m_swapchain, nullptr, &index));
@@ -312,7 +312,7 @@ namespace
             TraceLocalActivity(local);
             TraceLoggingWriteStart(local, "Swapchain_ReleaseImage", TLPArg(this, "Swapchain"));
 
-            std::unique_lock lock(m_mutex);
+            std::lock_guard lock(m_mutex);
 
             // We defer release of the OpenXR swapchain to ensure that we will have an opportunity to peek and/or poke
             // its content. If the same swapchain is released multiple times, then only defer the most recent call.
@@ -520,7 +520,7 @@ namespace
             TraceLocalActivity(local);
             TraceLoggingWriteStart(local, "Swapchain_AcquireImage", TLPArg(this, "Swapchain"));
 
-            std::unique_lock lock(m_mutex);
+            std::lock_guard lock(m_mutex);
 
             if (m_acquiredImages.size() == m_images.size())
             {
@@ -554,7 +554,7 @@ namespace
             TraceLocalActivity(local);
             TraceLoggingWriteStart(local, "Swapchain_WaitImage", TLPArg(this, "Swapchain"));
 
-            std::unique_lock lock(m_mutex);
+            std::lock_guard lock(m_mutex);
 
             if (m_acquiredImages.empty())
             {
@@ -569,7 +569,7 @@ namespace
             TraceLocalActivity(local);
             TraceLoggingWriteStart(local, "Swapchain_ReleaseImage", TLPArg(this, "Swapchain"));
 
-            std::unique_lock lock(m_mutex);
+            std::lock_guard lock(m_mutex);
 
             if (m_acquiredImages.empty())
             {
@@ -861,7 +861,7 @@ namespace
             TraceLocalActivity(local);
             TraceLoggingWriteStart(local, "CompositionFramework_SerializePreComposition", TLXArg(m_session, "Session"));
 
-            std::unique_lock lock(m_fenceMutex);
+            std::lock_guard lock(m_fenceMutex);
 
             m_fenceValue++;
             m_fenceOnApplicationDevice->signal(m_fenceValue);
@@ -877,7 +877,7 @@ namespace
                                    "CompositionFramework_SerializePostComposition",
                                    TLXArg(m_session, "Session"));
 
-            std::unique_lock lock(m_fenceMutex);
+            std::lock_guard lock(m_fenceMutex);
 
             m_fenceValue++;
             m_fenceOnCompositionDevice->signal(m_fenceValue);
@@ -948,7 +948,7 @@ namespace
                                    TLArg(xr::ToString(compositionApi).c_str(), "CompositionApi"));
 
             {
-                std::unique_lock lock(factoryMutex);
+                std::lock_guard lock(factoryMutex);
                 if (factory)
                 {
                     throw std::runtime_error("There can only be one CompositionFramework factory");
@@ -975,7 +975,7 @@ namespace
             TraceLocalActivity(local);
             TraceLoggingWriteStart(local, "CompositionFrameworkFactory_Destroy");
 
-            std::unique_lock lock(factoryMutex);
+            std::lock_guard lock(factoryMutex);
 
             factory = nullptr;
 
@@ -986,7 +986,7 @@ namespace
         {
             TraceLocalActivity(local);
             TraceLoggingWriteStart(local, "CompositionFrameworkFactory_getCompositionFramework");
-            std::unique_lock lock(m_sessionsMutex);
+            std::lock_guard lock(m_sessionsMutex);
 
             auto it = m_sessions.find(session);
             if (it == m_sessions.end())
@@ -1081,7 +1081,7 @@ namespace
             TraceLocalActivity(local);
             TraceLoggingWriteStart(local, "CompositionFrameworkFactory_CreateSession");
 
-            std::unique_lock lock(m_sessionsMutex);
+            std::lock_guard lock(m_sessionsMutex);
 
             // Detect which graphics bindings to look for.
             bool has_XR_KHR_D3D11_enable = false;
@@ -1144,7 +1144,7 @@ namespace
             TraceLoggingWriteStart(local, "CompositionFrameworkFactory_DestroySession", TLXArg(session, "Session"));
 
             {
-                std::unique_lock lock(m_sessionsMutex);
+                std::lock_guard lock(m_sessionsMutex);
 
                 auto it = m_sessions.find(session);
                 if (it != m_sessions.end())
