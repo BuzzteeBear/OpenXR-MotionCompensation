@@ -358,6 +358,7 @@
   <ItemGroup>
     <None Include="framework\dispatch_generator.py" />
     <None Include="framework\layer_apis.py" />
+    <None Include="input.cs" />
     <None Include="output.cs" />
     <None Include="packages.config" />
     <None Include="Resources.rc2" />

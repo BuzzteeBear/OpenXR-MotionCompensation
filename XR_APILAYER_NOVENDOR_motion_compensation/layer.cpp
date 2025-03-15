@@ -195,6 +195,9 @@ namespace openxr_api_layer
             }
         }
 
+        m_CorEstimator = std::make_unique<utility::CorEstimator>(this);
+        m_CorEstimator->Init();
+
         // initialize tracker
         if (!m_Tracker->Init())
         {
@@ -1445,7 +1448,7 @@ namespace openxr_api_layer
         TraceLoggingWriteStop(local,
                               "OpenXrLayer::xrWaitFrame",
                               TLArg(frameState->predictedDisplayTime, "PredictedTime"),
-                              TLArg(frameState->predictedDisplayPeriod, "PredictedPPeriod"),
+                              TLArg(frameState->predictedDisplayPeriod, "PredictedPeriod"),
                               TLArg(frameState->shouldRender, "ShouldRender"),
                               TLArg(xr::ToCString(result), "Result"));
         return result;
@@ -1518,7 +1521,7 @@ namespace openxr_api_layer
             {
                 LocateRefSpace(space);
             }
-        }
+        } 
 
         XrFrameEndInfo chainFrameEndInfo = *frameEndInfo;
 
@@ -1536,6 +1539,8 @@ namespace openxr_api_layer
             // request pose delta to force recording and/or enable displaying tracker position
             m_Tracker->GetPoseDelta(delta, session, time);
         }
+
+        m_CorEstimator->Execute(m_LastFrameTime);
 
         if (m_Overlay)
         {
@@ -1557,7 +1562,7 @@ namespace openxr_api_layer
 
         if (!m_Activated)
         {
-            m_Input->HandleKeyboardInput(time);
+            m_Input->HandleInput(time);
             if (m_AutoActivator)
             {
                 m_AutoActivator->ActivateIfNecessary(time);
@@ -1711,7 +1716,7 @@ namespace openxr_api_layer
                 resetLayers.push_back(chainFrameEndInfo.layers[i]);
             }
         }
-        m_Input->HandleKeyboardInput(time);
+        m_Input->HandleInput(time);
 
         XrFrameEndInfo resetFrameEndInfo{chainFrameEndInfo.type,
                                          chainFrameEndInfo.next,
@@ -2169,6 +2174,69 @@ namespace openxr_api_layer
         return true;
     }
 
+    std::optional<XrPosef> OpenXrLayer::GetCurrentPosition(XrTime time, bool tracker)
+    {
+        if (tracker)
+        {
+            // locate motion controller
+            XrPosef pose{};
+            if (!m_Tracker->GetControllerPose(pose, m_Session, time))
+            {
+                ErrorLog("%s: unable to locate physical tracker", __FUNCTION__);
+                return {};
+            }
+            return pose;
+        }
+
+        // locate hmd position
+        XrSpaceLocation location{XR_TYPE_SPACE_LOCATION, nullptr};
+        XrResult result = OpenXrApi::xrLocateSpace(m_ViewSpace, m_StageSpace, time, &location);
+        if (XR_FAILED(result))
+        {
+            ErrorLog("%s: unable to locate view space (%lld) against stage space (%lld): %s",
+                     __FUNCTION__,
+                     m_ViewSpace,
+                     m_StageSpace,
+                     xr::ToString(result).c_str());
+            return {};
+        }
+        if (!Pose::IsPoseValid(location) || !Pose::IsPoseTracked(location))
+        {
+            ErrorLog("%s: view space (%lld) location in stage space (%lld) not valid or not tracked : %llu",
+                     __FUNCTION__,
+                     m_ViewSpace,
+                     m_StageSpace,
+                     location.locationFlags);
+            return {};
+        }
+        return location.pose;
+    }
+
+    std::optional<XrPosef> OpenXrLayer::GetCalibratedHmdPose() const
+    {
+        return m_CalibratedHmdPose;
+    }
+
+    void OpenXrLayer::ResetCalibratedHmdPose()
+    {
+        m_CalibratedHmdPose = {};
+    }
+
+    void OpenXrLayer::SetCor(const XrPosef& pose) const
+    {
+        m_Tracker->SetCorPose(pose);
+    }
+
+    std::vector<std::pair<XrPosef, int>> OpenXrLayer::GetEstimatorSamples() const
+    {
+        return m_CorEstimator->GetSamples();
+    }
+
+    std::vector<std::tuple<int, XrPosef, float>> OpenXrLayer::GetEstimatorAxes() const
+    {
+        return m_CorEstimator->GetAxes();
+    }
+
     bool OpenXrLayer::AttachActionSet(const std::string& caller)
     {
         TraceLocalActivity(local);
@@ -2326,6 +2394,17 @@ namespace openxr_api_layer
 
         return success;
     }
+
+    void OpenXrLayer::SetCalibratedHmdPose(XrTime time)
+    {
+        if (auto pose = GetCurrentPosition(time, false); pose.has_value())
+        {
+            m_CalibratedHmdPose = pose.value();
+            return;
+        }
+        m_CalibratedHmdPose = {};
+    }
+
 
     bool OpenXrLayer::GetDelta(XrTime time,
                                bool isHmd,

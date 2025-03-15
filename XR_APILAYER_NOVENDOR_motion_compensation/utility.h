@@ -3,7 +3,23 @@
 #pragma once
 
 #include <log.h>
-#include "input.h"
+
+namespace openxr_api_layer
+{
+    class OpenXrLayer;
+}
+
+namespace input
+{
+    class InputHandler;
+    class CorEstimatorCmd;
+    class CorEstimatorResult;
+}
+
+namespace output
+{
+    class PoseMmf;
+}
 
 namespace utility
 {
@@ -257,11 +273,11 @@ namespace utility
         void SetName(const std::string& name);
         bool Open(int64_t time) override;
         bool Read(void* buffer, size_t size, int64_t time);
-        bool Write(void* buffer, size_t size);
+        bool Write(void* buffer, size_t size, size_t offset = 0);
         void Close();
 
       private:
-        bool ReadWrite(void* buffer, size_t size, bool write, int64_t time = 0);
+        bool ReadWrite(void* buffer, size_t size, bool write, int64_t time, size_t offset = 0);
         XrTime m_Check{1000000000}; // reopen mmf once a second by default
         XrTime m_LastRefresh{0};
         std::string m_Name;
@@ -271,6 +287,26 @@ namespace utility
         bool m_WriteAccess{false};
         bool m_ConnectionLost{false};
         std::mutex m_MmfLock;
+    };
+
+    class CorEstimator
+    {
+      public:
+        explicit CorEstimator(openxr_api_layer::OpenXrLayer* layer);
+        bool Init();
+        void Execute(XrTime time);
+        bool TransmitHmd() const;
+        std::vector<std::tuple<int, XrPosef, float>> GetAxes();
+        std::vector<std::pair<XrPosef, int>> GetSamples();
+
+      private:
+        bool m_Enabled{false}, m_Active{false}, m_UseTracker{false};
+        std::unique_ptr<input::CorEstimatorCmd> m_CmdMmf{};
+        std::unique_ptr<input::CorEstimatorResult> m_ResultMmf{};
+        std::unique_ptr<output::PoseMmf> m_PoseMmf{};
+        openxr_api_layer::OpenXrLayer* m_Layer = nullptr;
+        std::vector<std::pair<XrPosef, int>> m_Samples{};
+        std::vector<std::tuple<int, XrPosef, float>> m_Axes{};
     };
 
     static inline bool endsWith(const std::string& str, const std::string& substr)

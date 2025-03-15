@@ -8,9 +8,11 @@
 #include "layer.h"
 #include "config.h"
 #include "output.h"
+#include "input.h"
 
 using namespace openxr_api_layer;
 using namespace log;
+using namespace output;
 using namespace xr::math;
 using namespace Pose;
 using namespace DirectX;
@@ -20,7 +22,7 @@ namespace utility
     XrVector3f ToEulerAngles(XrQuaternionf q)
     {
         TraceLocalActivity(local);
-        TraceLoggingWriteStart(local, "ModifierBase::ToEulerAngles", TLArg(xr::ToString(q).c_str(), "Quaternion"));
+        TraceLoggingWriteStart(local, "ToEulerAngles", TLArg(xr::ToString(q).c_str(), "Quaternion"));
 
         XrVector3f angles;
 
@@ -39,7 +41,7 @@ namespace utility
         const double cosRCosP = 1 - 2.0 * (q.z * q.z + q.x * q.x);
         angles.z = static_cast<float>(std::atan2(sinRCosP, cosRCosP));
 
-        TraceLoggingWriteStop(local, "ModifierBase::ToEulerAngles", TLArg(xr::ToString(angles).c_str(), "Angles"));
+        TraceLoggingWriteStop(local, "ToEulerAngles", TLArg(xr::ToString(angles).c_str(), "Angles"));
 
         return angles;
     }
@@ -80,7 +82,7 @@ namespace utility
 
             if (m_Countdown && currentlyLeft < m_SecondsLeft)
             {
-                output::AudioOut::CountDown(currentlyLeft);
+                AudioOut::CountDown(currentlyLeft);
             }
             m_SecondsLeft = currentlyLeft;
 
@@ -175,17 +177,17 @@ namespace utility
         return ReadWrite(buffer, size, false, time);
     }
 
-    bool Mmf::Write(void* buffer, size_t size)
+    bool Mmf::Write(void* buffer, size_t size, size_t offset)
     {
         if (!m_WriteAccess)
         {
             ErrorLog("%s: unable to write to mmf %s: write access not set", __FUNCTION__, m_Name.c_str());
             return false;
         }
-        return ReadWrite(buffer, size, true);
+        return ReadWrite(buffer, size, true, 0, offset);
     }
 
-    bool Mmf::ReadWrite(void* buffer, const size_t size, bool write, const int64_t time)
+    bool Mmf::ReadWrite(void* buffer, const size_t size, bool write, const int64_t time, size_t offset)
     {
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "Mmf::ReadWrite", TLArg(time, "Time"), TLArg(write, "Write"));
@@ -205,7 +207,8 @@ namespace utility
             {
                 if (write)
                 {
-                    memcpy(m_View, buffer, size);
+                    void* view = static_cast<char*>(m_View) + offset;
+                    memcpy(view, buffer, size);
                 }
                 else
                 {
@@ -245,6 +248,151 @@ namespace utility
         m_FileHandle = nullptr;
 
         TraceLoggingWriteStop(local, "Mmf::Close");
+    }
+
+    CorEstimator::CorEstimator(openxr_api_layer::OpenXrLayer* layer)
+        : m_CmdMmf(std::make_unique<input::CorEstimatorCmd>()),
+          m_ResultMmf(std::make_unique<input::CorEstimatorResult>()), m_PoseMmf(std::make_unique<PoseMmf>()),
+          m_Layer(layer)
+    {}
+
+    bool CorEstimator::Init()
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "CorEstimator::Init");
+
+        bool enabled;
+        if (GetConfig()->IsVirtualTracker() && GetConfig()->GetBool(Cfg::CorEstimatorEnabled, enabled) && enabled)
+        {
+            m_Enabled = m_CmdMmf->Init() && m_ResultMmf->Init();
+            TraceLoggingWriteStop(local, "CorEstimator::Init", TLArg(m_Enabled, "Success"));
+            return m_Enabled;
+        }
+        Log("CorEstimator feature deactivated");
+        TraceLoggingWriteStop(local,
+                              "CorEstimator::Init",
+                              TLArg(GetConfig()->IsVirtualTracker(), "VirtualTracker"),
+                              TLArg(false, "Enabled"));
+        return true;
+    }
+
+    void CorEstimator::Execute(XrTime time)
+    {
+        if (!m_Enabled)
+        {
+            return;
+        }
+
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "CorEstimator::Execute");
+
+        m_CmdMmf->Read();
+        if (m_CmdMmf->m_Reset)
+        {
+            Log("cor estimation %s", m_Active ? "canceled" : "reset");
+            m_Active = false;
+            m_Samples.clear();
+            m_Axes.clear();
+            m_PoseMmf->Reset();
+            m_CmdMmf->ConfirmReset();
+
+            TraceLoggingWriteStop(local, "CorEstimator::Execute", TLArg(true, "Reset"));
+            return;
+        }
+
+        auto result = m_ResultMmf->ReadResult();
+        if (result.has_value())
+        {
+            Log("COR estimation result received: type = %d, pose = %s, radius = %03f",
+                result.value().resultType,
+                xr::ToString(result.value().pose).c_str(),
+                result.value().radius);
+            if (static_cast<int>(PoseType::Cor) == result.value().resultType)
+            {
+                m_Layer->SetCor(result.value().pose);
+            }
+            else
+            {
+                m_Axes.push_back({result.value().resultType, result.value().pose, result.value().radius});
+            }
+        }
+
+        if (!m_Active)
+        {
+            if (!m_CmdMmf->m_Start)
+            {
+                TraceLoggingWriteStop(local, "CorEstimator::Execute", TLArg(false, "Started"));
+                return;
+            }
+            if (!GetConfig()->IsVirtualTracker())
+            {
+                m_CmdMmf->Failure();
+                ErrorLog("%s: cannot use cor estimation feature with physical tracker", __FUNCTION__);
+                EventSink::Execute(Event::Error);
+
+                TraceLoggingWriteStop(local, "CorEstimator::Execute", TLArg(false, "VirtualTracker"));
+                return;
+            }
+            if (!TransmitHmd())
+            {
+                TraceLoggingWriteStop(local, "CorEstimator::Execute", TLArg(false, "TransmitHmd"));
+                return;
+            }
+
+            m_CmdMmf->ConfirmStart();
+            
+            m_Active = true;
+            Log("cor estimation started");
+        }
+
+        if (m_CmdMmf->m_Stop)
+        {
+            m_CmdMmf->ConfirmStop();
+            m_Active = false;
+            Log("cor estimation stopped");
+
+            TraceLoggingWriteStop(local, "CorEstimator::Execute", TLArg(true, "Stopped"));
+            return;
+        }
+
+        auto pos = m_Layer->GetCurrentPosition(time, m_CmdMmf->m_Controller);
+        if (!pos.has_value())
+        {
+            m_CmdMmf->Failure();
+            return;
+        }
+        m_PoseMmf->Transmit(pos.value(), m_CmdMmf->m_PoseType);
+        m_Samples.push_back({pos.value(), m_CmdMmf->m_PoseType});
+        TraceLoggingWriteStop(local,
+                              "CorEstimator::Execute",
+                              TLArg(m_CmdMmf->m_PoseType, "Type"),
+                              TLArg(xr::ToString(pos.value()).c_str(), "Pose"));
+
+    }
+
+    bool CorEstimator::TransmitHmd() const
+    {
+        auto calibratedHmd = m_Layer->GetCalibratedHmdPose();
+        if (!calibratedHmd.has_value())
+        {
+            m_CmdMmf->Failure();
+            ErrorLog("%s: unable to obtain calibrated hmd pose", __FUNCTION__);
+            EventSink::Execute(Event::Error);
+            return false;
+        }
+        m_PoseMmf->Transmit(calibratedHmd.value(), static_cast<int>(PoseType::Hmd));
+        Log("transmitted hmd pose: %s", xr::ToString(calibratedHmd.value()).c_str());
+        return true;
+    }
+
+    std::vector<std::tuple<int, XrPosef, float>> CorEstimator::GetAxes()
+    {
+        return m_Axes;
+    }
+
+    std::vector<std::pair<XrPosef, int>> CorEstimator::GetSamples()
+    {
+        return m_Samples;
     }
 
     std::string LastErrorMsg()

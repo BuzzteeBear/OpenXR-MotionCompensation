@@ -28,9 +28,9 @@ namespace openxr_api_layer::log {
 
     TRACELOGGING_DECLARE_PROVIDER(g_traceProvider);
 
-#define IsTraceEnabled() TraceLoggingProviderEnabled(g_traceProvider, 0, 0)
+#define IsTraceEnabled() TraceLoggingProviderEnabled(openxr_api_layer::log::g_traceProvider, 0, 0)
 
-#define TraceLocalActivity(activity) TraceLoggingActivity<g_traceProvider> activity;
+#define TraceLocalActivity(activity) TraceLoggingActivity<openxr_api_layer::log::g_traceProvider> activity;
 
 #define TLArg(var, ...) TraceLoggingValue(var, ##__VA_ARGS__)
 #define TLPArg(var, ...) TraceLoggingPointer(var, ##__VA_ARGS__)

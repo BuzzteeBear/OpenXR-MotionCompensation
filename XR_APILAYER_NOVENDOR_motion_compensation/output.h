@@ -2,6 +2,7 @@
 
 #pragma once
 #include "resource.h"
+#include <log.h>
 
 // include definitions shared with c#
 typedef int Int32;
@@ -73,17 +74,86 @@ namespace output
                                                                   {Event::CrosshairOn, CROSSHAIR_ON_WAV},
                                                                   {Event::CrosshairOff, CROSSHAIR_OFF_WAV}};
     };
-
-    class EventMmf
+    template <typename Element>
+    class QueuedMmf
     {
       public:
-        EventMmf();
-        ~EventMmf();
+        explicit QueuedMmf(std::string name) : m_MmfName(std::move(name))
+        {
+            m_Thread = new std::thread(&QueuedMmf::UpdateMmf, this);
+        }
 
-        void Execute(Event event);
+        virtual ~QueuedMmf()
+        {
+            TraceLocalActivity(local);
+            TraceLoggingWriteStart(local, "QueuedMmf::Destroy", TLArg(m_MmfName.c_str(), "MmfName"));
+
+            StopThread();
+
+            TraceLoggingWriteStop(local, "QueuedMmf::Destroy", TLArg(m_MmfName.c_str(), "MmfName"));
+        }
+      
+        void UpdateMmf()
+        {
+            Element element;
+            utility::Mmf mmf;
+            mmf.SetWriteable(sizeof(element));
+            mmf.SetName(m_MmfName);
+
+            if (!mmf.Write(&element, sizeof(element)))
+            {
+                m_MmfError.store(true);
+                return;
+            }
+
+            while (!m_StopThread.load())
+            {
+                if (!WriteImpl(mmf))
+                {
+                    break;
+                }
+            }
+            m_StopThread.store(true);
+        }
+
+      protected:
+        void StopThread()
+        {
+            m_StopThread.store(true);
+            if (m_Thread)
+            {
+                if (m_Thread->joinable())
+                {
+                    m_Thread->join();
+                }
+                delete m_Thread;
+                m_Thread = nullptr;
+                TraceLoggingWrite(openxr_api_layer::log::g_traceProvider,
+                                  "EventMmf::StopThread",
+                                  TLArg(m_MmfName.c_str(), "MmfName"),
+                                  TLArg(true, "Stopped"));
+            }
+        }
+
+        std::string m_MmfName;
+        std::thread* m_Thread{nullptr};
+        std::atomic_bool m_StopThread{false}, m_MmfError{false};
+        int64_t m_LastError{0};
+        std::deque<Element> m_EventQueue;
+        std::mutex m_QueueMutex;
+
       private:
-        void UpdateEventMmf();
-        void StopThread();
+        virtual bool WriteImpl(utility::Mmf& mmf) = 0;
+    };
+
+    class EventMmf : public QueuedMmf < std::pair<Event, int64_t>>
+    {
+      public:
+        EventMmf() : QueuedMmf("Local\\OXRMC_Events") {};
+        void Execute(Event event);
+
+    private:
+        bool WriteImpl(utility::Mmf& mmf) override;
 
         std::set<Event> m_RelevantEvents{
             Event::Error,         Event::Critical,      Event::Initialized,     Event::Load,
@@ -93,17 +163,24 @@ namespace output
             Event::ModifierOn,    Event::ModifierOff,   Event::CalibrationLost, Event::VerboseOn,
             Event::VerboseOff,    Event::RecorderOn,    Event::RecorderOff,     Event::StabilizerOn,
             Event::StabilizerOff, Event::PassthroughOn, Event::PassthroughOff};
-        std::thread* m_Thread{nullptr};
-        std::atomic_bool m_StopThread{false}, m_MmfError{false};
         int64_t m_LastError{0};
-        std::deque <std::pair<Event, int64_t>> m_EventQueue;
-        std::mutex m_QueueMutex;
     };
 
     // Singleton accessor.
     EventMmf* GetEventMmf();    
 
-   
+    class PoseMmf : public QueuedMmf<std::pair<XrPosef, int32_t>>
+    {
+      public:
+        PoseMmf() : QueuedMmf("Local\\OXRMC_PositionOutput") {};
+        void Transmit(const XrPosef& position, int poseType);
+        void Reset();
+
+      private: 
+        bool WriteImpl(utility::Mmf& mmf) override;
+
+        int64_t m_LastError{0};
+    };  
 
     class StatusMmf
     {
@@ -117,23 +194,20 @@ namespace output
         static int StatusToInt(const Status& status);
 
         std::set<Event> m_RelevantEvents{
-            Event::Error,     Event::Critical,       Event::Initialized,  Event::Load,
-            Event::Save,      Event::Activated,      Event::Deactivated,  Event::Calibrated,
-            Event::Restored,  Event::ConnectionLost, Event::ModifierOff,  Event::CalibrationLost,
-            Event::Plus,      Event::Minus,          Event::Max,          Event::Min,
-            Event::Up,        Event::Down,           Event::Forward,      Event::Back,
-            Event::Left,      Event::Right,          Event::RotLeft,      Event::RotRight,
-            Event::EyeCached, Event::EyeCalculated,  Event::ModifierOn,   Event::ModifierOff,
-            Event::VerboseOn, Event::VerboseOff,     Event::StabilizerOn, Event::StabilizerOff};
+            Event::Error,      Event::Critical,       Event::Initialized,  Event::Load,
+            Event::Save,       Event::Activated,      Event::Deactivated,  Event::Calibrated,
+            Event::Restored,   Event::ConnectionLost, Event::ModifierOff,  Event::CalibrationLost,
+            Event::Plus,       Event::Minus,          Event::Max,          Event::Min,
+            Event::Up,         Event::Down,           Event::Forward,      Event::Back,
+            Event::Left,       Event::Right,          Event::RotLeft,      Event::RotRight,
+            Event::EyeCached,  Event::EyeCalculated,  Event::ModifierOn,   Event::ModifierOff,
+            Event::VerboseOn,  Event::VerboseOff,     Event::StabilizerOn, Event::StabilizerOff};
         utility::Mmf m_Mmf{};
         Status m_Status{};
     };
 
     // Singleton accessor.
     StatusMmf* GetStatusMmf();
-
-
-
 
     constexpr uint32_t m_RecorderMax{36000}; // max 10 min @ 100 frames/s
 

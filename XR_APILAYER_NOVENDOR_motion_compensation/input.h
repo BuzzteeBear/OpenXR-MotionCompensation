@@ -3,6 +3,17 @@
 #pragma once
 
 #include "config.h"
+#include "utility.h"
+
+// include definitions shared with c#
+typedef uint64_t UInt64;
+#define public
+#define record
+#define enum enum class
+#include "input.cs"
+#undef public
+#undef enum
+#undef record  
 
 namespace openxr_api_layer
 {
@@ -11,6 +22,54 @@ namespace openxr_api_layer
 
 namespace input
 {
+    class CorEstimatorCmd
+    {
+      public:
+        bool Init();
+        bool Read();
+        void ConfirmStart();
+        void ConfirmStop();
+        void ConfirmReset();
+        void Failure();
+
+        bool m_Controller{false}, m_Start{false}, m_Stop{false}, m_Error{false}, m_Reset{false};
+        int m_PoseType{};
+
+      private:
+        void WriteFlag(const int flag, bool active);
+
+        utility::Mmf m_Mmf{};
+    };
+
+    struct CorResult
+    {
+        int resultType;
+        XrPosef pose;
+        float radius;
+    };
+
+    class CorEstimatorResult
+    {
+      public:
+        bool Init();
+        std::optional<CorResult> ReadResult();
+      private:
+        utility::Mmf m_Mmf{};
+    };
+
+    class MmfInput
+    {
+      public:
+        bool Init();
+        bool ReadMmf();
+        bool GetTrigger(ActivityBit bit);
+        bool WriteConfirm();
+
+      private:
+        utility::Mmf m_Mmf{};
+        std::optional<ActivityFlags> m_Flags{};
+    };
+
     class KeyboardInput
     {
       public:
@@ -60,7 +119,7 @@ namespace input
       public:
         explicit InputHandler(openxr_api_layer::OpenXrLayer* layer);
         bool Init();
-        void HandleKeyboardInput(XrTime time);
+        void HandleInput(XrTime time);
         void ToggleActive(XrTime time) const;
         void Recalibrate(XrTime time) const;
         void LockRefPose() const;
@@ -70,14 +129,15 @@ namespace input
         void ToggleCrosshair() const;
         void ToggleCache() const;
         void ToggleModifier() const;
-        void ChangeOffset(::input::InputHandler::Direction dir, bool fast) const;
+        void ChangeOffset(Direction dir, bool fast) const;
         void ReloadConfig() const;
         void SaveConfig(XrTime time, bool forApp) const;
         static void ToggleVerbose();
 
       private:
         openxr_api_layer::OpenXrLayer* m_Layer;
-        KeyboardInput m_Input;
+        KeyboardInput m_Keyboard;
+        std::shared_ptr< MmfInput> m_Mmf{};
     };
 
     

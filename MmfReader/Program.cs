@@ -38,7 +38,11 @@ namespace MmfReader
                     fileName = "Local\\YawVRGEFile";
                     size = Marshal.SizeOf<YawData>();
                     break;
-                default:
+                case 4:
+	                fileName = "Local\\OXRMC_Telemetry";
+	                size = Marshal.SizeOf<MmfData>();
+	                break;
+				default:
                     return false;
             }
             try
@@ -63,7 +67,11 @@ namespace MmfReader
                         data.pitch = yaw.pitch;
                         success = true;
                         break;
-                    default:
+                    case 4:
+	                    accessor.Read(0, out data);
+	                    success = true;
+	                    break;
+					default:
                         break;
                 }
                 return success;

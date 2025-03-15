@@ -3,6 +3,7 @@
 #include "pch.h"
 
 #include "sampler.h"
+#include "config.h"
 #include "filter.h"
 #include "output.h"
 #include <log.h>

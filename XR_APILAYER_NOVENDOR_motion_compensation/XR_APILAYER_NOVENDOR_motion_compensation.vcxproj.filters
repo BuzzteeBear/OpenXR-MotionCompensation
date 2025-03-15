@@ -142,6 +142,9 @@
     <None Include="output.cs">
       <Filter>Header Files</Filter>
     </None>
+    <None Include="input.cs">
+      <Filter>Header Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resources.rc" />
