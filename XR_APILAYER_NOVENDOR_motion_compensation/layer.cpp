@@ -2168,7 +2168,14 @@ namespace openxr_api_layer
         m_LastActionSync = std::chrono::steady_clock::now();
         if (XR_SUCCESS != result)
         {
-            Log("SyncActions (called by %s) succeeded with: %s", caller.c_str(), xr::ToCString(result));
+            if (!std::exchange(m_SyncActionHint, true))
+            {
+                Log("SyncActions (called by %s) succeeded with: %s", caller.c_str(), xr::ToCString(result));
+            }
+        }
+        else if (std::exchange(m_SyncActionHint, false))
+        {
+            Log("xrSyncActions (called by %s) succeeded", caller.c_str());
         }
         TraceLoggingWriteStop(local, "OpenXrLayer::SyncActions", TLArg(true, "Succces"));
         return true;
