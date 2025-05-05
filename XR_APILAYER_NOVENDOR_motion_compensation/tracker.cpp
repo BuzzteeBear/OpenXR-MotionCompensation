@@ -297,7 +297,7 @@ namespace tracker
         TraceLoggingWriteStart(local, "TrackerBase::Init");
 
         bool success = GetConfig()->GetBool(Cfg::LoadRefPoseFromFile, m_LoadPoseFromFile);
-        Log("reference pose is %s read from config file", m_LoadPoseFromFile ? "" : "not");
+        Log("reference pose is%s read from config file", m_LoadPoseFromFile ? "" : " not");
 
         m_TrackerModifier = std::make_unique<modifier::TrackerModifier>();
         ControllerBase::Init();
@@ -460,7 +460,7 @@ namespace tracker
             TraceLoggingWriteStop(local, "TrackerBase::ModifyStabilizer", TLArg(false, "Success"));
             return;
         }
-        float amount = (increase ? 1 : -1) * (fast ? 0.10f : 0.01f);
+        float amount = (increase ? 1.f : -1.f) * (fast ? 0.10f : 0.01f);
 
         float newStrength = prevStrength + amount;
         if (newStrength < 0.001f)
@@ -1171,7 +1171,7 @@ namespace tracker
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local,
                                "VirtualTracker::ChangeOffset",
-                               TLArg(xr::ToString(modification).c_str(), "Modifiaction"),
+                               TLArg(xr::ToString(modification).c_str(), "Modification"),
                                TLArg(m_OffsetForward, "OffsetForward"),
                                TLArg(m_OffsetDown, "OffsetDown"),
                                TLArg(m_OffsetRight, "OffsetForward"));
@@ -1596,7 +1596,7 @@ namespace tracker
 
         if (!m_Initialized)
         {
-            TraceLoggingWriteStop(local, "CorManipulator::ApplyManipulation", TLArg(false, "Initilaized"));
+            TraceLoggingWriteStop(local, "CorManipulator::ApplyManipulation", TLArg(false, "Initialized"));
             return;
         }
 
@@ -1721,7 +1721,7 @@ namespace tracker
          }
          if (!layer->SyncActions("GetButtonState"))
          {
-             TraceLoggingWriteStop(local, "CorManipulator::GetButtonState", TLArg(false, "SyncActionSuccces"));
+             TraceLoggingWriteStop(local, "CorManipulator::GetButtonState", TLArg(false, "SyncActionSuccess"));
              return;
          }
          {
@@ -1844,7 +1844,7 @@ namespace tracker
                 ErrorLog("%s: runtime does not support Vive tracker OpenXR extension: %s",
                          __FUNCTION__,
                          XR_HTCX_VIVE_TRACKER_INTERACTION_EXTENSION_NAME);
-                TraceLoggingWriteStop(local, "ViveTrackerInfo::Init", TLArg(false, "Extansion_Granted"));
+                TraceLoggingWriteStop(local, "ViveTrackerInfo::Init", TLArg(false, "Extension_Granted"));
                 return false;
             }
             std::string role;

@@ -523,9 +523,15 @@ namespace input
         if (m_Layer->m_Initialized && lazySuccess)
         {
             // if tracker is not calibrated, activate only after successful calibration
-            m_Layer->m_Activated = m_Layer->m_Tracker->m_Calibrated
-                                       ? !m_Layer->m_Activated
-                                       : m_Layer->m_Tracker->ResetReferencePose(m_Layer->m_Session, time);
+            if (m_Layer->m_Tracker->m_Calibrated)
+            {
+                m_Layer->m_Activated = !m_Layer->m_Activated;
+            }
+            else
+            {
+                m_Layer->m_Activated = m_Layer->m_Tracker->ResetReferencePose(m_Layer->m_Session, time);
+                m_Layer->SetCalibratedHmdPose(time);
+            }
         }
         else
         {
