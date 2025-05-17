@@ -106,7 +106,7 @@ namespace openxr_api_layer
         XrResult XRAPI_CALL xrEndFrame(XrSession session, const XrFrameEndInfo* frameEndInfo) override;
 
         void SetForwardRotation(const XrPosef& pose) const;
-        bool GetRefToStage(XrSpace space, XrPosef* refToStage, XrPosef* stageToRef);
+        bool GetRefToStage(const XrSpace& space, XrPosef* refToStage, XrPosef* stageToRef);
         std::shared_ptr<graphics::ICompositionFrameworkFactory> GetCompositionFactory();
         bool SyncActions(const std::string& caller);
         std::optional<XrPosef> GetCurrentPosition(XrTime time, bool tracker);

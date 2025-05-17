@@ -343,6 +343,7 @@ namespace utility
             
             m_Active = true;
             Log("cor estimation started");
+            return;
         }
 
         if (m_CmdMmf->m_Stop)

@@ -1069,7 +1069,7 @@ namespace openxr_api_layer
                                 TLArg(spaceComp, "SpaceComp"),
                                 TLArg(baseComp, "BaseComp"));
 
-        if (m_Activated && ((spaceComp && !baseComp) || (!spaceComp && baseComp)))
+        if (m_Activated && spaceComp && !baseComp)
         {
             DebugLog("xrLocateSpace(%lld): original pose = %s", time, xr::ToString(location->pose).c_str());
             TraceLoggingWriteTagged(local,
@@ -1077,33 +1077,14 @@ namespace openxr_api_layer
                                     TLArg(xr::ToString(location->pose).c_str(), "OriginalPose"),
                                     TLArg(location->locationFlags, "LocationFlags"));
 
-            // switch roles if base space is the one to be compensated
-            const XrPosef poseToCompensate = spaceComp ? location->pose : Pose::Invert(location->pose);
-            const XrSpace refSpaceForCompensation = spaceComp ? baseSpace : space;
-
             // manipulate pose using tracker
-            XrPosef deltaStage{Pose::Identity()};
-            if (XrPosef deltaRef{Pose::Identity()}; GetDelta(time,
-                                                             spaceView || baseView,
-                                                             poseToCompensate,
-                                                             refSpaceForCompensation,
-                                                             deltaStage,
-                                                             deltaRef))
+            XrPosef deltaStage{Pose::Identity()}, deltaRef{Pose::Identity()};
+            if (GetDelta(time, spaceView || baseView, location->pose, baseSpace, deltaStage, deltaRef))
             {
-                location->pose = Pose::Multiply(location->pose, deltaRef);
-
-                if (baseComp)
-                {
-                    // TODO: verify calculation
-                    Log("Please report the application in use to the oxrmc developer!");
-                    // undo inversion (undo role switch)
-                    location->pose = Pose::Invert(location->pose);
-                }
-
-                location->pose = xr::Normalize(location->pose);
+                location->pose = xr::Normalize(Pose::Multiply(location->pose, deltaRef));
             }
 
-            if ((spaceView && !baseAction) || (baseView && !spaceAction))
+            if (spaceView && !baseAction)
             {
                 // save pose for use in xrEndFrame, if there isn't one from xrLocateViews already
                 m_DeltaCache.AddSample(time, deltaStage, false);
@@ -1172,11 +1153,11 @@ namespace openxr_api_layer
 
         if (!viewCountOutput || *viewCountOutput <= 0)
         {
-            uint32_t views = viewCountOutput ? *viewCountOutput : -1;
-            ErrorLog("%s: no views to compensate. viewCountOutput: %u", __FUNCTION__, views);
+            uint32_t viewCount = viewCountOutput ? *viewCountOutput : -1;
+            ErrorLog("%s: no views to compensate. viewCountOutput: %u", __FUNCTION__, viewCount);
             TraceLoggingWriteStop(local,
                                   "OpenXrLayer::xrLocateViews",
-                                  TLArg(views, "viewCountOutput"),
+                                  TLArg(viewCount, "viewCountOutput"),
                                   TLArg(xr::ToCString(result), "Result"));
             return result;
         }
@@ -1753,7 +1734,7 @@ namespace openxr_api_layer
         m_HmdModifier->SetFwdToStage(pose);
     }
 
-    bool OpenXrLayer::GetRefToStage(XrSpace space, XrPosef* refToStage, XrPosef* stageToRef)
+    bool OpenXrLayer::GetRefToStage(const XrSpace& space, XrPosef* refToStage, XrPosef* stageToRef)
     {
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local, "OpenXrLayer::GetRefToStage", TLXArg(space, "Space"));
@@ -1781,7 +1762,7 @@ namespace openxr_api_layer
                 TraceLoggingWriteStop(local, "OpenXrLayer::GetRefToStage", TLArg(true, "Fallback"));
                 return true;
             }
-            ErrorLog("%s: unable to locate reference space");
+            ErrorLog("%s: unable to locate reference space: %llu", __FUNCTION__, space);
             TraceLoggingWriteStop(local, "OpenXrLayer::GetRefToStage", TLArg(false, "Fallback"));
             return false;
         }
