@@ -1170,13 +1170,9 @@ namespace openxr_api_layer
             {
                 originalEyePoses.push_back(views[i].pose);
             }
-            // assumption: the first xrLocateView call within a frame is the one used for rendering
-            m_EyeCache.AddSample(displayTime, originalEyePoses, false);
 
             if (isViewSpace(refSpace))
             {
-                m_DeltaCache.AddSample(displayTime, Pose::Identity(), false);
-
                 DebugLog("xrLocateViews(%lld): omitting manipulation against view space (%llu)", displayTime, refSpace);
                 TraceLoggingWriteStop(local,
                                       "OpenXrLayer::xrLocateViews",
@@ -1184,6 +1180,9 @@ namespace openxr_api_layer
                                       TLArg(xr::ToCString(result), "Result"));
                 return result;
             }
+
+            // assumption: the first xrLocateView call within a frame is the one used for rendering
+            m_EyeCache.AddSample(displayTime, originalEyePoses, false);
 
             if (!m_LegacyMode)
             {
