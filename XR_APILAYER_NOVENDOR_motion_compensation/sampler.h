@@ -24,6 +24,7 @@ namespace sampler
         void StartSampling();
         void StopSampling();
         bool ReadData(utility::Dof& dof, XrTime now);
+        void SetFrameTime(XrTime frameTime);
 
       private:
         void DoSampling();
@@ -35,5 +36,8 @@ namespace sampler
         std::chrono::microseconds m_Interval{std::chrono::milliseconds(1)};
         bool m_SampleRecording{false};
         std::shared_ptr<output::RecorderBase> m_Recorder{};
+        XrTime m_XrFrameTime{};
+        LARGE_INTEGER m_FrameStart{};
+        LARGE_INTEGER m_CounterFrequency{};
     };
 } // namespace sampler

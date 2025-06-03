@@ -61,7 +61,7 @@ namespace openxr_api_layer {
             }
         }
 
-         // request extension for usage of vive tracker
+        // request extension for usage of vive tracker
         std::string type;
         GetConfig()->Init("");
         if (GetConfig()->GetString(Cfg::TrackerType, type) && "vive" == type)
@@ -72,17 +72,6 @@ namespace openxr_api_layer {
         {
             Log("extension %s not requested for tracker type: %s",
                 XR_HTCX_VIVE_TRACKER_INTERACTION_EXTENSION_NAME,
-                type.c_str());
-        }
-
-        if ("controller" == type || "vive" == type)
-        {
-            implicitExtensions.push_back(XR_KHR_WIN32_CONVERT_PERFORMANCE_COUNTER_TIME_EXTENSION_NAME);
-        }
-        else
-        {
-            Log("extension %s not requested for tracker type: %s",
-                XR_KHR_WIN32_CONVERT_PERFORMANCE_COUNTER_TIME_EXTENSION_NAME,
                 type.c_str());
         }
  

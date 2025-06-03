@@ -157,6 +157,7 @@ namespace openxr_api_layer
         if (overlayEnabled)
         {
             // Needed by DirectXTex.
+            // TODO: try to avoid this call (maybe use a dxtk instead?)
             CoInitializeEx(nullptr, COINIT_MULTITHREADED);
             m_Overlay = std::make_unique<graphics::Overlay>();
             m_CompositionFrameworkFactory = createCompositionFrameworkFactory(*createInfo,
@@ -1188,34 +1189,17 @@ namespace openxr_api_layer
             {
                 if (!m_EyeToHmd)
                 {
-                    // determine eye poses
-                    std::vector<XrView> eyeViews;
-                    eyeViews.resize(*viewCountOutput, {XR_TYPE_VIEW});
-
-                    const XrViewLocateInfo offsetViewLocateInfo{viewLocateInfo->type,
-                                                                nullptr,
-                                                                viewLocateInfo->viewConfigurationType,
-                                                                displayTime,
-                                                                m_ViewSpace};
-
-                    const XrResult toHmdResult = OpenXrApi::xrLocateViews(session,
-                                                                          &offsetViewLocateInfo,
-                                                                          viewState,
-                                                                          viewCapacityInput,
-                                                                          viewCountOutput,
-                                                                          eyeViews.data());
-
-                    if (SUCCEEDED(toHmdResult))
+                    SetEyeOffsets(session, viewLocateInfo, viewState, viewCapacityInput);
+                    if (m_EyeOffsets.size() <= 1)
                     {
-                        m_EyeToHmd = std::make_unique<XrPosef>(Pose::Invert(eyeViews[0].pose));
-                        TraceLoggingWriteTagged(local,
-                                                "OpenXrLayer::xrLocateViews",
-                                                TLArg(xr::ToString(*m_EyeToHmd).c_str(), "EyeToHmd"));
+                        ErrorLog("%s: no eye offsets set, cannot proceed", __FUNCTION__);
+                        TraceLoggingWriteStop(local,
+                                              "OpenXrLayer::xrLocateViews",
+                                              TLArg(false, "EyeOffsetsEmpty"),
+                                              TLArg(xr::ToCString(result), "Result"));
+                        return result;
                     }
-                    else
-                    {
-                        ErrorLog("%s: unable to determine eyeToHmd pose: %s", __FUNCTION__, xr::ToCString(toHmdResult));
-                    }
+                    m_EyeToHmd = std::make_unique<XrPosef>(Pose::Invert(m_EyeOffsets[0]));
                 }
 
                 // manipulate pose using tracker
@@ -1266,35 +1250,7 @@ namespace openxr_api_layer
             }
 
             // legacy mode using xrLocateSpace
-            if (m_EyeOffsets.empty())
-            {
-                // determine eye poses
-                const XrViewLocateInfo offsetViewLocateInfo{viewLocateInfo->type,
-                                                            nullptr,
-                                                            viewLocateInfo->viewConfigurationType,
-                                                            displayTime,
-                                                            m_ViewSpace};
-
-                if (XR_SUCCEEDED(OpenXrApi::xrLocateViews(session,
-                                                          &offsetViewLocateInfo,
-                                                          viewState,
-                                                          viewCapacityInput,
-                                                          viewCountOutput,
-                                                          views)))
-                {
-                    for (uint32_t i = 0; i < *viewCountOutput; i++)
-                    {
-                        m_EyeOffsets.push_back(views[i]);
-
-                        TraceLoggingWriteTagged(local,
-                                                "OpenXrLayer::xrLocateViews",
-                                                TLArg(i, "Index"),
-                                                TLArg(i, "Index"),
-                                                TLArg(xr::ToString(views[i].fov).c_str(), "Offset_Fov"),
-                                                TLArg(xr::ToString(views[i].pose).c_str(), "Offset_ViewPose"));
-                    }
-                }
-            }
+            SetEyeOffsets(session, viewLocateInfo, viewState, viewCapacityInput);
         } // unlock for xrLocateSpace
 
         // manipulate reference space location
@@ -1315,7 +1271,7 @@ namespace openxr_api_layer
                                         TLArg(xr::ToString(views[i].pose).c_str(), "OriginalViewPose"));
 
                 // apply manipulation
-                views[i].pose = xr::Normalize(Pose::Multiply(m_EyeOffsets[i].pose, location.pose));
+                views[i].pose = xr::Normalize(Pose::Multiply(m_EyeOffsets[i], location.pose));
 
                 DebugLog("xrLocateView(%lld): eye (%u) compensated pose = %s",
                          displayTime,
@@ -1421,6 +1377,10 @@ namespace openxr_api_layer
         TraceLoggingWriteStart(local, "OpenXrLayer::xrWaitFrame", TLXArg(session, "Session"));
 
         const XrResult result = OpenXrApi::xrWaitFrame(session, frameWaitInfo, frameState);
+        if (XR_SUCCEEDED(result))
+        {
+            m_Tracker->SetFrameTime(frameState->predictedDisplayTime);
+        }
 
         DebugLog("xrWaitFrame predicted time: %lld, predicted period: %lld",
                  frameState->predictedDisplayTime,
@@ -1501,7 +1461,7 @@ namespace openxr_api_layer
             {
                 LocateRefSpace(space);
             }
-        } 
+        }
 
         XrFrameEndInfo chainFrameEndInfo = *frameEndInfo;
 
@@ -1815,7 +1775,7 @@ namespace openxr_api_layer
                 return;
             }
             Log("internal stage space created: %llu", m_StageSpace);
-            TraceLoggingWriteTagged(local, "OpenXrLayer::CreateStageSpace", TLArg(true, "StageSpoaceCreated"));
+            TraceLoggingWriteTagged(local, "OpenXrLayer::CreateStageSpace", TLArg(true, "StageSpaceCreated"));
         }
         TraceLoggingWriteStop(local, "OpenXrLayer::CreateStageSpace");
     }
@@ -2589,6 +2549,64 @@ namespace openxr_api_layer
         m_RecorderActive = m_Tracker->ToggleRecording();
 
         TraceLoggingWriteStop(local, "OpenXrLayer::ToggleRecorderActive", TLArg(m_RecorderActive, "RecorderActive"));
+    }
+
+    void OpenXrLayer::SetEyeOffsets(XrSession session,
+                                    const XrViewLocateInfo* viewLocateInfo,
+                                    XrViewState* viewState,
+                                    uint32_t viewCapacityInput)
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "OpenXrLayer::SetEyeOffsets");
+
+        if (1 == m_EyeOffsets.size())
+        {
+            // determine eye poses
+            m_EyeOffsets.clear();
+
+            std::vector<XrView> eyeViews;
+            eyeViews.resize(viewCapacityInput, {XR_TYPE_VIEW});
+            uint32_t viewCountOutput = 0;
+            const XrViewLocateInfo offsetViewLocateInfo{viewLocateInfo->type,
+                                                        nullptr,
+                                                        viewLocateInfo->viewConfigurationType,
+                                                        viewLocateInfo->displayTime,
+                                                        m_ViewSpace};
+
+            const XrResult result = OpenXrApi::xrLocateViews(session,
+                                                             &offsetViewLocateInfo,
+                                                             viewState,
+                                                             viewCapacityInput,
+                                                             &viewCountOutput,
+                                                             eyeViews.data());
+            if (XR_SUCCEEDED(result))
+            {
+                TraceLoggingWriteTagged(local, "OpenXrLayer::SetEyeOffsets", TLArg(true, "xrLocateViewsSucceeded"));
+                for (uint32_t i = 0; i < viewCountOutput; i++)
+                {
+                    m_EyeOffsets.push_back(eyeViews[i].pose);
+
+                    TraceLoggingWriteTagged(local,
+                                            "OpenXrLayer::SetEyeOffsets",
+                                            TLArg(i, "Index"),
+                                            TLArg(i, "Index"),
+                                            TLArg(xr::ToString(eyeViews[i].fov).c_str(), "Offset_Fov"),
+                                            TLArg(xr::ToString(eyeViews[i].pose).c_str(), "Offset_ViewPose"));
+                }
+                DebugLog("eye offsets initialized");
+            }
+            else
+            {
+                m_EyeOffsets.push_back(Pose::Identity());
+                ErrorLog("%s: unable to determine eye offsets for session %llu and view space %llu: %s",
+                         __FUNCTION__,
+                         session,
+                         m_ViewSpace,
+                         xr::ToCString(result));
+                TraceLoggingWriteTagged(local, "OpenXrLayer::SetEyeOffsets", TLArg(false, "xrLocateViewsFailed"));
+            }
+        }
+        TraceLoggingWriteStop(local, "OpenXrLayer::SetEyeOffsets");
     }
 
     std::string OpenXrLayer::getXrPath(const XrPath path)

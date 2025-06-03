@@ -152,6 +152,10 @@ namespace openxr_api_layer
         void RecoveryTimeOut(XrTime time);
         bool ToggleModifierActive();
         void ToggleRecorderActive();
+        void SetEyeOffsets(XrSession session,
+                           const XrViewLocateInfo* viewLocateInfo,
+                           XrViewState* viewState,
+                           uint32_t viewCapacityInput);
 
         static std::string getXrPath(XrPath path);
 
@@ -192,7 +196,7 @@ namespace openxr_api_layer
         XrPath m_XrSubActionPath{XR_NULL_PATH};
         std::set<XrSpace> m_ViewSpaces{};
         std::set<XrSpace> m_ActionSpaces{};
-        std::vector<XrView> m_EyeOffsets{};
+        std::vector<XrPosef> m_EyeOffsets{xr::math::Pose::Identity()};
         XrViewConfigurationType m_ViewConfigType{XR_VIEW_CONFIGURATION_TYPE_MAX_ENUM};
         tracker::ViveTrackerInfo m_ViveTracker;
         input::InteractionPaths m_InteractionPaths;

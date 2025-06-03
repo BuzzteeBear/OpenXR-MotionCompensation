@@ -75,10 +75,13 @@ namespace tracker
 
         virtual utility::DataSource* GetSource() = 0;
         virtual bool ReadSource(XrTime time, utility::Dof& dof) = 0;
+        virtual void SetFrameTime(const XrTime time) {}
 
         bool m_SkipLazyInit{false};
         bool m_LoadPoseFromFile{false};
         bool m_Calibrated{false};
+        
+        std::mutex m_SampleMutex;
 
       protected:
         void ApplyFilters(XrPosef& pose) override;
@@ -113,6 +116,7 @@ namespace tracker
 
         utility::DataSource* GetSource() override;
         bool ReadSource(XrTime time, utility::Dof& dof) override;
+        void SetFrameTime(XrTime time) override;
 
       protected:
         bool GetPose(XrPosef& trackerPose, XrSession session, XrTime time) override;
@@ -131,7 +135,6 @@ namespace tracker
             OpenXrTracker* m_Tracker{nullptr};
         };
 
-        std::mutex m_SampleMutex;
         XrPosef m_RefToFwd{xr::math::Pose::Identity()};
 
         std::unique_ptr<PhysicalSource> m_Source;

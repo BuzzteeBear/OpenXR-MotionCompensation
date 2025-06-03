@@ -882,19 +882,8 @@ namespace tracker
                                "OpenXrTracker::ReadSource",
                                TLArg(time, "Time"));
 
-        std::lock_guard lock(m_SampleMutex); 
-        LARGE_INTEGER now;
-        QueryPerformanceCounter(&now);
-        TraceLoggingWriteTagged(local, "OpenXrTracker::ReadSource", TLArg(now.QuadPart, "QuadPart"));
-        XrTime nowXr;
-        if (XR_FAILED(
-                GetInstance()->xrConvertWin32PerformanceCounterToTimeKHR(GetInstance()->GetXrInstance(), &now, &nowXr)))
-        {
-            TraceLoggingWriteStop(local, "OpenXrTracker::ReadSource", TLArg(false, "Conversion"));
-            return false;
-        }
         XrPosef controllerPose;
-        if (!GetControllerPose(controllerPose, m_Session, nowXr))
+        if (!GetControllerPose(controllerPose, m_Session, time))
         {
             TraceLoggingWriteStop(local, "OpenXrTracker::ReadSource", TLArg(false, "Pose"));
             return false;
@@ -902,6 +891,14 @@ namespace tracker
         dof = PoseToDof(Pose::Multiply(m_RefToFwd, controllerPose));
         TraceLoggingWriteStop(local, "OpenXrTracker::ReadSource", TLArg(true, "Success"));
         return true;
+    }
+
+    void OpenXrTracker::SetFrameTime(const XrTime time)
+    {
+        if (m_Sampler)
+        {
+            m_Sampler->SetFrameTime(time);
+        }
     }
 
     bool OpenXrTracker::GetPose(XrPosef& trackerPose, XrSession session, XrTime time)

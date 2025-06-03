@@ -118,7 +118,7 @@ namespace filter
         virtual ~StabilizerBase() = default;
         virtual void SetStrength(float frequency) = 0;
         virtual void SetStartTime(int64_t now) = 0;
-        virtual void Insert(utility::Dof& sample, int64_t now) = 0;
+        virtual void Insert(const utility::Dof& sample, int64_t now) = 0;
         virtual void Read(utility::Dof& dof) = 0;
 
       protected:
@@ -132,7 +132,7 @@ namespace filter
         ;
         void SetStrength(float strength) override{};
         void SetStartTime(int64_t now) override{};
-        void Insert(utility::Dof& dof, int64_t now) override;
+        void Insert(const utility::Dof& dof, int64_t now) override;
         void Read(utility::Dof& dof) override;
 
       protected:
@@ -163,7 +163,7 @@ namespace filter
         explicit EmaStabilizer(const std::vector<utility::DofValue>& relevant) : LowPassStabilizer(relevant){};
         void SetStrength(float strength) override;
         void SetStartTime(int64_t now) override;
-        void Insert(utility::Dof& dof, int64_t now) override;
+        void Insert(const utility::Dof& dof, int64_t now) override;
 
       private:
         int64_t m_LastSampleTime{};
@@ -175,7 +175,7 @@ namespace filter
         explicit BiQuadStabilizer(const std::vector<utility::DofValue>& relevant) : LowPassStabilizer(relevant){};
         void SetStrength(float strength) override;
         void SetStartTime(int64_t now) override;
-        void Insert(utility::Dof& dof, int64_t now) override;
+        void Insert(const utility::Dof& dof, int64_t now) override;
 
       private:
         void ResetFilters();

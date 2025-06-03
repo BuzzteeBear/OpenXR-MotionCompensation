@@ -20,6 +20,7 @@ namespace sampler
                      const std::shared_ptr<output::RecorderBase>& recorder)
         : m_Tracker(tracker), m_Recorder(recorder)
     {
+        QueryPerformanceFrequency(&m_CounterFrequency);
         m_Stabilizer = std::make_shared<filter::BiQuadStabilizer>(relevant);
         GetConfig()->GetBool(Cfg::RecordSamples, m_SampleRecording);
     }
@@ -62,6 +63,32 @@ namespace sampler
 
         TraceLoggingWriteStop(local, "Sampler::ReadData", TLArg(true, "Success"));
         return true;
+    }
+
+    void Sampler::SetFrameTime(const XrTime frameTime)
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local,
+                               "Sampler::SetFrameTime",
+                               TLArg(m_XrFrameTime, "Previous_XrFrameTime"),
+                               TLArg(m_FrameStart.QuadPart, "Previous_FrameStart"));
+        std::lock_guard lock(m_Tracker->m_SampleMutex);
+
+        QueryPerformanceCounter(&m_FrameStart);
+        m_XrFrameTime = frameTime;
+
+        TraceLoggingWriteTagged(local,
+                                "Sampler::SetFrameTime",
+                                TLArg(m_XrFrameTime, "New_XrFrameTime"),
+                                TLArg(m_FrameStart.QuadPart, "New_FrameStart"));
+        
+        if (Dof dof; m_Tracker->m_Calibrated && m_Tracker->ReadSource(frameTime, dof))
+        {
+            // sample value
+            m_Stabilizer->Insert(dof, frameTime);
+        }
+
+        TraceLoggingWriteStop(local, "Sampler::SetFrameTime");
     }
 
     void Sampler::StartSampling()
@@ -113,30 +140,36 @@ namespace sampler
     {
         using namespace std::chrono;
 
-        const nanoseconds start = steady_clock::now().time_since_epoch();
-        m_Stabilizer->SetStartTime(start.count());
+        m_Stabilizer->SetStartTime(m_XrFrameTime);
 
         while (m_IsSampling.load())
         {
-            // set timing
-            auto now = steady_clock::now();
-            const int64_t time = time_point_cast<nanoseconds>(now).time_since_epoch().count();
-
-            // sample value
-            Dof dof;
-            if (!m_Tracker->ReadSource(time, dof))
+            time_point<steady_clock> now;
             {
-                break;
-            }
-            m_Stabilizer->Insert(dof, time);
+                std::lock_guard lock(m_Tracker->m_SampleMutex);
+                now = steady_clock::now();
 
-            // record sample
-            if (m_SampleRecording && m_Recorder)
-            {
-                m_Recorder->AddDofValues(dof, Sampled);
-                m_Recorder->Write(true);
-            }
+                // determine sampling time
+                LARGE_INTEGER current;
+                QueryPerformanceCounter(&current);
+                const auto sinceFrame = (current.QuadPart - m_FrameStart.QuadPart) * 1000000000 / m_CounterFrequency.QuadPart;
+                const XrTime time = m_XrFrameTime + sinceFrame;
 
+                // sample value
+                Dof dof;
+                if (!m_Tracker->ReadSource(time, dof))
+                {
+                    break;
+                }
+                m_Stabilizer->Insert(dof, time);
+
+                // record sample
+                if (m_SampleRecording && m_Recorder)
+                {
+                    m_Recorder->AddDofValues(dof, Sampled);
+                    m_Recorder->Write(true);
+                }
+            }
             // wait for next sampling cycle
             std::this_thread::sleep_until(now + m_Interval);
         }

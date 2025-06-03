@@ -27,9 +27,7 @@ namespace utility
         XrVector3f angles;
 
         // pitch (x-axis rotation)
-        const double sinP = std::sqrt(1 + 2.0 * (q.w * q.x - q.z * q.y));
-        const double cosP = std::sqrt(1 - 2.0 * (q.w * q.x - q.z * q.y));
-        angles.x = static_cast<float>(2 * std::atan2(sinP, cosP) - M_PI / 2);
+        angles.x = static_cast<float>(std::asin(2.0 * (q.w * q.x - q.z * q.y)));
 
         // yaw (y-axis rotation)
         const double sinYCosP = 2.0 * (q.w * q.y + q.z * q.x);
@@ -96,7 +94,7 @@ namespace utility
         if (GetConfig()->GetFloat(Cfg::TrackerCheck, check) && check >= 0)
         {
             m_Check = static_cast<XrTime>(check * 1000000000.0);
-            Log("mmf connection refresh interval is set to %.3f ms", check * 1000.0);
+            DebugLog("mmf connection refresh interval is set to %.3f ms", check * 1000.0);
         }
         else
         {

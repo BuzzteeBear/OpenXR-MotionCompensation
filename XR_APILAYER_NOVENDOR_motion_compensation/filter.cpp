@@ -223,7 +223,7 @@ namespace filter
         SetFactor(Cfg::StabilizerPitch, pitch);
     }
 
-    void PassThroughStabilizer::Insert(utility::Dof& dof, int64_t now)
+    void PassThroughStabilizer::Insert(const utility::Dof& dof, int64_t now)
     {
         std::lock_guard lock(m_SampleMutex);
         m_CurrentSample = dof;
@@ -336,7 +336,7 @@ namespace filter
         TraceLoggingWriteStop(local, "EmaStabilizer::SetStartTime");
     }
 
-    void EmaStabilizer::Insert(utility::Dof& dof, int64_t now)
+    void EmaStabilizer::Insert(const utility::Dof& dof, int64_t now)
     {
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local,
@@ -409,7 +409,7 @@ namespace filter
         TraceLoggingWriteStop(local, "BiQuadStabilizer::SetStartTime");
     }
 
-    void BiQuadStabilizer::Insert(utility::Dof& dof, int64_t now)
+    void BiQuadStabilizer::Insert(const utility::Dof& dof, int64_t now)
     {
         TraceLocalActivity(local);
         TraceLoggingWriteStart(local,
