@@ -4,8 +4,8 @@
     <VersionString>beta</VersionString>
     <VersionMajor>0</VersionMajor>
     <VersionMinor>3</VersionMinor>
-    <VersionPatch>9</VersionPatch>
-    <VersionRevision>1</VersionRevision>
+    <VersionPatch>10</VersionPatch>
+    <VersionRevision>0</VersionRevision>
   </PropertyGroup>
   <ItemGroup>
     <BuildMacro Include="VersionString">

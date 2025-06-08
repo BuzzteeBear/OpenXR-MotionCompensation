@@ -1,5 +1,19 @@
 OpenXR-MotionCompensation Changelog
 
+Version 0.3.10.0
+	
+	Physical Tracker:
+	- improved input stabilizer latency
+	
+	Virtual tracker:
+	- integrated interface for automatic CoR estimation app (yet to be released)
+	
+	Bugfixes:
+	- removed code causing inverted eyetracking in MSFS dynamic foveated rendering
+	- eliminated CTD on MC activation for UE 5 games (e.g. EA WRC, Kayak VR)
+	- fixed intermittent frames with wrong perspective for multithreaded/pipelined rendering (e.g. EA WRC)
+	- several minor bugfixes (e.g. log spam, potential nullpointer exception)
+
 Version 0.3.9.0
 
 	General:
