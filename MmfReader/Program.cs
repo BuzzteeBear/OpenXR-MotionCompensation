@@ -39,6 +39,10 @@ namespace MmfReader
                     size = Marshal.SizeOf<YawData>();
                     break;
                 case 4:
+	                fileName = "Local\\RotoVrMotionRigPose";
+	                size = Marshal.SizeOf<float>();
+	                break;
+                case 5:
 	                fileName = "Local\\OXRMC_Telemetry";
 	                size = Marshal.SizeOf<MmfData>();
 	                break;
@@ -57,17 +61,27 @@ namespace MmfReader
                         accessor.Read(0, out data);
                         success = true;
                         break;
-                    case 3:
-                        accessor.Read(0, out YawData yaw);
-                        data.sway = 0;
-                        data.surge = 0;
-                        data.heave = 0;
-                        data.yaw = yaw.yaw;
-                        data.roll = yaw.roll;
-                        data.pitch = yaw.pitch;
-                        success = true;
-                        break;
-                    case 4:
+					case 3:
+						accessor.Read(0, out YawData yaw);
+						data.sway = 0;
+						data.surge = 0;
+						data.heave = 0;
+						data.yaw = yaw.yaw;
+						data.roll = yaw.roll;
+						data.pitch = yaw.pitch;
+						success = true;
+						break;
+					case 4:
+						accessor.Read(0, out float yawAngle);
+						data.sway = 0;
+						data.surge = 0;
+						data.heave = 0;
+						data.yaw = yawAngle;
+						data.roll = 0;
+						data.pitch = 0;
+						success = true;
+						break;
+					case 5:
 	                    accessor.Read(0, out data);
 	                    success = true;
 	                    break;

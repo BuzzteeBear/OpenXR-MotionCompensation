@@ -265,7 +265,7 @@ bool ConfigManager::IsVirtualTracker()
 {
     std::string type;
     GetString(Cfg::TrackerType, type);
-    return "srs" == type || "flypt" == type || "yaw" == type;
+    return "rotovr" == type || "srs" == type || "flypt" == type || "yaw" == type;
 }
 
 std::string ConfigManager::GetControllerSide()

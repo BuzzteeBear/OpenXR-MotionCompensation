@@ -183,6 +183,19 @@ namespace tracker
         friend class Sampler;
     };
 
+    class RotoVrTracker : public VirtualTracker
+    {
+      public:
+        RotoVrTracker() : VirtualTracker({utility::yaw})
+        {
+            m_Filename = "Local\\RotoVrMotionRigPose";
+        }
+        bool ReadSource(XrTime now, utility::Dof& dof) override;
+
+      protected:
+        XrPosef DataToPose(const utility::Dof& dof) override;
+    };
+
     class YawTracker : public VirtualTracker
     {
       public:

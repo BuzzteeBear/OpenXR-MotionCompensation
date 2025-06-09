@@ -1476,6 +1476,41 @@ namespace tracker
         TraceLoggingWriteStop(local, "VirtualTracker::ApplyOffsets", TLArg(xr::ToString(view).c_str(), "view"));
     }
 
+    bool RotoVrTracker::ReadSource(XrTime now, utility::Dof& dof)
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "RotoVrTracker::ReadSource", TLArg(now, "Now"));
+
+        float yawAngle{};
+        if (!m_Mmf.Read(&yawAngle, sizeof(yawAngle), now))
+        {
+            TraceLoggingWriteStop(local, "RotoVrTracker::ReadSource", TLArg(false, "Success"));
+            return false;
+        }
+        dof = {0, 0, 0, yawAngle, 0, 0};
+
+        TraceLoggingWriteStop(local,
+                              "RotoVrTracker::ReadSource",
+                              TLArg(yawAngle, "Yaw"),
+                              TLArg(true, "Success"));
+        return true;
+    }
+
+    XrPosef RotoVrTracker::DataToPose(const Dof& dof)
+    {
+        TraceLocalActivity(local);
+        TraceLoggingWriteStart(local, "RotoVrTracker::DataToPose", TLArg(xr::ToString(dof).c_str(), "Dof"));
+
+        XrPosef rigPose{Pose::Identity()};
+        StoreXrQuaternion(&rigPose.orientation,
+                          DirectX::XMQuaternionRotationRollPitchYaw(-dof.data[pitch] * angleToRadian,
+                                                                    dof.data[yaw] * angleToRadian,
+                                                                    dof.data[roll] * angleToRadian));
+
+        TraceLoggingWriteStop(local, "RotoVrTracker::DataToPose", TLArg(xr::ToString(rigPose).c_str(), "Pose"));
+        return rigPose;
+    }
+
     bool YawTracker::ReadSource(XrTime now, Dof& dof)
     {
         TraceLocalActivity(local);
@@ -1882,6 +1917,12 @@ namespace tracker
         std::string trackerType;
         if (GetConfig()->GetString(Cfg::TrackerType, trackerType))
         {
+            if ("rotovr" == trackerType)
+            {
+                Log("RotoVR memory mapped file is used as reference tracker");
+                TraceLoggingWriteStop(local, "GetTracker", TLPArg(trackerType.c_str(), "tracker"));
+                return std::make_unique<RotoVrTracker>();
+            }
             if ("yaw" == trackerType)
             {
                 Log("Yaw Game Engine memory mapped file is used as reference tracker");

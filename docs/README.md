@@ -126,6 +126,7 @@ What you can modify in a configuration file:
     - `srs`: use the virtual tracker data provided by SRS motion software when using a Witmotion (or similar?) sensor on the motion rig.
     - `flypt` use the virtual tracker data provided by FlyPT Mover.
     - `yaw`: use the virtual tracker data provided by Yaw VR and Yaw 2. Either while using SRS or Game Link/Engine.
+    - `rotovr`: use yaw angle data for use with a RotoVR gaming chair.
   - the keys `offset_...`, `load_ref_pose_from_file` and `cor_...` are used to handle the configuration of the center of rotation (cor) for all available virtual trackers.
     - offset values are meant to be modified to specify how far away the cor is in terms of up/down, forward/backward left/right, and up/down direction relative to your headset. The yaw angle defines a counterclockwise rotation of the forward vector after positioning of the cor on calibration.
     - `non_neutral_calibration` with this option enabled, the current tracker values are taken into account on cor calibration. This allows for calibration while the motion simulator is not in neutral position. While possible, it is inadvisable to calibrate while the rig tilted on both pitch and roll axis, because even small inaccuracies in forward pose of the hmd can cause large error in cor positioning.
@@ -185,6 +186,7 @@ What you can modify in a configuration file:
 ## Using a virtual tracker
 
 To use a virtual tracker (as opposed to a physical device) set parameter `tracker_type` according to the motion software that is providing the data for motion compensation on your system:
+- `rotovr`: RotoVR gaming chair
 - `yaw`: Yaw Game Link/Engine (or Sim Racing Studio when using rotational data provided by Yaw VR or Yaw 2)
 - `srs`: Sim Racing Studio, using a Witmotion sensor
 - `flypt`: FlyPT Mover

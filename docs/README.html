@@ -175,6 +175,7 @@ Upon starting an OpenXR application with the API layer active for the first time
 <li><code>srs</code>: use the virtual tracker data provided by SRS motion software when using a Witmotion (or similar?) sensor on the motion rig.</li>
 <li><code>flypt</code> use the virtual tracker data provided by FlyPT Mover.</li>
 <li><code>yaw</code>: use the virtual tracker data provided by Yaw VR and Yaw 2. Either while using SRS or Game Link/Engine.</li>
+<li><code>rotovr</code>: use yaw angle data for use with a RotoVR gaming chair.</li>
 </ul>
 </li>
 <li>the keys <code>offset_...</code>, <code>load_ref_pose_from_file</code> and <code>cor_...</code> are used to handle the configuration of the center of rotation (cor) for all available virtual trackers.
@@ -259,6 +260,7 @@ The key <code>vertical_factor</code> is applied to translational filter strength
 <h2 id="using-a-virtual-tracker">Using a virtual tracker</h2>
 <p>To use a virtual tracker (as opposed to a physical device) set parameter <code>tracker_type</code> according to the motion software that is providing the data for motion compensation on your system:</p>
 <ul>
+<li><code>rotovr</code>: RotoVR gaming chair</li>
 <li><code>yaw</code>: Yaw Game Link/Engine (or Sim Racing Studio when using rotational data provided by Yaw VR or Yaw 2)</li>
 <li><code>srs</code>: Sim Racing Studio, using a Witmotion sensor</li>
 <li><code>flypt</code>: FlyPT Mover</li>
