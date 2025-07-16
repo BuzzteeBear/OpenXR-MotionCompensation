@@ -171,10 +171,12 @@ namespace openxr_api_layer
         m_AutoActivator = std::make_unique<utility::AutoActivator>(utility::AutoActivator(m_Input));
 
         m_VirtualTrackerUsed = GetConfig()->IsVirtualTracker();
+
+        bool compensateControllers{false};
+        GetConfig()->GetBool(Cfg::CompensateControllers, compensateControllers);
         if (m_PhysicalEnabled)
         {
-            GetConfig()->GetBool(Cfg::CompensateControllers, m_CompensateControllers);
-            if (m_CompensateControllers)
+            if ((m_CompensateControllers = compensateControllers))
             {
                 Log("compensation of motion controllers is activated (experimental)");
                 m_SuppressInteraction = m_VirtualTrackerUsed;
@@ -240,6 +242,11 @@ namespace openxr_api_layer
         GetConfig()->GetBool(Cfg::TestRotation, m_TestRotation);
 
         EventSink::Execute(m_Initialized ? Event::Initialized : Event::Critical);
+        if (!m_PhysicalEnabled && compensateControllers)
+        {
+            ErrorLog("%s: motion controller compensation is enabled but physical tracker is not active. Please change either setting", __FUNCTION__);
+            EventSink::Execute(Event::Error);
+        }
 
         Log("layer initialization completed\n");
         TraceLoggingWriteStop(local,
