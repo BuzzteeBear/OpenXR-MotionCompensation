@@ -36,15 +36,14 @@ namespace tracker
         XrPosef m_LastPose{xr::math::Pose::Identity()};
         XrPosef m_LastPoseDelta{xr::math::Pose::Identity()};
         XrTime m_LastPoseTime{0};
+        bool m_PhysicalEnabled{false};
         bool m_FallBackUsed{false};
         bool m_ConnectionLost{false};
         std::shared_ptr<output::RecorderBase> m_Recorder{std::make_shared<output::NoRecorder>()};
 
       private:
         virtual void ApplyFilters(XrPosef& trackerPose){};
-        virtual void ApplyModifier(XrPosef& trackerPose){};
-
-        bool m_PhysicalEnabled{false};
+        virtual void ApplyModifier(XrPosef& trackerPose){};        
     };
 
     class TrackerBase : public ControllerBase

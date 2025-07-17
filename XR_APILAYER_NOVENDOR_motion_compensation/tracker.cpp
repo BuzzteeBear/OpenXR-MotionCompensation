@@ -1626,9 +1626,12 @@ namespace tracker
                                TLXArg(session, "Session"),
                                TLArg(time, "Time"));
 
-        if (!m_Initialized)
+        if (!m_Initialized || !m_PhysicalEnabled)
         {
-            TraceLoggingWriteStop(local, "CorManipulator::ApplyManipulation", TLArg(false, "Initialized"));
+            TraceLoggingWriteStop(local,
+                                  "CorManipulator::ApplyManipulation",
+                                  TLArg(m_Initialized, "Initialized"),
+                                  TLArg(m_PhysicalEnabled, "PhysicalEnabled"));
             return;
         }
 
